@@ -5,20 +5,32 @@ import subprocess
 
 
 class ToolsScreen(tb.Frame):
+    """
+    A screen that provides quick access to common Windows system tools and utilities.
+    Displays a grid of buttons that launch various system management programs.
+    """
+
     def __init__(self, master):
+        """
+        Initialize the tools screen.
+
+        Args:
+            master: Parent widget
+        """
         super().__init__(master)
         self.master = master
         self.pack(fill=BOTH, expand=YES, padx=10, pady=5)
         self.create_widgets()
 
     def create_widgets(self):
-        # Tools Frame
+        """Create and arrange all widgets for the tools interface."""
+        # Create main tools container frame
         tools_frame = tb.LabelFrame(
             self, text=" System Tools ", bootstyle="success", padding=15
         )
         tools_frame.pack(fill=BOTH, expand=YES, pady=10)
 
-        # Tools Buttons with Windows system programs
+        # Define available Windows system tools with their commands
         tools = [
             ("Device Manager", "devmgmt.msc"),
             ("Registry Editor", "regedit"),
@@ -32,14 +44,14 @@ class ToolsScreen(tb.Frame):
             ("Event Viewer", "eventvwr.msc"),
         ]
 
-        # Create button grid
+        # Create frame for button grid
         btn_frame = tb.Frame(tools_frame)
         btn_frame.pack(expand=YES, pady=10)
 
-        # Arrange buttons in a 3x4 grid
+        # Create and arrange buttons in a 3x4 grid layout
         for i, (text, command) in enumerate(tools):
-            row = i // 3
-            col = i % 3
+            row = i // 3  # Calculate row position
+            col = i % 3  # Calculate column position
             btn = tb.Button(
                 btn_frame,
                 text=text,
@@ -50,6 +62,12 @@ class ToolsScreen(tb.Frame):
             btn.grid(row=row, column=col, pady=5, padx=5)
 
     def run_system_tool(self, command):
+        """
+        Launch a Windows system tool using the provided command.
+
+        Args:
+            command: The command to execute (e.g. 'devmgmt.msc', 'regedit')
+        """
         try:
             subprocess.run(command, shell=True)
         except Exception as e:

@@ -7,7 +7,23 @@ from ttkbootstrap.scrolled import ScrolledText
 
 
 class ServiceCard(tb.Frame):
+    """
+    A custom widget that displays a service option as a card.
+    Contains service details, features list and action button.
+    """
+
     def __init__(self, master, title, description, features, duration, command):
+        """
+        Initialize a new service card.
+
+        Args:
+            master: Parent widget
+            title: Service title
+            description: Brief service description
+            features: List of service features
+            duration: Estimated duration text
+            command: Callback function when start button is clicked
+        """
         super().__init__(master)
 
         # Create a bordered frame
@@ -54,7 +70,19 @@ class ServiceCard(tb.Frame):
 
 
 class ScanScreen(tb.Frame):
+    """
+    Main container frame that manages switching between service selection
+    and active scan screens.
+    """
+
     def __init__(self, master, app):
+        """
+        Initialize the scan screen manager.
+
+        Args:
+            master: Parent widget
+            app: Main application instance
+        """
         super().__init__(master)
         self.master = master
         self.app = app
@@ -63,6 +91,7 @@ class ScanScreen(tb.Frame):
         self.show_service_selection()
 
     def show_service_selection(self):
+        """Switch to the service selection screen."""
         if self.current_frame:
             self.current_frame.destroy()
 
@@ -70,6 +99,12 @@ class ScanScreen(tb.Frame):
         self.current_frame.pack(fill=BOTH, expand=YES)
 
     def show_scan_screen(self, service_type):
+        """
+        Switch to the active scan screen for the selected service.
+
+        Args:
+            service_type: Type of service to run ('general', 'complete', or 'custom')
+        """
         if self.current_frame:
             self.current_frame.destroy()
 
@@ -78,12 +113,22 @@ class ScanScreen(tb.Frame):
 
 
 class ServiceSelection(tb.Frame):
+    """Screen that displays available service options as cards."""
+
     def __init__(self, master, controller):
+        """
+        Initialize the service selection screen.
+
+        Args:
+            master: Parent widget
+            controller: ScanScreen instance for navigation control
+        """
         super().__init__(master)
         self.controller = controller
         self.create_widgets()
 
     def create_widgets(self):
+        """Create and arrange all widgets for the service selection interface."""
         # Header
         header_frame = tb.Frame(self)
         header_frame.pack(fill=X, pady=(0, 20))
@@ -160,7 +205,17 @@ class ServiceSelection(tb.Frame):
 
 
 class ActiveScanScreen(tb.Frame):
+    """Screen that displays and controls an active service scan."""
+
     def __init__(self, master, service_type, controller):
+        """
+        Initialize the active scan screen.
+
+        Args:
+            master: Parent widget
+            service_type: Type of service being run
+            controller: ScanScreen instance for navigation control
+        """
         super().__init__(master)
         self.service_type = service_type
         self.controller = controller
@@ -170,6 +225,7 @@ class ActiveScanScreen(tb.Frame):
         self.create_widgets()
 
     def create_widgets(self):
+        """Create and arrange all widgets for the active scan interface."""
         # Header with back button
         header_frame = tb.Frame(self)
         header_frame.pack(fill=X, pady=(0, 20))
@@ -241,6 +297,12 @@ class ActiveScanScreen(tb.Frame):
         self.results_text.pack(fill=BOTH, expand=YES)
 
     def get_service_details(self):
+        """
+        Get the detailed description text for the current service type.
+
+        Returns:
+            str: Formatted description of service tasks and duration
+        """
         if self.service_type == "general":
             return """This quick scan will perform the following tasks:
 • Quick malware scan of critical system areas
@@ -270,12 +332,19 @@ Estimated duration: 45-60 minutes"""
 Duration varies based on selected options"""
 
     def log(self, message):
+        """
+        Add a timestamped message to the results log.
+
+        Args:
+            message: Message text to log
+        """
         timestamp = datetime.now().strftime("%H:%M:%S")
         self.results_text.insert(END, f"[{timestamp}] {message}\n")
         self.results_text.see(END)
         self.update()
 
     def start_scan(self):
+        """Handle start/stop button clicks and toggle scan state."""
         if not self.scan_running:
             self.scan_running = True
             self.start_btn.configure(text="Stop Scan", bootstyle="danger")
@@ -289,6 +358,10 @@ Duration varies based on selected options"""
             self.log("Scan stopped by user")
 
     def simulate_progress(self):
+        """
+        Simulate scan progress by incrementing progress bar and logging updates.
+        Progress speed varies by service type.
+        """
         if not self.scan_running:
             return
 

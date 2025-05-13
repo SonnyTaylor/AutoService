@@ -13,7 +13,20 @@ from ..utils.system_utils import (
 
 
 class CollapsibleSection(tb.Labelframe):
+    """
+    A custom widget that creates a collapsible/expandable section with a toggle arrow.
+    Inherits from ttkbootstrap.Labelframe.
+    """
+
     def __init__(self, parent, text, **kwargs):
+        """
+        Initialize the collapsible section.
+
+        Args:
+            parent: The parent widget
+            text: The section title text
+            **kwargs: Additional keyword arguments passed to the parent class
+        """
         super().__init__(parent, text=f" ▼ {text}", **kwargs)
         self.expanded = True
         self.content_frame = tb.Frame(self)
@@ -22,12 +35,19 @@ class CollapsibleSection(tb.Labelframe):
         # Remove border
         self.configure(relief="flat", borderwidth=0)
 
-        # Bind click event to the label
+        # Bind click event to the label and all child widgets
         self.bind("<Button-1>", self.toggle)
         for child in self.winfo_children():
             child.bind("<Button-1>", self.toggle)
 
     def toggle(self, event=None):
+        """
+        Toggle the expanded/collapsed state of the section.
+        Updates the arrow indicator and adjusts the content visibility.
+
+        Args:
+            event: The event that triggered the toggle (optional)
+        """
         if self.expanded:
             self.content_frame.pack_forget()
             self.configure(text=f" ▶ {self.cget('text')[3:]}")
@@ -41,14 +61,25 @@ class CollapsibleSection(tb.Labelframe):
             self.configure(height=0)
         self.expanded = not self.expanded
 
-        # Get the root SystemInfoScreen instance
+        # Get the root SystemInfoScreen instance and update scroll region
         system_info_screen = self.master.master.master.master
         if isinstance(system_info_screen, SystemInfoScreen):
             system_info_screen.update_scroll_region()
 
 
 class SystemInfoScreen(tb.Frame):
+    """
+    A screen that displays various system information in collapsible sections.
+    Information includes system specs, battery, CPU, memory, disks, network, and boot time.
+    """
+
     def __init__(self, master):
+        """
+        Initialize the system information screen.
+
+        Args:
+            master: The parent widget
+        """
         super().__init__(master)
         self.master = master
         self.pack(fill=BOTH, expand=YES, padx=10, pady=5)
@@ -56,13 +87,14 @@ class SystemInfoScreen(tb.Frame):
         self.update_system_info()
 
     def create_widgets(self):
+        """Create and arrange all widgets for the system information display."""
         # System Info Frame
         self.sys_info_frame = tb.LabelFrame(
             self, text=" System Information ", bootstyle="info", padding=15
         )
         self.sys_info_frame.pack(fill=BOTH, expand=YES, pady=10)
 
-        # Create a canvas with scrollbar
+        # Create a canvas with scrollbar for scrollable content
         self.canvas = tb.Canvas(
             self.sys_info_frame, highlightthickness=0, width=500
         )  # Set minimum width
@@ -87,7 +119,7 @@ class SystemInfoScreen(tb.Frame):
         # Bind mouse wheel scrolling
         self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
 
-        # System Info Labels
+        # Create sections for different types of system information
         self.info_labels = {}
         info_sections = [
             ("System", get_system_info()),
@@ -99,8 +131,8 @@ class SystemInfoScreen(tb.Frame):
             ("Boot Time", get_boot_info()),
         ]
 
+        # Create collapsible sections for each category of information
         for section, items in info_sections:
-            # Create a collapsible section for each category
             section_frame = CollapsibleSection(
                 self.scrollable_frame,
                 text=section,
@@ -108,6 +140,7 @@ class SystemInfoScreen(tb.Frame):
             )
             section_frame.pack(fill=X, pady=5)
 
+            # Create labels for each key-value pair in the section
             for key, value in items.items():
                 frame = tb.Frame(section_frame.content_frame)
                 frame.pack(fill=X, pady=2)
@@ -120,7 +153,7 @@ class SystemInfoScreen(tb.Frame):
 
                 self.info_labels[f"{section}_{key}"] = value_label
 
-        # Add a refresh button
+        # Add a refresh button at the bottom
         refresh_btn = tb.Button(
             self,
             text="Refresh Information",
@@ -130,12 +163,17 @@ class SystemInfoScreen(tb.Frame):
         refresh_btn.pack(pady=10)
 
     def on_canvas_configure(self, event):
-        # Update the scrollable region to encompass the inner frame
+        """
+        Handle canvas resize events by updating the scrollable window width.
+
+        Args:
+            event: The Configure event
+        """
         self.canvas.itemconfig(self.canvas_window, width=event.width)
         self.update_scroll_region()
 
     def update_scroll_region(self):
-        # Update the scroll region to encompass the inner frame
+        """Update the canvas scroll region to match the content size."""
         self.canvas.update_idletasks()
         self.scrollable_frame.update_idletasks()
         bbox = self.canvas.bbox("all")
@@ -143,10 +181,17 @@ class SystemInfoScreen(tb.Frame):
             self.canvas.configure(scrollregion=bbox)
 
     def _on_mousewheel(self, event):
+        """
+        Handle mousewheel scrolling.
+
+        Args:
+            event: The MouseWheel event
+        """
         self.canvas.yview_scroll(-1 * (event.delta // 120), "units")
 
     def update_system_info(self):
-        # Update all dynamic information
+        """Update all dynamic system information in the display."""
+        # Update all dynamic information sections
         for section, items in [
             ("CPU", get_cpu_info()),
             ("Battery", get_battery_info()),
