@@ -112,12 +112,10 @@ class SystemInfoScreen(tb.Frame):
                 frame = tb.Frame(section_frame.content_frame)
                 frame.pack(fill=X, pady=2)
 
-                key_label = tb.Label(
-                    frame, text=f"{key}:", width=30, anchor=W, bootstyle="light"
-                )
+                key_label = tb.Label(frame, text=f"{key}:", width=30, anchor=W)
                 key_label.pack(side=LEFT)
 
-                value_label = tb.Label(frame, text=value, anchor=W, bootstyle="light")
+                value_label = tb.Label(frame, text=value, anchor=W)
                 value_label.pack(side=LEFT, fill=X, expand=True)
 
                 self.info_labels[f"{section}_{key}"] = value_label
