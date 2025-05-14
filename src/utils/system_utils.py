@@ -1,5 +1,6 @@
 import psutil
 import platform
+import batteryinfo
 import socket
 from datetime import datetime, timedelta
 import time
@@ -31,51 +32,51 @@ def get_system_info():
 
 
 def get_battery_info():
-    battery_info = {}
     try:
-        battery = psutil.sensors_battery()
-        if battery:
-            is_plugged = battery.power_plugged
-            battery_info["Power Status"] = "Plugged In" if is_plugged else "On Battery"
-            battery_info["Battery Level"] = f"{battery.percent}%"
-            battery_info["Time Left"] = (
-                str(timedelta(seconds=battery.secsleft))
-                if battery.secsleft != -1
-                else "Unknown"
-            )
+        battery = batteryinfo.Battery(
+            time_format=batteryinfo.TimeFormat.Human,
+            temp_unit=batteryinfo.TempUnit.DegC,
+        )
 
-            if platform.system() == "Windows":
-                try:
-                    import subprocess
+        raw_info = battery.as_dict()
 
-                    cmd = 'powershell "Get-WmiObject Win32_Battery | Select-Object DeviceID, Name, DesignVoltage, EstimatedChargeRemaining, EstimatedRunTime"'
-                    result = subprocess.check_output(cmd, shell=True).decode()
-                    for line in result.split("\n"):
-                        if ":" in line:
-                            key, value = line.split(":", 1)
-                            key = "".join(
-                                [" " + c if c.isupper() else c for c in key.strip()]
-                            ).strip()
-                            value = value.strip()
+        # Map of internal keys to user-friendly labels
+        fields_to_display = {
+            "vendor": "Vendor",
+            "model": "Model",
+            "serial_number": "Serial Number",
+            "technology": "Technology",
+            "percent": "Battery Level",
+            "state": "Power Status",
+            "capacity": "Capacity",
+            "temperature": "Temperature",
+            "cycle_count": "Charge Cycles",
+            "energy": "Current Energy",
+            "energy_full": "Energy When Full",
+            "energy_full_design": "Design Energy",
+            "energy_rate": "Energy Rate",
+            "voltage": "Voltage",
+            "time_to_empty": "Time Until Empty",
+            "time_to_full": "Time Until Full",
+        }
 
-                            if "Estimated Run Time" in key:
-                                if is_plugged:
-                                    value = "Indefinite (AC Power)"
-                                elif value.isdigit():
-                                    try:
-                                        seconds = int(value)
-                                        value = str(timedelta(seconds=seconds))
-                                    except ValueError:
-                                        pass
+        formatted_info = {}
 
-                            battery_info[key] = value
-                except:
-                    pass
-        else:
-            battery_info["Status"] = "No battery detected"
-    except:
-        battery_info["Status"] = "Battery information unavailable"
-    return battery_info
+        for key, label in fields_to_display.items():
+            value = raw_info.get(key)
+
+            if value is None or value == "":
+                formatted_info[label] = "N/A"
+            elif isinstance(value, tuple):
+                val, unit = value
+                formatted_info[label] = f"{round(val, 1)} {unit.upper()}"
+            else:
+                formatted_info[label] = str(value) if str(value).strip() else "N/A"
+
+        return formatted_info
+
+    except Exception as e:
+        return {"Status": f"Battery information unavailable: {e}"}
 
 
 def get_cpu_info():

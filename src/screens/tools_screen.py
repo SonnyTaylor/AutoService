@@ -1,7 +1,8 @@
+import subprocess
+
 import ttkbootstrap as tb
 from ttkbootstrap.constants import *
 from ttkbootstrap.dialogs import Messagebox
-import subprocess
 
 
 class ToolsScreen(tb.Frame):

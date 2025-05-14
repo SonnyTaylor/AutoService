@@ -123,12 +123,12 @@ class SystemInfoScreen(tb.Frame):
         self.info_labels = {}
         info_sections = [
             ("System", get_system_info()),
-            ("Battery", get_battery_info()),
             ("CPU", get_cpu_info()),
             ("Memory", get_memory_info()),
             ("Disks", get_disk_info()),
             ("Network", get_network_info()),
             ("Boot Time", get_boot_info()),
+            ("Battery", get_battery_info()),
         ]
 
         # Create collapsible sections for each category of information
@@ -194,11 +194,11 @@ class SystemInfoScreen(tb.Frame):
         # Update all dynamic information sections
         for section, items in [
             ("CPU", get_cpu_info()),
-            ("Battery", get_battery_info()),
             ("Memory", get_memory_info()),
             ("Disks", get_disk_info()),
             ("Network", get_network_info()),
             ("Boot Time", get_boot_info()),
+            ("Battery", get_battery_info()),
         ]:
             for key, value in items.items():
                 label_key = f"{section}_{key}"

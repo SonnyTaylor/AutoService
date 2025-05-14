@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "batteryinfo>=0.1.5",
     "psutil>=7.0.0",
     "ttkbootstrap>=1.13.2",
 ]
