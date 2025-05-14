@@ -30,34 +30,48 @@ class ToolsScreen(tb.Frame):
         )
         tools_frame.pack(fill=BOTH, expand=YES, pady=10)
 
-        # Define available Windows system tools with their commands
+        # Define available Windows system tools with their commands and icons
         tools = [
-            ("Device Manager", "devmgmt.msc"),
-            ("Registry Editor", "regedit"),
-            ("Command Prompt", "cmd"),
-            ("PowerShell", "powershell"),
-            ("Control Panel", "control"),
-            ("Task Manager", "taskmgr"),
-            ("Services", "services.msc"),
-            ("System Configuration", "msconfig"),
-            ("Disk Management", "diskmgmt.msc"),
-            ("Event Viewer", "eventvwr.msc"),
+            ("Device Manager", "devmgmt.msc", "🖥️"),
+            ("Registry Editor", "regedit", "📝"),
+            ("Command Prompt", "cmd", "💻"),
+            ("PowerShell", "powershell", "⚡"),
+            ("Control Panel", "control", "⚙️"),
+            ("Task Manager", "taskmgr", "📊"),
+            ("Services", "services.msc", "🔧"),
+            ("System Config", "msconfig", "⚙️"),
+            ("Disk Management", "diskmgmt.msc", "💿"),
+            ("Event Viewer", "eventvwr.msc", "📋"),
+            ("Perf Monitor", "perfmon.msc", "📈"),
+            ("Resource Monitor", "resmon", "📊"),
+            ("Computer Mgmt", "compmgmt.msc", "💻"),
+            ("Group Policy", "gpedit.msc", "👥"),
+            ("DirectX Diag", "dxdiag", "🎮"),
+            ("System Info", "msinfo32", "ℹ️"),
+            ("Network", "ncpa.cpl", "🌐"),
+            ("Firewall", "firewall.cpl", "🛡️"),
+            ("System Props", "sysdm.cpl", "⚙️"),
+            ("User Accounts", "netplwiz", "👤"),
+            ("Windows Features", "optionalfeatures", "✨"),
+            ("Disk Cleanup", "cleanmgr", "🧹"),
+            ("Character Map", "charmap", "🔤"),
+            ("Remote Desktop", "mstsc", "🖥️"),
         ]
 
         # Create frame for button grid
         btn_frame = tb.Frame(tools_frame)
         btn_frame.pack(expand=YES, pady=10)
 
-        # Create and arrange buttons in a 3x4 grid layout
-        for i, (text, command) in enumerate(tools):
+        # Create and arrange buttons in a 3x8 grid layout
+        for i, (text, command, icon) in enumerate(tools):
             row = i // 3  # Calculate row position
             col = i % 3  # Calculate column position
             btn = tb.Button(
                 btn_frame,
-                text=text,
+                text=f"{icon} {text}",
                 bootstyle=PRIMARY,
                 command=lambda cmd=command: self.run_system_tool(cmd),
-                width=20,
+                width=25,
             )
             btn.grid(row=row, column=col, pady=5, padx=5)
 
