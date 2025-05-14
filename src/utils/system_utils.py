@@ -2,8 +2,11 @@ import psutil
 import platform
 import batteryinfo
 import socket
-from datetime import datetime, timedelta
+import locale
 import time
+import os
+import subprocess
+from datetime import datetime, timedelta
 from uuid import getnode as get_mac_address
 
 
@@ -12,22 +15,81 @@ def get_system_info():
     release = platform.release()
     version = platform.version()
 
-    # Fix for Windows 11 detection
+    # Windows 11 detection
     if system == "Windows" and release == "10" and int(version.split(".")[2]) >= 22000:
         release = "11"
+
+    uname = platform.uname()
+    try:
+        user = os.getlogin()
+    except Exception:
+        user = os.environ.get("USERNAME") or os.environ.get("USER") or "N/A"
+
+    # Uptime in case not elsewhere
+    boot_time = datetime.fromtimestamp(psutil.boot_time())
+    uptime = datetime.now() - boot_time
+
+    # Try to get BIOS, Manufacturer, Model (Windows/Linux)
+    bios_version = "N/A"
+    system_model = "N/A"
+    system_manufacturer = "N/A"
+    secure_boot = "N/A"
+
+    if system == "Windows":
+        try:
+            output = subprocess.check_output(
+                ["wmic", "bios", "get", "SMBIOSBIOSVersion"], text=True
+            )
+            bios_version = output.strip().split("\n")[1].strip()
+            output = subprocess.check_output(
+                ["wmic", "computersystem", "get", "manufacturer"], text=True
+            )
+            system_manufacturer = output.strip().split("\n")[1].strip()
+            output = subprocess.check_output(
+                ["wmic", "computersystem", "get", "model"], text=True
+            )
+            system_model = output.strip().split("\n")[1].strip()
+            output = subprocess.check_output(
+                ["powershell", "-Command", "(Confirm-SecureBootUEFI)"], text=True
+            )
+            secure_boot = output.strip()
+        except Exception:
+            pass
+    elif system == "Linux":
+        try:
+            with open("/sys/class/dmi/id/bios_version") as f:
+                bios_version = f.read().strip()
+            with open("/sys/class/dmi/id/sys_vendor") as f:
+                system_manufacturer = f.read().strip()
+            with open("/sys/class/dmi/id/product_name") as f:
+                system_model = f.read().strip()
+            with open("/sys/firmware/efi/efivars/SecureBoot-*/data", "rb") as f:
+                secure_boot = "Enabled" if f.read(1) == b"\x01" else "Disabled"
+        except Exception:
+            pass
 
     return {
         "Operating System": f"{system} {release}",
         "OS Version": version,
+        "Architecture": uname.machine,
+        "Kernel Version": uname.release,
         "Hostname": socket.gethostname(),
-        "Machine": platform.machine(),
-        "Processor": platform.processor(),
+        "Username": user,
         "MAC Address": ":".join(
             [
                 "{:02x}".format((get_mac_address() >> elements) & 0xFF)
                 for elements in range(0, 2 * 6, 2)
             ][::-1]
         ),
+        "Processor": platform.processor() or uname.processor,
+        "BIOS Version": bios_version,
+        "System Manufacturer": system_manufacturer,
+        "System Model": system_model,
+        "Secure Boot": secure_boot,
+        "Boot Time": boot_time.strftime("%Y-%m-%d %H:%M:%S"),
+        "Uptime": str(uptime).split(".")[0],
+        "Locale": locale.getdefaultlocale()[0] or "N/A",
+        "Timezone": time.tzname[0],
     }
 
 
@@ -48,7 +110,7 @@ def get_battery_info():
             "technology": "Technology",
             "percent": "Battery Level",
             "state": "Power Status",
-            "capacity": "Capacity",
+            "capacity": "Battery Health",
             "temperature": "Temperature",
             "cycle_count": "Charge Cycles",
             "energy": "Current Energy",
@@ -128,14 +190,6 @@ def get_network_info():
             elif addr.family == 17:  # AF_PACKET
                 net_info[f"{name} (MAC)"] = addr.address
     return net_info
-
-
-def get_boot_info():
-    boot_time = psutil.boot_time()
-    return {
-        "Boot Time": datetime.fromtimestamp(boot_time).strftime("%Y-%m-%d %H:%M:%S"),
-        "Uptime": str(timedelta(seconds=int(time.time() - boot_time))),
-    }
 
 
 def bytes_to_gb(bytes_val):

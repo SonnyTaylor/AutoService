@@ -1,6 +1,7 @@
 import ttkbootstrap as tb
 from ttkbootstrap.constants import *
 from ttkbootstrap.dialogs import Messagebox
+from ttkbootstrap.tooltip import ToolTip
 import json
 import os
 import sys
@@ -74,7 +75,10 @@ class SettingsScreen(tb.Frame):
                     return json.load(f)
         except Exception as e:
             print(f"Error loading settings: {e}")
-        return {"theme": "darkly"}  # Default settings
+        return {
+            "theme": "darkly",
+            "technician_mode": False,  # Default technician mode setting
+        }
 
     def save_settings_to_file(self):
         """Save current settings to the JSON file."""
@@ -92,6 +96,9 @@ class SettingsScreen(tb.Frame):
 
         # Theme selection section
         self._create_theme_section(settings_container)
+
+        # Technician mode section
+        self._create_technician_mode_section(settings_container)
 
         # Save button at the bottom
         self._create_save_button(settings_container)
@@ -143,6 +150,36 @@ class SettingsScreen(tb.Frame):
         )
         preview_button.pack(side=LEFT, padx=5)
 
+    def _create_technician_mode_section(self, container):
+        """
+        Create the technician mode section of the settings screen.
+
+        Args:
+            container: The parent container widget
+        """
+        # Technician mode frame
+        tech_frame = tb.LabelFrame(container, text="Advanced Settings", padding=15)
+        tech_frame.pack(fill=X, pady=5)
+
+        # Technician mode switch
+        self.tech_mode_var = tb.BooleanVar(
+            value=self.settings.get("technician_mode", False)
+        )
+        tech_switch = tb.Checkbutton(
+            tech_frame,
+            text="Technician Mode",
+            variable=self.tech_mode_var,
+            bootstyle="round-toggle",
+        )
+        tech_switch.pack(side=LEFT, padx=5)
+
+        # Add tooltip to the switch
+        ToolTip(
+            tech_switch,
+            text="Enable advanced features for service technicians.\nProvides access to diagnostic tools and detailed system information.",
+            bootstyle=(INFO, INVERSE),
+        )
+
     def _create_save_button(self, container):
         """
         Create the save settings button.
@@ -189,6 +226,7 @@ class SettingsScreen(tb.Frame):
 
         # Update and save settings
         self.settings["theme"] = selected_theme
+        self.settings["technician_mode"] = self.tech_mode_var.get()
         self.save_settings_to_file()
 
         # Confirm to user

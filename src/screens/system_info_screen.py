@@ -1,15 +1,67 @@
 import ttkbootstrap as tb
 from ttkbootstrap.constants import *
-import tkinter as tk
+from ttkbootstrap.tooltip import ToolTip
+
 from ..utils.system_utils import (
-    get_system_info,
     get_battery_info,
     get_cpu_info,
-    get_memory_info,
     get_disk_info,
+    get_memory_info,
     get_network_info,
-    get_boot_info,
+    get_system_info,
 )
+
+TOOLTIP_DESCRIPTIONS = {
+    # System
+    "Operating System": "The installed OS platform, indicating the system’s environment (e.g., Windows, Linux).",
+    "OS Version": "Detailed version info, useful for compatibility and updates.",
+    "Hostname": "The network name of your device, used to identify it on local networks.",
+    "Machine": "The system's hardware architecture (e.g., x86_64), which affects software compatibility.",
+    "Processor": "The name/model of the CPU, helpful for assessing performance.",
+    "MAC Address": "A unique hardware address for network interfaces, used for identification on networks.",
+    "Architecture": "System hardware architecture (e.g., x86_64, ARM). Affects compatibility with software.",
+    "Kernel Version": "The core OS kernel version — useful for debugging OS-level issues.",
+    "Username": "Currently logged-in user — useful for identifying session context.",
+    "BIOS Version": "Firmware version of the system BIOS — helps determine hardware compatibility.",
+    "System Manufacturer": "OEM or vendor who built the system — useful for warranty/service.",
+    "System Model": "Model name/number — helpful for parts lookup or specs matching.",
+    "Secure Boot": "Indicates if Secure Boot is enabled — part of system security configuration.",
+    "Boot Time": "The exact date and time when the system was last started.",
+    "Uptime": "How long your device has been running since the last boot — useful for monitoring stability.",
+    "Locale": "Language and region settings — affects date/time, number formatting, etc.",
+    "Timezone": "The system's current timezone setting.",
+    # CPU
+    "Physical Cores": "The number of actual, physical CPU cores — affects multitasking capability.",
+    "Total Cores": "Includes both physical and virtual (logical) cores — important for parallel processing.",
+    "CPU Usage": "Real-time percentage of CPU workload — useful to monitor performance bottlenecks.",
+    "CPU Frequency": "Current operating speed of the CPU in MHz — fluctuates with system load.",
+    "CPU Max Frequency": "Maximum rated speed your CPU can reach under load.",
+    # Memory
+    "Total Memory": "Total RAM installed — more allows better multitasking and app performance.",
+    "Available Memory": "Unused RAM currently available for apps — low values may indicate high usage.",
+    "Used Memory": "RAM actively being used — helps assess system demand.",
+    "Total Swap": "Disk-based memory used when RAM is full — slower than RAM but prevents crashes.",
+    "Used Swap": "Portion of swap space currently in use — consistently high values may suggest low RAM.",
+    # Boot Time
+    "Boot Time": "The exact date and time when the system was last started.",
+    "Uptime": "How long your device has been running since the last boot — useful for monitoring stability.",
+    # Battery
+    "Battery Level": "Current battery charge in percentage — useful for checking how long before recharge.",
+    "Vendor": "Battery manufacturer — may help with warranty or replacement.",
+    "Serial Number": "Unique identifier for the battery — useful for support and tracking.",
+    "Technology": "Battery type (e.g., Li-ion) — affects lifespan and charging behavior.",
+    "Power Status": "Whether the battery is charging, discharging, or idle.",
+    "Battery Health": "Estimated battery capacity left compared to original — a sign of battery health.",
+    "Temperature": "Battery temperature in Celsius — high values may indicate stress or danger.",
+    "Charge Cycles": "Number of full charge/discharge cycles — more cycles mean more wear.",
+    "Current Energy": "Current stored energy in the battery — typically in Wh or mWh.",
+    "Energy When Full": "Estimated energy the battery can store when fully charged.",
+    "Design Energy": "Original designed energy capacity — helps determine battery wear.",
+    "Energy Rate": "How fast energy is being consumed or charged — measured in watts.",
+    "Voltage": "Current voltage across the battery terminals — fluctuates during usage.",
+    "Time Until Empty": "Estimated time remaining on current charge if unplugged.",
+    "Time Until Full": "Estimated time to fully recharge the battery.",
+}
 
 
 class CollapsibleSection(tb.Labelframe):
@@ -127,7 +179,6 @@ class SystemInfoScreen(tb.Frame):
             ("Memory", get_memory_info()),
             ("Disks", get_disk_info()),
             ("Network", get_network_info()),
-            ("Boot Time", get_boot_info()),
             ("Battery", get_battery_info()),
         ]
 
@@ -150,6 +201,14 @@ class SystemInfoScreen(tb.Frame):
 
                 value_label = tb.Label(frame, text=value, anchor=W)
                 value_label.pack(side=LEFT, fill=X, expand=True)
+
+                # Add a tooltip to the key label
+                description = TOOLTIP_DESCRIPTIONS.get(key, "No description available.")
+                ToolTip(key_label, text=description)
+
+                # Add a horizontal line separator
+                separator = tb.Separator(section_frame.content_frame, orient=HORIZONTAL)
+                separator.pack(fill=X, pady=2)
 
                 self.info_labels[f"{section}_{key}"] = value_label
 
@@ -197,7 +256,6 @@ class SystemInfoScreen(tb.Frame):
             ("Memory", get_memory_info()),
             ("Disks", get_disk_info()),
             ("Network", get_network_info()),
-            ("Boot Time", get_boot_info()),
             ("Battery", get_battery_info()),
         ]:
             for key, value in items.items():

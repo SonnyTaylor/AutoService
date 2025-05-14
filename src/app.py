@@ -5,6 +5,19 @@ from .screens.scan_screen import ScanScreen
 from .screens.system_info_screen import SystemInfoScreen
 from .screens.tools_screen import ToolsScreen
 from .screens.settings_screen import SettingsScreen
+import os
+import sys
+
+
+def resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller"""
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+
+    return os.path.join(base_path, relative_path)
 
 
 class AutoService:
@@ -28,8 +41,12 @@ class AutoService:
         self.root.geometry("1000x800")
 
         # Set the taskbar icon
-        icon_path = "resources/favicon.ico"
-        self.root.iconbitmap(icon_path)
+        try:
+            icon_path = resource_path("resources/favicon.ico")
+            self.root.iconbitmap(icon_path)
+        except Exception:
+            # If icon loading fails, continue without it
+            pass
 
         # Configure application theme and button style
         self.style = tb.Style("darkly")
