@@ -17,7 +17,7 @@ def main():
         root = tb.Window(themename="darkly")
 
         # Initialize the AutoService application
-        app = AutoService(root)
+        _app = AutoService(root)
 
         # Start the application event loop
         root.mainloop()
