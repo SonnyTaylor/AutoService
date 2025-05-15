@@ -138,6 +138,14 @@ class SystemInfoScreen(tb.Frame):
         self.create_widgets()
         self.update_system_info()
 
+    def _bind_mousewheel_recursive(self, widget):
+        """
+        Recursively bind <MouseWheel> event to all child widgets to ensure scrolling works anywhere.
+        """
+        widget.bind("<MouseWheel>", self._on_mousewheel)
+        for child in widget.winfo_children():
+            self._bind_mousewheel_recursive(child)
+
     def create_widgets(self):
         """Create and arrange all widgets for the system information display."""
         # System Info Frame
@@ -168,8 +176,8 @@ class SystemInfoScreen(tb.Frame):
         self.canvas.pack(side=LEFT, fill=BOTH, expand=True)
         scrollbar.pack(side=RIGHT, fill=Y)
 
-        # Bind mouse wheel scrolling
-        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+        # Bind mouse wheel event to the root window
+        self.winfo_toplevel().bind("<MouseWheel>", self._on_mousewheel)
 
         # Create sections for different types of system information
         self.info_labels = {}
@@ -246,7 +254,18 @@ class SystemInfoScreen(tb.Frame):
         Args:
             event: The MouseWheel event
         """
-        self.canvas.yview_scroll(-1 * (event.delta // 120), "units")
+        # Get the widget under the mouse
+        x = self.winfo_rootx() + event.x
+        y = self.winfo_rooty() + event.y
+        widget_under_mouse = event.widget.winfo_containing(x, y)
+
+        # Check if the widget under the mouse is part of our frame
+        current = widget_under_mouse
+        while current is not None:
+            if current == self:
+                self.canvas.yview_scroll(-1 * (event.delta // 120), "units")
+                break
+            current = current.master
 
     def update_system_info(self):
         """Update all dynamic system information in the display."""
