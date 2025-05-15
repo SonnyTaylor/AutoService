@@ -34,7 +34,9 @@ def is_admin():
     """Check if the program is running with admin privileges."""
     try:
         return ctypes.windll.shell32.IsUserAnAdmin()
-    except:
+    except (AttributeError, OSError):
+        # AttributeError if not on Windows or windll not available
+        # OSError if the Windows API call fails
         return False
 
 
