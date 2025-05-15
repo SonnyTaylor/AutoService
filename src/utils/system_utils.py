@@ -5,7 +5,7 @@ import socket
 import locale
 import time
 import os
-import subprocess
+import wmi
 from datetime import datetime, timedelta
 from uuid import getnode as get_mac_address
 
@@ -23,50 +23,40 @@ def get_system_info():
     try:
         user = os.getlogin()
     except Exception:
-        user = os.environ.get("USERNAME") or os.environ.get("USER") or "N/A"
+        user = os.environ.get("USERNAME") or "N/A"
 
     # Uptime in case not elsewhere
     boot_time = datetime.fromtimestamp(psutil.boot_time())
     uptime = datetime.now() - boot_time
 
-    # Try to get BIOS, Manufacturer, Model (Windows/Linux)
+    # Get BIOS, Manufacturer, Model using WMI
     bios_version = "N/A"
     system_model = "N/A"
     system_manufacturer = "N/A"
     secure_boot = "N/A"
 
-    if system == "Windows":
-        try:
-            output = subprocess.check_output(
-                ["wmic", "bios", "get", "SMBIOSBIOSVersion"], text=True
-            )
-            bios_version = output.strip().split("\n")[1].strip()
-            output = subprocess.check_output(
-                ["wmic", "computersystem", "get", "manufacturer"], text=True
-            )
-            system_manufacturer = output.strip().split("\n")[1].strip()
-            output = subprocess.check_output(
-                ["wmic", "computersystem", "get", "model"], text=True
-            )
-            system_model = output.strip().split("\n")[1].strip()
-            output = subprocess.check_output(
-                ["powershell", "-Command", "(Confirm-SecureBootUEFI)"], text=True
-            )
-            secure_boot = output.strip()
-        except Exception:
-            pass
-    elif system == "Linux":
-        try:
-            with open("/sys/class/dmi/id/bios_version") as f:
-                bios_version = f.read().strip()
-            with open("/sys/class/dmi/id/sys_vendor") as f:
-                system_manufacturer = f.read().strip()
-            with open("/sys/class/dmi/id/product_name") as f:
-                system_model = f.read().strip()
-            with open("/sys/firmware/efi/efivars/SecureBoot-*/data", "rb") as f:
-                secure_boot = "Enabled" if f.read(1) == b"\x01" else "Disabled"
-        except Exception:
-            pass
+    try:
+        w = wmi.WMI()
+
+        # Get BIOS information
+        for bios in w.Win32_BIOS():
+            bios_version = bios.SMBIOSBIOSVersion
+            break
+
+        # Get System information
+        for system_info in w.Win32_ComputerSystem():
+            system_manufacturer = system_info.Manufacturer
+            system_model = system_info.Model
+            break
+
+        # Get Secure Boot status using WMI
+        for os_info in w.Win32_OperatingSystem():
+            if hasattr(os_info, "SecureBootEnabled"):
+                secure_boot = str(os_info.SecureBootEnabled)
+            break
+
+    except Exception as e:
+        print(f"Error getting WMI information: {e}")
 
     return {
         "Operating System": f"{system} {release}",

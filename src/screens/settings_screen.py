@@ -13,8 +13,8 @@ class SettingsScreen(tb.Frame):
     Currently supports theme selection and persistence of settings.
 
     The settings are stored in a JSON file, which is located:
-    - Next to the executable when running as a compiled application
-    - In the project root directory when running in development
+    - In the data/settings directory next to the executable when running as a compiled application
+    - In the data/settings directory in the project root when running in development
     """
 
     def __init__(self, master):
@@ -44,15 +44,16 @@ class SettingsScreen(tb.Frame):
         """Set up the paths for settings storage based on execution context."""
         if getattr(sys, "frozen", False):
             # Running as compiled executable
-            self.settings_dir = os.path.dirname(sys.executable)
+            self.base_dir = os.path.dirname(sys.executable)
         else:
             # Running in development
-            self.settings_dir = os.path.dirname(
+            self.base_dir = os.path.dirname(
                 os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             )
 
         # Define paths and ensure settings directory exists
-        self.settings_path = os.path.join(self.settings_dir, "settings")
+        self.data_dir = os.path.join(self.base_dir, "data")
+        self.settings_path = os.path.join(self.data_dir, "settings")
         self.settings_file = os.path.join(self.settings_path, "settings.json")
         os.makedirs(self.settings_path, exist_ok=True)
 

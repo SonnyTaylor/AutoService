@@ -1,0 +1,18 @@
+{
+    "programs": [
+        {
+            "name": "Crystal Disk Info",
+            "description": "HDD/SSD utility that displays the health status, temperature, and many other attributes of hard disk drives.",
+            "icon": "crystaldiskicon.png",
+            "executable": "DiskInfo64.exe",
+            "folder": "CrystalDiskInfo9_6_3",
+            "version": "9.6.3",
+            "usage_count": 1
+        },
+        {
+            "name": "CCleaner"
+            
+
+        }
+    ]
+}

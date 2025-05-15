@@ -5,6 +5,7 @@ from .screens.scan_screen import ScanScreen
 from .screens.system_info_screen import SystemInfoScreen
 from .screens.tools_screen import ToolsScreen
 from .screens.settings_screen import SettingsScreen
+from .screens.programs_screen import ProgramsScreen
 import os
 import sys
 
@@ -65,18 +66,21 @@ class AutoService:
         self.tab2 = tb.Frame(self.notebook)
         self.tab3 = tb.Frame(self.notebook)
         self.tab4 = tb.Frame(self.notebook)
+        self.tab5 = tb.Frame(self.notebook)
 
         # Add tabs to the notebook with their respective labels
         self.notebook.add(self.tab1, text="Scans")
         self.notebook.add(self.tab2, text="System Info")
         self.notebook.add(self.tab3, text="Tools")
-        self.notebook.add(self.tab4, text="Settings")
+        self.notebook.add(self.tab4, text="Programs")
+        self.notebook.add(self.tab5, text="Settings")
 
         # Initialize screen objects for each tab
         self.scan_screen = ScanScreen(self.tab1, self)
         self.system_info_screen = SystemInfoScreen(self.tab2)
         self.tools_screen = ToolsScreen(self.tab3)
-        self.settings_screen = SettingsScreen(self.tab4)
+        self.programs_screen = ProgramsScreen(self.tab4)
+        self.settings_screen = SettingsScreen(self.tab5)
 
         # Create status bar at the bottom of the window
         self.status_var = tk.StringVar()
