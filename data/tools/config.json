@@ -17,7 +17,7 @@
             "executable": "CCleaner.exe",
             "folder": "CCleaner635",
             "version": "6.35",
-            "usage_count": 1,
+            "usage_count": 2,
             "core": true
         },
         {
@@ -68,6 +68,15 @@
             "icon": "_exeicon.png",
             "version": "14.11",
             "usage_count": 0
+        },
+        {
+            "name": "TreeSize",
+            "description": "TreeSize is a hard disk space manager for Windows with customizable file search and several exporting and reporting possibilities.",
+            "folder": "TreeSizeFree-Portable",
+            "executable": "TreeSizeFree.exe",
+            "icon": "_exeicon.png",
+            "version": "4.73",
+            "usage_count": 1
         }
     ]
 }

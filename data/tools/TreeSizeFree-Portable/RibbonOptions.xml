@@ -1,0 +1,1 @@
+<siq:customUI xmlns:siq="http://schemas.microsoft.com/windows/2009/ribbon/qat"><siq:ribbon minimized="false"><siq:qat position="0"><siq:sharedControls><siq:control idQ="siq:126" visible="true" argument="0" /><siq:control idQ="siq:127" visible="true" argument="0" /></siq:sharedControls></siq:qat></siq:ribbon></siq:customUI>
