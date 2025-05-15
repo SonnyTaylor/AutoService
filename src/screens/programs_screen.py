@@ -827,12 +827,6 @@ class AddProgramDialog(tb.Toplevel):
                 message="Please select an executable first."
             )
 
-    def update_preview(self):
-        """Update the icon preview when icon selection changes."""
-        # Note: If you want to add visual icon preview functionality,
-        # you can implement it here in the future
-        pass
-
     def add_program(self):
         """Add the new program to the configuration."""
         if not self.validate_inputs():
