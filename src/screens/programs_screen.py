@@ -1,18 +1,19 @@
-import ttkbootstrap as tb
-from ttkbootstrap.constants import BOTH, YES, LEFT, RIGHT, X, VERTICAL
-from ttkbootstrap.dialogs import Messagebox
-from PIL import Image, ImageTk
-import subprocess
-from pathlib import Path
-import sys
-import json
 import ctypes
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+import ttkbootstrap as tb
+from PIL import Image, ImageTk
+from ttkbootstrap.constants import BOTH, LEFT, RIGHT, VERTICAL, YES, X
+from ttkbootstrap.dialogs import Messagebox
 
 try:
     import win32api
     import win32con
-    import win32ui
     import win32gui
+    import win32ui
 except ImportError:
     win32api = win32con = win32ui = win32gui = None
 

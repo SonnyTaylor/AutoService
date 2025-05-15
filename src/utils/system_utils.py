@@ -6,7 +6,7 @@ import locale
 import time
 import os
 import wmi
-from datetime import datetime, timedelta
+from datetime import datetime
 from uuid import getnode as get_mac_address
 
 
