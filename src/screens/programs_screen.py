@@ -744,7 +744,7 @@ class AddProgramDialog(tb.Toplevel):
             folder_frame, text="Program Folder:", width=15, anchor="w"
         )
         folder_label.pack(side=LEFT)
-        self.folder_combo = tb.Combobox(folder_frame, textvariable=self.folder_var)
+        self.folder_combo = tb.Combobox(folder_frame, textvariable=self.folder_var, state="readonly")
         self.folder_combo.pack(side=LEFT, fill=X, expand=YES)
 
         # Executable
@@ -752,7 +752,7 @@ class AddProgramDialog(tb.Toplevel):
         exe_frame.pack(fill=X, pady=(0, 10))
         exe_label = tb.Label(exe_frame, text="Executable:", width=15, anchor="w")
         exe_label.pack(side=LEFT)
-        self.exe_combo = tb.Combobox(exe_frame, textvariable=self.exe_var)
+        self.exe_combo = tb.Combobox(exe_frame, textvariable=self.exe_var, state="readonly")
         self.exe_combo.pack(side=LEFT, fill=X, expand=YES)
 
         # Icon
@@ -760,7 +760,7 @@ class AddProgramDialog(tb.Toplevel):
         icon_frame.pack(fill=X, pady=(0, 5))
         icon_label = tb.Label(icon_frame, text="Icon:", width=15, anchor="w")
         icon_label.pack(side=LEFT)
-        self.icon_combo = tb.Combobox(icon_frame, textvariable=self.icon_var)
+        self.icon_combo = tb.Combobox(icon_frame, textvariable=self.icon_var, state="readonly")
         self.icon_combo.pack(side=LEFT, fill=X, expand=YES)
 
         # Buttons Frame at the bottom
