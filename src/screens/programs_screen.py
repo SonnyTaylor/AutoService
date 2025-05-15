@@ -35,11 +35,28 @@ def extract_exe_icon_to_png(exe_path, output_png_path):
             hbmp.CreateCompatibleBitmap(hdc, ico_x, ico_y)
             hdc_mem = hdc.CreateCompatibleDC()
             hdc_mem.SelectObject(hbmp)
-            win32gui.DrawIconEx(hdc_mem.GetSafeHdc(), 0, 0, hicon, ico_x, ico_y, 0, None, win32con.DI_NORMAL)
+            win32gui.DrawIconEx(
+                hdc_mem.GetSafeHdc(),
+                0,
+                0,
+                hicon,
+                ico_x,
+                ico_y,
+                0,
+                None,
+                win32con.DI_NORMAL,
+            )
             bmpinfo = hbmp.GetInfo()
             bmpstr = hbmp.GetBitmapBits(True)
-            img = Image.frombuffer('RGBA', (bmpinfo['bmWidth'], bmpinfo['bmHeight']), bmpstr, 'raw', 'BGRA', 0, 1)
-            img = img.transpose(Image.FLIP_TOP_BOTTOM)
+            img = Image.frombuffer(
+                "RGBA",
+                (bmpinfo["bmWidth"], bmpinfo["bmHeight"]),
+                bmpstr,
+                "raw",
+                "BGRA",
+                0,
+                1,
+            )
             img.save(output_png_path)
             win32gui.DestroyIcon(hicon)
             return True
@@ -358,13 +375,20 @@ def _handle_use_exe_icon(self):
             self.icon_var.set("_exeicon.png")
             self.update_preview()
         else:
-            Messagebox.show_error(title="Icon Extraction Failed", message="Could not extract icon from EXE. pywin32 must be installed and the EXE must have an icon.")
+            Messagebox.show_error(
+                title="Icon Extraction Failed",
+                message="Could not extract icon from EXE. pywin32 must be installed and the EXE must have an icon.",
+            )
     else:
-        Messagebox.show_warning(title="No EXE Selected", message="Please select an executable first.")
+        Messagebox.show_warning(
+            title="No EXE Selected", message="Please select an executable first."
+        )
+
 
 def on_icon_selected(self, event):
     if self.icon_combo.get() == "[Use EXE icon]":
         self._handle_use_exe_icon()
+
 
 class EditProgramDialog(tb.Toplevel):
     """Dialog for editing an existing program."""
@@ -716,7 +740,9 @@ class AddProgramDialog(tb.Toplevel):
         # Program Folder
         folder_frame = tb.Frame(content_frame)
         folder_frame.pack(fill=X, pady=(0, 10))
-        folder_label = tb.Label(folder_frame, text="Program Folder:", width=15, anchor="w")
+        folder_label = tb.Label(
+            folder_frame, text="Program Folder:", width=15, anchor="w"
+        )
         folder_label.pack(side=LEFT)
         self.folder_combo = tb.Combobox(folder_frame, textvariable=self.folder_var)
         self.folder_combo.pack(side=LEFT, fill=X, expand=YES)
@@ -819,12 +845,11 @@ class AddProgramDialog(tb.Toplevel):
             else:
                 Messagebox.show_error(
                     title="Icon Extraction Failed",
-                    message="Could not extract icon from EXE. pywin32 must be installed and the EXE must have an icon."
+                    message="Could not extract icon from EXE. pywin32 must be installed and the EXE must have an icon.",
                 )
         else:
             Messagebox.show_warning(
-                title="No EXE Selected",
-                message="Please select an executable first."
+                title="No EXE Selected", message="Please select an executable first."
             )
 
     def add_program(self):
@@ -938,8 +963,6 @@ class ProgramsScreen(tb.Frame):
 
         # Refresh the display
         self.filter_and_sort_programs()
-
-
 
     def create_widgets(self):
         """Create and arrange all widgets for the programs interface."""
@@ -1069,7 +1092,7 @@ class ProgramsScreen(tb.Frame):
         # Get the total height of content and visible area
         content_height = self.scrollable_frame.winfo_reqheight()
         visible_height = self.canvas.winfo_height()
-        
+
         # Only enable scrolling if content is taller than visible area
         if content_height > visible_height:
             self.canvas.configure(scrollregion=(0, 0, 0, content_height))
@@ -1082,16 +1105,18 @@ class ProgramsScreen(tb.Frame):
     def configure_canvas_window(self, event):
         """Configure the canvas window width and update scroll region."""
         # Set canvas width immediately but batch the update
-        self.canvas.after_idle(lambda: self.canvas.itemconfig("window", width=event.width - 5))
-        
+        self.canvas.after_idle(
+            lambda: self.canvas.itemconfig("window", width=event.width - 5)
+        )
+
         # Cancel any existing timer
         if self._resize_timer is not None:
             self.after_cancel(self._resize_timer)
             self._resize_timer = None
-        
+
         # Use a longer delay and batch updates
         self._resize_timer = self.after(200, self._update_scroll_region)
-    
+
     def _update_scroll_region(self):
         """Update the scroll region after resize."""
         try:
@@ -1099,31 +1124,35 @@ class ProgramsScreen(tb.Frame):
             content_height = self.scrollable_frame.winfo_reqheight()
             visible_height = self.canvas.winfo_height()
             current_view = self.canvas.yview()
-            
+
             # Prepare updates
             updates = {}
-            
+
             # Only enable scrolling if content is taller than visible area
             if content_height > visible_height:
-                updates['scrollregion'] = (0, 0, 0, content_height)
+                updates["scrollregion"] = (0, 0, 0, content_height)
                 # Batch grid management
-                self.after_idle(lambda: self.scrollbar.grid(row=0, column=1, sticky="ns"))
+                self.after_idle(
+                    lambda: self.scrollbar.grid(row=0, column=1, sticky="ns")
+                )
                 # Keep scroll position
-                updates['yscrollcommand'] = self.scrollbar.set
+                updates["yscrollcommand"] = self.scrollbar.set
             else:
-                updates['scrollregion'] = (0, 0, 0, visible_height)
+                updates["scrollregion"] = (0, 0, 0, visible_height)
                 # Batch grid management
                 self.after_idle(lambda: self.scrollbar.grid_remove())
                 # Reset scroll position
-                updates['yscrollcommand'] = lambda *args: None
-            
+                updates["yscrollcommand"] = lambda *args: None
+
             # Apply all updates at once
             self.canvas.configure(**updates)
-            
+
             # Restore scroll position if needed
             if content_height > visible_height:
-                self.canvas.after_idle(lambda: self.canvas.yview_moveto(current_view[0]))
-        
+                self.canvas.after_idle(
+                    lambda: self.canvas.yview_moveto(current_view[0])
+                )
+
         except Exception:
             pass
         finally:
@@ -1133,12 +1162,12 @@ class ProgramsScreen(tb.Frame):
         """Handle mousewheel scrolling."""
         content_height = self.scrollable_frame.winfo_reqheight()
         visible_height = self.canvas.winfo_height()
-        
+
         # Only allow scrolling if content is taller than visible area
         if content_height > visible_height:
             # Get current scroll position and size
             current_pos = self.canvas.yview()
-            
+
             # Check if we're at the top or bottom before scrolling
             if event.delta > 0 and current_pos[0] > 0:
                 # Scroll up
