@@ -1,7 +1,7 @@
 import subprocess
 
 import ttkbootstrap as tb
-from ttkbootstrap.constants import *
+from ttkbootstrap.constants import BOTH, YES, PRIMARY
 from ttkbootstrap.dialogs import Messagebox
 
 
