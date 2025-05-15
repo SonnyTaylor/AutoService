@@ -100,6 +100,9 @@ class ProgramCard(tb.Frame):
         buttons_frame = tb.Frame(content_frame)
         buttons_frame.pack(side=RIGHT, padx=5)
 
+        # Check if program is core
+        is_core = program_data.get("core", False)  # Default to False if not specified
+
         # Run button
         run_btn = tb.Button(
             buttons_frame,
@@ -110,8 +113,28 @@ class ProgramCard(tb.Frame):
         )
         run_btn.pack(side=LEFT, padx=(0, 5))
 
+        # Edit button - disabled for core programs
+        edit_btn = tb.Button(
+            buttons_frame,
+            text="✎",  # Using pencil symbol for edit
+            command=self.edit_program if not is_core else None,
+            bootstyle="info" if not is_core else "secondary",
+            width=3,
+            state="normal" if not is_core else "disabled",
+        )
+        edit_btn.pack(side=LEFT, padx=(0, 5))
+
+        # Add tooltip for disabled edit button
+        if is_core:
+            from ttkbootstrap.tooltip import ToolTip
+
+            ToolTip(
+                edit_btn,
+                text="This is a core program and cannot be edited",
+                bootstyle="secondary",
+            )
+
         # Delete button - disabled for core programs
-        is_core = program_data.get("core", False)  # Default to False if not specified
         delete_btn = tb.Button(
             buttons_frame,
             text="×",  # Using × symbol for delete
@@ -248,6 +271,323 @@ class ProgramCard(tb.Frame):
                     f"Config file: {programs_screen.config_file}\n"
                     f"Program folder: {program_folder if 'program_folder' in locals() else 'Not found'}",
                 )
+
+    def edit_program(self):
+        """Show dialog to edit the program."""
+        # Check if program is core
+        if self.program_data.get("core", False):
+            tb.dialogs.Messagebox.show_warning(
+                title="Cannot Edit",
+                message=f"{self.program_data['name']} is a core program and cannot be edited.",
+            )
+            return
+
+        # Get parent ProgramsScreen instance
+        parent = self
+        while parent and not isinstance(parent, ProgramsScreen):
+            parent = parent.master
+
+        if not parent:
+            raise Exception("Could not find ProgramsScreen instance")
+
+        programs_screen = parent
+
+        # Show edit dialog
+        dialog = EditProgramDialog(
+            programs_screen,
+            programs_screen.tools_dir,
+            self.program_data,
+            programs_screen.update_program,
+        )
+        dialog.grab_set()  # Make dialog modal
+
+
+class EditProgramDialog(tb.Toplevel):
+    """Dialog for editing an existing program."""
+
+    def __init__(self, parent, tools_dir, program_data, on_program_updated):
+        """
+        Initialize the edit program dialog.
+
+        Args:
+            parent: Parent widget
+            tools_dir: Path to the tools directory
+            program_data: Dictionary containing the program's current information
+            on_program_updated: Callback function when program is updated
+        """
+        super().__init__(parent)
+        self.tools_dir = Path(tools_dir)  # Ensure it's a Path object
+        self.program_data = program_data
+        self.on_program_updated = on_program_updated
+
+        # Initialize variables first
+        self.name_var = tb.StringVar(value=program_data["name"])
+        self.folder_var = tb.StringVar(value=program_data["folder"])
+        self.exe_var = tb.StringVar(value=program_data["executable"])
+        self.version_var = tb.StringVar(value=program_data["version"])
+        self.icon_var = tb.StringVar(value=program_data["icon"])
+
+        # Initialize combo boxes as None first
+        self.folder_combo = None
+        self.exe_combo = None
+        self.icon_combo = None
+        self.desc_text = None
+        self.preview_label = None
+
+        # Configure dialog
+        self.title(f"Edit Program - {program_data['name']}")
+        self.geometry("600x600")
+        self.resizable(False, False)
+
+        # Create the interface
+        self.create_interface()
+
+        # Now that everything is initialized, refresh the folder list
+        self.refresh_folder_list()
+
+        # Set description text
+        self.desc_text.insert("1.0", program_data["description"])
+
+    def create_interface(self):
+        """Create and arrange all interface elements."""
+        # Create main frame with padding
+        main_frame = tb.Frame(self, padding=20)
+        main_frame.pack(fill=BOTH, expand=YES)
+
+        # Content frame for all inputs
+        content_frame = tb.Frame(main_frame)
+        content_frame.pack(fill=BOTH, expand=YES)
+
+        # Program Name
+        name_frame = tb.Frame(content_frame)
+        name_frame.pack(fill=X, pady=(0, 10))
+        name_label = tb.Label(name_frame, text="Program Name:", width=15, anchor="w")
+        name_label.pack(side=LEFT)
+        tb.Entry(name_frame, textvariable=self.name_var).pack(
+            side=LEFT, fill=X, expand=YES, padx=(10, 0)
+        )
+
+        # Description
+        desc_frame = tb.Frame(content_frame)
+        desc_frame.pack(fill=X, pady=(0, 10))
+        desc_label = tb.Label(desc_frame, text="Description:", width=15, anchor="nw")
+        desc_label.pack(side=LEFT, anchor="n")
+        self.desc_text = tb.Text(desc_frame, height=3, width=50)
+        self.desc_text.pack(side=LEFT, fill=X, expand=YES, padx=(10, 0))
+
+        # Folder Selection
+        folder_frame = tb.Frame(content_frame)
+        folder_frame.pack(fill=X, pady=(0, 10))
+        folder_label = tb.Label(
+            folder_frame, text="Program Folder:", width=15, anchor="w"
+        )
+        folder_label.pack(side=LEFT)
+        self.folder_combo = tb.Combobox(
+            folder_frame, textvariable=self.folder_var, state="readonly"
+        )
+        self.folder_combo.pack(side=LEFT, fill=X, expand=YES, padx=(10, 0))
+
+        # Executable Selection
+        exe_frame = tb.Frame(content_frame)
+        exe_frame.pack(fill=X, pady=(0, 10))
+        exe_label = tb.Label(exe_frame, text="Executable:", width=15, anchor="w")
+        exe_label.pack(side=LEFT)
+        self.exe_combo = tb.Combobox(
+            exe_frame, textvariable=self.exe_var, state="readonly"
+        )
+        self.exe_combo.pack(side=LEFT, fill=X, expand=YES, padx=(10, 0))
+
+        # Version
+        version_frame = tb.Frame(content_frame)
+        version_frame.pack(fill=X, pady=(0, 10))
+        version_label = tb.Label(version_frame, text="Version:", width=15, anchor="w")
+        version_label.pack(side=LEFT)
+        tb.Entry(version_frame, textvariable=self.version_var).pack(
+            side=LEFT, fill=X, expand=YES, padx=(10, 0)
+        )
+
+        # Icon Selection
+        icon_frame = tb.Frame(content_frame)
+        icon_frame.pack(fill=X, pady=(0, 10))
+        icon_label = tb.Label(icon_frame, text="Icon:", width=15, anchor="w")
+        icon_label.pack(side=LEFT)
+        self.icon_combo = tb.Combobox(
+            icon_frame, textvariable=self.icon_var, state="readonly"
+        )
+        self.icon_combo.pack(side=LEFT, fill=X, expand=YES, padx=(10, 0))
+
+        # Preview Frame
+        preview_frame = tb.LabelFrame(content_frame, text="Preview", padding=10)
+        preview_frame.pack(fill=X, pady=(10, 20))
+        self.preview_label = tb.Label(
+            preview_frame, text="Select a folder to see program details"
+        )
+        self.preview_label.pack(fill=X)
+
+        # Buttons Frame at the bottom
+        btn_frame = tb.Frame(main_frame)
+        btn_frame.pack(fill=X, pady=(10, 0))
+
+        # Update Program button (left)
+        update_btn = tb.Button(
+            btn_frame,
+            text="Update Program",
+            command=self.update_program,
+            bootstyle="success",
+            width=15,
+        )
+        update_btn.pack(side=LEFT, padx=(0, 10))
+
+        # Cancel button (right)
+        cancel_btn = tb.Button(
+            btn_frame,
+            text="Cancel",
+            command=self.destroy,
+            bootstyle="secondary",
+            width=10,
+        )
+        cancel_btn.pack(side=RIGHT)
+
+        # Bind events after all widgets are created
+        self.folder_combo.bind("<<ComboboxSelected>>", self.on_folder_selected)
+        self.name_var.trace_add("write", lambda *args: self.update_preview())
+        self.version_var.trace_add("write", lambda *args: self.update_preview())
+        self.folder_var.trace_add("write", lambda *args: self.update_preview())
+        self.exe_var.trace_add("write", lambda *args: self.update_preview())
+        self.icon_var.trace_add("write", lambda *args: self.update_preview())
+
+    def refresh_folder_list(self):
+        """Refresh the list of available program folders."""
+        try:
+            if not self.tools_dir.exists():
+                Messagebox.show_warning(
+                    title="Warning",
+                    message=f"Tools directory not found at:\n{self.tools_dir}\n\nPlease create the directory and add program folders.",
+                )
+                return
+
+            folders = [d.name for d in self.tools_dir.iterdir() if d.is_dir()]
+            if not folders:
+                Messagebox.show_warning(
+                    title="No Folders Found",
+                    message=f"No program folders found in:\n{self.tools_dir}\n\nPlease add program folders first.",
+                )
+                return
+
+            self.folder_combo["values"] = folders
+            self.folder_combo.set(self.program_data["folder"])
+            self.on_folder_selected(None)
+
+        except Exception as e:
+            Messagebox.show_error(
+                title="Error",
+                message=f"Error loading program folders: {str(e)}\n\nPath: {self.tools_dir}",
+            )
+
+    def on_folder_selected(self, event):
+        """Update executable and icon lists when a folder is selected."""
+        try:
+            folder_path = self.tools_dir / self.folder_var.get()
+
+            # Update executable list
+            exes = list(folder_path.glob("*.exe"))
+            self.exe_combo["values"] = [exe.name for exe in exes]
+            if self.program_data["executable"] in [exe.name for exe in exes]:
+                self.exe_combo.set(self.program_data["executable"])
+            elif exes:
+                self.exe_combo.set(exes[0].name)
+            else:
+                self.exe_combo.set("")
+
+            # Update icon list
+            icons = list(folder_path.glob("*.ico")) + list(folder_path.glob("*.png"))
+            self.icon_combo["values"] = [icon.name for icon in icons]
+            if self.program_data["icon"] in [icon.name for icon in icons]:
+                self.icon_combo.set(self.program_data["icon"])
+            elif icons:
+                self.icon_combo.set(icons[0].name)
+            else:
+                self.icon_combo.set("")
+
+            # Update preview
+            self.update_preview()
+
+        except Exception as e:
+            Messagebox.show_error(
+                title="Error", message=f"Error loading folder contents: {str(e)}"
+            )
+
+    def update_preview(self):
+        """Update the preview of the program details."""
+        preview_text = f"Program: {self.name_var.get() or '[Program Name]'}\n"
+        preview_text += f"Version: {self.version_var.get() or '[Version]'}\n"
+        preview_text += f"Folder: {self.folder_var.get() or '[Folder]'}\n"
+        preview_text += f"Executable: {self.exe_var.get() or '[Executable]'}\n"
+        preview_text += f"Icon: {self.icon_var.get() or '[Icon]'}\n"
+        preview_text += (
+            f"Description: {self.desc_text.get('1.0', 'end-1c') or '[Description]'}"
+        )
+
+        self.preview_label.configure(text=preview_text)
+
+    def validate_inputs(self):
+        """Validate all input fields."""
+        if not self.name_var.get().strip():
+            Messagebox.show_warning(
+                title="Validation Error", message="Please enter a program name."
+            )
+            return False
+
+        if not self.desc_text.get("1.0", "end-1c").strip():
+            Messagebox.show_warning(
+                title="Validation Error", message="Please enter a program description."
+            )
+            return False
+
+        if not self.folder_var.get():
+            Messagebox.show_warning(
+                title="Validation Error", message="Please select a program folder."
+            )
+            return False
+
+        if not self.exe_var.get():
+            Messagebox.show_warning(
+                title="Validation Error", message="Please select an executable."
+            )
+            return False
+
+        if not self.version_var.get().strip():
+            Messagebox.show_warning(
+                title="Validation Error", message="Please enter a version number."
+            )
+            return False
+
+        if not self.icon_var.get():
+            Messagebox.show_warning(
+                title="Validation Error", message="Please select an icon."
+            )
+            return False
+
+        return True
+
+    def update_program(self):
+        """Update the program in the configuration."""
+        if not self.validate_inputs():
+            return
+
+        updated_program = {
+            "name": self.name_var.get().strip(),
+            "description": self.desc_text.get("1.0", "end-1c").strip(),
+            "folder": self.folder_var.get(),
+            "executable": self.exe_var.get(),
+            "icon": self.icon_var.get(),
+            "version": self.version_var.get().strip(),
+            "usage_count": self.program_data.get("usage_count", 0),
+            "core": self.program_data.get("core", False),
+        }
+
+        self.on_program_updated(self.program_data["name"], updated_program)
+        self.destroy()
 
 
 class AddProgramDialog(tb.Toplevel):
@@ -809,4 +1149,30 @@ class ProgramsScreen(tb.Frame):
         Messagebox.show_info(
             title="Success",
             message=f"Program '{new_program['name']}' has been added successfully!",
+        )
+
+    def update_program(self, old_name, new_program):
+        """
+        Update an existing program in the configuration.
+
+        Args:
+            old_name: The name of the program to be updated
+            new_program: Dictionary containing the updated program's information
+        """
+        # Find and update the program in all_programs
+        for i, prog in enumerate(self.all_programs):
+            if prog["name"] == old_name:
+                self.all_programs[i] = new_program
+                break
+
+        # Save the updated configuration
+        self.save_programs_config()
+
+        # Refresh the display
+        self.filter_and_sort_programs()
+
+        # Show success message
+        Messagebox.show_info(
+            title="Success",
+            message=f"Program '{old_name}' has been updated successfully!",
         )

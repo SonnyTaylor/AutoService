@@ -43,7 +43,7 @@ class AutoService:
 
         # Set the taskbar icon
         try:
-            icon_path = resource_path("resources/favicon.ico")
+            icon_path = resource_path("data/resources/favicon.ico")
             self.root.iconbitmap(icon_path)
         except Exception:
             # If icon loading fails, continue without it

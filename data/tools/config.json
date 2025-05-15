@@ -29,6 +29,25 @@
             "version": "1.54.120",
             "usage_count": 0,
             "core": false
+        },
+        {
+            "name": "Display Driver Uninstaller",
+            "description": "A driver removal utility that can help you completely uninstall AMD/NVIDIA/INTEL graphics card drivers and packages from your system",
+            "folder": "DDU",
+            "executable": "DDU v18.1.1.1.exe",
+            "icon": "DDU.png",
+            "version": "18.1.1.1",
+            "usage_count": 0,
+            "core": false
+        },
+        {
+            "name": "Blue Screen View",
+            "description": "BlueScreenView scans all your minidump files created during 'blue screen of death' crashes, and displays the information about all crashes in one table.",
+            "folder": "bluescreenview",
+            "executable": "BlueScreenView.exe",
+            "icon": "bluescreenviewicon.png",
+            "version": "1.55",
+            "usage_count": 0
         }
     ]
 }
