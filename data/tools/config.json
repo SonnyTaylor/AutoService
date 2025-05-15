@@ -2,7 +2,7 @@
     "programs": [
         {
             "name": "Crystal Disk Info",
-            "description": "HDD/SSD utility that displays the health status, temperature, and many other attributes of hard disk drives.",
+            "description": "A comprehensive utility for monitoring HDD and SSD health, temperature, and other critical drive attributes.",
             "icon": "crystaldiskicon.png",
             "executable": "DiskInfo64.exe",
             "folder": "CrystalDiskInfo9_6_3",
@@ -12,7 +12,7 @@
         },
         {
             "name": "CCleaner",
-            "description": "A utility to clean potentially unwanted files and invalid Windows Registry entries from a computer.",
+            "description": "A system optimization tool that removes junk files and cleans invalid Windows Registry entries to improve performance.",
             "icon": "ccleaner.png",
             "executable": "CCleaner.exe",
             "folder": "CCleaner635",
@@ -22,7 +22,7 @@
         },
         {
             "name": "Recuva",
-            "description": "Recuva is an application designed to recover files that have been accidentally deleted from your computer.",
+            "description": "A file recovery tool designed to restore deleted files from hard drives, USB drives, memory cards, and more.",
             "folder": "Recuva",
             "executable": "rcvPortable.exe",
             "icon": "rcvPortable_128-removebg-preview.png",
@@ -32,7 +32,7 @@
         },
         {
             "name": "Display Driver Uninstaller",
-            "description": "A driver removal utility that can help you completely uninstall AMD/NVIDIA/INTEL graphics card drivers and packages from your system",
+            "description": "A specialized utility for completely removing AMD, NVIDIA, and Intel graphics drivers from your system.",
             "folder": "DDU",
             "executable": "DDU v18.1.1.1.exe",
             "icon": "DDU.png",
@@ -42,7 +42,7 @@
         },
         {
             "name": "Blue Screen View",
-            "description": "BlueScreenView scans all your minidump files created during 'blue screen of death' crashes, and displays the information about all crashes in one table.",
+            "description": "Analyzes minidump files created during BSOD crashes and displays crash details in a clear, sortable table.",
             "folder": "bluescreenview",
             "executable": "BlueScreenView.exe",
             "icon": "bluescreenviewicon-removebg-preview.png",
