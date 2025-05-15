@@ -5,15 +5,15 @@ from ttkbootstrap.constants import *
 from ttkbootstrap.dialogs import Messagebox
 
 
-class ToolsScreen(tb.Frame):
+class UtilitiesScreen(tb.Frame):
     """
-    A screen that provides quick access to common Windows system tools and utilities.
+    A screen that provides quick access to common Windows system utilities and tools.
     Displays a grid of buttons that launch various system management programs.
     """
 
     def __init__(self, master):
         """
-        Initialize the tools screen.
+        Initialize the utilities screen.
 
         Args:
             master: Parent widget
@@ -24,10 +24,10 @@ class ToolsScreen(tb.Frame):
         self.create_widgets()
 
     def create_widgets(self):
-        """Create and arrange all widgets for the tools interface."""
-        # Create main tools container frame
+        """Create and arrange all widgets for the utilities interface."""
+        # Create main utilities container frame
         tools_frame = tb.LabelFrame(
-            self, text=" System Tools ", bootstyle="success", padding=15
+            self, text=" System Utilities ", bootstyle="success", padding=15
         )
         tools_frame.pack(fill=BOTH, expand=YES, pady=10)
 

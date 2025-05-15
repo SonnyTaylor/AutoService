@@ -3,7 +3,7 @@ from ttkbootstrap.constants import *
 import tkinter as tk
 from .screens.scan_screen import ScanScreen
 from .screens.system_info_screen import SystemInfoScreen
-from .screens.tools_screen import ToolsScreen
+from .screens.utilities_screen import UtilitiesScreen
 from .screens.settings_screen import SettingsScreen
 from .screens.programs_screen import ProgramsScreen
 import os
@@ -71,14 +71,14 @@ class AutoService:
         # Add tabs to the notebook with their respective labels
         self.notebook.add(self.tab1, text="Scans")
         self.notebook.add(self.tab2, text="System Info")
-        self.notebook.add(self.tab3, text="Tools")
+        self.notebook.add(self.tab3, text="Utilities")
         self.notebook.add(self.tab4, text="Programs")
         self.notebook.add(self.tab5, text="Settings")
 
         # Initialize screen objects for each tab
         self.scan_screen = ScanScreen(self.tab1, self)
         self.system_info_screen = SystemInfoScreen(self.tab2)
-        self.tools_screen = ToolsScreen(self.tab3)
+        self.utilities_screen = UtilitiesScreen(self.tab3)
         self.programs_screen = ProgramsScreen(self.tab4)
         self.settings_screen = SettingsScreen(self.tab5)
 
