@@ -20,6 +20,7 @@ dependencies = [
     { name = "pillow" },
     { name = "psutil" },
     { name = "pyinstaller" },
+    { name = "pywin32" },
     { name = "ttkbootstrap" },
     { name = "wmi" },
 ]
@@ -30,6 +31,7 @@ requires-dist = [
     { name = "pillow", specifier = ">=10.4.0" },
     { name = "psutil", specifier = ">=7.0.0" },
     { name = "pyinstaller", specifier = ">=6.13.0" },
+    { name = "pywin32", specifier = ">=310" },
     { name = "ttkbootstrap", specifier = ">=1.13.2" },
     { name = "wmi", specifier = ">=1.5.1" },
 ]

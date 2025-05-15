@@ -49,6 +49,25 @@
             "version": "1.55",
             "usage_count": 0,
             "core": false
+        },
+        {
+            "name": "CPU-Z",
+            "description": "CPU-Z is a freeware that gathers information on some of the main devices of your system",
+            "folder": "cpu-z_2.15-en",
+            "executable": "cpuz_x64.exe",
+            "icon": "cpu-z.png",
+            "version": "2.15",
+            "usage_count": 1,
+            "core": false
+        },
+        {
+            "name": "AutoRuns",
+            "description": "Used to identify software that is configured to run automatically when a device boots up or when a user logs in",
+            "folder": "Autoruns",
+            "executable": "Autoruns.exe",
+            "icon": "_exeicon.png",
+            "version": "14.11",
+            "usage_count": 0
         }
     ]
 }
