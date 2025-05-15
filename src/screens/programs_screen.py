@@ -1,5 +1,6 @@
 import ttkbootstrap as tb
 from ttkbootstrap.constants import *
+from ttkbootstrap.dialogs import Messagebox
 from PIL import Image, ImageTk
 import os
 import subprocess
@@ -8,6 +9,7 @@ import sys
 import json
 import ctypes
 from typing import List, Dict
+import glob
 
 
 def get_base_path():
@@ -94,18 +96,41 @@ class ProgramCard(tb.Frame):
         )
         desc_label.pack(side=LEFT, fill=BOTH, expand=YES)
 
-        # Run button - align to right
-        button_frame = tb.Frame(self.card_frame)
-        button_frame.pack(fill=X, expand=YES)
+        # Buttons container for run and delete
+        buttons_frame = tb.Frame(content_frame)
+        buttons_frame.pack(side=RIGHT, padx=5)
 
+        # Run button
         run_btn = tb.Button(
-            button_frame,
+            buttons_frame,
             text="Run",
             command=self.run_program,
             bootstyle="success",
             width=15,
         )
-        run_btn.pack(side=RIGHT)
+        run_btn.pack(side=LEFT, padx=(0, 5))
+
+        # Delete button - disabled for core programs
+        is_core = program_data.get("core", False)  # Default to False if not specified
+        delete_btn = tb.Button(
+            buttons_frame,
+            text="×",  # Using × symbol for delete
+            command=self.delete_program if not is_core else None,
+            bootstyle="danger" if not is_core else "secondary",
+            width=3,
+            state="normal" if not is_core else "disabled",
+        )
+        delete_btn.pack(side=LEFT)
+
+        # Add tooltip for disabled delete button
+        if is_core:
+            from ttkbootstrap.tooltip import ToolTip
+
+            ToolTip(
+                delete_btn,
+                text="This is a core program and cannot be deleted",
+                bootstyle="secondary",
+            )
 
     def run_program(self):
         """Run the program and update usage count."""
@@ -144,6 +169,363 @@ class ProgramCard(tb.Frame):
                 title="Error",
                 message=f"Error running {self.program_data['executable']}: {str(e)}",
             )
+
+    def delete_program(self):
+        """Delete the program from config and its folder."""
+        # Check if program is core
+        if self.program_data.get("core", False):
+            tb.dialogs.Messagebox.show_warning(
+                title="Cannot Delete",
+                message=f"{self.program_data['name']} is a core program and cannot be deleted.",
+            )
+            return
+
+        # Confirm with user
+        response = tb.dialogs.Messagebox.show_question(
+            title="Confirm Delete",
+            message=f"Are you sure you want to delete {self.program_data['name']}?\n\n"
+            f"This will remove it from the programs list and delete the folder:\n"
+            f"{self.data_dir}/tools/{self.program_data['folder']}",
+            buttons=["Yes:danger", "No:secondary"],
+        )
+
+        if response == "Yes":
+            try:
+                # Get parent ProgramsScreen instance
+                parent = self
+                while parent and not isinstance(parent, ProgramsScreen):
+                    parent = parent.master
+
+                if not parent:
+                    raise Exception("Could not find ProgramsScreen instance")
+
+                programs_screen = parent
+
+                # Remove from all_programs list
+                original_count = len(programs_screen.all_programs)
+                programs_screen.all_programs = [
+                    p
+                    for p in programs_screen.all_programs
+                    if p["name"] != self.program_data["name"]
+                ]
+                if len(programs_screen.all_programs) == original_count:
+                    raise Exception("Program was not removed from config")
+
+                # Save updated config
+                try:
+                    with open(programs_screen.config_file, "r") as f:
+                        config = json.load(f)
+                    config["programs"] = programs_screen.all_programs
+                    with open(programs_screen.config_file, "w") as f:
+                        json.dump(config, f, indent=4)
+                except Exception as e:
+                    raise Exception(f"Failed to save config: {str(e)}")
+
+                # Delete program folder
+                program_folder = self.data_dir / "tools" / self.program_data["folder"]
+                if program_folder.exists():
+                    try:
+                        import shutil
+
+                        shutil.rmtree(str(program_folder))
+                        if program_folder.exists():
+                            raise Exception("Folder still exists after deletion")
+                    except Exception as e:
+                        raise Exception(f"Failed to delete folder: {str(e)}")
+
+                # Refresh the display
+                programs_screen.filter_and_sort_programs()
+
+                # Show success message
+                tb.dialogs.Messagebox.show_info(
+                    title="Success",
+                    message=f"Program '{self.program_data['name']}' has been deleted successfully!",
+                )
+            except Exception as e:
+                tb.dialogs.Messagebox.show_error(
+                    title="Error",
+                    message=f"Error deleting program: {str(e)}\n\n"
+                    f"Config file: {programs_screen.config_file}\n"
+                    f"Program folder: {program_folder if 'program_folder' in locals() else 'Not found'}",
+                )
+
+
+class AddProgramDialog(tb.Toplevel):
+    """Dialog for adding a new program to the configuration."""
+
+    def __init__(self, parent, tools_dir, on_program_added):
+        """
+        Initialize the add program dialog.
+
+        Args:
+            parent: Parent widget
+            tools_dir: Path to the tools directory
+            on_program_added: Callback function when a program is added
+        """
+        super().__init__(parent)
+        self.tools_dir = Path(tools_dir)  # Ensure it's a Path object
+        self.on_program_added = on_program_added
+
+        # Initialize variables first
+        self.name_var = tb.StringVar()
+        self.folder_var = tb.StringVar()
+        self.exe_var = tb.StringVar()
+        self.version_var = tb.StringVar()
+        self.icon_var = tb.StringVar()
+
+        # Initialize combo boxes as None first
+        self.folder_combo = None
+        self.exe_combo = None
+        self.icon_combo = None
+        self.desc_text = None
+        self.preview_label = None
+
+        # Configure dialog
+        self.title("Add New Program")
+        self.geometry("600x600")
+        self.resizable(False, False)
+
+        # Create the interface
+        self.create_interface()
+
+        # Now that everything is initialized, refresh the folder list
+        self.refresh_folder_list()
+
+    def create_interface(self):
+        """Create and arrange all interface elements."""
+        # Create main frame with padding
+        main_frame = tb.Frame(self, padding=20)
+        main_frame.pack(fill=BOTH, expand=YES)
+
+        # Content frame for all inputs
+        content_frame = tb.Frame(main_frame)
+        content_frame.pack(fill=BOTH, expand=YES)
+
+        # Program Name
+        name_frame = tb.Frame(content_frame)
+        name_frame.pack(fill=X, pady=(0, 10))
+        name_label = tb.Label(name_frame, text="Program Name:", width=15, anchor="w")
+        name_label.pack(side=LEFT)
+        tb.Entry(name_frame, textvariable=self.name_var).pack(
+            side=LEFT, fill=X, expand=YES, padx=(10, 0)
+        )
+
+        # Description
+        desc_frame = tb.Frame(content_frame)
+        desc_frame.pack(fill=X, pady=(0, 10))
+        desc_label = tb.Label(desc_frame, text="Description:", width=15, anchor="nw")
+        desc_label.pack(side=LEFT, anchor="n")
+        self.desc_text = tb.Text(desc_frame, height=3, width=50)
+        self.desc_text.pack(side=LEFT, fill=X, expand=YES, padx=(10, 0))
+
+        # Folder Selection
+        folder_frame = tb.Frame(content_frame)
+        folder_frame.pack(fill=X, pady=(0, 10))
+        folder_label = tb.Label(
+            folder_frame, text="Program Folder:", width=15, anchor="w"
+        )
+        folder_label.pack(side=LEFT)
+        self.folder_combo = tb.Combobox(
+            folder_frame, textvariable=self.folder_var, state="readonly"
+        )
+        self.folder_combo.pack(side=LEFT, fill=X, expand=YES, padx=(10, 0))
+
+        # Executable Selection
+        exe_frame = tb.Frame(content_frame)
+        exe_frame.pack(fill=X, pady=(0, 10))
+        exe_label = tb.Label(exe_frame, text="Executable:", width=15, anchor="w")
+        exe_label.pack(side=LEFT)
+        self.exe_combo = tb.Combobox(
+            exe_frame, textvariable=self.exe_var, state="readonly"
+        )
+        self.exe_combo.pack(side=LEFT, fill=X, expand=YES, padx=(10, 0))
+
+        # Version
+        version_frame = tb.Frame(content_frame)
+        version_frame.pack(fill=X, pady=(0, 10))
+        version_label = tb.Label(version_frame, text="Version:", width=15, anchor="w")
+        version_label.pack(side=LEFT)
+        tb.Entry(version_frame, textvariable=self.version_var).pack(
+            side=LEFT, fill=X, expand=YES, padx=(10, 0)
+        )
+
+        # Icon Selection
+        icon_frame = tb.Frame(content_frame)
+        icon_frame.pack(fill=X, pady=(0, 10))
+        icon_label = tb.Label(icon_frame, text="Icon:", width=15, anchor="w")
+        icon_label.pack(side=LEFT)
+        self.icon_combo = tb.Combobox(
+            icon_frame, textvariable=self.icon_var, state="readonly"
+        )
+        self.icon_combo.pack(side=LEFT, fill=X, expand=YES, padx=(10, 0))
+
+        # Preview Frame
+        preview_frame = tb.LabelFrame(content_frame, text="Preview", padding=10)
+        preview_frame.pack(fill=X, pady=(10, 20))
+        self.preview_label = tb.Label(
+            preview_frame, text="Select a folder to see program details"
+        )
+        self.preview_label.pack(fill=X)
+
+        # Buttons Frame at the bottom
+        btn_frame = tb.Frame(main_frame)
+        btn_frame.pack(fill=X, pady=(10, 0))
+
+        # Add Program button (left)
+        add_btn = tb.Button(
+            btn_frame,
+            text="Save Program",
+            command=self.add_program,
+            bootstyle="success",
+            width=15,
+        )
+        add_btn.pack(side=LEFT, padx=(0, 10))
+
+        # Cancel button (right)
+        cancel_btn = tb.Button(
+            btn_frame,
+            text="Cancel",
+            command=self.destroy,
+            bootstyle="secondary",
+            width=10,
+        )
+        cancel_btn.pack(side=RIGHT)
+
+        # Bind events after all widgets are created
+        self.folder_combo.bind("<<ComboboxSelected>>", self.on_folder_selected)
+        self.name_var.trace_add("write", lambda *args: self.update_preview())
+        self.version_var.trace_add("write", lambda *args: self.update_preview())
+        self.folder_var.trace_add("write", lambda *args: self.update_preview())
+        self.exe_var.trace_add("write", lambda *args: self.update_preview())
+        self.icon_var.trace_add("write", lambda *args: self.update_preview())
+
+    def refresh_folder_list(self):
+        """Refresh the list of available program folders."""
+        try:
+            if not self.tools_dir.exists():
+                Messagebox.show_warning(
+                    title="Warning",
+                    message=f"Tools directory not found at:\n{self.tools_dir}\n\nPlease create the directory and add program folders.",
+                )
+                return
+
+            folders = [d.name for d in self.tools_dir.iterdir() if d.is_dir()]
+            if not folders:
+                Messagebox.show_warning(
+                    title="No Folders Found",
+                    message=f"No program folders found in:\n{self.tools_dir}\n\nPlease add program folders first.",
+                )
+                return
+
+            self.folder_combo["values"] = folders
+            self.folder_combo.set(folders[0])
+            self.on_folder_selected(None)
+
+        except Exception as e:
+            Messagebox.show_error(
+                title="Error",
+                message=f"Error loading program folders: {str(e)}\n\nPath: {self.tools_dir}",
+            )
+
+    def on_folder_selected(self, event):
+        """Update executable and icon lists when a folder is selected."""
+        try:
+            folder_path = self.tools_dir / self.folder_var.get()
+
+            # Update executable list
+            exes = list(folder_path.glob("*.exe"))
+            self.exe_combo["values"] = [exe.name for exe in exes]
+            if exes:
+                self.exe_combo.set(exes[0].name)
+            else:
+                self.exe_combo.set("")
+
+            # Update icon list
+            icons = list(folder_path.glob("*.ico")) + list(folder_path.glob("*.png"))
+            self.icon_combo["values"] = [icon.name for icon in icons]
+            if icons:
+                self.icon_combo.set(icons[0].name)
+            else:
+                self.icon_combo.set("")
+
+            # Update preview
+            self.update_preview()
+
+        except Exception as e:
+            Messagebox.show_error(
+                title="Error", message=f"Error loading folder contents: {str(e)}"
+            )
+
+    def update_preview(self):
+        """Update the preview of the program details."""
+        preview_text = f"Program: {self.name_var.get() or '[Program Name]'}\n"
+        preview_text += f"Version: {self.version_var.get() or '[Version]'}\n"
+        preview_text += f"Folder: {self.folder_var.get() or '[Folder]'}\n"
+        preview_text += f"Executable: {self.exe_var.get() or '[Executable]'}\n"
+        preview_text += f"Icon: {self.icon_var.get() or '[Icon]'}\n"
+        preview_text += (
+            f"Description: {self.desc_text.get('1.0', 'end-1c') or '[Description]'}"
+        )
+
+        self.preview_label.configure(text=preview_text)
+
+    def validate_inputs(self):
+        """Validate all input fields."""
+        if not self.name_var.get().strip():
+            Messagebox.show_warning(
+                title="Validation Error", message="Please enter a program name."
+            )
+            return False
+
+        if not self.desc_text.get("1.0", "end-1c").strip():
+            Messagebox.show_warning(
+                title="Validation Error", message="Please enter a program description."
+            )
+            return False
+
+        if not self.folder_var.get():
+            Messagebox.show_warning(
+                title="Validation Error", message="Please select a program folder."
+            )
+            return False
+
+        if not self.exe_var.get():
+            Messagebox.show_warning(
+                title="Validation Error", message="Please select an executable."
+            )
+            return False
+
+        if not self.version_var.get().strip():
+            Messagebox.show_warning(
+                title="Validation Error", message="Please enter a version number."
+            )
+            return False
+
+        if not self.icon_var.get():
+            Messagebox.show_warning(
+                title="Validation Error", message="Please select an icon."
+            )
+            return False
+
+        return True
+
+    def add_program(self):
+        """Add the new program to the configuration."""
+        if not self.validate_inputs():
+            return
+
+        new_program = {
+            "name": self.name_var.get().strip(),
+            "description": self.desc_text.get("1.0", "end-1c").strip(),
+            "folder": self.folder_var.get(),
+            "executable": self.exe_var.get(),
+            "icon": self.icon_var.get(),
+            "version": self.version_var.get().strip(),
+            "usage_count": 0,
+        }
+
+        self.on_program_added(new_program)
+        self.destroy()
 
 
 class ProgramsScreen(tb.Frame):
@@ -185,15 +567,41 @@ class ProgramsScreen(tb.Frame):
     def save_programs_config(self):
         """Save programs configuration to JSON file."""
         try:
-            with open(self.config_file, "r") as f:
-                config = json.load(f)
+            # Create a backup of the current config
+            import shutil
+
+            backup_file = self.config_file.with_suffix(".json.bak")
+            if self.config_file.exists():
+                shutil.copy2(str(self.config_file), str(backup_file))
+
+            # Read existing config or create new one
+            if self.config_file.exists():
+                with open(self.config_file, "r") as f:
+                    config = json.load(f)
+            else:
+                config = {"programs": []}
+
+            # Update programs list
             config["programs"] = self.all_programs
+
+            # Write updated config
             with open(self.config_file, "w") as f:
                 json.dump(config, f, indent=4)
+
+            # Remove backup if save was successful
+            if backup_file.exists():
+                backup_file.unlink()
+
         except Exception as e:
+            # Restore from backup if it exists
+            if "backup_file" in locals() and backup_file.exists():
+                shutil.copy2(str(backup_file), str(self.config_file))
+                backup_file.unlink()
+
             tb.dialogs.Messagebox.show_error(
                 title="Error",
-                message=f"Error saving program configuration: {str(e)}",
+                message=f"Error saving program configuration: {str(e)}\n\n"
+                f"Config file: {self.config_file}",
             )
 
     def on_program_run(self, program_data):
@@ -218,9 +626,23 @@ class ProgramsScreen(tb.Frame):
         )
         main_frame.pack(fill=BOTH, expand=YES)
 
-        # Create search and sort controls frame
-        controls_frame = tb.Frame(main_frame)
-        controls_frame.pack(fill=X, pady=(0, 10))
+        # Top controls container
+        top_controls = tb.Frame(main_frame)
+        top_controls.pack(fill=X, pady=(0, 10))
+
+        # Add Program button (left side)
+        add_btn = tb.Button(
+            top_controls,
+            text="Add Program",
+            command=self.show_add_program_dialog,
+            bootstyle="success",
+            width=12,
+        )
+        add_btn.pack(side=LEFT, padx=(0, 20))
+
+        # Search and sort controls frame (right side)
+        controls_frame = tb.Frame(top_controls)
+        controls_frame.pack(side=RIGHT, fill=X, expand=YES)
 
         # Search bar
         search_frame = tb.Frame(controls_frame)
@@ -243,7 +665,7 @@ class ProgramsScreen(tb.Frame):
         sort_label = tb.Label(sort_frame, text="Sort by:")
         sort_label.pack(side=LEFT, padx=(0, 5))
 
-        self.sort_var = tb.StringVar(value="Most Used")  # Set default sort to Most Used
+        self.sort_var = tb.StringVar(value="Most Used")
         sort_options = [
             "Most Used",
             "Least Used",
@@ -361,3 +783,30 @@ class ProgramsScreen(tb.Frame):
                 on_program_run=self.on_program_run,
             )
             card.pack(fill=X, expand=YES, pady=5, padx=5)
+
+    def show_add_program_dialog(self):
+        """Show the dialog for adding a new program."""
+        dialog = AddProgramDialog(self, self.tools_dir, self.add_new_program)
+        dialog.grab_set()  # Make dialog modal
+
+    def add_new_program(self, new_program):
+        """
+        Add a new program to the configuration.
+
+        Args:
+            new_program: Dictionary containing the new program's information
+        """
+        # Add to programs list
+        self.all_programs.append(new_program)
+
+        # Save to config file
+        self.save_programs_config()
+
+        # Refresh display
+        self.filter_and_sort_programs()
+
+        # Show success message
+        Messagebox.show_info(
+            title="Success",
+            message=f"Program '{new_program['name']}' has been added successfully!",
+        )

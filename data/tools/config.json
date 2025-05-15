@@ -7,12 +7,28 @@
             "executable": "DiskInfo64.exe",
             "folder": "CrystalDiskInfo9_6_3",
             "version": "9.6.3",
-            "usage_count": 1
+            "usage_count": 1,
+            "core": true
         },
         {
-            "name": "CCleaner"
-            
-
+            "name": "CCleaner",
+            "description": "A utility to clean potentially unwanted files and invalid Windows Registry entries from a computer.",
+            "icon": "ccleaner.png",
+            "executable": "CCleaner.exe",
+            "folder": "CCleaner635",
+            "version": "6.35",
+            "usage_count": 1,
+            "core": true
+        },
+        {
+            "name": "Recuva",
+            "description": "Recuva is an application designed to recover files that have been accidentally deleted from your computer.",
+            "folder": "Recuva",
+            "executable": "rcvPortable.exe",
+            "icon": "rcvPortable_128.png",
+            "version": "1.54.120",
+            "usage_count": 0,
+            "core": false
         }
     ]
 }
