@@ -4,6 +4,7 @@ from ttkbootstrap.dialogs import Messagebox
 from PIL import Image, ImageTk
 import os
 import subprocess
+from tkinter import BOTH, YES, LEFT, RIGHT, X, VERTICAL
 from pathlib import Path
 import sys
 import json
@@ -880,6 +881,9 @@ class ProgramsScreen(tb.Frame):
         self.tools_dir = self.data_dir / "tools"
         self.config_file = self.tools_dir / "config.json"
 
+        # Initialize resize timer
+        self._resize_timer = None
+
         # Create data directory structure if in development mode
         if not getattr(sys, "frozen", False):
             for folder in ["tools", "settings", "resources", "reports"]:
@@ -957,6 +961,8 @@ class ProgramsScreen(tb.Frame):
 
         # Refresh the display
         self.filter_and_sort_programs()
+
+
 
     def create_widgets(self):
         """Create and arrange all widgets for the programs interface."""
@@ -1067,20 +1073,102 @@ class ProgramsScreen(tb.Frame):
         self.filter_and_sort_programs()
 
         # Bind mouse wheel scrolling
-        self.canvas.bind_all("<MouseWheel>", self.on_mousewheel)
+        def _on_mousewheel(event):
+            if event.delta > 0:
+                # Scroll up (negative units)
+                self.canvas.yview_scroll(-1, "units")
+            else:
+                # Scroll down (positive units)
+                self.canvas.yview_scroll(1, "units")
+
+        # Bind mousewheel to the entire window
+        self.bind_all("<MouseWheel>", _on_mousewheel)
+
+        # Bind mousewheel to the canvas for better control
+        self.canvas.bind("<MouseWheel>", _on_mousewheel)
 
     def configure_scroll_region(self, event):
         """Configure the scroll region of the canvas."""
-        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        # Get the total height of content and visible area
+        content_height = self.scrollable_frame.winfo_reqheight()
+        visible_height = self.canvas.winfo_height()
+        
+        # Only enable scrolling if content is taller than visible area
+        if content_height > visible_height:
+            self.canvas.configure(scrollregion=(0, 0, 0, content_height))
+            self.scrollbar.grid(row=0, column=1, sticky="ns")
+        else:
+            self.canvas.configure(scrollregion=(0, 0, 0, visible_height))
+            self.canvas.yview_moveto(0)  # Reset to top
+            self.scrollbar.grid_remove()
 
     def configure_canvas_window(self, event):
-        """Configure the canvas window width."""
-        canvas_width = event.width - 5
-        self.canvas.itemconfig("window", width=canvas_width)
+        """Configure the canvas window width and update scroll region."""
+        # Set canvas width immediately but batch the update
+        self.canvas.after_idle(lambda: self.canvas.itemconfig("window", width=event.width - 5))
+        
+        # Cancel any existing timer
+        if self._resize_timer is not None:
+            self.after_cancel(self._resize_timer)
+            self._resize_timer = None
+        
+        # Use a longer delay and batch updates
+        self._resize_timer = self.after(200, self._update_scroll_region)
+    
+    def _update_scroll_region(self):
+        """Update the scroll region after resize."""
+        try:
+            # Get dimensions once to avoid multiple queries
+            content_height = self.scrollable_frame.winfo_reqheight()
+            visible_height = self.canvas.winfo_height()
+            current_view = self.canvas.yview()
+            
+            # Prepare updates
+            updates = {}
+            
+            # Only enable scrolling if content is taller than visible area
+            if content_height > visible_height:
+                updates['scrollregion'] = (0, 0, 0, content_height)
+                # Batch grid management
+                self.after_idle(lambda: self.scrollbar.grid(row=0, column=1, sticky="ns"))
+                # Keep scroll position
+                updates['yscrollcommand'] = self.scrollbar.set
+            else:
+                updates['scrollregion'] = (0, 0, 0, visible_height)
+                # Batch grid management
+                self.after_idle(lambda: self.scrollbar.grid_remove())
+                # Reset scroll position
+                updates['yscrollcommand'] = lambda *args: None
+            
+            # Apply all updates at once
+            self.canvas.configure(**updates)
+            
+            # Restore scroll position if needed
+            if content_height > visible_height:
+                self.canvas.after_idle(lambda: self.canvas.yview_moveto(current_view[0]))
+        
+        except Exception:
+            pass
+        finally:
+            self._resize_timer = None
 
     def on_mousewheel(self, event):
         """Handle mousewheel scrolling."""
-        self.canvas.yview_scroll(-1 * (event.delta // 120), "units")
+        content_height = self.scrollable_frame.winfo_reqheight()
+        visible_height = self.canvas.winfo_height()
+        
+        # Only allow scrolling if content is taller than visible area
+        if content_height > visible_height:
+            # Get current scroll position and size
+            current_pos = self.canvas.yview()
+            
+            # Check if we're at the top or bottom before scrolling
+            if event.delta > 0 and current_pos[0] > 0:
+                # Scroll up
+                self.canvas.yview_scroll(-1, "units")
+            elif event.delta < 0 and current_pos[1] < 1:
+                # Scroll down
+                self.canvas.yview_scroll(1, "units")
 
     def filter_and_sort_programs(self):
         """Filter and sort programs based on search text and sort option."""
