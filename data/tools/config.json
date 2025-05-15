@@ -77,6 +77,15 @@
             "icon": "_exeicon.png",
             "version": "4.73",
             "usage_count": 1
+        },
+        {
+            "name": "WinDirsStat",
+            "description": "WinDirStat is a free and open-source graphical disk usage analyzer for Microsoft Windows",
+            "folder": "WinDirStat",
+            "executable": "WinDirStat.exe",
+            "icon": "_exeicon.png",
+            "version": "2.2.2",
+            "usage_count": 0
         }
     ]
 }

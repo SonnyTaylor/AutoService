@@ -1863,15 +1863,18 @@
 	<IndicatorBarColor1>13432063</IndicatorBarColor1>
 	<IndicatorBarColor2>52479</IndicatorBarColor2>
 	<ViewType>3</ViewType>
-	<RecentlyScannedPaths Type="TRecentlyUsedStrings"></RecentlyScannedPaths>
+	<RecentlyScannedPaths Type="TRecentlyUsedStrings">
+		<Item>
+			<Path>C:\</Path>
+			<TimeStamp>45792.9410883796</TimeStamp>
+		</Item>
+	</RecentlyScannedPaths>
 	<MRUMaximum>16</MRUMaximum>
 	<GroupExtensionsByFileType>True</GroupExtensionsByFileType>
 	<ShowErrors>False</ShowErrors>
 	<GridLinesInDirectoryTree>False</GridLinesInDirectoryTree>
 	<ShowLongScanHint>True</ShowLongScanHint>
-	<PersistedExpression Type="TContainerExpression">
-		<Item Type="TExpressionAnd"></Item>
-	</PersistedExpression>
+	<PersistedExpression Type="TContainerExpression"></PersistedExpression>
 	<AlwaysStartAsAdministrator>False</AlwaysStartAsAdministrator>
 	<AskForRestartAsAdministrator>True</AskForRestartAsAdministrator>
 	<RecentlyUsedFilePaths Type="TRecentlyUsedPaths"></RecentlyUsedFilePaths>
@@ -1948,7 +1951,7 @@
 	<ThreadPriority>2</ThreadPriority>
 	<CheckForUpdateOptions Type="TCheckForUpdateOptions">
 		<LatestOnlineVersion>-1</LatestOnlineVersion>
-		<LastAutomaticCheckForUpdate>0</LastAutomaticCheckForUpdate>
+		<LastAutomaticCheckForUpdate>45792.941063125</LastAutomaticCheckForUpdate>
 		<CheckForUpdatesAutomatically>True</CheckForUpdatesAutomatically>
 	</CheckForUpdateOptions>
 	<ShowCheckForUpdate>True</ShowCheckForUpdate>
