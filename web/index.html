@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AutoService</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    button { font-size: 1rem; padding: 10px 20px; }
+    pre { background: #eee; padding: 10px; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>AutoService</h1>
+  <button onclick="runScan()">Run Scan</button>
+  <button onclick="showSystemInfo()">Show System Info</button>
+  <pre id="output"></pre>
+
+  <script>
+    async function runScan() {
+      const result = await window.pywebview.api.run_scan();
+      document.getElementById('output').textContent = result;
+    }
+
+    async function showSystemInfo() {
+      const info = await window.pywebview.api.get_system_info();
+      let output = `OS: ${info.os}\nRelease: ${info.release}\nVersion: ${info.version}\nProcessor: ${info.processor}`;
+      document.getElementById('output').textContent = output;
+    }
+  </script>
+</body>
+</html>
