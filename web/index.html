@@ -1,31 +1,86 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>AutoService</title>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    button { font-size: 1rem; padding: 10px 20px; }
-    pre { background: #eee; padding: 10px; white-space: pre-wrap; }
-  </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoService</title>
+  <link rel="stylesheet" href="styles/main.css">
 </head>
 <body>
-  <h1>AutoService</h1>
-  <button onclick="runScan()">Run Scan</button>
-  <button onclick="showSystemInfo()">Show System Info</button>
-  <pre id="output"></pre>
+    <nav class="navbar">
+        <a href="#" class="logo">AutoService</a>
+        <div class="nav-tabs">
+            <a href="#scans" class="nav-tab" data-page="scans">Scans</a>
+            <a href="#system" class="nav-tab" data-page="system">System Information</a>
+            <a href="#shortcuts" class="nav-tab" data-page="shortcuts">Shortcuts</a>
+            <a href="#programs" class="nav-tab" data-page="programs">Programs</a>
+            <a href="#stress" class="nav-tab" data-page="stress">Stress Test</a>
+            <a href="#component" class="nav-tab" data-page="component">Component Test</a>
+            <a href="#settings" class="nav-tab" data-page="settings">Settings</a>
+        </div>
+    </nav>
 
-  <script>
-    async function runScan() {
-      const result = await window.pywebview.api.run_scan();
-      document.getElementById('output').textContent = result;
-    }
+    <main class="content">
+        <div id="main-content"></div>
+        <div class="loading" id="loading"></div>
+    </main>
 
-    async function showSystemInfo() {
-      const info = await window.pywebview.api.get_system_info();
-      let output = `OS: ${info.os}\nRelease: ${info.release}\nVersion: ${info.version}\nProcessor: ${info.processor}`;
-      document.getElementById('output').textContent = output;
-    }
-  </script>
+    <script>
+        let currentPage = '';
+        
+        async function loadPage(pageName) {
+            if (currentPage === pageName) return;
+            
+            const loading = document.getElementById('loading');
+            const content = document.getElementById('main-content');
+            
+            // Update active tab
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+                if (tab.dataset.page === pageName) {
+                    tab.classList.add('active');
+                }
+            });
+
+            loading.style.display = 'flex';
+            content.style.opacity = '0.5';
+
+            try {
+                const response = await fetch(`pages/${pageName}.html`);
+                const html = await response.text();
+                content.innerHTML = html;
+                currentPage = pageName;
+                
+                // Execute any scripts in the loaded content
+                const scripts = content.getElementsByTagName('script');
+                for (let script of scripts) {
+                    eval(script.innerHTML);
+                }
+            } catch (error) {
+                content.innerHTML = `<h2>Error loading page</h2><p>${error.message}</p>`;
+            } finally {
+                loading.style.display = 'none';
+                content.style.opacity = '1';
+            }
+        }
+
+        // Handle navigation
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                e.preventDefault();
+                loadPage(tab.dataset.page);
+            });
+        });
+
+        // Load initial page based on hash or default to scans
+        const initialPage = window.location.hash.slice(1) || 'scans';
+        loadPage(initialPage);
+
+        // Handle browser back/forward
+        window.addEventListener('popstate', () => {
+            const page = window.location.hash.slice(1) || 'scans';
+            loadPage(page);
+        });
+    </script>
 </body>
 </html>

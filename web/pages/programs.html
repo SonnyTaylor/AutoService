@@ -1,0 +1,34 @@
+<div class="page-container">
+    <h1>Installed Programs</h1>
+    <div class="programs-controls">
+        <input type="text" id="program-search" placeholder="Search programs..." class="form-control search-input">
+        <button class="button button-primary" onclick="refreshPrograms()">
+            Refresh List
+        </button>
+    </div>
+    <div id="programs-list" class="card">
+        <div class="loading">Loading programs...</div>
+    </div>
+</div>
+
+<script>
+    async function refreshPrograms() {
+        const programsList = document.getElementById('programs-list');
+        programsList.innerHTML = '<div class="loading">Loading programs...</div>';
+
+        try {
+            // This is a placeholder - implement the actual API call
+            const programs = await window.pywebview.api.get_installed_programs();
+            displayPrograms(programs);
+        } catch (error) {
+            programsList.innerHTML = `<div class="error">Error loading programs: ${error.message}</div>`;
+        }
+    }
+
+    function displayPrograms(programs) {
+        // This is a placeholder - implement the actual display logic
+    }
+
+    // Initial load
+    refreshPrograms();
+</script>]]>

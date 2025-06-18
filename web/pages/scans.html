@@ -1,0 +1,26 @@
+<div class="page-container">
+    <h1>System Scans</h1>
+    <div class="scan-controls">
+        <button class="button button-primary" onclick="runScan()">
+            <i class="fas fa-play"></i>
+            Run Scan
+        </button>
+    </div>
+    <div class="scan-results">
+        <pre id="scan-output"></pre>
+    </div>
+</div>
+
+<script>
+    async function runScan() {
+        const output = document.getElementById('scan-output');
+        output.textContent = 'Running scan...';
+        
+        try {
+            const result = await window.pywebview.api.run_scan();
+            output.textContent = result;
+        } catch (error) {
+            output.textContent = `Error running scan: ${error.message}`;
+        }
+    }
+</script>]]>

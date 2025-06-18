@@ -1,0 +1,69 @@
+<div class="page-container">
+    <h1>Component Testing</h1>
+    <div class="grid">
+        <div class="card">
+            <h2>Memory Test</h2>
+            <div class="test-controls">
+                <button class="button button-primary" onclick="runMemoryTest()">Test Memory</button>
+                <div class="status" id="memory-status">Ready</div>
+            </div>
+        </div>
+        <div class="card">
+            <h2>Storage Test</h2>
+            <div class="test-controls">
+                <button class="button button-primary" onclick="runStorageTest()">Test Storage</button>
+                <div class="status" id="storage-status">Ready</div>
+            </div>
+        </div>
+        <div class="card">
+            <h2>CPU Test</h2>
+            <div class="test-controls">
+                <button class="button button-primary" onclick="runCPUTest()">Test CPU</button>
+                <div class="status" id="cpu-status">Ready</div>
+            </div>
+        </div>
+        <div class="card">
+            <h2>Network Test</h2>
+            <div class="test-controls">
+                <button class="button button-primary" onclick="runNetworkTest()">Test Network</button>
+                <div class="status" id="network-status">Ready</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    async function runMemoryTest() {
+        await runTest('memory');
+    }
+
+    async function runStorageTest() {
+        await runTest('storage');
+    }
+
+    async function runCPUTest() {
+        await runTest('cpu');
+    }
+
+    async function runNetworkTest() {
+        await runTest('network');
+    }
+
+    async function runTest(component) {
+        const statusElement = document.getElementById(`${component}-status`);
+        const button = statusElement.previousElementSibling;
+        
+        button.disabled = true;
+        statusElement.textContent = 'Testing...';
+        
+        try {
+            // This is a placeholder - implement the actual API call
+            const result = await window.pywebview.api.test_component(component);
+            statusElement.textContent = result.status;
+        } catch (error) {
+            statusElement.textContent = `Error: ${error.message}`;
+        } finally {
+            button.disabled = false;
+        }
+    }
+</script>]]>

@@ -1,0 +1,43 @@
+<div class="page-container">
+    <h1>System Information</h1>
+    <div class="grid">
+        <div class="card" id="basic-info">
+            <h2>Basic Information</h2>
+            <div class="info-content">
+                <div class="info-row">
+                    <span class="label">OS:</span>
+                    <span class="value" id="os-info">Loading...</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Version:</span>
+                    <span class="value" id="version-info">Loading...</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Release:</span>
+                    <span class="value" id="release-info">Loading...</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Processor:</span>
+                    <span class="value" id="processor-info">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    async function loadSystemInfo() {
+        try {
+            const info = await window.pywebview.api.get_system_info();
+            document.getElementById('os-info').textContent = info.os;
+            document.getElementById('version-info').textContent = info.version;
+            document.getElementById('release-info').textContent = info.release;
+            document.getElementById('processor-info').textContent = info.processor;
+        } catch (error) {
+            console.error('Error loading system info:', error);
+        }
+    }
+
+    // Load system info when the page loads
+    loadSystemInfo();
+</script>]]>

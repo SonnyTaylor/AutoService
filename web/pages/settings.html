@@ -1,0 +1,121 @@
+<div class="page-container">
+    <h1>Settings</h1>
+    <div class="grid">
+        <div class="card">
+            <h2>General Settings</h2>
+            <div class="settings-form">
+                <div class="form-group">
+                    <label for="auto-start">Auto-start on boot</label>
+                    <input type="checkbox" id="auto-start">
+                </div>
+                <div class="form-group">
+                    <label for="notification">Enable notifications</label>
+                    <input type="checkbox" id="notification" checked>
+                </div>
+                <div class="form-group">
+                    <label for="language">Language</label>
+                    <select id="language" class="form-control">
+                        <option value="en">English</option>
+                        <option value="es">Spanish</option>
+                        <option value="fr">French</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Test Settings</h2>
+            <div class="settings-form">
+                <div class="form-group">
+                    <label for="test-timeout">Test timeout (seconds)</label>
+                    <input type="number" id="test-timeout" value="30" min="10" max="300" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="test-threads">Maximum test threads</label>
+                    <input type="number" id="test-threads" value="4" min="1" max="16" class="form-control">
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Backup Settings</h2>
+            <div class="settings-form">
+                <div class="form-group">
+                    <label for="backup-enabled">Enable automatic backup</label>
+                    <input type="checkbox" id="backup-enabled">
+                </div>
+                <div class="form-group">
+                    <label for="backup-interval">Backup interval (days)</label>
+                    <input type="number" id="backup-interval" value="7" min="1" max="30" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="backup-location">Backup location</label>
+                    <input type="text" id="backup-location" placeholder="C:\backups" class="form-control">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="settings-actions">
+        <button class="button button-primary" onclick="saveSettings()">Save Settings</button>
+        <button class="button button-danger" onclick="resetSettings()">Reset to Defaults</button>
+    </div>
+</div>
+
+<script>
+    async function loadSettings() {
+        try {
+            // This is a placeholder - implement the actual API call
+            const settings = await window.pywebview.api.get_settings();
+            applySettings(settings);
+        } catch (error) {
+            console.error('Error loading settings:', error);
+        }
+    }
+
+    async function saveSettings() {
+        const settings = {
+            general: {
+                autoStart: document.getElementById('auto-start').checked,
+                notifications: document.getElementById('notification').checked,
+                language: document.getElementById('language').value
+            },
+            test: {
+                timeout: parseInt(document.getElementById('test-timeout').value),
+                maxThreads: parseInt(document.getElementById('test-threads').value)
+            },
+            backup: {
+                enabled: document.getElementById('backup-enabled').checked,
+                interval: parseInt(document.getElementById('backup-interval').value),
+                location: document.getElementById('backup-location').value
+            }
+        };
+
+        try {
+            // This is a placeholder - implement the actual API call
+            await window.pywebview.api.save_settings(settings);
+            alert('Settings saved successfully!');
+        } catch (error) {
+            alert(`Error saving settings: ${error.message}`);
+        }
+    }
+
+    async function resetSettings() {
+        if (confirm('Are you sure you want to reset all settings to their defaults?')) {
+            try {
+                // This is a placeholder - implement the actual API call
+                await window.pywebview.api.reset_settings();
+                await loadSettings();
+                alert('Settings reset successfully!');
+            } catch (error) {
+                alert(`Error resetting settings: ${error.message}`);
+            }
+        }
+    }
+
+    function applySettings(settings) {
+        // This is a placeholder - implement the actual settings application
+    }
+
+    // Load settings when the page loads
+    loadSettings();
+</script>]]>

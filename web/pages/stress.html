@@ -1,0 +1,71 @@
+<div class="page-container">
+    <h1>System Stress Test</h1>
+    <div class="card">
+        <div class="test-options">
+            <label>
+                <input type="checkbox" id="cpu-test" checked>
+                CPU Test
+            </label>
+            <label>
+                <input type="checkbox" id="memory-test" checked>
+                Memory Test
+            </label>
+            <label>
+                <input type="checkbox" id="disk-test">
+                Disk Test
+            </label>
+        </div>
+        <div class="form-group">
+            <label for="test-duration">Test Duration (minutes):</label>
+            <input type="number" id="test-duration" value="5" min="1" max="60" class="form-control">
+        </div>
+        <button class="button button-primary" onclick="startStressTest()">Start Test</button>
+    </div>
+    <div class="card">
+        <div class="test-progress">
+            <div class="progress-bar">
+                <div class="progress" id="test-progress-bar"></div>
+            </div>
+            <div class="progress-text" id="test-progress-text">Ready to start</div>
+        </div>
+    </div>
+    <div class="card" id="test-results">
+        <!-- Results will be populated here -->
+    </div>
+</div>
+
+<script>
+    async function startStressTest() {
+        const startButton = document.querySelector('.start-button');
+        const progressBar = document.getElementById('test-progress-bar');
+        const progressText = document.getElementById('test-progress-text');
+        const resultsDiv = document.getElementById('test-results');
+        
+        // Get test configuration
+        const config = {
+            cpu: document.getElementById('cpu-test').checked,
+            memory: document.getElementById('memory-test').checked,
+            disk: document.getElementById('disk-test').checked,
+            duration: parseInt(document.getElementById('test-duration').value)
+        };
+
+        startButton.disabled = true;
+        progressBar.style.width = '0%';
+        progressText.textContent = 'Starting test...';
+        resultsDiv.innerHTML = '';
+
+        try {
+            // This is a placeholder - implement the actual API call
+            const testId = await window.pywebview.api.start_stress_test(config);
+            await monitorTest(testId);
+        } catch (error) {
+            progressText.textContent = `Error: ${error.message}`;
+        } finally {
+            startButton.disabled = false;
+        }
+    }
+
+    async function monitorTest(testId) {
+        // This is a placeholder - implement the actual monitoring logic
+    }
+</script>]]>
