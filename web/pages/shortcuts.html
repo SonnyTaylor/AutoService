@@ -1,19 +1,98 @@
 <div class="page-container">
-    <h1>Keyboard Shortcuts</h1>
+    <h1>System Shortcuts</h1>
     <div class="grid">
         <div class="card">
-            <h2>Application Shortcuts</h2>
+            <h2>Control Panel & Settings</h2>
             <div class="shortcut-list">
-                <div class="shortcut-item">
-                    <span class="keys">Ctrl + S</span>
-                    <span class="description">Save current settings</span>
-                </div>
-                <div class="shortcut-item">
-                    <span class="keys">Ctrl + R</span>
-                    <span class="description">Refresh system info</span>
-                </div>
-                <!-- Add more shortcuts as needed -->
+                <button class="button button-primary" onclick="openProgram('control')">Control Panel</button>
+                <button class="button button-primary" onclick="openProgram('settings')">Windows Settings</button>
+                <button class="button button-primary" onclick="openProgram('windowsfeatures')">Windows Features</button>
+                <button class="button button-primary" onclick="openProgram('systemproperties')">System Properties</button>
+                <button class="button button-primary" onclick="openProgram('powercfg')">Power Options</button>
+                <button class="button button-primary" onclick="openProgram('appwiz')">Programs and Features</button>
+                <button class="button button-primary" onclick="openProgram('firewall')">Windows Firewall</button>
+                <button class="button button-primary" onclick="openProgram('netplwiz')">User Accounts</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Administrative Tools</h2>
+            <div class="shortcut-list">
+                <button class="button button-primary" onclick="openProgram('devmgmt')">Device Manager</button>
+                <button class="button button-primary" onclick="openProgram('diskmgmt')">Disk Management</button>
+                <button class="button button-primary" onclick="openProgram('compmgmt')">Computer Management</button>
+                <button class="button button-primary" onclick="openProgram('services')">Services</button>
+                <button class="button button-primary" onclick="openProgram('taskmgr')">Task Manager</button>
+                <button class="button button-primary" onclick="openProgram('msconfig')">System Configuration</button>
+                <button class="button button-primary" onclick="openProgram('eventvwr')">Event Viewer</button>
+                <button class="button button-primary" onclick="openProgram('perfmon')">Performance Monitor</button>
+                <button class="button button-primary" onclick="openProgram('resmon')">Resource Monitor</button>
+                <button class="button button-primary" onclick="openProgram('taskschd')">Task Scheduler</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>System Tools</h2>
+            <div class="shortcut-list">
+                <button class="button button-primary" onclick="openProgram('regedit')">Registry Editor</button>
+                <button class="button button-primary" onclick="openProgram('msinfo32')">System Information</button>
+                <button class="button button-primary" onclick="openProgram('dxdiag')">DirectX Diagnostic</button>
+                <button class="button button-primary" onclick="openProgram('cleanmgr')">Disk Cleanup</button>
+                <button class="button button-primary" onclick="openProgram('mdsched')">Memory Diagnostic</button>
+                <button class="button button-primary" onclick="openProgram('mstsc')">Remote Desktop</button>
+                <button class="button button-primary" onclick="openProgram('cmd')">Command Prompt</button>
+                <button class="button button-primary" onclick="openProgram('powershell')">PowerShell</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Security & Maintenance</h2>
+            <div class="shortcut-list">
+                <button class="button button-primary" onclick="openProgram('secpol')">Security Policy</button>
+                <button class="button button-primary" onclick="openProgram('certmgr')">Certificate Manager</button>
+                <button class="button button-primary" onclick="openProgram('gpedit')">Group Policy Editor</button>
+                <button class="button button-primary" onclick="openProgram('lusrmgr')">Local Users and Groups</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Network Tools</h2>
+            <div class="shortcut-list">
+                <button class="button button-primary" onclick="openProgram('ncpa')">Network Connections</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Accessibility</h2>
+            <div class="shortcut-list">
+                <button class="button button-primary" onclick="openProgram('magnify')">Magnifier</button>
+                <button class="button button-primary" onclick="openProgram('narrator')">Narrator</button>
+                <button class="button button-primary" onclick="openProgram('osk')">On-Screen Keyboard</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Windows Tools</h2>
+            <div class="shortcut-list">
+                <button class="button button-primary" onclick="openProgram('calc')">Calculator</button>
+                <button class="button button-primary" onclick="openProgram('notepad')">Notepad</button>
+                <button class="button button-primary" onclick="openProgram('charmap')">Character Map</button>
+                <button class="button button-primary" onclick="openProgram('mspaint')">Paint</button>
+                <button class="button button-primary" onclick="openProgram('snippingtool')">Snipping Tool</button>
             </div>
         </div>
     </div>
-</div>]]>
+
+    <script>
+        async function openProgram(program) {
+            try {
+                const result = await window.pywebview.api.open_system_program(program);
+                if (result.error) {
+                    alert(result.error);
+                }
+            } catch (error) {
+                alert('Error opening program: ' + error);
+            }
+        }
+    </script>
+</div>

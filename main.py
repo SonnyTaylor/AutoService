@@ -43,6 +43,78 @@ class Api:
             "processor": platform.processor(),
         }
 
+    def open_system_program(self, program):
+        """Open Windows system programs"""
+        import subprocess
+        import platform
+
+        if platform.system() != "Windows":
+            return {"error": "This feature is only available on Windows"}
+
+        commands = {
+            # Control Panel and Settings
+            "control": "control.exe",
+            "settings": "start ms-settings:",
+            "windowsfeatures": "optionalfeatures.exe",
+            "systemproperties": "sysdm.cpl",
+            "ncpa": "ncpa.cpl",  # Network Connections
+            "powercfg": "powercfg.cpl",  # Power Options
+            "appwiz": "appwiz.cpl",  # Programs and Features
+            "sysdm": "sysdm.cpl",  # System Properties
+            "firewall": "firewall.cpl",
+            "netplwiz": "netplwiz.exe",  # User Accounts
+            # Administrative Tools
+            "devmgmt": "devmgmt.msc",  # Device Manager
+            "diskmgmt": "diskmgmt.msc",  # Disk Management
+            "compmgmt": "compmgmt.msc",  # Computer Management
+            "services": "services.msc",  # Services
+            "taskmgr": "taskmgr.exe",  # Task Manager
+            "msconfig": "msconfig.exe",  # System Configuration
+            "eventvwr": "eventvwr.msc",  # Event Viewer
+            "perfmon": "perfmon.exe",  # Performance Monitor
+            "resmon": "resmon.exe",  # Resource Monitor
+            "taskschd": "taskschd.msc",  # Task Scheduler
+            "wmimgmt": "wmimgmt.msc",  # WMI Management
+            # System Tools
+            "regedit": "regedit.exe",  # Registry Editor
+            "msinfo32": "msinfo32.exe",  # System Information
+            "dxdiag": "dxdiag.exe",  # DirectX Diagnostic Tool
+            "cleanmgr": "cleanmgr.exe",  # Disk Cleanup
+            "mdsched": "mdsched.exe",  # Windows Memory Diagnostic
+            "mstsc": "mstsc.exe",  # Remote Desktop
+            "snippingtool": "snippingtool.exe",
+            "cmd": "cmd.exe",  # Command Prompt
+            "powershell": "powershell.exe",
+            # Security and Maintenance
+            "secpol": "secpol.msc",  # Security Policy
+            "certmgr": "certmgr.msc",  # Certificate Manager
+            "azman": "azman.msc",  # Authorization Manager
+            "gpedit": "gpedit.msc",  # Group Policy Editor
+            "lusrmgr": "lusrmgr.msc",  # Local Users and Groups
+            # Network Tools
+            "ncpa": "ncpa.cpl",  # Network Connections
+            "netstat": "netstat.exe",
+            "ipconfig": "ipconfig.exe",
+            # Accessibility
+            "magnify": "magnify.exe",  # Magnifier
+            "narrator": "narrator.exe",
+            "osk": "osk.exe",  # On-Screen Keyboard
+            # Windows Tools
+            "calc": "calc.exe",  # Calculator
+            "notepad": "notepad.exe",
+            "charmap": "charmap.exe",  # Character Map
+            "mspaint": "mspaint.exe",  # Paint
+        }
+
+        if program not in commands:
+            return {"error": f"Unknown program: {program}"}
+
+        try:
+            subprocess.Popen(commands[program], shell=True)
+            return {"success": True}
+        except Exception as e:
+            return {"error": str(e)}
+
 
 def start():
     api = Api()
