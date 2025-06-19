@@ -1,12 +1,14 @@
 import os
 import sys
 import webview
+from app.system_info import SystemInfo
 
 
 # API exposed to JS in the webview
 class Api:
     def __init__(self):
         self.base_path = self.get_base_path()
+        self.system_info = SystemInfo()  # Create an instance of SystemInfo
 
     def get_base_path(self):
         if getattr(sys, "frozen", False):
@@ -18,6 +20,10 @@ class Api:
 
     def get_tool_path(self, tool_name):
         return os.path.join(self.base_path, "data", tool_name)
+
+    def get_all_info(self):
+        """Get all system information"""
+        return self.system_info.get_all_info()
 
     def run_scan(self):
         # Placeholder: Replace with real scan logic using subprocess etc.
@@ -48,3 +54,10 @@ def start():
 
 if __name__ == "__main__":
     start()
+
+    # Test the system info directly
+    try:
+        test_info = Api().get_all_info()
+        print("System Info Test:", test_info)
+    except Exception as e:
+        print("Error getting system info:", str(e))

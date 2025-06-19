@@ -1,38 +1,226 @@
 <div class="page-container">
     <h1>System Information</h1>
-    <div class="grid">
-        <div class="card" id="basic-info">
-            <h2>Basic Information</h2>
-            <div class="info-content">
-                <div class="info-row">
-                    <span class="label">OS:</span>
-                    <span class="value" id="os-info">Loading...</span>
-                </div>
-                <div class="info-row">
-                    <span class="label">Version:</span>
-                    <span class="value" id="version-info">Loading...</span>
-                </div>
-                <div class="info-row">
-                    <span class="label">Release:</span>
-                    <span class="value" id="release-info">Loading...</span>
-                </div>
-                <div class="info-row">
-                    <span class="label">Processor:</span>
-                    <span class="value" id="processor-info">Loading...</span>
-                </div>
+    <div class="system-sections">
+        <!-- OS Information -->
+        <div class="section">
+            <div class="section-header" onclick="toggleSection('os')">
+                <h2>Operating System</h2>
+                <span class="toggle-icon" id="os-toggle">▼</span>
+            </div>
+            <div class="section-content show" id="os-section">
+                <table class="info-table" id="os-info">
+                    <tr>
+                        <td colspan="2" class="loading">Loading...</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- CPU Information -->
+        <div class="section">
+            <div class="section-header" onclick="toggleSection('cpu')">
+                <h2>CPU</h2>
+                <span class="toggle-icon" id="cpu-toggle">▼</span>
+            </div>
+            <div class="section-content show" id="cpu-section">
+                <table class="info-table" id="cpu-info">
+                    <tr>
+                        <td colspan="2" class="loading">Loading...</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Memory Information -->
+        <div class="section">
+            <div class="section-header" onclick="toggleSection('memory')">
+                <h2>Memory</h2>
+                <span class="toggle-icon" id="memory-toggle">▼</span>
+            </div>
+            <div class="section-content show" id="memory-section">
+                <table class="info-table" id="memory-info">
+                    <tr>
+                        <td colspan="2" class="loading">Loading...</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- GPU Information -->
+        <div class="section">
+            <div class="section-header" onclick="toggleSection('gpu')">
+                <h2>GPU</h2>
+                <span class="toggle-icon" id="gpu-toggle">▼</span>
+            </div>
+            <div class="section-content show" id="gpu-section">
+                <table class="info-table" id="gpu-info">
+                    <tr>
+                        <td colspan="2" class="loading">Loading...</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Disk Information -->
+        <div class="section">
+            <div class="section-header" onclick="toggleSection('disk')">
+                <h2>Storage</h2>
+                <span class="toggle-icon" id="disk-toggle">▼</span>
+            </div>
+            <div class="section-content show" id="disk-section">
+                <table class="info-table" id="disk-info">
+                    <tr>
+                        <td colspan="2" class="loading">Loading...</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Network Information -->
+        <div class="section">
+            <div class="section-header" onclick="toggleSection('network')">
+                <h2>Network</h2>
+                <span class="toggle-icon" id="network-toggle">▼</span>
+            </div>
+            <div class="section-content show" id="network-section">
+                <table class="info-table" id="network-info">
+                    <tr>
+                        <td colspan="2" class="loading">Loading...</td>
+                    </tr>
+                </table>
             </div>
         </div>
     </div>
 </div>
 
 <script>
+    function formatBytes(bytes) {
+        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        let i = 0;
+        while (bytes >= 1024 && i < units.length - 1) {
+            bytes /= 1024;
+            i++;
+        }
+        return `${bytes.toFixed(2)} ${units[i]}`;
+    }
+
+    function createTableRow(label, value) {
+        return `
+            <tr>
+                <td class="label">${label}:</td>
+                <td class="value">${value}</td>
+            </tr>
+        `;
+    }
+
+    function toggleSection(sectionName) {
+        const section = document.getElementById(`${sectionName}-section`);
+        const toggle = document.getElementById(`${sectionName}-toggle`);
+        section.classList.toggle('show');
+        toggle.textContent = section.classList.contains('show') ? '▼' : '▶';
+    }
+
     async function loadSystemInfo() {
         try {
-            const info = await window.pywebview.api.get_system_info();
-            document.getElementById('os-info').textContent = info.os;
-            document.getElementById('version-info').textContent = info.version;
-            document.getElementById('release-info').textContent = info.release;
-            document.getElementById('processor-info').textContent = info.processor;
+            console.log('Fetching system info...');
+            const info = await window.pywebview.api.get_all_info();
+            console.log('Received system info:', info);
+
+            // Update OS Info
+            const osInfo = info.os;
+            document.getElementById('os-info').innerHTML = `
+                ${createTableRow('System', osInfo.system)}
+                ${createTableRow('Version', osInfo.version)}
+                ${createTableRow('Release', osInfo.release)}
+                ${createTableRow('Machine', osInfo.machine)}
+                ${createTableRow('Processor', osInfo.processor)}
+                ${createTableRow('Hostname', osInfo.hostname)}
+            `;
+
+            // Update CPU Info
+            const cpuInfo = info.cpu;
+            let cpuHtml = `
+                <table class="info-table">
+                    <tr><th colspan="2">CPU Information</th></tr>
+                    ${createTableRow('Name', cpuInfo.name || 'N/A')}
+                    ${createTableRow('Manufacturer/Vendor', cpuInfo.manufacturer || cpuInfo.vendor || 'N/A')}
+                    ${createTableRow('Physical Cores', cpuInfo.physical_cores)}
+                    ${createTableRow('Total Cores', cpuInfo.total_cores)}
+                    ${createTableRow('Architecture', cpuInfo.architecture || 'N/A')}
+                    ${createTableRow('Family', cpuInfo.family || 'N/A')}
+                    ${createTableRow('Model', cpuInfo.model || 'N/A')}
+                    ${createTableRow('Stepping', cpuInfo.stepping || 'N/A')}
+                    ${cpuInfo.socket ? createTableRow('Socket', cpuInfo.socket) : ''}
+                    ${cpuInfo.virtualization !== undefined ? createTableRow('Virtualization', cpuInfo.virtualization ? 'Enabled' : 'Disabled') : ''}
+                    ${cpuInfo.temperature !== undefined ? createTableRow('Temperature', cpuInfo.temperature + '°C') : ''}
+                </table>
+
+                <table class="info-table">
+                    <tr><th colspan="2">CPU Usage & Performance</th></tr>
+                    ${createTableRow('Total CPU Usage', cpuInfo.total_cpu_usage.toFixed(1) + '%')}
+                    ${createTableRow('Average Frequency', cpuInfo.cpu_freq.average.current.toFixed(2) + ' MHz')}
+                    ${createTableRow('Min Frequency', cpuInfo.cpu_freq.average.min.toFixed(2) + ' MHz')}
+                    ${createTableRow('Max Frequency', cpuInfo.cpu_freq.average.max.toFixed(2) + ' MHz')}
+                    ${createTableRow('Load Average (1m)', cpuInfo.load_avg['1min'].toFixed(2))}
+                    ${createTableRow('Load Average (5m)', cpuInfo.load_avg['5min'].toFixed(2))}
+                    ${createTableRow('Load Average (15m)', cpuInfo.load_avg['15min'].toFixed(2))}
+                </table>`;
+
+            document.getElementById('cpu-info').innerHTML = cpuHtml;
+
+            // Update Memory Info
+            const memInfo = info.memory;
+            document.getElementById('memory-info').innerHTML = `
+                ${createTableRow('Total', formatBytes(memInfo.total))}
+                ${createTableRow('Available', formatBytes(memInfo.available))}
+                ${createTableRow('Used', formatBytes(memInfo.used))}
+                ${createTableRow('Usage', memInfo.percentage.toFixed(1) + '%')}
+            `;
+
+            // Update GPU Info
+            const gpuInfo = info.gpu;
+            if (Array.isArray(gpuInfo)) {
+                document.getElementById('gpu-info').innerHTML = gpuInfo.map((gpu, index) => `
+                    <table class="info-table">
+                        <tr><th colspan="2">GPU ${index + 1}: ${gpu.name}</th></tr>
+                        ${createTableRow('Total Memory', formatBytes(gpu.memory_total))}
+                        ${createTableRow('Used Memory', formatBytes(gpu.memory_used))}
+                        ${createTableRow('Free Memory', formatBytes(gpu.memory_free))}
+                        ${createTableRow('Temperature', gpu.temperature + '°C')}
+                        ${createTableRow('Power Usage', gpu.power_usage.toFixed(2) + ' W')}
+                    </table>
+                `).join('');
+            } else {
+                document.getElementById('gpu-info').innerHTML = createTableRow('Status', gpuInfo.error);
+            }
+
+            // Update Disk Info
+            const diskInfo = info.disk;
+            document.getElementById('disk-info').innerHTML = diskInfo.map(disk => `
+                <table class="info-table">
+                    <tr><th colspan="2">${disk.mountpoint}</th></tr>
+                    ${createTableRow('Device', disk.device)}
+                    ${createTableRow('Filesystem', disk.filesystem)}
+                    ${createTableRow('Total', formatBytes(disk.total))}
+                    ${createTableRow('Used', formatBytes(disk.used))}
+                    ${createTableRow('Free', formatBytes(disk.free))}
+                    ${createTableRow('Usage', disk.percentage.toFixed(1) + '%')}
+                </table>
+            `).join('');
+
+            // Update Network Info
+            const networkInfo = info.network;
+            document.getElementById('network-info').innerHTML = Object.entries(networkInfo)
+                .map(([interface, info]) => `
+                    <table class="info-table">
+                        <tr><th colspan="2">${interface}</th></tr>
+                        ${createTableRow('Status', info.isup ? 'Up' : 'Down')}
+                        ${createTableRow('Speed', info.speed + ' Mbps')}
+                        ${createTableRow('MTU', info.mtu)}
+                        ${info.addresses.map(addr => createTableRow('Address', `${addr.address} (${addr.family})`)).join('')}
+                    </table>
+                `).join('');
+
         } catch (error) {
             console.error('Error loading system info:', error);
         }
@@ -40,4 +228,7 @@
 
     // Load system info when the page loads
     loadSystemInfo();
+
+    // Refresh every 5 seconds
+    setInterval(loadSystemInfo, 5000);
 </script>]]>
