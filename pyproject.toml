@@ -5,6 +5,9 @@ description = "A USB-based Windows tool that runs portable virus scanners and ge
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "gputil>=1.4.0",
+    "psutil>=7.0.0",
+    "py3nvml>=0.2.7",
     "pywebview>=5.4",
 ]
 
