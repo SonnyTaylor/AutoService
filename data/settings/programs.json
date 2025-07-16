@@ -2,9 +2,11 @@
   "programs": [
     {
       "name": "CrystalDiskInfo",
+      "version": "9.7.0",
       "description": "Disk health monitoring tool",
       "executable": "data/programs/CrystalDiskInfo9_7_0Aoi/DiskInfo64A.exe",
-      "added_date": "2025-07-16"
+      "added_date": "2025-07-16",
+      "icon": ""
     }
   ]
 }
