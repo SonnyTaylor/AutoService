@@ -353,10 +353,16 @@ class ProgramsView:
         """Dialog for adding or editing program details"""
 
         def __init__(
-            self, parent, title="Add Program", program_data=None, exe_path=None
+            self,
+            parent,
+            programs_view,
+            title="Add Program",
+            program_data=None,
+            exe_path=None,
         ):
             super().__init__(parent)
             self.parent = parent
+            self.programs_view = programs_view  # Reference to ProgramsView instance
             self.program_data = program_data or {}
             self.exe_path = exe_path
             self.result = None
@@ -515,7 +521,7 @@ class ProgramsView:
 
             # Convert relative path to absolute if needed
             if not os.path.isabs(exe_path):
-                exe_path = os.path.join(self.parent.data_folder, "..", exe_path)
+                exe_path = os.path.join(self.programs_view.data_folder, "..", exe_path)
                 exe_path = os.path.normpath(exe_path)
 
             if not os.path.exists(exe_path):
@@ -525,7 +531,7 @@ class ProgramsView:
                 return
 
             try:
-                self.icon_base64 = self.parent.extract_icon_from_exe(exe_path)
+                self.icon_base64 = self.programs_view.extract_icon_from_exe(exe_path)
                 if self.icon_base64:
                     self.update_icon_preview()
                     messagebox.showinfo("Success", "Icon extracted successfully!")
@@ -539,12 +545,12 @@ class ProgramsView:
         def update_icon_preview(self):
             """Update the icon preview"""
             if self.icon_base64:
-                self.icon_image = self.parent.load_icon_from_base64(
+                self.icon_image = self.programs_view.load_icon_from_base64(
                     self.icon_base64, (64, 64)
                 )
 
             if not self.icon_image:
-                self.icon_image = self.parent.get_default_icon((64, 64))
+                self.icon_image = self.programs_view.get_default_icon((64, 64))
 
             if self.icon_image:
                 self.icon_label.configure(image=self.icon_image, text="")
@@ -557,12 +563,12 @@ class ProgramsView:
             file_path = filedialog.askopenfilename(
                 title="Select Portable Executable",
                 filetypes=[("Executable files", "*.exe"), ("All files", "*.*")],
-                initialdir=os.path.join(self.parent.data_folder, "programs"),
+                initialdir=os.path.join(self.programs_view.data_folder, "programs"),
             )
 
             if file_path:
                 try:
-                    project_root = os.path.dirname(self.parent.data_folder)
+                    project_root = os.path.dirname(self.programs_view.data_folder)
                     relative_path = os.path.relpath(file_path, project_root)
                     relative_path = relative_path.replace("\\", "/")
                 except ValueError:
@@ -638,7 +644,10 @@ class ProgramsView:
 
             # Open dialog to edit program details
             dialog = self.ProgramDialog(
-                self.frame.winfo_toplevel(), title="Add Program", exe_path=relative_path
+                self.frame.winfo_toplevel(),
+                self,  # Pass the ProgramsView instance
+                title="Add Program",
+                exe_path=relative_path,
             )
             self.frame.wait_window(dialog)
 
@@ -664,6 +673,7 @@ class ProgramsView:
                 # Open dialog to edit program details
                 dialog = self.ProgramDialog(
                     self.frame.winfo_toplevel(),
+                    self,  # Pass the ProgramsView instance
                     title="Edit Program",
                     program_data=program.copy(),
                 )
