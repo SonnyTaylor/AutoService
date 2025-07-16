@@ -7,6 +7,7 @@ name = "autoservice"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "batteryinfo" },
     { name = "customtkinter" },
     { name = "psutil" },
     { name = "pywin32" },
@@ -14,9 +15,20 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "batteryinfo", specifier = ">=0.1.5" },
     { name = "customtkinter", specifier = ">=5.2.2" },
     { name = "psutil", specifier = ">=5.9.5" },
     { name = "pywin32", specifier = ">=311" },
+]
+
+[[package]]
+name = "batteryinfo"
+version = "0.1.5"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/99/c9/466782bc2a1d86dcd741098422b94892e2d43399c1dfec56b0c38fb04912/batteryinfo-0.1.5-cp310-abi3-manylinux_2_34_x86_64.whl", hash = "sha256:c05540677334c01de6c8aa4e8981410b02ed327630719c57bd9c3ed561b2f686", size = 343659, upload-time = "2025-04-30T00:51:14.919Z" },
+    { url = "https://files.pythonhosted.org/packages/c4/c7/283a15d4173fdd0dcf284c863dbb3e0244c0dc66162e072cd6837e7bc7f7/batteryinfo-0.1.5-cp310-abi3-win_amd64.whl", hash = "sha256:7711376eeaa8b26d0daec16419f2c5780671e330c9561915e3397b6a3924006c", size = 674408, upload-time = "2025-04-30T00:51:17.216Z" },
+    { url = "https://files.pythonhosted.org/packages/96/37/5689a371bb9841bc0ed617c5bab4a8424b8d00b4386fc5b03bd2d64a30f2/batteryinfo-0.1.5-cp313-cp313t-win_amd64.whl", hash = "sha256:2253c3e8df4ca55f47c6564c5282a0e95cd16b86561a7c101432c07b9b29f87b", size = 679843, upload-time = "2025-04-30T00:51:18.742Z" },
 ]
 
 [[package]]

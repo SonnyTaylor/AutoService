@@ -21,11 +21,11 @@ class SystemInfoSection(ctk.CTkFrame):
         self.row += 1
 
 
-def init_view(frame):
-    """Initialize the System Info view"""
-    # Create scrollable frame with larger width to prevent horizontal scroll
-    scrollable_frame = ctk.CTkScrollableFrame(frame, width=700)
-    scrollable_frame.pack(fill="both", expand=True, padx=10, pady=10)
+def update_info(scrollable_frame):
+    """Update all system information sections"""
+    # Clear existing widgets
+    for widget in scrollable_frame.winfo_children():
+        widget.destroy()
 
     # System Information
     system_section = SystemInfoSection(scrollable_frame, "System Information")
@@ -67,7 +67,7 @@ def init_view(frame):
             f"Total: {details['Total']} | "
             f"Used: {details['Used']} | "
             f"Free: {details['Free']} | "
-            f"Usage: {details['Percentage']}"
+            f"Usage: {details['Percentage']}",
         )
 
     # Network Information
@@ -83,5 +83,30 @@ def init_view(frame):
     if battery_info:
         battery_section = SystemInfoSection(scrollable_frame, "Battery Information")
         battery_section.pack(fill="x", pady=5)
-        for key, value in battery_info.items():
-            battery_section.add_item(key, value)
+        for battery_name, battery_details in battery_info.items():
+            battery_section.add_item(battery_name, "")  # Add battery header
+            for key, value in battery_details.items():
+                battery_section.add_item(f"  {key}", value)  # Indent battery details
+
+
+def init_view(frame):
+    """Initialize the System Info view"""
+    # Create container for refresh button
+    top_container = ctk.CTkFrame(frame, fg_color="transparent")
+    top_container.pack(fill="x", padx=10, pady=(10, 0))
+    
+    # Create refresh button
+    refresh_button = ctk.CTkButton(
+        top_container,
+        text="↻ Refresh",
+        width=100,
+        command=lambda: update_info(scrollable_frame)
+    )
+    refresh_button.pack(side="right")
+
+    # Create scrollable frame with larger width to prevent horizontal scroll
+    scrollable_frame = ctk.CTkScrollableFrame(frame, width=700)
+    scrollable_frame.pack(fill="both", expand=True, padx=10, pady=10)
+    
+    # Initial update of information
+    update_info(scrollable_frame)
