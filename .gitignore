@@ -7,4 +7,10 @@ wheels/
 *.egg-info
 
 # Virtual environments
-.venv
+.venv/
+
+# Ignore all files in data/programs/
+data/programs/
+
+# But keep the folder itself if needed (so it exists when cloned)
+!data/programs/.gitkeep
