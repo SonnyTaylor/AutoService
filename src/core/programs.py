@@ -49,20 +49,30 @@ class ProgramsManager:
             for i in range(min(5, len(icons))):
                 try:
                     icon_data = extractor.get_icon(num=i)
-                    icon_bytes = icon_data.read()
+
+                    # Use getvalue() instead of read() to get the icon bytes
+                    if hasattr(icon_data, "getvalue"):
+                        icon_bytes = icon_data.getvalue()
+                    else:
+                        # Fallback to read() method
+                        icon_data.seek(0)  # Reset position
+                        icon_bytes = icon_data.read()
 
                     # Check if we got valid icon data
                     if len(icon_bytes) > 0:
                         # Convert to base64 for storage
                         icon_base64 = base64.b64encode(icon_bytes).decode("utf-8")
                         return icon_base64
-                except:
+                except Exception as e:
+                    # Continue to next icon if this one fails
                     continue
 
             return None
-        except IconExtractorError:
+        except IconExtractorError as e:
+            print(f"IconExtractorError: {e}")
             return None
-        except Exception:
+        except Exception as e:
+            print(f"General error extracting icon: {e}")
             return None
 
     def load_icon_from_base64(self, icon_base64, size=(32, 32)):
