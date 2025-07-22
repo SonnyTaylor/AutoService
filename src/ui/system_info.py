@@ -1,5 +1,5 @@
 import customtkinter as ctk
-from src.core.system.info import SystemInfo
+from src.core.info import SystemInfo
 
 
 class SystemInfoSection(ctk.CTkFrame):
@@ -94,19 +94,19 @@ def init_view(frame):
     # Create container for refresh button
     top_container = ctk.CTkFrame(frame, fg_color="transparent")
     top_container.pack(fill="x", padx=10, pady=(10, 0))
-    
+
     # Create refresh button
     refresh_button = ctk.CTkButton(
         top_container,
         text="↻ Refresh",
         width=100,
-        command=lambda: update_info(scrollable_frame)
+        command=lambda: update_info(scrollable_frame),
     )
     refresh_button.pack(side="right")
 
     # Create scrollable frame with larger width to prevent horizontal scroll
     scrollable_frame = ctk.CTkScrollableFrame(frame, width=700)
     scrollable_frame.pack(fill="both", expand=True, padx=10, pady=10)
-    
+
     # Initial update of information
     update_info(scrollable_frame)
