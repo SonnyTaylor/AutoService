@@ -219,8 +219,11 @@ class ProgramsView:
             self.icon_image = None
 
             self.title(title)
-            self.geometry("500x600")
-            self.resizable(False, False)
+            self.geometry("500x700")  # Increased height from 600 to 700
+            self.resizable(True, True)  # Allow resizing so users can adjust if needed
+            self.minsize(
+                450, 650
+            )  # Set minimum size to ensure all elements are visible
 
             # Make modal
             self.transient(parent)
@@ -239,9 +242,13 @@ class ProgramsView:
             self.geometry(f"+{x}+{y}")
 
         def setup_ui(self):
-            # Main frame
-            main_frame = ctk.CTkFrame(self, fg_color="transparent")
-            main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+            # Create main container frame
+            container_frame = ctk.CTkFrame(self, fg_color="transparent")
+            container_frame.pack(fill="both", expand=True, padx=20, pady=20)
+
+            # Main scrollable frame for content
+            main_frame = ctk.CTkScrollableFrame(container_frame)
+            main_frame.pack(fill="both", expand=True, pady=(0, 10))
 
             # Icon preview frame
             icon_frame = ctk.CTkFrame(main_frame)
@@ -317,20 +324,11 @@ class ProgramsView:
             )
             self.browse_btn.pack(side="right")
 
-            # Buttons frame
-            buttons_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
-            buttons_frame.pack(fill="x", pady=(20, 0))
+            # Fixed buttons frame at bottom (outside scrollable area)
+            buttons_frame = ctk.CTkFrame(container_frame, fg_color="transparent")
+            buttons_frame.pack(fill="x", pady=(10, 0))
 
-            self.cancel_btn = ctk.CTkButton(
-                buttons_frame,
-                text="Cancel",
-                command=self.cancel,
-                width=100,
-                fg_color="gray",
-                hover_color="darkgray",
-            )
-            self.cancel_btn.pack(side="right", padx=(10, 0))
-
+            # Save button (packed first so it appears on the right)
             self.save_btn = ctk.CTkButton(
                 buttons_frame,
                 text="Save",
@@ -339,7 +337,18 @@ class ProgramsView:
                 fg_color="green",
                 hover_color="darkgreen",
             )
-            self.save_btn.pack(side="right")
+            self.save_btn.pack(side="right", padx=(0, 0))
+
+            # Cancel button
+            self.cancel_btn = ctk.CTkButton(
+                buttons_frame,
+                text="Cancel",
+                command=self.cancel,
+                width=100,
+                fg_color="gray",
+                hover_color="darkgray",
+            )
+            self.cancel_btn.pack(side="right", padx=(0, 10))
 
         def populate_fields(self):
             """Populate fields with existing data"""
