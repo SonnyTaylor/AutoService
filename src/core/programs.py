@@ -5,7 +5,8 @@ import sys
 from datetime import datetime
 import base64
 from io import BytesIO
-from PIL import Image, ImageTk
+from PIL import Image
+import customtkinter as ctk
 from icoextract import IconExtractor, IconExtractorError
 
 
@@ -65,7 +66,7 @@ class ProgramsManager:
             return None
 
     def load_icon_from_base64(self, icon_base64, size=(32, 32)):
-        """Load icon from base64 string and return as PhotoImage"""
+        """Load icon from base64 string and return as CTkImage"""
         try:
             if not icon_base64:
                 return None
@@ -77,8 +78,8 @@ class ProgramsManager:
             pil_image = Image.open(icon_data)
             pil_image = pil_image.resize(size, Image.Resampling.LANCZOS)
 
-            # Convert to PhotoImage for tkinter
-            return ImageTk.PhotoImage(pil_image)
+            # Convert to CTkImage for CustomTkinter
+            return ctk.CTkImage(light_image=pil_image, dark_image=pil_image, size=size)
         except Exception:
             return None
 
@@ -119,7 +120,7 @@ class ProgramsManager:
                     # Fallback without font
                     pass
 
-            return ImageTk.PhotoImage(img)
+            return ctk.CTkImage(light_image=img, dark_image=img, size=size)
         except Exception:
             return None
 

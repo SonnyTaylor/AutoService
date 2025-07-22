@@ -90,8 +90,6 @@ class ProgramsView:
         if icon_image:
             icon_label = ctk.CTkLabel(icon_frame, image=icon_image, text="")
             icon_label.pack(pady=10)
-            # Keep reference to prevent garbage collection
-            icon_label.image = icon_image
 
         # Right side - Program info
         info_frame = ctk.CTkFrame(content_frame, fg_color="transparent")
@@ -413,7 +411,6 @@ class ProgramsView:
 
             if self.icon_image:
                 self.icon_label.configure(image=self.icon_image, text="")
-                self.icon_label.image = self.icon_image
             else:
                 self.icon_label.configure(image=None, text="No icon")
 
