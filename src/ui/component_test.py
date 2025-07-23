@@ -646,8 +646,11 @@ class ComponentTestView:
             "Alt_R": "Alt",
             "Super_L": "Win",
             "Super_R": "Win",
+            "Win_L": "Win",  # Add this mapping
+            "Win_R": "Win",  # Add this mapping
             "Menu": "Menu",
             "space": "Space",
+            "Tab": "Tab",  # Keep Tab as Tab, not uppercase
             # Function keys
             "F1": "F1",
             "F2": "F2",
@@ -678,7 +681,6 @@ class ComponentTestView:
         # Apply mapping or use the key as-is (converted to uppercase for letters)
         mapped_key = key_mapping.get(key, key.upper() if key.isalpha() else key)
 
-        print(f"Key pressed: {key} -> mapped to: {mapped_key}")  # Debug print
         self.mark_key_pressed(mapped_key)
 
     def on_key_release(self, event):
@@ -702,10 +704,9 @@ class ComponentTestView:
 
         if button:
             button.configure(fg_color="green")
-            print(f"Marked key as pressed: {key}")  # Debug print
         else:
-            print(f"No button found for key: {key}")  # Debug print
-            print(f"Available buttons: {list(self.key_buttons.keys())}")  # Debug print
+            # Only print debug info if needed for troubleshooting
+            pass
 
     def clear_keyboard_test(self):
         """Clear all pressed keys"""
