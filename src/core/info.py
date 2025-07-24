@@ -118,7 +118,9 @@ class SystemInfo:
             nvidia_memory = None
             try:
                 # Try using Win32_VideoController's AdapterRAM first
-                nvidia_cards = wmi.ExecQuery("Select * from Win32_VideoController where Name like '%NVIDIA%'")
+                nvidia_cards = wmi.ExecQuery(
+                    "Select * from Win32_VideoController where Name like '%NVIDIA%'"
+                )
                 for card in nvidia_cards:
                     try:
                         if hasattr(card, "AdapterRAM") and card.AdapterRAM:
@@ -143,16 +145,23 @@ class SystemInfo:
                                         break
                                 except Exception:
                                     continue
-                
+
                 # If still no success, try DisplayConfiguration
                 if not nvidia_memory:
-                    display_info = wmi.ExecQuery("Select * from Win32_DisplayConfiguration")
+                    display_info = wmi.ExecQuery(
+                        "Select * from Win32_DisplayConfiguration"
+                    )
                     for display in display_info:
-                        if hasattr(display, "VideoMemoryType") and display.VideoMemoryType:
+                        if (
+                            hasattr(display, "VideoMemoryType")
+                            and display.VideoMemoryType
+                        ):
                             try:
                                 mem = int(display.VideoMemoryType)
                                 if mem > 0:
-                                    nvidia_memory = mem * 1024 * 1024  # Convert to bytes
+                                    nvidia_memory = (
+                                        mem * 1024 * 1024
+                                    )  # Convert to bytes
                                     break
                             except Exception:
                                 continue
@@ -180,7 +189,7 @@ class SystemInfo:
                                     dedicated_memory = val
                             except (AttributeError, TypeError, ValueError):
                                 continue
-                        
+
                         # If still no success, try additional properties
                         if dedicated_memory <= 0:
                             # Try VideoProcessor property which might contain memory info
@@ -189,12 +198,16 @@ class SystemInfo:
                                 desc = gpu.VideoProcessor
                                 if "GB)" in desc:
                                     try:
-                                        gb_str = desc[desc.find("(") + 1:desc.find("GB")]
+                                        gb_str = desc[
+                                            desc.find("(") + 1 : desc.find("GB")
+                                        ]
                                         gb_val = float(gb_str)
-                                        dedicated_memory = int(gb_val * 1024 * 1024 * 1024)
+                                        dedicated_memory = int(
+                                            gb_val * 1024 * 1024 * 1024
+                                        )
                                     except Exception:
                                         pass
-                            
+
                             # Try description for memory info
                             if dedicated_memory <= 0 and hasattr(gpu, "Description"):
                                 desc = gpu.Description
@@ -202,14 +215,19 @@ class SystemInfo:
                                     try:
                                         # Try to find patterns like "2GB" or "2 GB"
                                         import re
-                                        match = re.search(r'(\d+(?:\.\d+)?)\s*GB', desc)
+
+                                        match = re.search(r"(\d+(?:\.\d+)?)\s*GB", desc)
                                         if match:
                                             gb_val = float(match.group(1))
-                                            dedicated_memory = int(gb_val * 1024 * 1024 * 1024)
+                                            dedicated_memory = int(
+                                                gb_val * 1024 * 1024 * 1024
+                                            )
                                     except Exception:
                                         pass
 
-                    dedicated_memory_gb = dedicated_memory / (1024**3) if dedicated_memory > 0 else None
+                    dedicated_memory_gb = (
+                        dedicated_memory / (1024**3) if dedicated_memory > 0 else None
+                    )
                 except Exception:
                     dedicated_memory_gb = None
 
@@ -335,7 +353,7 @@ class SystemInfo:
                             12: "Credentials required",
                         }
                         status = status_map.get(adapter.NetConnectionStatus, "Unknown")
-                        
+
                         interfaces[adapter.Name] = [ip_addresses]
             return interfaces
         except Exception:
@@ -353,18 +371,18 @@ class SystemInfo:
         """Get detailed battery information using batteryinfo"""
         try:
             batteries = {}
-            
+
             # Try getting info for both batteries (index 0 and 1)
             for idx in range(2):
                 try:
                     battery = batteryinfo.Battery(
                         index=idx,
                         time_format=batteryinfo.TimeFormat.Human,
-                        temp_unit=batteryinfo.TempUnit.DegC
+                        temp_unit=batteryinfo.TempUnit.DegC,
                     )
-                    
+
                     info = {}
-                    
+
                     # Basic information
                     if battery.vendor:
                         info["Vendor"] = battery.vendor
@@ -374,17 +392,17 @@ class SystemInfo:
                         info["Serial Number"] = battery.serial_number
                     if battery.technology:
                         info["Technology"] = battery.technology
-                    
+
                     # Essential status information
                     info["Status"] = battery.state
                     info["Battery Level"] = str(battery.percent)
-                    
+
                     # Health information
                     if battery.capacity:
                         info["Battery Health"] = str(battery.capacity)
                     if battery.cycle_count:
                         info["Cycle Count"] = str(battery.cycle_count)
-                    
+
                     # Power information
                     if battery.energy and battery.energy_full:
                         info["Current Energy"] = str(battery.energy)
@@ -395,23 +413,23 @@ class SystemInfo:
                         info["Power Draw"] = str(battery.energy_rate)
                     if battery.voltage:
                         info["Voltage"] = str(battery.voltage)
-                    
+
                     # Temperature
                     if battery.temperature:
                         info["Temperature"] = str(battery.temperature)
-                    
+
                     # Time estimates
                     if battery.state == "Charging" and battery.time_to_full:
                         info["Time to Full"] = battery.time_to_full
                     elif battery.state == "Discharging" and battery.time_to_empty:
                         info["Time to Empty"] = battery.time_to_empty
-                    
+
                     batteries[f"Battery {idx + 1}"] = info
                 except Exception:
                     continue
-                    
+
             return batteries if batteries else None
-            
+
         except (ImportError, Exception) as e:
             # Fallback to psutil if batteryinfo is not available
             if hasattr(psutil, "sensors_battery"):
@@ -420,7 +438,9 @@ class SystemInfo:
                     return {
                         "Battery 1": {
                             "Battery Level": f"{battery.percent}%",
-                            "Status": "Charging" if battery.power_plugged else "Discharging",
+                            "Status": "Charging"
+                            if battery.power_plugged
+                            else "Discharging",
                             "Power Plugged": "Yes" if battery.power_plugged else "No",
                         }
                     }

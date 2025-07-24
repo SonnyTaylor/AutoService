@@ -34,7 +34,10 @@ class WindowsShortcuts:
                 {"name": "Network Status", "command": "ms-settings:network-status"},
                 {"name": "Remote Desktop", "command": "mstsc"},
                 {"name": "Windows Firewall", "command": "firewall.cpl"},
-                {"name": "Network Diagnostics", "command": "ms-settings:network-troubleshoot"},
+                {
+                    "name": "Network Diagnostics",
+                    "command": "ms-settings:network-troubleshoot",
+                },
             ],
             "Power & Hardware": [
                 {"name": "Power Options", "command": "powercfg.cpl"},
@@ -64,13 +67,13 @@ class WindowsShortcuts:
                 {"name": "Storage Settings", "command": "ms-settings:storagesense"},
                 {"name": "System Restore", "command": "rstrui"},
                 {"name": "Windows Memory Diagnostic", "command": "mdsched"},
-            ]
+            ],
         }
 
     @staticmethod
     def launch_shortcut(command: str, admin: bool = False) -> None:
         """Launch a Windows utility or command
-        
+
         Args:
             command: The command to execute
             admin: Whether to run with administrative privileges
@@ -78,10 +81,10 @@ class WindowsShortcuts:
         try:
             if admin:
                 # For administrative privileges
-                subprocess.run(['runas', '/user:Administrator', command], check=True)
+                subprocess.run(["runas", "/user:Administrator", command], check=True)
             else:
                 # For normal execution
-                if command.startswith('ms-settings:'):
+                if command.startswith("ms-settings:"):
                     # Handle modern Windows Settings URIs
                     os.startfile(command)
                 else:
