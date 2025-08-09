@@ -14,3 +14,5 @@ data/programs/
 
 # But keep the folder itself if needed (so it exists when cloned)
 !data/programs/.gitkeep
+
+data/settings/programs.json
