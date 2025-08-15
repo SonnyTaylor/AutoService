@@ -646,8 +646,11 @@ class ComponentTestView:
             "Alt_R": "Alt",
             "Super_L": "Win",
             "Super_R": "Win",
+            "Win_L": "Win",  # Add this mapping
+            "Win_R": "Win",  # Add this mapping
             "Menu": "Menu",
             "space": "Space",
+            "Tab": "Tab",  # Keep Tab as Tab, not uppercase
             # Function keys
             "F1": "F1",
             "F2": "F2",
@@ -678,7 +681,6 @@ class ComponentTestView:
         # Apply mapping or use the key as-is (converted to uppercase for letters)
         mapped_key = key_mapping.get(key, key.upper() if key.isalpha() else key)
 
-        print(f"Key pressed: {key} -> mapped to: {mapped_key}")  # Debug print
         self.mark_key_pressed(mapped_key)
 
     def on_key_release(self, event):
@@ -702,10 +704,9 @@ class ComponentTestView:
 
         if button:
             button.configure(fg_color="green")
-            print(f"Marked key as pressed: {key}")  # Debug print
         else:
-            print(f"No button found for key: {key}")  # Debug print
-            print(f"Available buttons: {list(self.key_buttons.keys())}")  # Debug print
+            # Only print debug info if needed for troubleshooting
+            pass
 
     def clear_keyboard_test(self):
         """Clear all pressed keys"""
@@ -731,24 +732,64 @@ class ComponentTestView:
         if self.screen_test_window:
             self.screen_test_window.destroy()
 
+        # Create new window
         self.screen_test_window = tk.Toplevel()
         self.screen_test_window.title(f"Screen Test - {test_type.title()}")
-        self.screen_test_window.attributes("-fullscreen", True)
+        
+        # Configure for true fullscreen
+        self.screen_test_window.state('zoomed')  # Maximize first
+        self.screen_test_window.attributes('-fullscreen', True)
+        self.screen_test_window.overrideredirect(True)  # Remove window decorations
+        
+        # Get the actual screen dimensions
+        self.screen_test_window.update()  # Force window to update
+        screen_width = self.screen_test_window.winfo_width()
+        screen_height = self.screen_test_window.winfo_height()
+        
+        if screen_width == 1 or screen_height == 1:  # If dimensions not yet available
+            screen_width = self.screen_test_window.winfo_screenwidth()
+            screen_height = self.screen_test_window.winfo_screenheight()
+        
+        # Set the window size and position
+        self.screen_test_window.geometry(f"{screen_width}x{screen_height}+0+0")
         self.screen_test_window.configure(bg="black")
-
-        # Create canvas for drawing
-        canvas = tk.Canvas(self.screen_test_window, highlightthickness=0, bg="black")
+        
+        # Create canvas with explicit dimensions
+        canvas = tk.Canvas(
+            self.screen_test_window, 
+            highlightthickness=0, 
+            bg="black",
+            width=screen_width,
+            height=screen_height
+        )
         canvas.pack(fill="both", expand=True)
-
+        
         # Instructions label
         instructions = tk.Label(
             self.screen_test_window,
             text="Press SPACE for next, ESC to exit",
             bg="black",
             fg="white",
-            font=("Arial", 12),
+            font=("Arial", 12)
         )
         instructions.place(x=10, y=10)
+        instructions.lift()
+        
+        # Bind window resize event to update canvas
+        def on_resize(event=None):
+            if event and event.widget == self.screen_test_window:
+                width = event.width
+                height = event.height
+                canvas.configure(width=width, height=height)
+                # Redraw current test pattern
+                if hasattr(self, 'current_color_index'):
+                    self.show_next_color()
+                elif hasattr(self, 'current_pattern_index'):
+                    self.show_next_dead_pixel_pattern()
+                elif hasattr(self, 'current_gradient_index'):
+                    self.show_next_gradient()
+        
+        self.screen_test_window.bind('<Configure>', on_resize)
 
         # Start the test
         if test_type == "color":
@@ -783,13 +824,22 @@ class ComponentTestView:
 
         if self.current_color_index < len(self.test_colors):
             color = self.test_colors[self.current_color_index]
+            self.screen_test_window.configure(bg=color["hex"])
             self.test_canvas.configure(bg=color["hex"])
+            
+            # Create a full-screen rectangle in the same color
+            width = self.screen_test_window.winfo_width()
+            height = self.screen_test_window.winfo_height()
+            self.test_canvas.delete("all")  # Clear any previous shapes
+            self.test_canvas.create_rectangle(0, 0, width, height, fill=color["hex"], outline="")
 
             # Update instructions
             for widget in self.screen_test_window.winfo_children():
                 if isinstance(widget, tk.Label):
                     widget.configure(
-                        text=f"Color: {color['name']} - Press SPACE for next, ESC to exit"
+                        text=f"Color: {color['name']} - Press SPACE for next, ESC to exit",
+                        bg=color["hex"],
+                        fg="white" if color["name"] in ["Black", "Red", "Blue"] else "black"
                     )
 
             self.current_color_index += 1
@@ -846,12 +896,17 @@ class ComponentTestView:
     def draw_checkerboard_pattern(self):
         """Draw checkerboard pattern for dead pixel detection"""
         self.test_canvas.delete("all")
-        width = self.screen_test_window.winfo_screenwidth()
-        height = self.screen_test_window.winfo_screenheight()
+        width = self.screen_test_window.winfo_width()
+        height = self.screen_test_window.winfo_height()
 
-        square_size = 20
-        for y in range(0, height, square_size):
-            for x in range(0, width, square_size):
+        # Scale square size based on screen resolution
+        base_size = 20
+        scale_factor = min(width, height) / 1080  # Scale based on resolution
+        square_size = max(int(base_size * scale_factor), 10)  # Minimum size of 10px
+        
+        # Draw squares to cover entire screen
+        for y in range(0, height + square_size, square_size):
+            for x in range(0, width + square_size, square_size):
                 color = (
                     "white"
                     if (x // square_size + y // square_size) % 2 == 0
@@ -892,19 +947,49 @@ class ComponentTestView:
     def draw_gradient(self, gradient_type):
         """Draw gradient pattern"""
         self.test_canvas.delete("all")
-        width = self.screen_test_window.winfo_screenwidth()
-        height = self.screen_test_window.winfo_screenheight()
+        width = self.screen_test_window.winfo_width()
+        height = self.screen_test_window.winfo_height()
 
         if gradient_type == "horizontal":
-            for x in range(width):
-                gray_value = int(255 * x / width)
+            # Draw horizontal gradient with optimized performance
+            steps = min(width, 256)  # Limit steps for smoother performance
+            step_width = width / steps
+            for i in range(steps):
+                x = int(i * step_width)
+                next_x = int((i + 1) * step_width)
+                gray_value = int(255 * i / steps)
                 color = f"#{gray_value:02x}{gray_value:02x}{gray_value:02x}"
-                self.test_canvas.create_line(x, 0, x, height, fill=color)
+                self.test_canvas.create_rectangle(x, 0, next_x + 1, height, fill=color, outline="")
+                
         elif gradient_type == "vertical":
-            for y in range(height):
-                gray_value = int(255 * y / height)
+            # Draw vertical gradient with optimized performance
+            steps = min(height, 256)  # Limit steps for smoother performance
+            step_height = height / steps
+            for i in range(steps):
+                y = int(i * step_height)
+                next_y = int((i + 1) * step_height)
+                gray_value = int(255 * i / steps)
                 color = f"#{gray_value:02x}{gray_value:02x}{gray_value:02x}"
-                self.test_canvas.create_line(0, y, width, y, fill=color)
+                self.test_canvas.create_rectangle(0, y, width, next_y + 1, fill=color, outline="")
+                
+        elif gradient_type == "radial":
+            # Create radial gradient
+            center_x = width / 2
+            center_y = height / 2
+            max_radius = max(width, height)
+            steps = 256  # Number of gradient steps
+            
+            for i in range(steps - 1, -1, -1):  # Draw from outside in
+                radius = (i / steps) * max_radius
+                gray_value = int(255 * (1 - i / steps))
+                color = f"#{gray_value:02x}{gray_value:02x}{gray_value:02x}"
+                
+                # Draw circle
+                x0 = center_x - radius
+                y0 = center_y - radius
+                x1 = center_x + radius
+                y1 = center_y + radius
+                self.test_canvas.create_oval(x0, y0, x1, y1, fill=color, outline="")
 
     def next_screen_test(self):
         """Go to next screen test"""
