@@ -1,0 +1,6 @@
+# Ignore all portable programs dropped here
+*
+
+# Keep this file (and an optional README for docs)
+!.gitignore
+!README.md
