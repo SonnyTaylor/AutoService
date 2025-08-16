@@ -162,8 +162,25 @@ pub fn run() {
 
     #[tauri::command]
     fn list_programs(state: tauri::State<AppState>) -> Result<Vec<ProgramEntry>, String> {
-        let settings_path = programs_json_path(state.data_dir.as_path());
-        Ok(read_programs_file(&settings_path))
+        let data_root = state.data_dir.as_path();
+        let settings_path = programs_json_path(data_root);
+        let mut list = read_programs_file(&settings_path);
+        // One-time migration: store exe_path relative to data dir when possible
+        let mut changed = false;
+        for p in &mut list {
+            let exe_p = PathBuf::from(&p.exe_path);
+            if exe_p.is_absolute() {
+                if let Ok(stripped) = exe_p.strip_prefix(data_root) {
+                    p.exe_path = stripped.to_string_lossy().to_string();
+                    changed = true;
+                }
+            }
+        }
+        if changed {
+            // Best-effort write; ignore error in listing path
+            let _ = write_programs_file(&settings_path, &list);
+        }
+        Ok(list)
     }
 
     #[tauri::command]
@@ -171,8 +188,16 @@ pub fn run() {
         let settings_path = programs_json_path(state.data_dir.as_path());
         // If no logo provided by frontend, try to extract one here
         if program.logo_data_url.is_empty() {
-            if let Ok(Some(url)) = suggest_logo_from_exe(program.exe_path.clone()) {
+            if let Ok(Some(url)) = get_logo_from_exe(state.data_dir.as_path(), &program.exe_path) {
                 program.logo_data_url = url;
+            }
+        }
+        // Convert exe_path to relative (to data dir) if applicable
+        let exe_p = std::path::PathBuf::from(&program.exe_path);
+        if exe_p.is_absolute() {
+            let data_root = state.data_dir.as_path();
+            if let Ok(stripped) = exe_p.strip_prefix(data_root) {
+                program.exe_path = stripped.to_string_lossy().to_string();
             }
         }
         let mut list = read_programs_file(&settings_path);
@@ -192,14 +217,15 @@ pub fn run() {
     }
 
     #[tauri::command]
-    fn launch_program(program: ProgramEntry) -> Result<(), String> {
+    fn launch_program(state: tauri::State<AppState>, program: ProgramEntry) -> Result<(), String> {
         #[cfg(not(windows))]
         { return Err("Programs launch only supported on Windows".into()); }
         #[cfg(windows)]
         {
             use std::process::Command;
+            let exe_full = resolve_exe_path(state.data_dir.as_path(), &program.exe_path);
             // Use PowerShell Start-Process for robust path handling
-            let ps = format!("Start-Process -FilePath \"{}\"", program.exe_path.replace('`', "``").replace('"', "`\""));
+            let ps = format!("Start-Process -FilePath \"{}\"", exe_full.replace('`', "``").replace('"', "`\""));
             Command::new("powershell.exe")
                 .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps])
                 .spawn()
@@ -209,9 +235,14 @@ pub fn run() {
     }
 
     #[tauri::command]
-    fn suggest_logo_from_exe(exe_path: String) -> Result<Option<String>, String> {
+    fn suggest_logo_from_exe(state: tauri::State<AppState>, exe_path: String) -> Result<Option<String>, String> {
+        get_logo_from_exe(state.data_dir.as_path(), &exe_path)
+    }
+
+    fn get_logo_from_exe(data_root: &Path, exe_path: &str) -> Result<Option<String>, String> {
         // Windows-only icon extraction using exeico; otherwise fallback heuristics
-        let p = PathBuf::from(&exe_path);
+        let p0 = PathBuf::from(exe_path);
+        let p = if p0.is_absolute() { p0 } else { data_root.join(&p0) };
         #[cfg(windows)]
         {
             if let Ok(bytes) = exeico::get_exe_ico(&p) {
@@ -283,6 +314,15 @@ pub fn run() {
     fn programs_json_path(data_root: &Path) -> PathBuf {
         let (_reports, _programs, settings, _resources) = crate::paths::subdirs(data_root);
         settings.join("programs.json")
+    }
+
+    fn resolve_exe_path(data_root: &Path, exe_path: &str) -> String {
+        let p = PathBuf::from(exe_path);
+        if p.is_absolute() {
+            exe_path.to_string()
+        } else {
+            data_root.join(p).to_string_lossy().to_string()
+        }
     }
 
     fn read_programs_file(path: &Path) -> Vec<ProgramEntry> {
