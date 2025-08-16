@@ -2,11 +2,10 @@
   <h1>Shortcuts</h1>
   <p class="muted">Quick actions for Windows system and utility tools.</p>
 
-  <div class="toolbar" style="display:flex; gap:8px; align-items:center; margin: 8px 0 12px;">
-    <input id="shortcut-search" type="search" placeholder="Search tools... (e.g., device, disk, powershell)"
-           style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--border); background: var(--panel-2); color: var(--text);" />
+  <div class="shortcut-toolbar">
+    <input id="shortcut-search" class="shortcut-search" type="search" placeholder="Search tools... (e.g., device, disk, powershell)" />
     <button id="clear-search" title="Clear search">Clear</button>
   </div>
 
-  <div id="shortcut-list" class="categories" style="display:flex; flex-direction:column; gap:14px;"></div>
+  <div id="shortcut-list" class="shortcut-list"></div>
 </section>

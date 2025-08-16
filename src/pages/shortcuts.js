@@ -90,24 +90,19 @@ export async function initPage() {
       const section = document.createElement("section");
       section.className = "category";
       section.innerHTML = `
-        <h2 style="font-size:1rem;margin:0 0 8px;">${cat.title}</h2>
-        <div class="grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;"></div>
+        <div class="category-header"><h2>${cat.title}</h2></div>
+        <div class="shortcut-grid"></div>
       `;
-      const grid = section.querySelector(".grid");
+      const grid = section.querySelector(".shortcut-grid");
       for (const item of cat.items) {
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "shortcut-btn";
         btn.textContent = item.label;
         btn.title = item.label;
-        btn.style.padding = "10px";
-        btn.style.textAlign = "left";
-        btn.style.background = "var(--panel-2)";
-        btn.style.border = "1px solid var(--border)";
-        btn.style.borderRadius = "8px";
-        btn.style.whiteSpace = "nowrap";
-        btn.style.overflow = "hidden";
-        btn.style.textOverflow = "ellipsis";
+        // Allow wrapping on larger buttons
+        btn.style.whiteSpace = "normal";
+        btn.style.wordBreak = "break-word";
         btn.addEventListener("click", async () => {
           btn.disabled = true;
           try {
