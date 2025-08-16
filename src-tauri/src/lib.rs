@@ -1,4 +1,5 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+mod paths;
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
@@ -121,9 +122,41 @@ fn launch_shortcut(id: &str) -> Result<(), String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    use std::sync::Arc;
+    use tauri::Manager;
+
+    #[derive(Clone)]
+    struct AppState { data_dir: Arc<std::path::PathBuf> }
+
+    #[tauri::command]
+    fn get_data_dirs(state: tauri::State<AppState>) -> Result<serde_json::Value, String> {
+        let data_root = state.data_dir.as_path();
+        let (reports, programs, settings, resources) = crate::paths::subdirs(data_root);
+        Ok(serde_json::json!({
+            "data": data_root,
+            "reports": reports,
+            "programs": programs,
+            "settings": settings,
+            "resources": resources,
+        }))
+    }
+
+    let data_root = crate::paths::resolve_data_dir();
+    if let Err(e) = crate::paths::ensure_structure(&data_root) {
+        eprintln!("Failed to ensure data structure at {:?}: {}", data_root, e);
+    }
+
     tauri::Builder::default()
+        .manage(AppState { data_dir: Arc::new(data_root) })
         .plugin(tauri_plugin_opener::init())
-    .invoke_handler(tauri::generate_handler![greet, launch_shortcut])
+        .invoke_handler(tauri::generate_handler![greet, launch_shortcut, get_data_dirs])
+        .setup(|app| {
+            // Optionally, set current directory to data dir for simpler relative paths
+            if let Some(state) = app.state::<AppState>().inner().clone().data_dir.as_ref().to_str() {
+                let _ = std::env::set_current_dir(state);
+            }
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

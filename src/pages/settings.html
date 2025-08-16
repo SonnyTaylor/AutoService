@@ -1,5 +1,43 @@
 <section class="page" data-page="settings">
   <h1>Settings</h1>
   <p class="muted">Preferences, paths, and reporting options.</p>
-  <!-- Future: JSON config editor, report email settings, default actions -->
+
+  <div style="margin-top:12px">
+    <h2 style="font-size:1rem;margin:0 0 8px;">Data folder</h2>
+    <p class="muted">AutoService looks for a sibling <code>data</code> folder next to the executable (USB), or uses the environment variable <code>AUTOSERVICE_DATA_DIR</code>. In development, it falls back to <code>./data</code> at the repo root.</p>
+    <div id="data-paths" style="display:grid;grid-template-columns:max-content 1fr auto;gap:8px;align-items:center;"></div>
+  </div>
+
+  <script type="module">
+    const { invoke, convertFileSrc } = window.__TAURI__.core;
+    const container = document.querySelector('#data-paths');
+
+    function row(label, value) {
+      const r = document.createElement('div');
+      r.style.display = 'contents';
+      const l = document.createElement('div'); l.textContent = label + ':';
+      const v = document.createElement('div'); v.textContent = value; v.style.wordBreak = 'break-all';
+      const b = document.createElement('button'); b.textContent = 'Copy';
+      b.addEventListener('click', async () => {
+        await navigator.clipboard.writeText(value);
+        b.textContent = 'Copied'; setTimeout(()=> b.textContent='Copy', 1000);
+      });
+      r.append(l, v, b);
+      return r;
+    }
+
+    try {
+      const paths = await invoke('get_data_dirs');
+      container.append(
+        row('Root', String(paths.data)),
+        row('Reports', String(paths.reports)),
+        row('Programs', String(paths.programs)),
+        row('Settings', String(paths.settings)),
+        row('Resources', String(paths.resources)),
+      );
+    } catch (e) {
+      container.textContent = 'Failed to load data directories.';
+      console.error(e);
+    }
+  </script>
 </section>
