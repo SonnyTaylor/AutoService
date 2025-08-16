@@ -192,11 +192,13 @@ pub fn run() {
         #[cfg(windows)]
         {
             use std::process::Command;
-            // Start detached similar to shortcuts
-            let mut cmd = Command::new("cmd");
-            let quoted = format!("\"{}\"", program.exe_path);
-            cmd.args(["/c", "start", "", &quoted]);
-            cmd.spawn().map(|_| ()).map_err(|e| format!("Failed to start program: {}", e))
+            // Use PowerShell Start-Process for robust path handling
+            let ps = format!("Start-Process -FilePath \"{}\"", program.exe_path.replace('`', "``").replace('"', "`\""));
+            Command::new("powershell.exe")
+                .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps])
+                .spawn()
+                .map(|_| ())
+                .map_err(|e| format!("Failed to start program: {}", e))
         }
     }
 
