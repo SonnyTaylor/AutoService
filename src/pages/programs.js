@@ -164,6 +164,15 @@ function wireEditor() {
       alert("Name and executable are required");
       return;
     }
+    // If no logo yet, try to extract from the EXE before saving
+    if (!state.editing.logo_data_url) {
+      try {
+        const suggested = await invoke("suggest_logo_from_exe", { exe_path: state.editing.exe_path });
+        if (suggested) {
+          state.editing.logo_data_url = suggested;
+        }
+      } catch {}
+    }
     save.disabled = true;
     try {
       await invoke("save_program", { program: state.editing });

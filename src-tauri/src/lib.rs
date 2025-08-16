@@ -167,8 +167,14 @@ pub fn run() {
     }
 
     #[tauri::command]
-    fn save_program(state: tauri::State<AppState>, program: ProgramEntry) -> Result<(), String> {
+    fn save_program(state: tauri::State<AppState>, mut program: ProgramEntry) -> Result<(), String> {
         let settings_path = programs_json_path(state.data_dir.as_path());
+        // If no logo provided by frontend, try to extract one here
+        if program.logo_data_url.is_empty() {
+            if let Ok(Some(url)) = suggest_logo_from_exe(program.exe_path.clone()) {
+                program.logo_data_url = url;
+            }
+        }
         let mut list = read_programs_file(&settings_path);
         match list.iter_mut().find(|p| p.id == program.id) {
             Some(existing) => *existing = program,
@@ -204,26 +210,40 @@ pub fn run() {
 
     #[tauri::command]
     fn suggest_logo_from_exe(exe_path: String) -> Result<Option<String>, String> {
-        // Simple heuristic: look for an .ico or .png next to the exe
+        // Windows-only icon extraction using exeico; otherwise fallback heuristics
         let p = PathBuf::from(&exe_path);
+        #[cfg(windows)]
+        {
+            if let Ok(bytes) = exeico::get_exe_ico(&p) {
+                if let Ok(png_data_url) = ico_bytes_to_png_data_url(&bytes) {
+                    return Ok(Some(png_data_url));
+                }
+            }
+        }
+        // Heuristic: look for .ico or .png next to the exe
         if let Some(dir) = p.parent() {
-            // Prefer .ico with same stem
             if let Some(stem) = p.file_stem() {
                 let ico = dir.join(format!("{}.ico", stem.to_string_lossy()));
                 if ico.exists() {
+                    if let Ok(bytes) = fs::read(&ico) {
+                        if let Ok(png) = ico_bytes_to_png_data_url(&bytes) { return Ok(Some(png)); }
+                    }
                     return Ok(load_image_data_url(&ico).ok());
                 }
                 let png = dir.join(format!("{}.png", stem.to_string_lossy()));
-                if png.exists() {
-                    return Ok(load_image_data_url(&png).ok());
-                }
+                if png.exists() { return Ok(load_image_data_url(&png).ok()); }
             }
-            // Fallback: first .ico or .png in folder
             if let Ok(read) = fs::read_dir(dir) {
                 for entry in read.flatten() {
                     let path = entry.path();
                     if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-                        if matches!(ext.to_ascii_lowercase().as_str(), "ico" | "png") {
+                        let ext_l = ext.to_ascii_lowercase();
+                        if ext_l == "ico" {
+                            if let Ok(bytes) = fs::read(&path) {
+                                if let Ok(png) = ico_bytes_to_png_data_url(&bytes) { return Ok(Some(png)); }
+                            }
+                            return Ok(load_image_data_url(&path).ok());
+                        } else if ext_l == "png" {
                             return Ok(load_image_data_url(&path).ok());
                         }
                     }
@@ -231,6 +251,16 @@ pub fn run() {
             }
         }
         Ok(None)
+    }
+
+    fn ico_bytes_to_png_data_url(ico_bytes: &[u8]) -> Result<String, String> {
+        let img = image::load_from_memory_with_format(ico_bytes, image::ImageFormat::Ico)
+            .map_err(|e| format!("ICO decode failed: {}", e))?;
+        let mut buf = Vec::new();
+        img.write_to(&mut std::io::Cursor::new(&mut buf), image::ImageFormat::Png)
+            .map_err(|e| format!("PNG encode failed: {}", e))?;
+        let b64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &buf);
+        Ok(format!("data:image/png;base64,{}", b64))
     }
 
     #[tauri::command]
