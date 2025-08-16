@@ -50,10 +50,10 @@ function renderList() {
       } else if (action === "edit") {
         openEditor(prog);
       } else if (action === "remove") {
-        if (confirm(`Remove ${prog.name}?`)) {
-          await invoke("remove_program", { id: prog.id });
-          await loadPrograms();
-        }
+        const ok = await confirmRemove(prog.name);
+        if (!ok) return;
+        await invoke("remove_program", { id: prog.id });
+        await loadPrograms();
       }
     });
   });
@@ -179,4 +179,14 @@ export async function initPage() {
   wireToolbar();
   wireEditor();
   await loadPrograms();
+}
+
+async function confirmRemove(name) {
+  const tauriConfirm = window.__TAURI__?.dialog?.confirm;
+  if (tauriConfirm) {
+    try {
+      return await tauriConfirm(`Remove ${name}?`, { title: "Confirm", type: "warning" });
+    } catch { /* fall through */ }
+  }
+  return window.confirm(`Remove ${name}?`);
 }
