@@ -26,11 +26,22 @@ async function loadPage(route) {
   if (!content) return;
   content.setAttribute("aria-busy", "true");
   try {
-    const res = await fetch(`/pages/${route}.html`, { cache: "no-cache" });
+    const res = await fetch(`pages/${route}.html`, { cache: "no-cache" });
     const html = await res.text();
     content.innerHTML = html;
     // Focus the main landmark for a11y
     content.focus();
+
+    // Try to load optional page controller: /pages/<route>.js
+    try {
+      const mod = await import(`./pages/${route}.js?ts=${Date.now()}`);
+      if (typeof mod.initPage === "function") {
+        await mod.initPage();
+      }
+    } catch (e) {
+      // No controller or failed to load; ignore silently
+      // console.debug("No page controller for", route, e);
+    }
   } catch (e) {
     content.innerHTML = `<div class="page"><h1>Error</h1><p class="muted">Failed to load page: ${route}</p></div>`;
   } finally {
