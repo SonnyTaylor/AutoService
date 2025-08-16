@@ -2,38 +2,28 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="stylesheet" href="styles.css" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tauri App</title>
+    <title>AutoService</title>
+    <link rel="stylesheet" href="/styles.css" />
     <script type="module" src="/main.js" defer></script>
   </head>
-
   <body>
-    <main class="container">
-      <h1>Welcome to Tauri</h1>
+    <header>
+      <nav class="tab-bar" aria-label="Primary">
+        <a class="tab" data-route="scans" href="#/scans">Scans</a>
+        <a class="tab" data-route="system-info" href="#/system-info">System Info</a>
+        <a class="tab" data-route="shortcuts" href="#/shortcuts">Shortcuts</a>
+        <a class="tab" data-route="programs" href="#/programs">Programs</a>
+        <a class="tab" data-route="stress-test" href="#/stress-test">Stress Test</a>
+        <a class="tab" data-route="component-test" href="#/component-test">Component Test</a>
+        <a class="tab" data-route="diagnostic" href="#/diagnostic">Diagnostic</a>
+        <a class="tab" data-route="tools" href="#/tools">Tools</a>
+        <a class="tab" data-route="settings" href="#/settings">Settings</a>
+      </nav>
+    </header>
 
-      <div class="row">
-        <a href="https://tauri.app" target="_blank">
-          <img src="/assets/tauri.svg" class="logo tauri" alt="Tauri logo" />
-        </a>
-        <a
-          href="https://developer.mozilla.org/en-US/docs/Web/JavaScript"
-          target="_blank"
-        >
-          <img
-            src="/assets/javascript.svg"
-            class="logo vanilla"
-            alt="JavaScript logo"
-          />
-        </a>
-      </div>
-      <p>Click on the Tauri logo to learn more about the framework</p>
-
-      <form class="row" id="greet-form">
-        <input id="greet-input" placeholder="Enter a name..." />
-        <button type="submit">Greet</button>
-      </form>
-      <p id="greet-msg"></p>
+    <main id="content" class="page-container" tabindex="-1" aria-live="polite" aria-busy="false">
+      <!-- Page content is injected here by main.js router -->
     </main>
   </body>
 </html>
