@@ -1,5 +1,8 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 mod paths;
+use serde::{Deserialize, Serialize};
+use std::{fs, path::{Path, PathBuf}};
+use uuid::Uuid;
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
@@ -146,10 +149,141 @@ pub fn run() {
         eprintln!("Failed to ensure data structure at {:?}: {}", data_root, e);
     }
 
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct ProgramEntry {
+        pub id: Uuid,
+        pub name: String,
+        pub version: String,
+        pub description: String,
+        pub exe_path: String,
+        // Data URL (e.g., data:image/png;base64,....) or empty string if not set
+        pub logo_data_url: String,
+    }
+
+    #[tauri::command]
+    fn list_programs(state: tauri::State<AppState>) -> Result<Vec<ProgramEntry>, String> {
+        let settings_path = programs_json_path(state.data_dir.as_path());
+        Ok(read_programs_file(&settings_path))
+    }
+
+    #[tauri::command]
+    fn save_program(state: tauri::State<AppState>, program: ProgramEntry) -> Result<(), String> {
+        let settings_path = programs_json_path(state.data_dir.as_path());
+        let mut list = read_programs_file(&settings_path);
+        match list.iter_mut().find(|p| p.id == program.id) {
+            Some(existing) => *existing = program,
+            None => list.push(program),
+        }
+        write_programs_file(&settings_path, &list)
+    }
+
+    #[tauri::command]
+    fn remove_program(state: tauri::State<AppState>, id: Uuid) -> Result<(), String> {
+        let settings_path = programs_json_path(state.data_dir.as_path());
+        let mut list = read_programs_file(&settings_path);
+        list.retain(|p| p.id != id);
+        write_programs_file(&settings_path, &list)
+    }
+
+    #[tauri::command]
+    fn launch_program(program: ProgramEntry) -> Result<(), String> {
+        #[cfg(not(windows))]
+        { return Err("Programs launch only supported on Windows".into()); }
+        #[cfg(windows)]
+        {
+            use std::process::Command;
+            // Start detached similar to shortcuts
+            let mut cmd = Command::new("cmd");
+            let quoted = format!("\"{}\"", program.exe_path);
+            cmd.args(["/c", "start", "", &quoted]);
+            cmd.spawn().map(|_| ()).map_err(|e| format!("Failed to start program: {}", e))
+        }
+    }
+
+    #[tauri::command]
+    fn suggest_logo_from_exe(exe_path: String) -> Result<Option<String>, String> {
+        // Simple heuristic: look for an .ico or .png next to the exe
+        let p = PathBuf::from(&exe_path);
+        if let Some(dir) = p.parent() {
+            // Prefer .ico with same stem
+            if let Some(stem) = p.file_stem() {
+                let ico = dir.join(format!("{}.ico", stem.to_string_lossy()));
+                if ico.exists() {
+                    return Ok(load_image_data_url(&ico).ok());
+                }
+                let png = dir.join(format!("{}.png", stem.to_string_lossy()));
+                if png.exists() {
+                    return Ok(load_image_data_url(&png).ok());
+                }
+            }
+            // Fallback: first .ico or .png in folder
+            if let Ok(read) = fs::read_dir(dir) {
+                for entry in read.flatten() {
+                    let path = entry.path();
+                    if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                        if matches!(ext.to_ascii_lowercase().as_str(), "ico" | "png") {
+                            return Ok(load_image_data_url(&path).ok());
+                        }
+                    }
+                }
+            }
+        }
+        Ok(None)
+    }
+
+    #[tauri::command]
+    fn read_image_as_data_url(path: String) -> Result<String, String> {
+        load_image_data_url(Path::new(&path))
+    }
+
+    fn load_image_data_url(path: &Path) -> Result<String, String> {
+        let bytes = fs::read(path).map_err(|e| format!("Failed to read image: {}", e))?;
+        let b64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &bytes);
+        let mime = match path.extension().and_then(|e| e.to_str()).map(|s| s.to_ascii_lowercase()) {
+            Some(ext) if ext == "png" => "image/png",
+            Some(ext) if ext == "jpg" || ext == "jpeg" => "image/jpeg",
+            Some(ext) if ext == "ico" => "image/x-icon",
+            _ => "application/octet-stream",
+        };
+        Ok(format!("data:{};base64,{}", mime, b64))
+    }
+
+    fn programs_json_path(data_root: &Path) -> PathBuf {
+        let (_reports, _programs, settings, _resources) = crate::paths::subdirs(data_root);
+        settings.join("programs.json")
+    }
+
+    fn read_programs_file(path: &Path) -> Vec<ProgramEntry> {
+        if let Ok(data) = fs::read_to_string(path) {
+            if let Ok(list) = serde_json::from_str::<Vec<ProgramEntry>>(&data) {
+                return list;
+            }
+        }
+        Vec::new()
+    }
+
+    fn write_programs_file(path: &Path, list: &Vec<ProgramEntry>) -> Result<(), String> {
+        let parent = path.parent().ok_or_else(|| "Invalid settings path".to_string())?;
+        if let Err(e) = fs::create_dir_all(parent) { return Err(e.to_string()); }
+        let data = serde_json::to_string_pretty(list).map_err(|e| e.to_string())?;
+        fs::write(path, data).map_err(|e| e.to_string())
+    }
+
     tauri::Builder::default()
         .manage(AppState { data_dir: Arc::new(data_root) })
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, launch_shortcut, get_data_dirs])
+        .plugin(tauri_plugin_dialog::init())
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            launch_shortcut,
+            get_data_dirs,
+            list_programs,
+            save_program,
+            remove_program,
+            launch_program,
+            suggest_logo_from_exe,
+            read_image_as_data_url
+        ])
         .setup(|app| {
             // Optionally, set current directory to data dir for simpler relative paths
             if let Some(state) = app.state::<AppState>().inner().clone().data_dir.as_ref().to_str() {

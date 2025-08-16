@@ -1,5 +1,43 @@
 <section class="page" data-page="programs">
   <h1>Programs</h1>
-  <p class="muted">Installers and common software bundles.</p>
-  <!-- Future: list of available installers from USB, one-click installs, silent flags -->
+  <p class="muted">Manage portable tools and installers stored under the data/programs folder.</p>
+
+  <div class="toolbar programs-toolbar">
+    <input id="program-search" class="shortcut-search" type="search" placeholder="Search programs..." />
+    <button id="program-add-btn">Add</button>
+  </div>
+
+  <div class="programs-list"></div>
+
+  <dialog id="program-editor" class="program-editor">
+    <form method="dialog" id="program-form">
+      <div class="editor-grid">
+        <div class="logo-col">
+          <img id="p-logo-preview" alt="Logo preview" />
+          <button type="button" id="p-pick-logo" class="secondary">Add Logo</button>
+        </div>
+        <div class="fields-col">
+          <label>Name
+            <input id="p-name" type="text" required />
+          </label>
+          <label>Version
+            <input id="p-version" type="text" />
+          </label>
+          <label>Description
+            <textarea id="p-desc" rows="3"></textarea>
+          </label>
+          <label>Executable
+            <div class="input-with-btn">
+              <input id="p-exe" type="text" placeholder="Path to .exe" required />
+              <button type="button" id="p-pick-exe" class="secondary">Browse</button>
+            </div>
+          </label>
+        </div>
+      </div>
+      <div class="editor-actions">
+        <button type="button" id="p-cancel" class="ghost">Cancel</button>
+        <button type="button" id="p-save">Save</button>
+      </div>
+    </form>
+  </dialog>
 </section>

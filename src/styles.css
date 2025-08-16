@@ -188,3 +188,47 @@ button:hover { background: var(--primary-700); }
   opacity: 0.6;
   cursor: progress;
 }
+
+/* Programs page */
+.programs-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 8px 0 14px;
+}
+.programs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.program-row {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-2);
+}
+.program-logo { width: 56px; height: 56px; object-fit: contain; border-radius: 8px; background: #12151d; }
+.program-main { display: flex; flex-direction: column; gap: 4px; }
+.program-title { font-weight: 600; }
+.program-title .ver { color: var(--muted); font-weight: 400; margin-left: 6px; }
+.program-desc { color: var(--muted); }
+.program-actions { display: flex; gap: 8px; }
+.program-actions .secondary { background: #2a3753; }
+.program-actions .ghost { background: transparent; border-color: var(--border); }
+.program-actions .ghost:hover { background: #222a3a; }
+
+.program-editor::backdrop { backdrop-filter: blur(2px); background: rgba(0,0,0,0.4); }
+.program-editor { border: 1px solid var(--border); border-radius: 12px; background: var(--panel); color: var(--text); padding: 0; width: min(780px, 92vw); }
+.program-editor form { padding: 16px; }
+.editor-grid { display: grid; grid-template-columns: 180px 1fr; gap: 16px; }
+.logo-col { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.logo-col img { width: 160px; height: 160px; border-radius: 12px; background: #0e1118; object-fit: contain; border: 1px solid var(--border); }
+.fields-col { display: grid; gap: 10px; }
+.fields-col label { display: grid; gap: 6px; font-size: 0.95rem; color: var(--muted); }
+.fields-col input, .fields-col textarea { padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel-2); color: var(--text); }
+.input-with-btn { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.editor-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
