@@ -121,6 +121,14 @@ function wireEditor() {
     if (selected) {
       document.querySelector("#p-exe").value = selected;
       state.editing.exe_path = selected;
+      // If Name is empty, set it to the EXE filename (without extension)
+      const nameInput = document.querySelector("#p-name");
+      if (nameInput && !nameInput.value.trim()) {
+        const base = selected.split(/[\\\/]/).pop() || "";
+        const inferred = base.replace(/\.exe$/i, "");
+        state.editing.name = inferred;
+        nameInput.value = inferred;
+      }
       try {
         const suggested = await invoke("suggest_logo_from_exe", { exe_path: selected });
         if (suggested) {
