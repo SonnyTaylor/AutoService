@@ -15,78 +15,104 @@ fn launch_shortcut(id: &str) -> Result<(), String> {
     {
         use std::process::Command;
 
-        fn spawn(program: &str, args: &[&str]) -> Result<(), String> {
-            Command::new(program)
-                .args(args)
+        // Launch using cmd /c start "" <target> [args...] to detach from the current console
+        fn start_detached(target: &str, args: &[&str]) -> Result<(), String> {
+            let mut cmd = Command::new("cmd");
+            cmd.args(["/c", "start", "", target]);
+            if !args.is_empty() {
+                cmd.args(args);
+            }
+            cmd.spawn()
+                .map(|_| ())
+                .map_err(|e| format!("Failed to start '{}': {}", target, e))
+        }
+
+        // Elevate with UAC prompt
+        fn start_elevated(target: &str, args: &[&str]) -> Result<(), String> {
+            // Quote each argument for PowerShell -ArgumentList
+            let arg_list = if args.is_empty() {
+                String::new()
+            } else {
+                let joined = args
+                    .iter()
+                    .map(|a| a.replace('\'', "''"))
+                    .map(|a| format!("'{}'", a))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                format!(" -ArgumentList {}", joined)
+            };
+            let ps = format!("Start-Process '{}' -Verb runAs{}", target, arg_list);
+            Command::new("powershell.exe")
+                .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps])
                 .spawn()
                 .map(|_| ())
-                .map_err(|e| format!("Failed to launch {}: {}", program, e))
+                .map_err(|e| format!("Failed to elevate '{}': {}", target, e))
         }
 
         match id {
             // Control Panel and classic CPLs
-            "control_panel" => spawn("control.exe", &[]),
-            "power_options" => spawn("control.exe", &["powercfg.cpl"]),
-            "programs_features" => spawn("control.exe", &["appwiz.cpl"]),
-            "internet_options" => spawn("control.exe", &["inetcpl.cpl"]),
-            "printers" => spawn("control.exe", &["printers"]),
-            "network_connections" => spawn("control.exe", &["ncpa.cpl"]),
-            "firewall_control" => spawn("control.exe", &["firewall.cpl"]),
-            "user_accounts_advanced" => spawn("control.exe", &["userpasswords2"]),
-            "netplwiz" => spawn("netplwiz.exe", &[]),
+            "control_panel" => start_detached("control.exe", &[]),
+            "power_options" => start_detached("control.exe", &["powercfg.cpl"]),
+            "programs_features" => start_detached("control.exe", &["appwiz.cpl"]),
+            "internet_options" => start_detached("control.exe", &["inetcpl.cpl"]),
+            "printers" => start_detached("control.exe", &["printers"]),
+            "network_connections" => start_detached("control.exe", &["ncpa.cpl"]),
+            "firewall_control" => start_detached("control.exe", &["firewall.cpl"]),
+            "user_accounts_advanced" => start_detached("control.exe", &["userpasswords2"]),
+            "netplwiz" => start_detached("netplwiz.exe", &[]),
 
             // MMC / MSC consoles (open via mmc)
-            "device_manager" => spawn("mmc.exe", &["devmgmt.msc"]),
-            "disk_management" => spawn("mmc.exe", &["diskmgmt.msc"]),
-            "services" => spawn("mmc.exe", &["services.msc"]),
-            "event_viewer" => spawn("mmc.exe", &["eventvwr.msc"]),
-            "computer_management" => spawn("mmc.exe", &["compmgmt.msc"]),
-            "firewall_advanced" => spawn("mmc.exe", &["wf.msc"]),
-            "local_users_groups" => spawn("mmc.exe", &["lusrmgr.msc"]),
-            "local_security_policy" => spawn("mmc.exe", &["secpol.msc"]),
-            "group_policy" => spawn("mmc.exe", &["gpedit.msc"]),
+            "device_manager" => start_detached("devmgmt.msc", &[]),
+            "disk_management" => start_detached("diskmgmt.msc", &[]),
+            "services" => start_detached("services.msc", &[]),
+            "event_viewer" => start_detached("eventvwr.msc", &[]),
+            "computer_management" => start_detached("compmgmt.msc", &[]),
+            "firewall_advanced" => start_detached("wf.msc", &[]),
+            "local_users_groups" => start_detached("lusrmgr.msc", &[]),
+            "local_security_policy" => start_detached("secpol.msc", &[]),
+            "group_policy" => start_detached("gpedit.msc", &[]),
 
             // System tools
-            "task_manager" => spawn("taskmgr.exe", &[]),
-            "system_properties" => spawn("sysdm.cpl", &[]),
-            "system_information" => spawn("msinfo32.exe", &[]),
-            "performance_monitor" => spawn("perfmon.exe", &[]),
-            "resource_monitor" => spawn("resmon.exe", &[]),
-            "directx_diag" => spawn("dxdiag.exe", &[]),
-            "disk_cleanup" => spawn("cleanmgr.exe", &[]),
-            "windows_features" => spawn("optionalfeatures.exe", &[]),
-            "optimize_drives" => spawn("dfrgui.exe", &[]),
-            "system_config" => spawn("msconfig.exe", &[]),
-            "diskpart" => spawn("diskpart.exe", &[]),
+            "task_manager" => start_detached("taskmgr.exe", &[]),
+            "system_properties" => start_detached("sysdm.cpl", &[]),
+            "system_information" => start_detached("msinfo32.exe", &[]),
+            "performance_monitor" => start_detached("perfmon.exe", &[]),
+            "resource_monitor" => start_detached("resmon.exe", &[]),
+            "directx_diag" => start_detached("dxdiag.exe", &[]),
+            "disk_cleanup" => start_detached("cleanmgr.exe", &[]),
+            "windows_features" => start_detached("optionalfeatures.exe", &[]),
+            "optimize_drives" => start_detached("dfrgui.exe", &[]),
+            "system_config" => start_detached("msconfig.exe", &[]),
+            "diskpart" => start_elevated("diskpart.exe", &[]),
 
             // Consoles
-            "cmd" => spawn("cmd.exe", &[]),
-            "cmd_admin" => spawn("powershell.exe", &["-Command", "Start-Process cmd -Verb runAs"]),
-            "powershell" => spawn("powershell.exe", &[]),
-            "powershell_admin" => spawn("powershell.exe", &["-Command", "Start-Process PowerShell -Verb runAs"]),
+            "cmd" => start_detached("cmd.exe", &[]),
+            "cmd_admin" => start_elevated("cmd.exe", &[]),
+            "powershell" => start_detached("powershell.exe", &[]),
+            "powershell_admin" => start_elevated("powershell.exe", &[]),
 
             // Utilities
-            "notepad" => spawn("notepad.exe", &[]),
-            "calculator" => spawn("calc.exe", &[]),
-            "snipping_tool" => spawn("snippingtool.exe", &[]),
-            "paint" => spawn("mspaint.exe", &[]),
-            "character_map" => spawn("charmap.exe", &[]),
-            "remote_desktop" => spawn("mstsc.exe", &[]),
-            "remote_assistance" => spawn("msra.exe", &[]),
-            "on_screen_keyboard" => spawn("osk.exe", &[]),
-            "magnifier" => spawn("magnify.exe", &[]),
-            "narrator" => spawn("narrator.exe", &[]),
-            "msrt" => spawn("mrt.exe", &[]),
-            "registry_editor" => spawn("regedit.exe", &[]),
-            "about_windows" => spawn("winver.exe", &[]),
+            "notepad" => start_detached("notepad.exe", &[]),
+            "calculator" => start_detached("calc.exe", &[]),
+            "snipping_tool" => start_detached("snippingtool.exe", &[]),
+            "paint" => start_detached("mspaint.exe", &[]),
+            "character_map" => start_detached("charmap.exe", &[]),
+            "remote_desktop" => start_detached("mstsc.exe", &[]),
+            "remote_assistance" => start_detached("msra.exe", &[]),
+            "on_screen_keyboard" => start_detached("osk.exe", &[]),
+            "magnifier" => start_detached("magnify.exe", &[]),
+            "narrator" => start_detached("narrator.exe", &[]),
+            "msrt" => start_detached("mrt.exe", &[]),
+            "registry_editor" => start_detached("regedit.exe", &[]),
+            "about_windows" => start_detached("winver.exe", &[]),
 
             // Settings URIs via explorer (opens Windows Settings pages)
-            "settings_power_sleep" => spawn("explorer.exe", &["ms-settings:powersleep"]),
-            "settings_update" => spawn("explorer.exe", &["ms-settings:windowsupdate"]),
-            "settings_apps_features" => spawn("explorer.exe", &["ms-settings:appsfeatures"]),
-            "settings_network" => spawn("explorer.exe", &["ms-settings:network"]),
-            "settings_windows_security" => spawn("explorer.exe", &["windowsdefender:"]),
-            "control_troubleshooting" => spawn("control.exe", &["/name", "Microsoft.Troubleshooting"]),
+            "settings_power_sleep" => start_detached("explorer.exe", &["ms-settings:powersleep"]),
+            "settings_update" => start_detached("explorer.exe", &["ms-settings:windowsupdate"]),
+            "settings_apps_features" => start_detached("explorer.exe", &["ms-settings:appsfeatures"]),
+            "settings_network" => start_detached("explorer.exe", &["ms-settings:network"]),
+            "settings_windows_security" => start_detached("explorer.exe", &["windowsdefender:"]),
+            "control_troubleshooting" => start_detached("control.exe", &["/name", "Microsoft.Troubleshooting"]),
 
             _ => Err(format!("Unknown shortcut id: {}", id)),
         }
