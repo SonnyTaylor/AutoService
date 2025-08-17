@@ -492,3 +492,10 @@ details[open] summary { color: var(--text); }
 
 [data-page="component-test"] .grid { display: grid; gap: 12px; }
 [data-page="component-test"] .grid-2 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+
+/* Network section result styles */
+[data-page="component-test"] #panel-network .list { gap: 8px; }
+[data-page="component-test"] #panel-network .list li { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: #202636; }
+[data-page="component-test"] #panel-network .list li.pass { border-color: #2f6b4a; background: #213a2a; }
+[data-page="component-test"] #panel-network .list li.fail { border-color: #6b422b; background: #3a2b24; }
+[data-page="component-test"] #panel-network .list li.note { opacity: 0.85; }

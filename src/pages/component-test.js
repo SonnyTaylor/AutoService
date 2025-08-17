@@ -218,6 +218,10 @@ export async function initPage() {
   const netResults = qs('#network-results');
   const netHealth = qs('#network-health');
   const netSummary = qs('#network-summary');
+  const kpiMed = qs('#net-kpi-med');
+  const kpiAvg = qs('#net-kpi-avg');
+  const kpiLoss = qs('#net-kpi-loss');
+  const kpiDl = qs('#net-kpi-dl');
 
   async function networkQuickTest() {
     netStatus.textContent = 'Running…';
@@ -253,7 +257,7 @@ export async function initPage() {
   const timings = []; // all timings (success/fail durations)
   const successTimes = []; // only successful request durations
     let successCount = 0;
-    for (const url of urls) {
+  for (const url of urls) {
       const li = document.createElement('li');
       li.textContent = `GET ${url} …`;
       netResults.appendChild(li);
@@ -265,10 +269,12 @@ export async function initPage() {
   successTimes.push(t);
         successCount++;
         li.textContent = `GET ${url} → OK (${t} ms)`;
+    li.classList.add('pass');
       } catch (e) {
         const t = Math.round(performance.now() - t0);
         timings.push(t);
         li.textContent = `GET ${url} → FAIL (${t} ms): ${e.message}`;
+    li.classList.add('fail');
       }
     }
     // DNS check via image fetch (different domain)
@@ -284,11 +290,13 @@ export async function initPage() {
   timings.push(t);
   successTimes.push(t);
   successCount++;
-        li.textContent = `DNS ${dnsUrl} → OK (${t} ms)`;
+  li.textContent = `DNS ${dnsUrl} → OK (${t} ms)`;
+  li.classList.add('pass');
       } catch (e) {
         const t = Math.round(performance.now() - t0);
         timings.push(t);
         li.textContent = `DNS ${dnsUrl} → FAIL (${t} ms): ${e.message}`;
+  li.classList.add('fail');
       }
     }
 
@@ -310,16 +318,19 @@ export async function initPage() {
           timings.push(t);
           successTimes.push(t);
           li.textContent = `WebSocket → OK (${t} ms)`;
+          li.classList.add('pass');
           done = true; ws.close(); resolve();
         };
         ws.onerror = () => {
           const t = Math.round(performance.now() - t0);
           timings.push(t);
           li.textContent = `WebSocket → FAIL (${t} ms)`;
+          li.classList.add('fail');
           if (!done) { done = true; resolve(); }
         };
       } catch (e) {
         li.textContent = `WebSocket → Not supported: ${e.message}`;
+        li.classList.add('note');
         resolve();
       }
       setTimeout(() => { if (!done) { li.textContent = 'WebSocket → TIMEOUT'; resolve(); } }, 4000);
@@ -351,9 +362,12 @@ export async function initPage() {
     } else {
       grade = 'Poor'; cls += ' warn';
     }
-    netHealth.textContent = grade;
+  netHealth.textContent = grade;
     netHealth.className = cls;
-    netSummary.textContent = `${successCount}/${total} checks passed • median ${med} ms, avg ${avg} ms`;
+  netSummary.textContent = `${successCount}/${total} checks passed • median ${med} ms, avg ${avg} ms`;
+  if (kpiMed) kpiMed.textContent = `${med} ms`;
+  if (kpiAvg) kpiAvg.textContent = `${avg} ms`;
+  if (kpiLoss) kpiLoss.textContent = `${Math.max(0, Math.round(100 - (successCount/total)*100))}%`;
 
     netStatus.textContent = 'Done';
   }
@@ -363,8 +377,8 @@ export async function initPage() {
   netBtnExt?.addEventListener('click', async () => {
     netBtnExt.disabled = true;
     await networkQuickTest();
-    const header = document.createElement('li');
-    header.textContent = '--- Extended ---';
+  const header = document.createElement('li');
+  header.textContent = '--- Extended ---';
     netResults.appendChild(header);
 
     // Multi-sample latency to a single endpoint
@@ -379,12 +393,14 @@ export async function initPage() {
       try {
         await fetch(url, { cache: 'no-store', mode: 'no-cors' });
         const t = Math.round(performance.now() - t0);
-        times.push(t);
-        li.textContent = `Sample ${i+1} → ${t} ms`;
+  times.push(t);
+  li.textContent = `Sample ${i+1} → ${t} ms`;
+  li.classList.add('pass');
       } catch {
         const t = Math.round(performance.now() - t0);
         times.push(t);
-        li.textContent = `Sample ${i+1} → FAIL (${t} ms)`;
+  li.textContent = `Sample ${i+1} → FAIL (${t} ms)`;
+  li.classList.add('fail');
       }
     }
     const avg = Math.round(times.reduce((a,b)=>a+b,0)/times.length);
@@ -399,13 +415,16 @@ export async function initPage() {
     try {
       const dlUrl = 'https://speed.cloudflare.com/__down?bytes=100000';
       const t0 = performance.now();
-      const res = await fetch(dlUrl, { cache: 'no-store' });
+  const res = await fetch(dlUrl, { cache: 'no-store' });
       const buf = await res.arrayBuffer();
       const dt = (performance.now() - t0) / 1000;
       const mbps = (buf.byteLength * 8 / 1_000_000) / dt; // Mb/s
-      dlLi.textContent = `Throughput sample: ${mbps.toFixed(2)} Mb/s`;
+  dlLi.textContent = `Throughput sample: ${mbps.toFixed(2)} Mb/s`;
+  dlLi.classList.add('pass');
+  if (kpiDl) kpiDl.textContent = `${mbps.toFixed(2)} Mb/s`;
     } catch (e) {
-      dlLi.textContent = `Throughput sample: FAIL (${e.message})`;
+  dlLi.textContent = `Throughput sample: FAIL (${e.message})`;
+  dlLi.classList.add('fail');
     }
     netBtnExt.disabled = false;
   });
