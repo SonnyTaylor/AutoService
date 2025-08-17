@@ -382,3 +382,6 @@ details[open] summary { color: var(--text); }
 }
 .per-core-item { display: grid; gap: 6px; }
 .per-core-name { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 0.9rem; }
+
+/* Empty state inside table wrap */
+.empty-state { padding: 16px; color: var(--muted); text-align: center; }

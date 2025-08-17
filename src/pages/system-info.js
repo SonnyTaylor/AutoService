@@ -214,31 +214,49 @@ function render(info) {
     </div></div>
   `);
 
-  // Battery (if available)
-  if (info.battery) {
-    const pct = info.battery.percentage;
-    const stateBadgeClass = pct >= 50 ? 'ok' : pct >= 20 ? '' : 'warn';
-    const statusBits = [
-      info.battery.cycle_count != null ? `${info.battery.cycle_count} cycles` : null,
-      info.battery.state_of_health_pct != null ? `${info.battery.state_of_health_pct.toFixed(0)}% health` : null,
-      info.battery.voltage_v != null ? `${info.battery.voltage_v.toFixed(2)} V` : null,
-      info.battery.energy_full_wh != null ? `Full ${info.battery.energy_full_wh.toFixed(1)} Wh` : null,
-      info.battery.energy_full_design_wh != null ? `Design ${info.battery.energy_full_design_wh.toFixed(1)} Wh` : null,
-    ].filter(Boolean).join(' • ');
+  // Battery (always render; supports multiple)
+  {
+    const batteries = Array.isArray(info.batteries)
+      ? info.batteries
+      : (info.battery ? [info.battery] : []); // backward compatibility
 
-    section.insertAdjacentHTML('beforeend', `
-      <div class="section-title">Battery</div>
-      <div class="table-block"><div class="table-wrap">
-        <table class="table kv-table">
-          <tbody>
-            <tr><th>Charge</th><td><span class="badge ${stateBadgeClass}">${pct.toFixed(0)}%</span> <span class="muted" style="margin-left:8px;">${escapeHtml(info.battery.state)}</span></td></tr>
-            ${statusBits?`<tr><th>Details</th><td class="muted">${statusBits}</td></tr>`:''}
-            ${info.battery.time_to_full_sec!=null?`<tr><th>To full</th><td>${formatDuration(info.battery.time_to_full_sec)}</td></tr>`:''}
-            ${info.battery.time_to_empty_sec!=null?`<tr><th>To empty</th><td>${formatDuration(info.battery.time_to_empty_sec)}</td></tr>`:''}
-          </tbody>
-        </table>
-      </div></div>
-    `);
+    section.insertAdjacentHTML('beforeend', `<div class="section-title">Battery</div>`);
+    if (!batteries.length) {
+      section.insertAdjacentHTML('beforeend', `
+        <div class="table-block"><div class="table-wrap">
+          <div class="empty-state">No batteries detected</div>
+        </div></div>
+      `);
+    } else {
+      batteries.forEach((batt, idx) => {
+        const pct = batt.percentage ?? 0;
+        const stateBadgeClass = pct >= 50 ? 'ok' : pct >= 20 ? '' : 'warn';
+        const idBits = [batt.vendor, batt.model].filter(Boolean).join(' ');
+        const details = [
+          batt.cycle_count != null ? `${batt.cycle_count} cycles` : null,
+          batt.state_of_health_pct != null ? `${batt.state_of_health_pct.toFixed(0)}% health` : null,
+          batt.voltage_v != null ? `${batt.voltage_v.toFixed(2)} V` : null,
+          batt.energy_full_wh != null ? `Full ${batt.energy_full_wh.toFixed(1)} Wh` : null,
+          batt.energy_full_design_wh != null ? `Design ${batt.energy_full_design_wh.toFixed(1)} Wh` : null,
+        ].filter(Boolean).join(' • ');
+
+        section.insertAdjacentHTML('beforeend', `
+          <div class="table-block"><div class="table-wrap">
+            <table class="table kv-table">
+              <tbody>
+                <tr><th>Charge ${batteries.length>1?`(Battery ${idx+1})`:''}</th><td><span class="badge ${stateBadgeClass}">${pct.toFixed(0)}%</span> <span class="muted" style="margin-left:8px;">${escapeHtml(batt.state || '-')}</span></td></tr>
+                ${idBits?`<tr><th>Identity</th><td>${escapeHtml(idBits)}</td></tr>`:''}
+                ${batt.serial?`<tr><th>Serial</th><td>${escapeHtml(batt.serial)}</td></tr>`:''}
+                ${batt.technology?`<tr><th>Technology</th><td>${escapeHtml(batt.technology)}</td></tr>`:''}
+                ${details?`<tr><th>Details</th><td class="muted">${details}</td></tr>`:''}
+                ${batt.time_to_full_sec!=null?`<tr><th>To full</th><td>${formatDuration(batt.time_to_full_sec)}</td></tr>`:''}
+                ${batt.time_to_empty_sec!=null?`<tr><th>To empty</th><td>${formatDuration(batt.time_to_empty_sec)}</td></tr>`:''}
+              </tbody>
+            </table>
+          </div></div>
+        `);
+      });
+    }
   }
 
   // Sensors section intentionally removed per request

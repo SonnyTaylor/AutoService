@@ -22,7 +22,7 @@ pub struct SystemInfo {
     networks: Vec<NetworkInfo>,
     gpus: Vec<GpuInfo>,
     sensors: Vec<SensorInfo>,
-    battery: Option<BatteryInfo>,
+    batteries: Vec<BatteryInfo>,
     motherboard: Option<MotherboardInfo>,
     product: Option<ProductInfo>,
     load_avg: LoadAvgInfo,
@@ -58,7 +58,7 @@ pub struct GpuInfo {
 pub struct SensorInfo { label: String, temperature_c: f32 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BatteryInfo { vendor: Option<String>, model: Option<String>, serial: Option<String>, state: String, percentage: f32, cycle_count: Option<u32>, state_of_health_pct: Option<f32>, energy_wh: Option<f32>, energy_full_wh: Option<f32>, energy_full_design_wh: Option<f32>, voltage_v: Option<f32>, temperature_c: Option<f32>, time_to_full_sec: Option<u64>, time_to_empty_sec: Option<u64> }
+pub struct BatteryInfo { vendor: Option<String>, model: Option<String>, serial: Option<String>, technology: Option<String>, state: String, percentage: f32, cycle_count: Option<u32>, state_of_health_pct: Option<f32>, energy_wh: Option<f32>, energy_full_wh: Option<f32>, energy_full_design_wh: Option<f32>, voltage_v: Option<f32>, temperature_c: Option<f32>, time_to_full_sec: Option<u64>, time_to_empty_sec: Option<u64> }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MotherboardInfo { vendor: Option<String>, name: Option<String>, version: Option<String>, serial_number: Option<String>, asset_tag: Option<String> }
@@ -741,10 +741,10 @@ pub fn run() {
     let users_list = Users::new_with_refreshed_list();
     let users: Vec<String> = users_list.iter().map(|u| u.name().to_string()).collect();
 
-        // Battery (optional)
-        let battery = match get_battery_info() {
-            Ok(opt) => opt,
-            Err(_) => None,
+        // Batteries (optional; may be empty)
+        let batteries = match get_batteries_info() {
+            Ok(list) => list,
+            Err(_) => Vec::new(),
         };
 
         // Motherboard & Product
@@ -781,7 +781,7 @@ pub fn run() {
             networks,
             gpus,
             sensors,
-            battery,
+            batteries,
             motherboard,
             product,
             load_avg: LoadAvgInfo { one: la.one, five: la.five, fifteen: la.fifteen },
@@ -790,29 +790,32 @@ pub fn run() {
         Ok(info)
     }
 
-    fn get_battery_info() -> Result<Option<BatteryInfo>, String> {
-        // Battery crate may fail on desktops; return Ok(None) if not present
-        let manager = match battery::Manager::new() { Ok(m) => m, Err(_) => return Ok(None) };
-        let mut batteries = match manager.batteries() { Ok(b) => b, Err(_) => return Ok(None) };
-        if let Some(Ok(batt)) = batteries.next() {
-            let percentage = batt.state_of_charge().value as f32 * 100.0;
-            let state = format!("{:?}", batt.state());
-            let vendor = batt.vendor().map(|s| s.to_string());
-            let model = batt.model().map(|s| s.to_string());
-            let serial = batt.serial_number().map(|s| s.to_string());
-            let cycle_count = batt.cycle_count();
-            let soh = Some(batt.state_of_health().value as f32 * 100.0);
-            let energy_wh = Some(batt.energy().value as f32);
-            let energy_full_wh = Some(batt.energy_full().value as f32);
-            let energy_full_design_wh = Some(batt.energy_full_design().value as f32);
-            let voltage_v = Some(batt.voltage().value as f32);
-            let temp_c = batt.temperature().map(|t| t.value as f32);
-            let ttf = batt.time_to_full().map(|d| d.value as u64);
-            let tte = batt.time_to_empty().map(|d| d.value as u64);
-            Ok(Some(BatteryInfo { vendor, model, serial, state, percentage, cycle_count, state_of_health_pct: soh, energy_wh, energy_full_wh, energy_full_design_wh, voltage_v, temperature_c: temp_c, time_to_full_sec: ttf, time_to_empty_sec: tte }))
-        } else {
-            Ok(None)
+    fn get_batteries_info() -> Result<Vec<BatteryInfo>, String> {
+        // Battery crate may fail on desktops; return empty vec if not present
+        let manager = match battery::Manager::new() { Ok(m) => m, Err(_) => return Ok(Vec::new()) };
+        let list = match manager.batteries() { Ok(b) => b, Err(_) => return Ok(Vec::new()) };
+        let mut out = Vec::new();
+        for item in list {
+            if let Ok(batt) = item {
+                let percentage = batt.state_of_charge().value as f32 * 100.0;
+                let state = format!("{:?}", batt.state());
+                let technology = Some(format!("{:?}", batt.technology()));
+                let vendor = batt.vendor().map(|s| s.to_string());
+                let model = batt.model().map(|s| s.to_string());
+                let serial = batt.serial_number().map(|s| s.to_string());
+                let cycle_count = batt.cycle_count();
+                let soh = Some(batt.state_of_health().value as f32 * 100.0);
+                let energy_wh = Some(batt.energy().value as f32);
+                let energy_full_wh = Some(batt.energy_full().value as f32);
+                let energy_full_design_wh = Some(batt.energy_full_design().value as f32);
+                let voltage_v = Some(batt.voltage().value as f32);
+                let temp_c = batt.temperature().map(|t| t.value as f32);
+                let ttf = batt.time_to_full().map(|d| d.value as u64);
+                let tte = batt.time_to_empty().map(|d| d.value as u64);
+                out.push(BatteryInfo { vendor, model, serial, technology, state, percentage, cycle_count, state_of_health_pct: soh, energy_wh, energy_full_wh, energy_full_design_wh, voltage_v, temperature_c: temp_c, time_to_full_sec: ttf, time_to_empty_sec: tte });
+            }
         }
+        Ok(out)
     }
 
     tauri::Builder::default()
