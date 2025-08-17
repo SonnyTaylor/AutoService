@@ -28,4 +28,7 @@ base64 = "0.22"
 once_cell = "1"
 exeico = "0.1"
 image = { version = "0.24", default-features = false, features = ["ico", "png"] }
+sysinfo = "0.37"
+battery = "0.7.8"
+wgpu = "26.0.1"
 
