@@ -44,7 +44,15 @@ pub struct DiskInfo { name: String, file_system: String, mount_point: String, to
 pub struct NetworkInfo { interface: String, mac: Option<String>, mtu: u64, ips: Vec<String>, received: u64, transmitted: u64, total_received: u64, total_transmitted: u64, errors_rx: u64, errors_tx: u64 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GpuInfo { name: String }
+pub struct GpuInfo {
+    name: String,
+    vendor: Option<u32>,
+    device: Option<u32>,
+    device_type: Option<String>,
+    driver: Option<String>,
+    driver_info: Option<String>,
+    backend: Option<String>,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SensorInfo { label: String, temperature_c: f32 }
@@ -621,8 +629,113 @@ pub fn run() {
             .map(|c| SensorInfo { label: c.label().to_string(), temperature_c: c.temperature().unwrap_or(0.0) })
             .collect();
 
-        // GPU - not provided by sysinfo reliably; leaving empty for now
-        let gpus: Vec<GpuInfo> = Vec::new();
+        // GPU via wgpu AdapterInfo (best-effort; ignore errors)
+        // Deduplicate physical GPUs by vendor+device (or vendor+name if device id is 0),
+        // prefer real hardware backends and richer driver info.
+        let gpus: Vec<GpuInfo> = {
+            #[allow(unused_mut)]
+            let mut all: Vec<GpuInfo> = Vec::new();
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                use wgpu::{Backends, Instance};
+                let instance = Instance::default();
+                for adapter in instance.enumerate_adapters(Backends::all()) {
+                    let info = adapter.get_info();
+                    all.push(GpuInfo {
+                        name: info.name,
+                        vendor: Some(info.vendor),
+                        device: Some(info.device),
+                        device_type: Some(format!("{:?}", info.device_type)),
+                        driver: Some(info.driver),
+                        driver_info: Some(info.driver_info),
+                        backend: Some(format!("{:?}", info.backend)),
+                    });
+                }
+            }
+
+            // If any non-CPU adapters exist, drop CPU/software adapters (e.g., Microsoft Basic Render Driver)
+            let has_hw = all.iter().any(|g| g.device_type.as_deref() != Some("Cpu"));
+            let filtered: Vec<GpuInfo> = if has_hw {
+                all.into_iter().filter(|g| g.device_type.as_deref() != Some("Cpu")).collect()
+            } else {
+                all
+            };
+
+            use std::collections::HashMap;
+
+            // Backend preference (higher is better)
+            fn backend_rank(s: Option<&str>) -> u8 {
+                match s.unwrap_or("") {
+                    "Dx12" => 5,
+                    "Vulkan" => 4,
+                    "Metal" => 4,
+                    "Gl" => 2,
+                    "BrowserWebGpu" => 1,
+                    _ => 0,
+                }
+            }
+
+            // Select best per (vendor, device) or (vendor, name) when device==0
+            let mut best: HashMap<String, GpuInfo> = HashMap::new();
+            for g in filtered.into_iter() {
+                let vendor = g.vendor.unwrap_or(0);
+                let device = g.device.unwrap_or(0);
+                let key = if device != 0 {
+                    format!("{}:{}", vendor, device)
+                } else {
+                    format!("{}:{}", vendor, g.name.to_lowercase())
+                };
+
+                let cand_score = (
+                    backend_rank(g.backend.as_deref()),
+                    (g.device.unwrap_or(0) != 0) as u8,
+                    g.driver.as_deref().unwrap_or("").len() as u16,
+                );
+
+                if let Some(existing) = best.get(&key) {
+                    let ex_score = (
+                        backend_rank(existing.backend.as_deref()),
+                        (existing.device.unwrap_or(0) != 0) as u8,
+                        existing.driver.as_deref().unwrap_or("").len() as u16,
+                    );
+                    if cand_score > ex_score {
+                        best.insert(key, g);
+                    }
+                } else {
+                    best.insert(key, g);
+                }
+            }
+
+            // Drop any remaining entries with unknown device id (0) if a concrete device exists for the same vendor
+            let vendor_with_real: std::collections::HashSet<u32> = best
+                .values()
+                .filter_map(|g| {
+                    let v = g.vendor.unwrap_or(0);
+                    let d = g.device.unwrap_or(0);
+                    if v != 0 && d != 0 { Some(v) } else { None }
+                })
+                .collect();
+
+            let mut out: Vec<GpuInfo> = best
+                .into_values()
+                .filter(|g| {
+                    let v = g.vendor.unwrap_or(0);
+                    let d = g.device.unwrap_or(0);
+                    if d == 0 && vendor_with_real.contains(&v) { return false; }
+                    true
+                })
+                .collect();
+
+            // Stable-ish order: by vendor, device, name
+            out.sort_by(|a, b| {
+                let av = a.vendor.unwrap_or(0).cmp(&b.vendor.unwrap_or(0));
+                if av != std::cmp::Ordering::Equal { return av; }
+                let ad = a.device.unwrap_or(0).cmp(&b.device.unwrap_or(0));
+                if ad != std::cmp::Ordering::Equal { return ad; }
+                a.name.to_lowercase().cmp(&b.name.to_lowercase())
+            });
+            out
+        };
 
     // Users
     let users_list = Users::new_with_refreshed_list();

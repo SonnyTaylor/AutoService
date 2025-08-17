@@ -38,7 +38,7 @@ function render(info) {
     <div style="display:flex; align-items:center; gap:10px; justify-content: space-between; flex-wrap: wrap;">
       <div>
         <h1 style="margin-bottom:4px;">System Info</h1>
-        <p class="muted" style="margin:0;">Hardware, software, drivers, and temperatures at a glance.</p>
+  <p class="muted" style="margin:0;">Hardware, software, and drivers at a glance.</p>
       </div>
       <div>
         <button id=\"sysinfo-refresh-btn\" class=\"ghost\">Refresh</button>
@@ -118,9 +118,23 @@ function render(info) {
     <div class="section-title">GPU</div>
     <div class="table-block"><div class="table-wrap">
       <table class="table data-table">
-        <thead><tr><th>Name</th></tr></thead>
+        <thead><tr><th>Name</th><th>Vendor</th><th>Device</th><th>Type</th><th>Driver</th><th>Backend</th></tr></thead>
         <tbody>
-          ${info.gpus.length ? info.gpus.map(g => `<tr><td>${escapeHtml(g.name)}</td></tr>`).join('') : '<tr><td class="muted">No GPU info available</td></tr>'}
+          ${info.gpus.length ? info.gpus.map(g => {
+            const vendor = (g.vendor ?? null) !== null ? String(g.vendor) : '';
+            const device = (g.device ?? null) !== null ? String(g.device) : '';
+            const dtype = g.device_type || '';
+            const driver = [g.driver, g.driver_info].filter(Boolean).join(' ');
+            const backend = g.backend || '';
+            return `<tr>
+              <td>${escapeHtml(g.name)}</td>
+              <td>${escapeHtml(vendor || '-')}</td>
+              <td>${escapeHtml(device || '-')}</td>
+              <td>${escapeHtml(dtype || '-')}</td>
+              <td>${escapeHtml(driver || '-')}</td>
+              <td>${escapeHtml(backend || '-')}</td>
+            </tr>`;
+          }).join('') : '<tr><td colspan="6" class="muted">No GPU info available</td></tr>'}
         </tbody>
       </table>
     </div></div>
@@ -213,22 +227,7 @@ function render(info) {
     `);
   }
 
-  // Sensors
-  section.insertAdjacentHTML('beforeend', `
-    <div class="section-title">Sensors</div>
-    <div class="table-block"><div class="table-wrap">
-      <table class="table data-table">
-        <thead><tr><th>Label</th><th>Temperature</th></tr></thead>
-        <tbody>
-          ${info.sensors.length ? info.sensors.map(s => {
-            const t = s.temperature_c;
-            const cls = t < 60 ? 'cool' : t < 80 ? 'warm' : 'hot';
-            return `<tr><td>${escapeHtml(s.label)}</td><td><span class="temp ${cls}">${t.toFixed(1)} °C</span></td></tr>`;
-          }).join('') : '<tr><td colspan="2" class="muted">No sensor data</td></tr>'}
-        </tbody>
-      </table>
-    </div></div>
-  `);
+  // Sensors section intentionally removed per request
 
   // Bind refresh
   const btn = document.getElementById('sysinfo-refresh-btn');

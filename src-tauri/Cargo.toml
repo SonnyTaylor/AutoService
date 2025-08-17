@@ -30,4 +30,5 @@ exeico = "0.1"
 image = { version = "0.24", default-features = false, features = ["ico", "png"] }
 sysinfo = "0.37"
 battery = "0.7.8"
+wgpu = "26.0.1"
 
