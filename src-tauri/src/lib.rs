@@ -12,6 +12,7 @@ pub struct SystemInfo {
     hostname: Option<String>,
     kernel_version: Option<String>,
     os_version: Option<String>,
+    system_name: Option<String>,
     uptime_seconds: u64,
     boot_time_seconds: u64,
     users: Vec<String>,
@@ -22,19 +23,25 @@ pub struct SystemInfo {
     gpus: Vec<GpuInfo>,
     sensors: Vec<SensorInfo>,
     battery: Option<BatteryInfo>,
+    motherboard: Option<MotherboardInfo>,
+    product: Option<ProductInfo>,
+    load_avg: LoadAvgInfo,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CpuInfo { brand: String, frequency_mhz: u64, num_physical_cores: Option<usize>, num_logical_cpus: usize }
+pub struct CpuInfo { brand: String, vendor_id: Option<String>, frequency_mhz: u64, num_physical_cores: Option<usize>, num_logical_cpus: usize, cores: Vec<CpuCoreInfo> }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CpuCoreInfo { name: String, frequency_mhz: u64, usage_percent: f32 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MemoryInfo { total: u64, available: u64, used: u64, free: u64, swap_total: u64, swap_used: u64 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DiskInfo { name: String, file_system: String, mount_point: String, total_space: u64, available_space: u64, is_removable: bool }
+pub struct DiskInfo { name: String, file_system: String, mount_point: String, total_space: u64, available_space: u64, is_removable: bool, is_read_only: bool, kind: String, read_bytes: u64, written_bytes: u64 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NetworkInfo { interface: String, received: u64, transmitted: u64 }
+pub struct NetworkInfo { interface: String, mac: Option<String>, mtu: u64, ips: Vec<String>, received: u64, transmitted: u64, total_received: u64, total_transmitted: u64, errors_rx: u64, errors_tx: u64 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GpuInfo { name: String }
@@ -43,7 +50,16 @@ pub struct GpuInfo { name: String }
 pub struct SensorInfo { label: String, temperature_c: f32 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BatteryInfo { vendor: Option<String>, model: Option<String>, serial: Option<String>, state: String, percentage: f32, cycle_count: Option<u32> }
+pub struct BatteryInfo { vendor: Option<String>, model: Option<String>, serial: Option<String>, state: String, percentage: f32, cycle_count: Option<u32>, state_of_health_pct: Option<f32>, energy_wh: Option<f32>, energy_full_wh: Option<f32>, energy_full_design_wh: Option<f32>, voltage_v: Option<f32>, temperature_c: Option<f32>, time_to_full_sec: Option<u64>, time_to_empty_sec: Option<u64> }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MotherboardInfo { vendor: Option<String>, name: Option<String>, version: Option<String>, serial_number: Option<String>, asset_tag: Option<String> }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProductInfo { vendor: Option<String>, name: Option<String>, family: Option<String>, version: Option<String>, serial_number: Option<String>, sku: Option<String>, uuid: Option<String> }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LoadAvgInfo { one: f64, five: f64, fifteen: f64 }
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
@@ -540,13 +556,18 @@ pub fn run() {
         let mut sys = System::new_all();
         sys.refresh_all();
 
-        // CPU
+    // CPU (refresh to compute usage)
+    sys.refresh_cpu_all();
+    std::thread::sleep(sysinfo::MINIMUM_CPU_UPDATE_INTERVAL);
+    sys.refresh_cpu_usage();
     let cpus: &[Cpu] = sys.cpus();
-        let brand = cpus.first().map(|c| c.brand().to_string()).unwrap_or_else(|| String::from(""));
-        let frequency_mhz = cpus.first().map(|c| c.frequency() as u64).unwrap_or(0);
-        let num_logical = cpus.len();
-        let num_physical = System::physical_core_count();
-        let cpu = CpuInfo { brand, frequency_mhz, num_physical_cores: num_physical, num_logical_cpus: num_logical };
+    let brand = cpus.first().map(|c| c.brand().to_string()).unwrap_or_default();
+    let vendor_id = cpus.first().map(|c| c.vendor_id().to_string());
+    let frequency_mhz = cpus.first().map(|c| c.frequency() as u64).unwrap_or(0);
+    let num_logical = cpus.len();
+    let num_physical = System::physical_core_count();
+    let cores: Vec<CpuCoreInfo> = cpus.iter().map(|c| CpuCoreInfo { name: c.name().to_string(), frequency_mhz: c.frequency() as u64, usage_percent: c.cpu_usage() }).collect();
+    let cpu = CpuInfo { brand, vendor_id, frequency_mhz, num_physical_cores: num_physical, num_logical_cpus: num_logical, cores };
 
         // Memory
         let total = sys.total_memory();
@@ -558,7 +579,7 @@ pub fn run() {
         let memory = MemoryInfo { total, available, used, free, swap_total, swap_used };
 
         // Disks
-        let disks_list = Disks::new_with_refreshed_list();
+    let disks_list = Disks::new_with_refreshed_list();
         let disks: Vec<DiskInfo> = disks_list
             .iter()
             .map(|d| DiskInfo {
@@ -567,7 +588,11 @@ pub fn run() {
                 mount_point: d.mount_point().to_string_lossy().to_string(),
                 total_space: d.total_space(),
                 available_space: d.available_space(),
-                is_removable: d.is_removable(),
+        is_removable: d.is_removable(),
+        is_read_only: d.is_read_only(),
+        kind: format!("{:?}", d.kind()),
+        read_bytes: d.usage().read_bytes,
+        written_bytes: d.usage().written_bytes,
             })
             .collect();
 
@@ -575,7 +600,18 @@ pub fn run() {
         let networks_list = Networks::new_with_refreshed_list();
         let networks: Vec<NetworkInfo> = networks_list
             .iter()
-            .map(|(name, data)| NetworkInfo { interface: name.clone(), received: data.total_received(), transmitted: data.total_transmitted() })
+            .map(|(name, data)| NetworkInfo {
+                interface: name.clone(),
+                mac: Some(data.mac_address().to_string()),
+                mtu: data.mtu(),
+                ips: data.ip_networks().iter().map(|ip| ip.to_string()).collect(),
+                received: data.received(),
+                transmitted: data.transmitted(),
+                total_received: data.total_received(),
+                total_transmitted: data.total_transmitted(),
+                errors_rx: data.errors_on_received(),
+                errors_tx: data.errors_on_transmitted(),
+            })
             .collect();
 
         // Sensors (temperatures)
@@ -588,9 +624,9 @@ pub fn run() {
         // GPU - not provided by sysinfo reliably; leaving empty for now
         let gpus: Vec<GpuInfo> = Vec::new();
 
-        // Users
-        let users_list = Users::new_with_refreshed_list();
-        let users: Vec<String> = users_list.iter().map(|u| u.name().to_string()).collect();
+    // Users
+    let users_list = Users::new_with_refreshed_list();
+    let users: Vec<String> = users_list.iter().map(|u| u.name().to_string()).collect();
 
         // Battery (optional)
         let battery = match get_battery_info() {
@@ -598,11 +634,31 @@ pub fn run() {
             Err(_) => None,
         };
 
+        // Motherboard & Product
+        let motherboard = sysinfo::Motherboard::new().map(|m| MotherboardInfo {
+            vendor: m.vendor_name(),
+            name: m.name(),
+            version: m.version(),
+            serial_number: m.serial_number(),
+            asset_tag: m.asset_tag(),
+        });
+        let product = Some(ProductInfo {
+            vendor: sysinfo::Product::vendor_name(),
+            name: sysinfo::Product::name(),
+            family: sysinfo::Product::family(),
+            version: sysinfo::Product::version(),
+            serial_number: sysinfo::Product::serial_number(),
+            sku: sysinfo::Product::stock_keeping_unit(),
+            uuid: sysinfo::Product::uuid(),
+        });
+
+        let la = System::load_average();
         let info = SystemInfo {
             os: sysinfo::System::long_os_version(),
             hostname: System::host_name(),
             kernel_version: System::kernel_version(),
             os_version: System::os_version(),
+            system_name: System::name(),
             uptime_seconds: System::uptime(),
             boot_time_seconds: System::boot_time(),
             users,
@@ -613,6 +669,9 @@ pub fn run() {
             gpus,
             sensors,
             battery,
+            motherboard,
+            product,
+            load_avg: LoadAvgInfo { one: la.one, five: la.five, fifteen: la.fifteen },
         };
 
         Ok(info)
@@ -629,7 +688,15 @@ pub fn run() {
             let model = batt.model().map(|s| s.to_string());
             let serial = batt.serial_number().map(|s| s.to_string());
             let cycle_count = batt.cycle_count();
-            Ok(Some(BatteryInfo { vendor, model, serial, state, percentage, cycle_count }))
+            let soh = Some(batt.state_of_health().value as f32 * 100.0);
+            let energy_wh = Some(batt.energy().value as f32);
+            let energy_full_wh = Some(batt.energy_full().value as f32);
+            let energy_full_design_wh = Some(batt.energy_full_design().value as f32);
+            let voltage_v = Some(batt.voltage().value as f32);
+            let temp_c = batt.temperature().map(|t| t.value as f32);
+            let ttf = batt.time_to_full().map(|d| d.value as u64);
+            let tte = batt.time_to_empty().map(|d| d.value as u64);
+            Ok(Some(BatteryInfo { vendor, model, serial, state, percentage, cycle_count, state_of_health_pct: soh, energy_wh, energy_full_wh, energy_full_design_wh, voltage_v, temperature_c: temp_c, time_to_full_sec: ttf, time_to_empty_sec: tte }))
         } else {
             Ok(None)
         }
