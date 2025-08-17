@@ -83,7 +83,20 @@ function render(info) {
   }
 
   // CPU
-  const perCore = info.cpu.cores?.length ? info.cpu.cores.map(c => `${escapeHtml(c.name)} — ${Math.round(c.usage_percent)}%`).join('<br>') : '';
+  const cores = info.cpu.cores || [];
+  const avgCpu = cores.length ? Math.max(0, Math.min(100, Math.round(cores.reduce((s,c)=> s + (c.usage_percent||0), 0) / cores.length))) : null;
+  const perCoreGrid = cores.length ? `
+    <div class="per-core-grid">
+      ${cores.map(c => {
+        const pct = Math.max(0, Math.min(100, Math.round(c.usage_percent||0)));
+        const name = escapeHtml(c.name);
+        return `<div class="per-core-item">
+          <div class="per-core-name"><span>${name}</span><span class="badge">${pct}%</span></div>
+          <div class="progress" aria-label="${name} usage"><div class="bar" style="width:${pct}%;"></div></div>
+        </div>`;
+      }).join('')}
+    </div>
+  ` : '';
   section.insertAdjacentHTML('beforeend', `
     <div class="section-title">CPU</div>
     <div class="table-block"><div class="table-wrap">
@@ -93,7 +106,8 @@ function render(info) {
           <tr><th>Vendor</th><td>${escapeHtml(info.cpu.vendor_id || '-')}</td></tr>
           <tr><th>Cores/Threads</th><td>${info.cpu.num_physical_cores ?? '-'}C / ${info.cpu.num_logical_cpus}T</td></tr>
           <tr><th>Frequency</th><td>${info.cpu.frequency_mhz} MHz</td></tr>
-          ${perCore?`<tr><th>Per-core usage</th><td class="muted">${perCore}</td></tr>`:''}
+          ${avgCpu!=null?`<tr><th>CPU Usage</th><td>${avgCpu}%<div class="progress" aria-label="cpu usage"><div class="bar" style="width:${avgCpu}%;"></div></div></td></tr>`:''}
+          ${perCoreGrid?`<tr><th>Per-core usage</th><td>${perCoreGrid}</td></tr>`:''}
         </tbody>
       </table>
     </div></div>

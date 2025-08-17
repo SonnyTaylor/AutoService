@@ -373,3 +373,12 @@ details[open] summary { color: var(--text); }
 .temp.cool { color: #8fd5ff; font-weight: 700; }
 .temp.warm { color: #ffd37a; font-weight: 700; }
 .temp.hot  { color: #ff8f8f; font-weight: 700; }
+
+/* Per-core usage grid */
+.per-core-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px 12px;
+}
+.per-core-item { display: grid; gap: 6px; }
+.per-core-name { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 0.9rem; }
