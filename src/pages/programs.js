@@ -21,14 +21,17 @@ function renderList() {
     }
   list.innerHTML = items.map(p => `
     <div class="program-row" data-id="${p.id}">
-      <img class="program-logo" src="${p.logo_data_url || "./assets/tauri.svg"}" alt="${p.name} logo"/>
+      <div class="program-logo-wrap">
+        <img class="program-logo" src="${p.logo_data_url || "./assets/tauri.svg"}" alt="${escapeHtml(p.name)} logo"/>
+        <span class="exe-status ${p.exe_exists ? "ok" : "missing"}" title="${p.exe_exists ? "Executable found" : "Executable missing"}">${p.exe_exists ? "✓" : "✕"}</span>
+      </div>
       <div class="program-main">
-        <div class="program-title">${escapeHtml(p.name)} <span class="ver">${escapeHtml(p.version || "")}</span></div>
-        <div class="program-desc">${escapeHtml(p.description || "")}</div>
-        <div class="program-path muted">${escapeHtml(p.exe_path)}</div>
+        <div class="program-title" title="${escapeHtml(p.name)}${p.version ? ` — ${escapeHtml(p.version)}` : ''}"><span class="name">${escapeHtml(p.name)}</span> <span class="ver">${escapeHtml(p.version || "")}</span></div>
+        <div class="program-desc" title="${escapeHtml(p.description || "")}">${escapeHtml(p.description || "")}</div>
+        <div class="program-path muted" title="${escapeHtml(p.exe_path)}">${escapeHtml(p.exe_path)}</div>
       </div>
       <div class="program-actions">
-        <button data-action="launch">Launch</button>
+        <button data-action="launch" ${p.exe_exists ? "" : "disabled"}>Launch</button>
         <button data-action="edit" class="secondary">Edit</button>
         <button data-action="remove" class="ghost">Remove</button>
       </div>
@@ -178,6 +181,9 @@ function wireEditor() {
       await invoke("save_program", { program: state.editing });
       dlg.close();
       await loadPrograms();
+    } catch (e) {
+      console.error(e);
+      alert(typeof e === "string" ? e : (e?.message || "Failed to save program"));
     } finally { save.disabled = false; }
   });
 }

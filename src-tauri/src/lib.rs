@@ -158,6 +158,19 @@ pub fn run() {
         pub description: String,
         pub exe_path: String,
         // Data URL (e.g., data:image/png;base64,....) or empty string if not set
+    pub logo_data_url: String,
+    #[serde(default)]
+    pub exe_exists: bool,
+    }
+
+    // On-disk representation (does not include derived fields like exe_exists)
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    struct ProgramDiskEntry {
+        pub id: Uuid,
+        pub name: String,
+        pub version: String,
+        pub description: String,
+        pub exe_path: String,
         pub logo_data_url: String,
     }
 
@@ -176,6 +189,9 @@ pub fn run() {
                     changed = true;
                 }
             }
+            // compute existence for UI
+            let full = resolve_exe_path(data_root, &p.exe_path);
+            p.exe_exists = Path::new(&full).is_file();
         }
         if changed {
             // Best-effort write; ignore error in listing path
@@ -225,6 +241,9 @@ pub fn run() {
         {
             use std::process::Command;
             let exe_full = resolve_exe_path(state.data_dir.as_path(), &program.exe_path);
+            if !Path::new(&exe_full).is_file() {
+                return Err(format!("Executable not found: {}", exe_full));
+            }
             // Use PowerShell Start-Process for robust path handling
             let ps = format!("Start-Process -FilePath \"{}\"", exe_full.replace('`', "``").replace('"', "`\""));
             Command::new("powershell.exe")
@@ -417,14 +436,39 @@ pub fn run() {
     fn resolve_exe_path(data_root: &Path, exe_path: &str) -> String {
         let p = PathBuf::from(exe_path);
         if p.is_absolute() {
-            exe_path.to_string()
-        } else {
-            data_root.join(p).to_string_lossy().to_string()
+            return exe_path.to_string();
         }
+    let (_reports, programs, _settings, _resources) = crate::paths::subdirs(data_root);
+        let candidate1 = data_root.join(&p); // relative to data root
+        if candidate1.is_file() {
+            return candidate1.to_string_lossy().to_string();
+        }
+        let candidate2 = programs.join(&p); // relative to data/programs
+        if candidate2.is_file() {
+            return candidate2.to_string_lossy().to_string();
+        }
+        // Fallback to data root join even if it doesn't exist yet
+        candidate1.to_string_lossy().to_string()
     }
 
     fn read_programs_file(path: &Path) -> Vec<ProgramEntry> {
         if let Ok(data) = fs::read_to_string(path) {
+            // Prefer disk format without exe_exists, but be lenient if older/newer formats exist
+            if let Ok(list) = serde_json::from_str::<Vec<ProgramDiskEntry>>(&data) {
+                return list
+                    .into_iter()
+                    .map(|d| ProgramEntry {
+                        id: d.id,
+                        name: d.name,
+                        version: d.version,
+                        description: d.description,
+                        exe_path: d.exe_path,
+                        logo_data_url: d.logo_data_url,
+                        exe_exists: false, // will be computed later
+                    })
+                    .collect();
+            }
+            // Fallback: try reading full ProgramEntry if present
             if let Ok(list) = serde_json::from_str::<Vec<ProgramEntry>>(&data) {
                 return list;
             }
@@ -435,7 +479,19 @@ pub fn run() {
     fn write_programs_file(path: &Path, list: &Vec<ProgramEntry>) -> Result<(), String> {
         let parent = path.parent().ok_or_else(|| "Invalid settings path".to_string())?;
         if let Err(e) = fs::create_dir_all(parent) { return Err(e.to_string()); }
-        let data = serde_json::to_string_pretty(list).map_err(|e| e.to_string())?;
+        // Persist without derived fields
+        let disk: Vec<ProgramDiskEntry> = list
+            .iter()
+            .map(|p| ProgramDiskEntry {
+                id: p.id,
+                name: p.name.clone(),
+                version: p.version.clone(),
+                description: p.description.clone(),
+                exe_path: p.exe_path.clone(),
+                logo_data_url: p.logo_data_url.clone(),
+            })
+            .collect();
+        let data = serde_json::to_string_pretty(&disk).map_err(|e| e.to_string())?;
         fs::write(path, data).map_err(|e| e.to_string())
     }
 
