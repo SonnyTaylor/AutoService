@@ -795,7 +795,7 @@ pub fn run() {
         let manager = match battery::Manager::new() { Ok(m) => m, Err(_) => return Ok(Vec::new()) };
         let list = match manager.batteries() { Ok(b) => b, Err(_) => return Ok(Vec::new()) };
         let mut out = Vec::new();
-        for item in list {
+    for item in list {
             if let Ok(batt) = item {
                 let percentage = batt.state_of_charge().value as f32 * 100.0;
                 let state = format!("{:?}", batt.state());
@@ -804,10 +804,12 @@ pub fn run() {
                 let model = batt.model().map(|s| s.to_string());
                 let serial = batt.serial_number().map(|s| s.to_string());
                 let cycle_count = batt.cycle_count();
-                let soh = Some(batt.state_of_health().value as f32 * 100.0);
-                let energy_wh = Some(batt.energy().value as f32);
-                let energy_full_wh = Some(batt.energy_full().value as f32);
-                let energy_full_design_wh = Some(batt.energy_full_design().value as f32);
+        let soh = Some(batt.state_of_health().value as f32 * 100.0);
+        // Convert to Wh using units to avoid mWh confusion
+        use battery::units::energy::watt_hour;
+        let energy_wh = Some(batt.energy().get::<watt_hour>() as f32);
+        let energy_full_wh = Some(batt.energy_full().get::<watt_hour>() as f32);
+        let energy_full_design_wh = Some(batt.energy_full_design().get::<watt_hour>() as f32);
                 let voltage_v = Some(batt.voltage().value as f32);
                 let temp_c = batt.temperature().map(|t| t.value as f32);
                 let ttf = batt.time_to_full().map(|d| d.value as u64);
