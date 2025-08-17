@@ -1,5 +1,149 @@
 <section class="page" data-page="component-test">
   <h1>Component Test</h1>
-  <p class="muted">Speaker, microphone, camera, keyboard, and display tests.</p>
-  <!-- Future: interactive tests and visual indicators -->
+  <p class="muted">Camera, microphone, speakers, keyboard, mouse/trackpad, network, and display tests.</p>
+
+  <nav class="subtabs" role="tablist" aria-label="Component sections">
+    <button role="tab" id="tab-camera" data-tab="camera" aria-selected="true" tabindex="0">Camera</button>
+    <button role="tab" id="tab-keyboard" data-tab="keyboard" aria-selected="false" tabindex="-1">Keyboard</button>
+    <button role="tab" id="tab-mouse" data-tab="mouse" aria-selected="false" tabindex="-1">Mouse</button>
+    <button role="tab" id="tab-network" data-tab="network" aria-selected="false" tabindex="-1">Network</button>
+    <button role="tab" id="tab-display" data-tab="display" aria-selected="false" tabindex="-1">Display</button>
+    <button role="tab" id="tab-audio" data-tab="audio" aria-selected="false" tabindex="-1">Audio</button>
+  </nav>
+
+  <!-- Camera Test -->
+  <section class="card subtab-panel" id="panel-camera" role="tabpanel" aria-labelledby="tab-camera">
+    <h2 id="camera-title">Camera</h2>
+    <div class="row">
+      <label for="camera-select">Camera:</label>
+      <select id="camera-select" aria-label="Select camera"></select>
+      <button id="camera-start">Start</button>
+      <button id="camera-stop" disabled>Stop</button>
+      <span id="camera-status" class="muted" role="status" aria-live="polite"></span>
+    </div>
+    <div class="media-row">
+      <video id="camera-video" playsinline autoplay muted></video>
+    </div>
+  </section>
+
+  <!-- Keyboard Test -->
+  <section class="card subtab-panel" id="panel-keyboard" role="tabpanel" aria-labelledby="tab-keyboard" hidden>
+    <h2 id="keyboard-title">Keyboard</h2>
+    <p class="muted">Press keys to verify detection. Modifiers and key codes are shown below.</p>
+    <div id="keyboard-current" class="kbd-readout" aria-live="polite"></div>
+    <div id="keyboard-pressed" class="kbd-keys" aria-label="Currently pressed keys"></div>
+    <div class="row">
+      <button id="keyboard-clear">Clear</button>
+      <label><input type="checkbox" id="keyboard-capture" checked /> Capture keystrokes</label>
+    </div>
+  </section>
+
+  <!-- Mouse / Trackpad Test -->
+  <section class="card subtab-panel" id="panel-mouse" role="tabpanel" aria-labelledby="tab-mouse" hidden>
+    <h2 id="mouse-title">Mouse / Trackpad</h2>
+    <div class="row">
+      <div>Pos: <span id="mouse-pos">0, 0</span></div>
+      <div>Buttons: <span id="mouse-buttons">none</span></div>
+      <div>Wheel: <span id="mouse-wheel">0</span></div>
+      <button id="mouse-reset">Reset</button>
+    </div>
+    <div id="mouse-area" class="mouse-area" tabindex="0" aria-label="Mouse test area">
+      Click, move, and scroll here
+    </div>
+    <div class="row">
+      <button id="dblclick-test">Double-click test</button>
+      <span class="muted">Last double-click: <span id="dblclick-time">n/a</span> ms</span>
+    </div>
+  </section>
+
+  <!-- Network Test -->
+  <section class="card subtab-panel" id="panel-network" role="tabpanel" aria-labelledby="tab-network" hidden>
+    <h2 id="network-title">Network</h2>
+    <div class="row">
+      <button id="network-quick">Run quick test</button>
+      <span id="network-status" class="muted" role="status" aria-live="polite"></span>
+    </div>
+    <div class="grid grid-2">
+      <div>
+        <h3>Info</h3>
+        <ul id="network-info" class="list"></ul>
+      </div>
+      <div>
+        <h3>Results</h3>
+        <ul id="network-results" class="list"></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Display Test -->
+  <section class="card subtab-panel" id="panel-display" role="tabpanel" aria-labelledby="tab-display" hidden>
+    <h2 id="display-title">Display</h2>
+    <div class="row wrap">
+      <button class="disp-color" data-color="#000000">Black</button>
+      <button class="disp-color" data-color="#ffffff">White</button>
+      <button class="disp-color" data-color="#ff0000">Red</button>
+      <button class="disp-color" data-color="#00ff00">Green</button>
+      <button class="disp-color" data-color="#0000ff">Blue</button>
+      <button id="disp-gradient">Gradient</button>
+      <button id="disp-checker">Checkerboard</button>
+      <button id="disp-cycle">Cycle colors</button>
+      <button id="disp-fullscreen">Toggle Fullscreen</button>
+    </div>
+    <div id="display-area" class="display-area" aria-label="Display test area"></div>
+  </section>
+
+  <!-- Audio Test -->
+  <section class="card subtab-panel" id="panel-audio" role="tabpanel" aria-labelledby="tab-audio" hidden>
+    <h2 id="audio-title">Audio</h2>
+    <div class="row wrap">
+      <label for="mic-select">Microphone:</label>
+      <select id="mic-select"></select>
+      <button id="mic-start">Start mic</button>
+      <button id="mic-stop" disabled>Stop mic</button>
+      <span id="mic-status" class="muted" role="status" aria-live="polite"></span>
+    </div>
+    <div class="row">
+      <div class="meter" aria-label="Microphone level"><div id="mic-meter" class="meter-fill"></div></div>
+    </div>
+
+    <div class="row wrap">
+      <label for="out-select">Speaker output:</label>
+      <select id="out-select"></select>
+      <span id="out-status" class="muted"></span>
+    </div>
+    <div class="row wrap">
+      <button id="test-left">Left</button>
+      <button id="test-right">Right</button>
+      <button id="test-stereo">Stereo sweep</button>
+  <a href="https://www.youtube.com/watch?v=LDU_Txk06tM" target="_blank" rel="noopener" class="button">Open Crab Rave (YouTube)</a>
+    </div>
+    <div class="row wrap">
+      <label for="test-file">Test track:</label>
+      <input id="test-file" type="file" accept="audio/*" />
+      <button id="test-play">Play</button>
+      <button id="test-stop">Stop</button>
+    </div>
+    <audio id="test-audio" controls preload="none" style="width:100%"></audio>
+  </section>
+
+  <style>
+    .card { border: 1px solid var(--border, #333); border-radius: 8px; padding: 12px; margin: 12px 0; }
+    .row { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+    .row.wrap { flex-wrap: wrap; }
+    .media-row { display: flex; justify-content: center; }
+    video#camera-video { max-width: 100%; width: 480px; height: 270px; background: #000; }
+    .kbd-readout { min-height: 24px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .kbd-keys { display: flex; flex-wrap: wrap; gap: 6px; min-height: 36px; }
+    .kbd-keys .key { border: 1px solid #555; padding: 4px 8px; border-radius: 4px; background: #1a1a1a; }
+    .mouse-area { border: 1px dashed #666; min-height: 160px; display:flex; align-items:center; justify-content:center; border-radius:6px; user-select:none; }
+    .display-area { border: 1px solid #333; border-radius: 6px; height: 220px; background: #000; margin-top: 8px; }
+    .meter { width: 240px; height: 10px; background: #333; border-radius: 4px; overflow: hidden; }
+    .meter-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #2ecc71, #f1c40f, #e74c3c); transition: width 80ms linear; }
+    .grid { display: grid; gap: 12px; }
+    .grid-2 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .subtabs { display: flex; gap: 6px; padding: 6px 0; border-bottom: 1px solid #333; margin-bottom: 8px; flex-wrap: wrap; }
+  .subtabs [role=tab] { background: #1a1a1a; color: #ddd; border: 1px solid #333; border-bottom: 2px solid transparent; padding: 6px 10px; border-radius: 6px 6px 0 0; cursor: pointer; }
+  .subtabs [role=tab][aria-selected="true"] { background: #222; border-bottom-color: #ff7a18; }
+  .subtab-panel[hidden] { display: none !important; }
+  </style>
 </section>
