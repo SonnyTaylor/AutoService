@@ -212,14 +212,20 @@ export async function initPage() {
 
   // ---------- Network ----------
   const netBtn = qs('#network-quick');
+  const netBtnExt = qs('#network-extended');
   const netStatus = qs('#network-status');
   const netInfo = qs('#network-info');
   const netResults = qs('#network-results');
+  const netHealth = qs('#network-health');
+  const netSummary = qs('#network-summary');
 
   async function networkQuickTest() {
     netStatus.textContent = 'Running…';
     netInfo.innerHTML = '';
     netResults.innerHTML = '';
+    netHealth.textContent = 'Testing…';
+    netHealth.className = 'badge';
+    netSummary.textContent = '';
 
     // Connection info
     const items = [];
@@ -238,29 +244,171 @@ export async function initPage() {
       netInfo.appendChild(li);
     });
 
-    // Latency test (to a public endpoint)
+    // Latency/connectivity tests
     const urls = [
       'https://cloudflare.com/cdn-cgi/trace',
       'https://www.google.com/generate_204',
       'https://httpbin.org/get'
     ];
+  const timings = []; // all timings (success/fail durations)
+  const successTimes = []; // only successful request durations
+    let successCount = 0;
     for (const url of urls) {
       const li = document.createElement('li');
       li.textContent = `GET ${url} …`;
       netResults.appendChild(li);
       const t0 = performance.now();
       try {
-        const res = await fetch(url, { cache: 'no-store', mode: 'no-cors' });
+        await fetch(url, { cache: 'no-store', mode: 'no-cors' });
         const t = Math.round(performance.now() - t0);
+  timings.push(t);
+  successTimes.push(t);
+        successCount++;
         li.textContent = `GET ${url} → OK (${t} ms)`;
       } catch (e) {
         const t = Math.round(performance.now() - t0);
+        timings.push(t);
         li.textContent = `GET ${url} → FAIL (${t} ms): ${e.message}`;
       }
     }
+    // DNS check via image fetch (different domain)
+    const dnsUrl = 'https://i.imgur.com/favicon.ico';
+    {
+      const li = document.createElement('li');
+      li.textContent = `DNS check ${dnsUrl} …`;
+      netResults.appendChild(li);
+      const t0 = performance.now();
+      try {
+        const res = await fetch(dnsUrl, { cache: 'no-store', mode: 'no-cors' });
+  const t = Math.round(performance.now() - t0);
+  timings.push(t);
+  successTimes.push(t);
+  successCount++;
+        li.textContent = `DNS ${dnsUrl} → OK (${t} ms)`;
+      } catch (e) {
+        const t = Math.round(performance.now() - t0);
+        timings.push(t);
+        li.textContent = `DNS ${dnsUrl} → FAIL (${t} ms): ${e.message}`;
+      }
+    }
+
+    // Basic WebSocket test (cloudflare echo)
+    await new Promise((resolve) => {
+      const li = document.createElement('li');
+      li.textContent = 'WebSocket echo …';
+      netResults.appendChild(li);
+      let done = false;
+      try {
+        const ws = new WebSocket('wss://ws.postman-echo.com/raw');
+        const t0 = performance.now();
+        ws.onopen = () => {
+          ws.send('ping');
+        };
+        ws.onmessage = () => {
+          const t = Math.round(performance.now() - t0);
+          successCount++;
+          timings.push(t);
+          successTimes.push(t);
+          li.textContent = `WebSocket → OK (${t} ms)`;
+          done = true; ws.close(); resolve();
+        };
+        ws.onerror = () => {
+          const t = Math.round(performance.now() - t0);
+          timings.push(t);
+          li.textContent = `WebSocket → FAIL (${t} ms)`;
+          if (!done) { done = true; resolve(); }
+        };
+      } catch (e) {
+        li.textContent = `WebSocket → Not supported: ${e.message}`;
+        resolve();
+      }
+      setTimeout(() => { if (!done) { li.textContent = 'WebSocket → TIMEOUT'; resolve(); } }, 4000);
+    });
+
+    // Compute health
+    // Stats on successful checks only to avoid skew from failures/timeouts
+    const avg = successTimes.length ? Math.round(successTimes.reduce((a,b)=>a+b,0) / successTimes.length) : 0;
+    const median = (arr) => {
+      if (!arr.length) return 0;
+      const s = [...arr].sort((a,b)=>a-b);
+      const mid = Math.floor(s.length/2);
+      return s.length % 2 ? s[mid] : Math.round((s[mid-1] + s[mid]) / 2);
+    };
+    const med = median(successTimes);
+    const online = navigator.onLine;
+    const total = urls.length + 2; // + DNS + WebSocket
+    let grade = 'Unknown';
+    let cls = 'badge';
+    if (!online || successCount === 0) {
+      grade = 'Poor'; cls += ' warn';
+    } else if (successCount === total && med <= 200) {
+      grade = 'Good'; cls += 'ok' in {} ? ' ok' : ' ok';
+    } else if (successCount >= Math.ceil(total * 0.6) && med <= 450) {
+      grade = 'Fair';
+    } else if (successCount === total && med > 450) {
+      // All checks passed, but latency high → consider Fair rather than Poor
+      grade = 'Fair';
+    } else {
+      grade = 'Poor'; cls += ' warn';
+    }
+    netHealth.textContent = grade;
+    netHealth.className = cls;
+    netSummary.textContent = `${successCount}/${total} checks passed • median ${med} ms, avg ${avg} ms`;
+
     netStatus.textContent = 'Done';
   }
   netBtn?.addEventListener('click', networkQuickTest);
+
+  // Extended test: runs quick test plus multiple pings and download throughput sample
+  netBtnExt?.addEventListener('click', async () => {
+    netBtnExt.disabled = true;
+    await networkQuickTest();
+    const header = document.createElement('li');
+    header.textContent = '--- Extended ---';
+    netResults.appendChild(header);
+
+    // Multi-sample latency to a single endpoint
+    const url = 'https://www.google.com/generate_204';
+    const samples = 5;
+    const times = [];
+    for (let i=0;i<samples;i++) {
+      const li = document.createElement('li');
+      li.textContent = `Sample ${i+1}/${samples} …`;
+      netResults.appendChild(li);
+      const t0 = performance.now();
+      try {
+        await fetch(url, { cache: 'no-store', mode: 'no-cors' });
+        const t = Math.round(performance.now() - t0);
+        times.push(t);
+        li.textContent = `Sample ${i+1} → ${t} ms`;
+      } catch {
+        const t = Math.round(performance.now() - t0);
+        times.push(t);
+        li.textContent = `Sample ${i+1} → FAIL (${t} ms)`;
+      }
+    }
+    const avg = Math.round(times.reduce((a,b)=>a+b,0)/times.length);
+    const liAvg = document.createElement('li');
+    liAvg.textContent = `Avg latency over ${samples} samples: ${avg} ms`;
+    netResults.appendChild(liAvg);
+
+    // Simple throughput estimate by downloading a known-size blob
+    // Using Cloudflare CDN test file (approx 100KB)
+    const dlLi = document.createElement('li');
+    netResults.appendChild(dlLi);
+    try {
+      const dlUrl = 'https://speed.cloudflare.com/__down?bytes=100000';
+      const t0 = performance.now();
+      const res = await fetch(dlUrl, { cache: 'no-store' });
+      const buf = await res.arrayBuffer();
+      const dt = (performance.now() - t0) / 1000;
+      const mbps = (buf.byteLength * 8 / 1_000_000) / dt; // Mb/s
+      dlLi.textContent = `Throughput sample: ${mbps.toFixed(2)} Mb/s`;
+    } catch (e) {
+      dlLi.textContent = `Throughput sample: FAIL (${e.message})`;
+    }
+    netBtnExt.disabled = false;
+  });
 
   // ---------- Display ----------
   const dispArea = qs('#display-area');
