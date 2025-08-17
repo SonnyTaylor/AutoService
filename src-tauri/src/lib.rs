@@ -4,6 +4,46 @@ use serde::{Deserialize, Serialize};
 use std::{fs, path::{Path, PathBuf}};
 use uuid::Uuid;
 use image::GenericImageView; // for dimensions()
+use sysinfo::{System, Components, Disks, Networks, Users, Cpu};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SystemInfo {
+    os: Option<String>,
+    hostname: Option<String>,
+    kernel_version: Option<String>,
+    os_version: Option<String>,
+    uptime_seconds: u64,
+    boot_time_seconds: u64,
+    users: Vec<String>,
+    cpu: CpuInfo,
+    memory: MemoryInfo,
+    disks: Vec<DiskInfo>,
+    networks: Vec<NetworkInfo>,
+    gpus: Vec<GpuInfo>,
+    sensors: Vec<SensorInfo>,
+    battery: Option<BatteryInfo>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CpuInfo { brand: String, frequency_mhz: u64, num_physical_cores: Option<usize>, num_logical_cpus: usize }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MemoryInfo { total: u64, available: u64, used: u64, free: u64, swap_total: u64, swap_used: u64 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiskInfo { name: String, file_system: String, mount_point: String, total_space: u64, available_space: u64, is_removable: bool }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NetworkInfo { interface: String, received: u64, transmitted: u64 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GpuInfo { name: String }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SensorInfo { label: String, temperature_c: f32 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BatteryInfo { vendor: Option<String>, model: Option<String>, serial: Option<String>, state: String, percentage: f32, cycle_count: Option<u32> }
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
@@ -495,6 +535,106 @@ pub fn run() {
         fs::write(path, data).map_err(|e| e.to_string())
     }
 
+    #[tauri::command]
+    fn get_system_info() -> Result<SystemInfo, String> {
+        let mut sys = System::new_all();
+        sys.refresh_all();
+
+        // CPU
+    let cpus: &[Cpu] = sys.cpus();
+        let brand = cpus.first().map(|c| c.brand().to_string()).unwrap_or_else(|| String::from(""));
+        let frequency_mhz = cpus.first().map(|c| c.frequency() as u64).unwrap_or(0);
+        let num_logical = cpus.len();
+        let num_physical = System::physical_core_count();
+        let cpu = CpuInfo { brand, frequency_mhz, num_physical_cores: num_physical, num_logical_cpus: num_logical };
+
+        // Memory
+        let total = sys.total_memory();
+        let available = sys.available_memory();
+        let used = sys.used_memory();
+        let free = sys.free_memory();
+        let swap_total = sys.total_swap();
+        let swap_used = sys.used_swap();
+        let memory = MemoryInfo { total, available, used, free, swap_total, swap_used };
+
+        // Disks
+        let disks_list = Disks::new_with_refreshed_list();
+        let disks: Vec<DiskInfo> = disks_list
+            .iter()
+            .map(|d| DiskInfo {
+                name: d.name().to_string_lossy().to_string(),
+                file_system: d.file_system().to_string_lossy().to_string(),
+                mount_point: d.mount_point().to_string_lossy().to_string(),
+                total_space: d.total_space(),
+                available_space: d.available_space(),
+                is_removable: d.is_removable(),
+            })
+            .collect();
+
+        // Networks
+        let networks_list = Networks::new_with_refreshed_list();
+        let networks: Vec<NetworkInfo> = networks_list
+            .iter()
+            .map(|(name, data)| NetworkInfo { interface: name.clone(), received: data.total_received(), transmitted: data.total_transmitted() })
+            .collect();
+
+        // Sensors (temperatures)
+        let components = Components::new_with_refreshed_list();
+        let sensors: Vec<SensorInfo> = components
+            .iter()
+            .map(|c| SensorInfo { label: c.label().to_string(), temperature_c: c.temperature().unwrap_or(0.0) })
+            .collect();
+
+        // GPU - not provided by sysinfo reliably; leaving empty for now
+        let gpus: Vec<GpuInfo> = Vec::new();
+
+        // Users
+        let users_list = Users::new_with_refreshed_list();
+        let users: Vec<String> = users_list.iter().map(|u| u.name().to_string()).collect();
+
+        // Battery (optional)
+        let battery = match get_battery_info() {
+            Ok(opt) => opt,
+            Err(_) => None,
+        };
+
+        let info = SystemInfo {
+            os: sysinfo::System::long_os_version(),
+            hostname: System::host_name(),
+            kernel_version: System::kernel_version(),
+            os_version: System::os_version(),
+            uptime_seconds: System::uptime(),
+            boot_time_seconds: System::boot_time(),
+            users,
+            cpu,
+            memory,
+            disks,
+            networks,
+            gpus,
+            sensors,
+            battery,
+        };
+
+        Ok(info)
+    }
+
+    fn get_battery_info() -> Result<Option<BatteryInfo>, String> {
+        // Battery crate may fail on desktops; return Ok(None) if not present
+        let manager = match battery::Manager::new() { Ok(m) => m, Err(_) => return Ok(None) };
+        let mut batteries = match manager.batteries() { Ok(b) => b, Err(_) => return Ok(None) };
+        if let Some(Ok(batt)) = batteries.next() {
+            let percentage = batt.state_of_charge().value as f32 * 100.0;
+            let state = format!("{:?}", batt.state());
+            let vendor = batt.vendor().map(|s| s.to_string());
+            let model = batt.model().map(|s| s.to_string());
+            let serial = batt.serial_number().map(|s| s.to_string());
+            let cycle_count = batt.cycle_count();
+            Ok(Some(BatteryInfo { vendor, model, serial, state, percentage, cycle_count }))
+        } else {
+            Ok(None)
+        }
+    }
+
     tauri::Builder::default()
         .manage(AppState { data_dir: Arc::new(data_root) })
         .plugin(tauri_plugin_opener::init())
@@ -508,7 +648,8 @@ pub fn run() {
             remove_program,
             launch_program,
             suggest_logo_from_exe,
-            read_image_as_data_url
+            read_image_as_data_url,
+            get_system_info
         ])
         .setup(|app| {
             // Optionally, set current directory to data dir for simpler relative paths
