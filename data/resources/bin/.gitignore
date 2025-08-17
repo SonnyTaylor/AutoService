@@ -1,0 +1,7 @@
+# Ignore all files and subdirectories in this folder by default
+*
+*/
+
+# Allow these placeholder/metadata files to be tracked
+!.gitignore
+!.gitkeep
