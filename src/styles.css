@@ -472,6 +472,7 @@ details[open] summary { color: var(--text); }
   border-radius: 8px;
   user-select: none;
   background: #0f141f;
+  position: relative;
 }
 
 [data-page="component-test"] .display-area {
@@ -481,6 +482,15 @@ details[open] summary { color: var(--text); }
   background: #000;
   margin-top: 8px;
 }
+
+/* Mouse tester visuals */
+[data-page="component-test"] .mouse-buttons-visual { display: inline-flex; gap: 6px; margin-left: 8px; vertical-align: middle; }
+[data-page="component-test"] .mouse-btn { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 4px; border: 1px solid var(--border); background: #1b2130; color: var(--muted); font-size: 0.75rem; }
+[data-page="component-test"] .mouse-btn.active { background: #213a2a; border-color: #2f6b4a; color: #dff7e6; }
+
+[data-page="component-test"] .cursor-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--primary); position: absolute; transform: translate(-50%, -50%); box-shadow: 0 0 0 2px rgba(79,140,255,0.4); }
+[data-page="component-test"] .coord-tag { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.35); border: 1px solid var(--border); padding: 4px 8px; border-radius: 6px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.9rem; color: var(--text); }
+[data-page="component-test"] .mouse-area-hint { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; color: var(--muted); }
 
 [data-page="component-test"] .meter {
   width: 240px;
@@ -506,3 +516,6 @@ details[open] summary { color: var(--text); }
 [data-page="component-test"] #panel-network .list li.pass { border-color: #2f6b4a; background: #213a2a; }
 [data-page="component-test"] #panel-network .list li.fail { border-color: #6b422b; background: #3a2b24; }
 [data-page="component-test"] #panel-network .list li.note { opacity: 0.85; }
+
+/* Space between mouse KPIs and test area */
+[data-page="component-test"] .mouse-kpis { margin: 10px 0 14px; }

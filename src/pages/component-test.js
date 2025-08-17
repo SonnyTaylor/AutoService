@@ -164,17 +164,31 @@ export async function initPage() {
   const mousePos = qs('#mouse-pos');
   const mouseButtons = qs('#mouse-buttons');
   const mouseWheel = qs('#mouse-wheel');
+  const mouseWheelBar = qs('#mouse-wheel-bar');
+  const mouseSpeed = qs('#mouse-speed');
   const mouseReset = qs('#mouse-reset');
   const dblBtn = qs('#dblclick-test');
   const dblReadout = qs('#dblclick-time');
+  const dblBadge = qs('#dblclick-badge');
+  const cursorDot = qs('#cursor-dot');
+  const coordTag = qs('#coord-tag');
+  const btnL = qs('#btn-left');
+  const btnM = qs('#btn-middle');
+  const btnR = qs('#btn-right');
   let wheelAccum = 0;
   let lastClick = 0;
+  let lastMove = null; // {x,y,t}
+  let speedIdleTimer = null;
 
   function buttonsToText(b) {
-    const map = ['L', 'R', 'M', 'X1', 'X2'];
+    const labels = ['L', 'R', 'M', 'X1', 'X2'];
     const active = [];
-    map.forEach((name, i) => { if (b & (1 << i)) active.push(name); });
+    labels.forEach((name, i) => { if (b & (1 << i)) active.push(name); });
     return active.join(', ') || 'none';
+  }
+  function updateButtonVisuals(buttonMask) {
+    const arr = [btnL, btnR, btnM];
+    arr.forEach((el, idx) => { if (!el) return; el.classList.toggle('active', !!(buttonMask & (1 << idx))); });
   }
 
   mouseArea?.addEventListener('mousemove', (e) => {
@@ -183,33 +197,72 @@ export async function initPage() {
     const y = Math.round(e.clientY - rect.top);
     mousePos.textContent = `${x}, ${y}`;
     mouseButtons.textContent = buttonsToText(e.buttons);
+    updateButtonVisuals(e.buttons);
+    if (cursorDot) { cursorDot.hidden = false; cursorDot.style.left = `${x}px`; cursorDot.style.top = `${y}px`; }
+    if (coordTag) { coordTag.textContent = `${x}, ${y}`; }
+    const tNow = performance.now();
+    if (lastMove) {
+      const dx = x - lastMove.x; const dy = y - lastMove.y; const dt = (tNow - lastMove.t) / 1000;
+      if (dt > 0) {
+        const v = Math.round(Math.hypot(dx, dy) / dt);
+        if (mouseSpeed) mouseSpeed.textContent = `${v} px/s`;
+      }
+    }
+  lastMove = { x, y, t: tNow };
+  // reset any pending idle timer
+  if (speedIdleTimer) { clearTimeout(speedIdleTimer); speedIdleTimer = null; }
+  speedIdleTimer = setTimeout(() => { if (mouseSpeed) mouseSpeed.textContent = '0 px/s'; }, 300);
   });
   mouseArea?.addEventListener('mousedown', (e) => {
     mouseButtons.textContent = buttonsToText(e.buttons);
-    const now = performance.now();
-    const dt = now - lastClick;
-    lastClick = now;
+    updateButtonVisuals(e.buttons);
+    const tNow = performance.now();
+    const dt = tNow - lastClick;
+    lastClick = tNow;
     if (dt < 400) {
-      dblReadout.textContent = Math.round(dt).toString();
+      const ms = Math.round(dt);
+      dblReadout.textContent = String(ms);
+      if (dblBadge) dblBadge.textContent = `${ms} ms`;
     }
   });
   mouseArea?.addEventListener('mouseup', (e) => {
     mouseButtons.textContent = buttonsToText(e.buttons);
+    updateButtonVisuals(e.buttons);
   });
   mouseArea?.addEventListener('wheel', (e) => {
     wheelAccum += e.deltaY;
     mouseWheel.textContent = String(Math.round(wheelAccum));
+    if (mouseWheelBar) {
+      const w = Math.max(-2000, Math.min(2000, wheelAccum));
+      const pct = Math.round((w + 2000) / 40); // 0..100 with center at 50%
+      mouseWheelBar.style.width = `${pct}%`;
+    }
   }, { passive: true });
-  mouseReset?.addEventListener('click', () => { wheelAccum = 0; mouseWheel.textContent = '0'; });
+  mouseReset?.addEventListener('click', () => {
+    wheelAccum = 0;
+    mouseWheel.textContent = '0';
+    if (mouseWheelBar) mouseWheelBar.style.width = '50%';
+    if (mouseSpeed) mouseSpeed.textContent = '0 px/s';
+    lastMove = null;
+  if (speedIdleTimer) { clearTimeout(speedIdleTimer); speedIdleTimer = null; }
+    cursorDot && (cursorDot.hidden = true);
+    coordTag && (coordTag.textContent = '0, 0');
+    updateButtonVisuals(0);
+  });
   dblBtn?.addEventListener('click', () => {
-    const now = performance.now();
-    const dt = now - lastClick;
-    lastClick = now;
+    const tNow = performance.now();
+    const dt = tNow - lastClick;
+    lastClick = tNow;
     if (dt < 400) {
-      dblReadout.textContent = Math.round(dt).toString();
+      const ms = Math.round(dt);
+      dblReadout.textContent = String(ms);
+      if (dblBadge) dblBadge.textContent = `${ms} ms`;
     }
   });
-
+  mouseArea?.addEventListener('mouseleave', () => {
+    if (mouseSpeed) mouseSpeed.textContent = '0 px/s';
+    if (speedIdleTimer) { clearTimeout(speedIdleTimer); speedIdleTimer = null; }
+  });
   // ---------- Network ----------
   const netBtn = qs('#network-quick');
   const netBtnExt = qs('#network-extended');

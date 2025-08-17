@@ -41,18 +41,30 @@
   <!-- Mouse / Trackpad Test -->
   <section class="card subtab-panel" id="panel-mouse" role="tabpanel" aria-labelledby="tab-mouse" hidden>
     <h2 id="mouse-title">Mouse / Trackpad</h2>
-    <div class="row">
-      <div>Pos: <span id="mouse-pos">0, 0</span></div>
-      <div>Buttons: <span id="mouse-buttons">none</span></div>
-      <div>Wheel: <span id="mouse-wheel">0</span></div>
-      <button id="mouse-reset">Reset</button>
+    <div class="mouse-kpis stat-grid">
+      <div class="stat"><div class="label">Position</div><div class="value" id="mouse-pos">0, 0</div></div>
+      <div class="stat"><div class="label">Buttons</div><div class="value"><span id="mouse-buttons">none</span>
+        <span class="mouse-buttons-visual" aria-hidden="true">
+          <span id="btn-left" class="mouse-btn" title="Left">L</span>
+          <span id="btn-middle" class="mouse-btn" title="Middle">M</span>
+          <span id="btn-right" class="mouse-btn" title="Right">R</span>
+        </span>
+      </div></div>
+      <div class="stat"><div class="label">Wheel</div><div class="value"><span id="mouse-wheel">0</span>
+        <div class="progress" style="margin-top:6px"><div id="mouse-wheel-bar" class="bar" style="width:50%"></div></div>
+      </div></div>
+      <div class="stat"><div class="label">Speed</div><div class="value" id="mouse-speed">0 px/s</div></div>
     </div>
     <div id="mouse-area" class="mouse-area" tabindex="0" aria-label="Mouse test area">
-      Click, move, and scroll here
+      <div class="mouse-area-hint">Click, move, and scroll here</div>
+      <div id="cursor-dot" class="cursor-dot" hidden></div>
+      <div id="coord-tag" class="coord-tag">0, 0</div>
     </div>
     <div class="row">
       <button id="dblclick-test">Double-click test</button>
       <span class="muted">Last double-click: <span id="dblclick-time">n/a</span> ms</span>
+      <span id="dblclick-badge" class="badge" aria-hidden="true">n/a</span>
+      <button id="mouse-reset" class="ghost" style="margin-left:auto">Reset</button>
     </div>
   </section>
 
