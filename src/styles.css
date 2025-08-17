@@ -322,3 +322,54 @@ button:hover { background: var(--primary-700); }
 /* Details summary tweaks */
 details summary { cursor: pointer; color: var(--muted); }
 details[open] summary { color: var(--text); }
+
+/* =============================== */
+/* Stacked tables for System Info  */
+/* =============================== */
+
+/* Section titles above each table */
+.section-title {
+  font-size: 1rem;
+  margin: 16px 0 8px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* Generic table block wrapper to allow horizontal scroll on narrow screens */
+.table-block { margin: 8px 0 16px; }
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-2);
+}
+.table { width: 100%; border-collapse: collapse; min-width: 520px; }
+.table th, .table td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.table tr:last-child th, .table tr:last-child td { border-bottom: none; }
+.table tr:hover td { background: #263043; }
+
+/* Key-Value (two-column) tables */
+.kv-table th {
+  width: 220px;
+  text-align: left;
+  color: var(--muted);
+  font-weight: 500;
+  background: transparent;
+}
+.kv-table td { color: var(--text); }
+
+/* Data tables with header */
+.data-table thead th {
+  text-align: left;
+  color: var(--muted);
+  font-weight: 600;
+  background: #202636;
+}
+
+/* Inline progress for usage rows inside tables */
+.table .progress { margin-top: 6px; }
+
+/* Temperature coloring when used outside .sensor cards */
+.temp.cool { color: #8fd5ff; font-weight: 700; }
+.temp.warm { color: #ffd37a; font-weight: 700; }
+.temp.hot  { color: #ff8f8f; font-weight: 700; }
