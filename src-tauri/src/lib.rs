@@ -3,6 +3,7 @@ mod paths;
 use serde::{Deserialize, Serialize};
 use std::{fs, path::{Path, PathBuf}};
 use uuid::Uuid;
+use image::GenericImageView; // for dimensions()
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
@@ -240,18 +241,28 @@ pub fn run() {
     }
 
     fn get_logo_from_exe(data_root: &Path, exe_path: &str) -> Result<Option<String>, String> {
-        // Windows-only icon extraction using exeico; otherwise fallback heuristics
+        // Prefer bundled NirSoft IconsExtract if present (better quality/size selection),
+        // then fall back to exeico and file heuristics.
         let p0 = PathBuf::from(exe_path);
         let p = if p0.is_absolute() { p0 } else { data_root.join(&p0) };
+
         #[cfg(windows)]
         {
+            if let Some(iconsext) = find_iconsext_exe(data_root) {
+                if let Ok(Some(url)) = extract_with_iconsext(&iconsext, &p) {
+                    return Ok(Some(url));
+                }
+            }
+
+            // Fallback: use exeico crate
             if let Ok(bytes) = exeico::get_exe_ico(&p) {
                 if let Ok(png_data_url) = ico_bytes_to_png_data_url(&bytes) {
                     return Ok(Some(png_data_url));
                 }
             }
         }
-        // Heuristic: look for .ico or .png next to the exe
+
+        // Heuristic (cross-platform): look for .ico or .png next to the exe
         if let Some(dir) = p.parent() {
             if let Some(stem) = p.file_stem() {
                 let ico = dir.join(format!("{}.ico", stem.to_string_lossy()));
@@ -282,6 +293,93 @@ pub fn run() {
             }
         }
         Ok(None)
+    }
+
+    #[cfg(windows)]
+    fn find_iconsext_exe(data_root: &Path) -> Option<PathBuf> {
+        // Expected at: data/resources/bin/iconsextract/iconsext.exe
+        let (_reports, _programs, _settings, resources) = crate::paths::subdirs(data_root);
+        let exe = resources.join("bin").join("iconsextract").join("iconsext.exe");
+        if exe.exists() { Some(exe) } else { None }
+    }
+
+    #[cfg(windows)]
+    fn extract_with_iconsext(iconsext_path: &Path, target_exe: &Path) -> Result<Option<String>, String> {
+        use std::process::Command;
+
+        // Create a temp folder to hold extracted icons
+        let tmp_dir = std::env::temp_dir().join(format!(
+            "autoservice_iconsextract_{}",
+            Uuid::new_v4()
+        ));
+        if let Err(e) = std::fs::create_dir_all(&tmp_dir) {
+            return Err(format!("Failed to create temp dir: {}", e));
+        }
+
+        // Run: iconsext.exe /save "<exe>" "<tmp_dir>" -icons
+        let status = Command::new(iconsext_path)
+            .args([
+                "/save",
+                &target_exe.to_string_lossy(),
+                &tmp_dir.to_string_lossy(),
+                "-icons",
+            ])
+            .status()
+            .map_err(|e| format!("Failed to run IconsExtract: {}", e))?;
+
+        if !status.success() {
+            // Cleanup and return none on failure
+            let _ = std::fs::remove_dir_all(&tmp_dir);
+            return Ok(None);
+        }
+
+        // Find the best .ico produced (largest dimensions). Some builds may also output .png; prefer PNG if found.
+        let mut best_png: Option<(u32, u32, Vec<u8>)> = None;
+        let mut best_ico: Option<(u32, u32, Vec<u8>)> = None;
+        if let Ok(read_dir) = std::fs::read_dir(&tmp_dir) {
+            for entry in read_dir.flatten() {
+                let path = entry.path();
+                if !path.is_file() { continue; }
+                let ext_l = path.extension().and_then(|e| e.to_str()).map(|s| s.to_ascii_lowercase());
+                match ext_l.as_deref() {
+                    Some("png") => {
+                        if let Ok(bytes) = fs::read(&path) {
+                            if let Ok(img) = image::load_from_memory_with_format(&bytes, image::ImageFormat::Png) {
+                                let (w, h) = img.dimensions();
+                                if best_png.as_ref().map(|(bw, bh, _)| w * h > *bw * *bh).unwrap_or(true) {
+                                    best_png = Some((w, h, bytes));
+                                }
+                            }
+                        }
+                    }
+                    Some("ico") => {
+                        if let Ok(bytes) = fs::read(&path) {
+                            if let Ok(img) = image::load_from_memory_with_format(&bytes, image::ImageFormat::Ico) {
+                                let (w, h) = img.dimensions();
+                                if best_ico.as_ref().map(|(bw, bh, _)| w * h > *bw * *bh).unwrap_or(true) {
+                                    best_ico = Some((w, h, bytes));
+                                }
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        // Prefer PNG if available; otherwise convert best ICO to PNG
+        let out = if let Some((_w, _h, bytes)) = best_png {
+            let b64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &bytes);
+            Some(format!("data:image/png;base64,{}", b64))
+        } else if let Some((_w, _h, ico_bytes)) = best_ico {
+            Some(ico_bytes_to_png_data_url(&ico_bytes)?)
+        } else {
+            None
+        };
+
+        // Cleanup temp folder
+        let _ = std::fs::remove_dir_all(&tmp_dir);
+        Ok(out)
     }
 
     fn ico_bytes_to_png_data_url(ico_bytes: &[u8]) -> Result<String, String> {
