@@ -4,11 +4,11 @@
 
   <nav class="subtabs" role="tablist" aria-label="Component sections">
     <button role="tab" id="tab-camera" data-tab="camera" aria-selected="true" tabindex="0">Camera</button>
+  <button role="tab" id="tab-audio" data-tab="audio" aria-selected="false" tabindex="-1">Audio</button>
     <button role="tab" id="tab-keyboard" data-tab="keyboard" aria-selected="false" tabindex="-1">Keyboard</button>
     <button role="tab" id="tab-mouse" data-tab="mouse" aria-selected="false" tabindex="-1">Mouse</button>
     <button role="tab" id="tab-network" data-tab="network" aria-selected="false" tabindex="-1">Network</button>
     <button role="tab" id="tab-display" data-tab="display" aria-selected="false" tabindex="-1">Display</button>
-    <button role="tab" id="tab-audio" data-tab="audio" aria-selected="false" tabindex="-1">Audio</button>
   </nav>
 
   <!-- Camera Test -->
@@ -23,6 +23,50 @@
     </div>
     <div class="media-row">
       <video id="camera-video" playsinline autoplay muted></video>
+    </div>
+  </section>
+
+  <!-- Audio Test -->
+  <section class="card subtab-panel" id="panel-audio" role="tabpanel" aria-labelledby="tab-audio" hidden>
+    <h2 id="audio-title">Audio</h2>
+    <div class="grid grid-2">
+      <div>
+        <h3>Microphone</h3>
+        <div class="row">
+          <label for="mic-select">Input:</label>
+          <select id="mic-select" aria-label="Select microphone"></select>
+          <button id="mic-start">Start</button>
+          <button id="mic-stop" disabled>Stop</button>
+          <label class="muted" style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="mic-monitor"> Monitor</label>
+        </div>
+        <div class="stat-grid">
+          <div class="stat"><div class="label">Level (RMS)</div><div class="value" id="mic-kpi-level">— dB</div></div>
+          <div class="stat"><div class="label">Peak</div><div class="value" id="mic-kpi-peak">— dB</div></div>
+          <div class="stat"><div class="label">Clipping</div><div class="value" id="mic-kpi-clip">0</div></div>
+          <div class="stat"><div class="label">Status</div><div class="value"><span id="mic-status" class="badge">Idle</span></div></div>
+        </div>
+        <div class="row" aria-label="Microphone level meter">
+          <div class="meter" style="flex:1;min-width:220px"><div id="mic-meter" class="meter-fill" style="width:0%"></div></div>
+        </div>
+      </div>
+      <div>
+        <h3>Speakers</h3>
+        <div class="row">
+          <label for="spk-select">Output:</label>
+          <select id="spk-select" aria-label="Select speakers"></select>
+          <button id="spk-left">Left</button>
+          <button id="spk-right">Right</button>
+          <button id="spk-both">Both</button>
+          <button id="spk-sweep" class="ghost">Stereo sweep</button>
+          <button id="spk-stop" class="ghost" title="Stop playback">Stop</button>
+        </div>
+        <div class="row">
+          <label for="spk-volume">Volume:</label>
+          <input id="spk-volume" type="range" min="0" max="1" step="0.01" value="0.5" style="width:200px" />
+          <span class="muted" id="spk-status" role="status" aria-live="polite" style="margin-left:auto">Idle</span>
+        </div>
+        <p id="spk-note" class="muted" style="margin:8px 0 0"></p>
+      </div>
     </div>
   </section>
 
@@ -115,39 +159,4 @@
     </div>
     <div id="display-area" class="display-area" aria-label="Display test area"></div>
   </section>
-
-  <!-- Audio Test -->
-  <section class="card subtab-panel" id="panel-audio" role="tabpanel" aria-labelledby="tab-audio" hidden>
-    <h2 id="audio-title">Audio</h2>
-    <div class="row wrap">
-      <label for="mic-select">Microphone:</label>
-      <select id="mic-select"></select>
-      <button id="mic-start">Start mic</button>
-      <button id="mic-stop" disabled>Stop mic</button>
-      <span id="mic-status" class="muted" role="status" aria-live="polite"></span>
-    </div>
-    <div class="row">
-      <div class="meter" aria-label="Microphone level"><div id="mic-meter" class="meter-fill"></div></div>
-    </div>
-
-    <div class="row wrap">
-      <label for="out-select">Speaker output:</label>
-      <select id="out-select"></select>
-      <span id="out-status" class="muted"></span>
-    </div>
-    <div class="row wrap">
-      <button id="test-left">Left</button>
-      <button id="test-right">Right</button>
-      <button id="test-stereo">Stereo sweep</button>
-  <a href="https://www.youtube.com/watch?v=LDU_Txk06tM" target="_blank" rel="noopener" class="button">Open Crab Rave (YouTube)</a>
-    </div>
-    <div class="row wrap">
-      <label for="test-file">Test track:</label>
-      <input id="test-file" type="file" accept="audio/*" />
-      <button id="test-play">Play</button>
-      <button id="test-stop">Stop</button>
-    </div>
-    <audio id="test-audio" controls preload="none" style="width:100%"></audio>
-  </section>
-
 </section>

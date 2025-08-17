@@ -9,11 +9,11 @@ export async function initPage() {
   const tabButtons = qsa('.subtabs [role=tab]');
   const panels = {
     camera: qs('#panel-camera'),
+  audio: qs('#panel-audio'),
     keyboard: qs('#panel-keyboard'),
     mouse: qs('#panel-mouse'),
     network: qs('#panel-network'),
     display: qs('#panel-display'),
-    audio: qs('#panel-audio'),
   };
   function activateTab(name) {
     tabButtons.forEach(btn => {
@@ -58,8 +58,8 @@ export async function initPage() {
   async function listDevices() {
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
-      const mics = devices.filter(d => d.kind === 'audioinput');
       const cams = devices.filter(d => d.kind === 'videoinput');
+      const mics = devices.filter(d => d.kind === 'audioinput');
       const outs = devices.filter(d => d.kind === 'audiooutput');
       // populate camera select
       camSel.innerHTML = '';
@@ -69,11 +69,14 @@ export async function initPage() {
         opt.textContent = d.label || `Camera ${i + 1}`;
         camSel.appendChild(opt);
       });
-      // audio selects
+      // populate mic select
       const micSel = qs('#mic-select');
-      const outSel = qs('#out-select');
       if (micSel) {
         micSel.innerHTML = '';
+        const def = document.createElement('option');
+        def.value = '';
+        def.textContent = 'System default';
+        micSel.appendChild(def);
         mics.forEach((d, i) => {
           const opt = document.createElement('option');
           opt.value = d.deviceId;
@@ -81,15 +84,20 @@ export async function initPage() {
           micSel.appendChild(opt);
         });
       }
-      if (outSel) {
-        outSel.innerHTML = '';
+      // populate speakers (note: labels may require permissions)
+      const spkSel = qs('#spk-select');
+      if (spkSel) {
+        spkSel.innerHTML = '';
+        const def = document.createElement('option');
+        def.value = '';
+        def.textContent = 'System default';
+        spkSel.appendChild(def);
         outs.forEach((d, i) => {
           const opt = document.createElement('option');
           opt.value = d.deviceId;
-          opt.textContent = d.label || `Speaker ${i + 1}`;
-          outSel.appendChild(opt);
+          opt.textContent = d.label || `Speakers ${i + 1}`;
+          spkSel.appendChild(opt);
         });
-        // Note: setSinkId requires HTTPS or secure context; Tauri provides secure context.
       }
     } catch (e) {
       console.error('enumerateDevices failed', e);
@@ -526,183 +534,251 @@ export async function initPage() {
     }
   });
 
+  // Audio test removed.
   // ---------- Audio ----------
   const micSel = qs('#mic-select');
   const micStart = qs('#mic-start');
   const micStop = qs('#mic-stop');
-  const micStatus = qs('#mic-status');
+  const micMonitor = qs('#mic-monitor');
   const micMeter = qs('#mic-meter');
-  const outSel = qs('#out-select');
-  const outStatus = qs('#out-status');
-  const audioEl = qs('#test-audio');
-  const fileInput = qs('#test-file');
-  const btnLeft = qs('#test-left');
-  const btnRight = qs('#test-right');
-  const btnStereo = qs('#test-stereo');
-  const btnPlay = qs('#test-play');
-  const btnStop = qs('#test-stop');
+  const micKpiLevel = qs('#mic-kpi-level');
+  const micKpiPeak = qs('#mic-kpi-peak');
+  const micKpiClip = qs('#mic-kpi-clip');
+  const micStatus = qs('#mic-status');
+
+  const spkSel = qs('#spk-select');
+  const spkLeft = qs('#spk-left');
+  const spkRight = qs('#spk-right');
+  const spkBoth = qs('#spk-both');
+  const spkSweep = qs('#spk-sweep');
+  const spkStop = qs('#spk-stop');
+  const spkVol = qs('#spk-volume');
+  const spkStatus = qs('#spk-status');
+  const spkNote = qs('#spk-note');
 
   let micStream = null;
   let audioCtx = null;
   let analyser = null;
-  let rafId = null;
-  let mediaDest = null; // WebAudio destination to route into <audio>
+  let micSource = null;
+  let monitorNode = null; // Gain node for monitoring
+  let rafId = 0;
+  let clipCount = 0;
+  let peakDb = -Infinity;
 
-  function ensureAudioCtx() {
-    if (!audioCtx) {
+  function ensureAudioContext() {
+    if (!audioCtx || audioCtx.state === 'closed') {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      // Route WebAudio through a MediaStreamDestination into the <audio> element
-      mediaDest = audioCtx.createMediaStreamDestination();
-      if (audioEl) {
-        audioEl.srcObject = mediaDest.stream;
-        audioEl.muted = false;
-      }
     }
     return audioCtx;
   }
 
+  function setOutputDeviceFor(el, deviceId) {
+    // setSinkId is not supported in all browsers; try and note result
+    if (typeof el.setSinkId === 'function') {
+      return el.setSinkId(deviceId).then(() => true).catch(() => false);
+    }
+    return Promise.resolve(false);
+  }
+
   async function startMic() {
     try {
-      micStatus.textContent = 'Requesting microphone…';
+      micStatus.textContent = 'Starting…';
+      micStatus.className = 'badge';
       const constraints = { audio: micSel?.value ? { deviceId: { exact: micSel.value } } : true, video: false };
       micStream = await navigator.mediaDevices.getUserMedia(constraints);
-      const ctx = ensureAudioCtx();
-      const src = ctx.createMediaStreamSource(micStream);
+      const ctx = ensureAudioContext();
+      micSource = ctx.createMediaStreamSource(micStream);
       analyser = ctx.createAnalyser();
-      analyser.fftSize = 512;
-      src.connect(analyser);
-      // draw/compute RMS level
-      const data = new Uint8Array(analyser.frequencyBinCount);
+      analyser.fftSize = 2048;
+      analyser.smoothingTimeConstant = 0.8;
+      micSource.connect(analyser);
+
+      // Monitoring chain
+      monitorNode = ctx.createGain();
+      monitorNode.gain.value = micMonitor?.checked ? 0.6 : 0.0;
+      micSource.connect(monitorNode);
+      monitorNode.connect(ctx.destination);
+
+      const data = new Float32Array(analyser.fftSize);
+      peakDb = -Infinity; clipCount = 0;
       const loop = () => {
-        analyser.getByteTimeDomainData(data);
-        let sum = 0;
-        for (let i = 0; i < data.length; i++) {
-          const v = (data[i] - 128) / 128;
-          sum += v * v;
+        analyser.getFloatTimeDomainData(data);
+        // RMS
+        let sum = 0, peak = 0, clipped = false;
+        for (let i=0;i<data.length;i++) {
+          const v = data[i];
+          sum += v*v;
+          const a = Math.abs(v);
+          if (a > peak) peak = a;
+          if (a > 0.98) clipped = true;
         }
-        const rms = Math.sqrt(sum / data.length);
-        const pct = Math.min(100, Math.max(0, Math.round(rms * 200)));
-        micMeter.style.width = pct + '%';
+        const rms = Math.sqrt(sum / data.length) || 0;
+        const rmsDb = rms > 0 ? 20*Math.log10(rms) : -Infinity;
+        const peakDbNow = peak > 0 ? 20*Math.log10(peak) : -Infinity;
+        if (peakDbNow > peakDb) peakDb = peakDbNow;
+        if (clipped) clipCount++;
+
+        if (micMeter) micMeter.style.width = `${Math.max(0, Math.min(100, Math.round((rms) * 140)))}%`;
+        if (micKpiLevel) micKpiLevel.textContent = Number.isFinite(rmsDb) ? `${rmsDb.toFixed(1)} dB` : '-∞ dB';
+        if (micKpiPeak) micKpiPeak.textContent = Number.isFinite(peakDb) ? `${peakDb.toFixed(1)} dB` : '-∞ dB';
+        if (micKpiClip) micKpiClip.textContent = String(clipCount);
+
         rafId = requestAnimationFrame(loop);
       };
       loop();
-      micStart.disabled = true;
-      micStop.disabled = false;
-      micStatus.textContent = 'Microphone active';
+      micStatus.textContent = 'Listening';
+      micStatus.className = 'badge ok';
+      micStart.disabled = true; micStop.disabled = false;
     } catch (e) {
-      micStatus.textContent = 'Mic error: ' + e.message;
+      micStatus.textContent = `Error: ${e.message}`;
+      micStatus.className = 'badge warn';
       console.error(e);
     }
   }
+
   function stopMic() {
-    if (rafId) cancelAnimationFrame(rafId), rafId = null;
-    if (micStream) {
-      micStream.getTracks().forEach(t => t.stop());
-      micStream = null;
-    }
-    micStart.disabled = false;
-    micStop.disabled = true;
-    micStatus.textContent = 'Microphone stopped';
-    micMeter.style.width = '0%';
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = 0;
+    if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+    try { micSource && micSource.disconnect(); } catch {}
+    try { analyser && analyser.disconnect(); } catch {}
+    try { monitorNode && monitorNode.disconnect(); } catch {}
+    micSource = null; analyser = null; monitorNode = null;
+    if (micMeter) micMeter.style.width = '0%';
+    if (micStatus) { micStatus.textContent = 'Stopped'; micStatus.className = 'badge'; }
+    micStart && (micStart.disabled = false); micStop && (micStop.disabled = true);
   }
+
   micStart?.addEventListener('click', startMic);
   micStop?.addEventListener('click', stopMic);
+  micMonitor?.addEventListener('change', () => { if (monitorNode) monitorNode.gain.value = micMonitor.checked ? 0.6 : 0.0; });
 
-  // Output selection via setSinkId (if supported)
-  async function applyOutputDevice() {
-    if (!audioEl) return;
-    const id = outSel?.value;
-    if (audioEl.setSinkId && id) {
-      try {
-        await audioEl.setSinkId(id);
-        outStatus.textContent = 'Output set.';
-      } catch (e) {
-        outStatus.textContent = 'Cannot set output: ' + e.message;
+  // Speaker tests
+  let osc = null, gainL = null, gainR = null, merger = null, masterGain = null;
+  let msDest = null, audioEl = null; // For selectable output via setSinkId
+
+  function getOutputNode() {
+    const ctx = ensureAudioContext();
+    const canSetSink = typeof HTMLMediaElement !== 'undefined' && typeof HTMLMediaElement.prototype.setSinkId === 'function';
+    if (canSetSink) {
+      if (!msDest) {
+        msDest = ctx.createMediaStreamDestination();
+        audioEl = document.createElement('audio');
+        audioEl.autoplay = true;
+        audioEl.srcObject = msDest.stream;
+        audioEl.style.display = 'none';
+        document.body.appendChild(audioEl);
       }
-    } else {
-      outStatus.textContent = 'Output selection not supported.';
+      const deviceId = spkSel?.value || 'default';
+      if (deviceId) {
+        audioEl.setSinkId(deviceId).then(() => {
+          spkNote.textContent = '';
+        }).catch(err => {
+          spkNote.textContent = `Output select failed: ${err.message}`;
+        });
+      }
+      return msDest;
     }
+    return ctx.destination;
   }
-  outSel?.addEventListener('change', applyOutputDevice);
 
-  // Test tones
-  function playChannel(panValue) {
-    const ctx = ensureAudioCtx();
-    const osc = ctx.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.value = 440;
-    const gain = ctx.createGain();
-    let dest = mediaDest ? mediaDest : ctx.destination;
-    if (ctx.createStereoPanner) {
-      const panner = ctx.createStereoPanner();
-      panner.pan.value = panValue; // -1 left, +1 right
-      osc.connect(panner).connect(gain).connect(dest);
-    } else {
-      osc.connect(gain).connect(dest);
-    }
-    gain.gain.value = 0.1;
-    osc.start();
-    setTimeout(() => osc.stop(), 800);
-    // try to play element so sinkId routing is honored
-    audioEl?.play?.().catch(()=>{});
+  function stopTone() {
+    try { osc && osc.stop(); } catch {}
+    try { osc && osc.disconnect(); } catch {}
+    try { gainL && gainL.disconnect(); } catch {}
+    try { gainR && gainR.disconnect(); } catch {}
+  try { merger && merger.disconnect(); } catch {}
+  try { masterGain && masterGain.disconnect(); } catch {}
+  osc = null; gainL = null; gainR = null; merger = null; masterGain = null;
+    if (spkStatus) spkStatus.textContent = 'Idle';
   }
-  btnLeft?.addEventListener('click', () => playChannel(-1));
-  btnRight?.addEventListener('click', () => playChannel(1));
-  btnStereo?.addEventListener('click', () => {
-    const ctx = ensureAudioCtx();
-    const osc = ctx.createOscillator();
+
+  function startTone({ left = 0, right = 0, freq = 440 }) {
+    const ctx = ensureAudioContext();
+    stopTone();
+    osc = ctx.createOscillator();
     osc.type = 'sine';
-    osc.frequency.value = 440;
-    const gain = ctx.createGain();
-    let dest = mediaDest ? mediaDest : ctx.destination;
-    const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
-    if (panner) {
-      osc.connect(panner).connect(gain).connect(dest);
-      gain.gain.value = 0.1;
-      osc.start();
-      let t = 0;
-      const id = setInterval(() => { panner.pan.value = Math.sin(t); t += 0.2; }, 50);
-      setTimeout(() => { clearInterval(id); osc.stop(); }, 2500);
-    } else {
-      osc.connect(gain).connect(dest);
-      gain.gain.value = 0.1;
-      osc.start();
-      setTimeout(() => osc.stop(), 2000);
+    osc.frequency.value = freq;
+    gainL = ctx.createGain();
+    gainR = ctx.createGain();
+    gainL.gain.value = left ? 1 : 0;
+    gainR.gain.value = right ? 1 : 0;
+    merger = ctx.createChannelMerger(2);
+    osc.connect(gainL).connect(merger, 0, 0);
+    osc.connect(gainR).connect(merger, 0, 1);
+    masterGain = ctx.createGain();
+    masterGain.gain.value = parseFloat(spkVol?.value || '0.5');
+    merger.connect(masterGain).connect(getOutputNode());
+    try { osc.start(); } catch {}
+    if (spkStatus) spkStatus.textContent = left && right ? 'Playing (Both)' : left ? 'Playing (Left)' : 'Playing (Right)';
+  }
+
+  spkVol?.addEventListener('input', () => { if (masterGain) masterGain.gain.value = parseFloat(spkVol.value); });
+
+  spkLeft?.addEventListener('click', () => startTone({ left: 1, right: 0, freq: 440 }));
+  spkRight?.addEventListener('click', () => startTone({ left: 0, right: 1, freq: 440 }));
+  spkBoth?.addEventListener('click', () => startTone({ left: 1, right: 1, freq: 440 }));
+  spkStop?.addEventListener('click', stopTone);
+
+  spkSweep?.addEventListener('click', () => {
+    const ctx = ensureAudioContext();
+    stopTone();
+    const duration = 4; // seconds
+    const start = ctx.currentTime;
+    const end = start + duration;
+    osc = ctx.createOscillator();
+    osc.type = 'sine';
+    gainL = ctx.createGain();
+    gainR = ctx.createGain();
+  merger = ctx.createChannelMerger(2);
+  const vol = 1.0; // channel gains; overall volume via masterGain
+    gainL.gain.value = vol;
+    gainR.gain.value = vol;
+  osc.connect(gainL).connect(merger, 0, 0);
+  osc.connect(gainR).connect(merger, 0, 1);
+  masterGain = ctx.createGain();
+  masterGain.gain.value = parseFloat(spkVol?.value || '0.5');
+  merger.connect(masterGain).connect(getOutputNode());
+    osc.frequency.setValueAtTime(200, start);
+    osc.frequency.exponentialRampToValueAtTime(2000, end);
+    osc.start(start);
+    if (spkStatus) spkStatus.textContent = 'Stereo sweep';
+    // Pan from left to right using periodic gain automation
+    const panSteps = 40;
+    for (let i=0;i<=panSteps;i++) {
+      const t = start + (i/panSteps)*duration;
+      const p = i/panSteps; // 0..1
+      // equal-power panning
+      const l = Math.cos(p * Math.PI/2);
+      const r = Math.sin(p * Math.PI/2);
+      gainL.gain.setValueAtTime(vol * l, t);
+      gainR.gain.setValueAtTime(vol * r, t);
     }
-    audioEl?.play?.().catch(()=>{});
+    osc.stop(end);
+    setTimeout(() => { stopTone(); }, duration*1000 + 100);
   });
 
-  // File playback
-  btnPlay?.addEventListener('click', async () => {
-    if (!audioEl) return;
-    if (fileInput?.files?.[0]) {
-      const url = URL.createObjectURL(fileInput.files[0]);
-  // ensure file playback uses src, not srcObject
-  try { audioEl.srcObject = null; } catch {}
-      audioEl.src = url;
-    } else if (!audioEl.src) {
-      // As a fun default, try to play a built-in short beep via data URL
-      const ctx = ensureAudioCtx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      gain.gain.value = 0.1;
-      const dest = mediaDest ? mediaDest : ctx.destination;
-      osc.connect(gain).connect(dest);
-      osc.start();
-      setTimeout(() => osc.stop(), 400);
+  // Try to honor output device selection when supported by the browser environment
+  async function applySpeakerSelection() {
+    const can = typeof HTMLMediaElement !== 'undefined' && typeof HTMLMediaElement.prototype.setSinkId === 'function';
+    if (!can) {
+      spkNote.textContent = 'Note: Selecting specific output may be limited by browser.';
       return;
     }
-    try { await audioEl.play(); } catch (e) { console.error(e); }
-  });
-  btnStop?.addEventListener('click', () => { audioEl?.pause(); audioEl.currentTime = 0; });
+    // Ensure audio element exists and apply sink id
+    getOutputNode();
+  }
+  spkSel?.addEventListener('change', applySpeakerSelection);
 
   // Initial device list (requires permission in some browsers to reveal labels)
   await listDevices();
   // If permissions are needed for labels, trigger a minimal getUserMedia to unlock labels
   try {
+    // Request video and audio to populate labels for all device types
     const s = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
     s.getTracks().forEach(t => t.stop());
-    await listDevices();
+  await listDevices();
+  await applySpeakerSelection();
   } catch (e) {
     // ignore
   }
@@ -710,8 +786,8 @@ export async function initPage() {
   // Cleanup when navigating away
   const cleanup = () => {
     stopCamera();
-    stopMic();
-    if (audioCtx && audioCtx.state !== 'closed') audioCtx.close();
+  stopMic();
+  stopTone();
     window.removeEventListener('beforeunload', cleanup);
   };
   window.addEventListener('beforeunload', cleanup, { once: true });
