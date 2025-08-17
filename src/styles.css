@@ -385,3 +385,110 @@ details[open] summary { color: var(--text); }
 
 /* Empty state inside table wrap */
 .empty-state { padding: 16px; color: var(--muted); text-align: center; }
+
+/* =============================== */
+/* Sub-tabs (used in Component Test and others) */
+/* =============================== */
+
+.subtabs {
+  display: flex;
+  gap: 6px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+/* Override base button style for tab buttons */
+.subtabs [role=tab] {
+  appearance: none;
+  background: var(--panel-2);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-bottom: 2px solid transparent;
+  padding: 8px 12px;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+}
+
+.subtabs [role=tab]:hover {
+  color: var(--text);
+  background: #222a3a;
+}
+
+.subtabs [role=tab][aria-selected="true"] {
+  color: var(--text);
+  background: #21304a; /* match top tab active */
+  border-color: #2b416b; /* match top tab border */
+  border-bottom-color: var(--primary);
+}
+
+.subtab-panel[hidden] { display: none !important; }
+
+/* =============================== */
+/* Component Test page tweaks      */
+/* Scoped overrides to avoid clash */
+/* =============================== */
+
+[data-page="component-test"] .row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+  background: transparent; /* keep inside card background */
+  border: 0;
+  padding: 0;
+}
+
+[data-page="component-test"] .row.wrap { flex-wrap: wrap; }
+[data-page="component-test"] .media-row { display: flex; justify-content: center; }
+[data-page="component-test"] video#camera-video { max-width: 100%; width: 480px; height: 270px; background: #000; border-radius: 6px; }
+
+[data-page="component-test"] .kbd-readout {
+  min-height: 24px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+[data-page="component-test"] .kbd-keys { display: flex; flex-wrap: wrap; gap: 6px; min-height: 36px; }
+[data-page="component-test"] .kbd-keys .key {
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #1b2130;
+}
+
+[data-page="component-test"] .mouse-area {
+  border: 1px dashed #566078;
+  min-height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  user-select: none;
+  background: #0f141f;
+}
+
+[data-page="component-test"] .display-area {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  height: 220px;
+  background: #000;
+  margin-top: 8px;
+}
+
+[data-page="component-test"] .meter {
+  width: 240px;
+  height: 10px;
+  background: #1b2130;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+[data-page="component-test"] .meter-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #2ecc71, #f1c40f, #e74c3c);
+  transition: width 80ms linear;
+}
+
+[data-page="component-test"] .grid { display: grid; gap: 12px; }
+[data-page="component-test"] .grid-2 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }

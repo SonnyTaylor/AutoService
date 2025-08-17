@@ -126,24 +126,4 @@
     <audio id="test-audio" controls preload="none" style="width:100%"></audio>
   </section>
 
-  <style>
-    .card { border: 1px solid var(--border, #333); border-radius: 8px; padding: 12px; margin: 12px 0; }
-    .row { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
-    .row.wrap { flex-wrap: wrap; }
-    .media-row { display: flex; justify-content: center; }
-    video#camera-video { max-width: 100%; width: 480px; height: 270px; background: #000; }
-    .kbd-readout { min-height: 24px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-    .kbd-keys { display: flex; flex-wrap: wrap; gap: 6px; min-height: 36px; }
-    .kbd-keys .key { border: 1px solid #555; padding: 4px 8px; border-radius: 4px; background: #1a1a1a; }
-    .mouse-area { border: 1px dashed #666; min-height: 160px; display:flex; align-items:center; justify-content:center; border-radius:6px; user-select:none; }
-    .display-area { border: 1px solid #333; border-radius: 6px; height: 220px; background: #000; margin-top: 8px; }
-    .meter { width: 240px; height: 10px; background: #333; border-radius: 4px; overflow: hidden; }
-    .meter-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #2ecc71, #f1c40f, #e74c3c); transition: width 80ms linear; }
-    .grid { display: grid; gap: 12px; }
-    .grid-2 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-  .subtabs { display: flex; gap: 6px; padding: 6px 0; border-bottom: 1px solid #333; margin-bottom: 8px; flex-wrap: wrap; }
-  .subtabs [role=tab] { background: #1a1a1a; color: #ddd; border: 1px solid #333; border-bottom: 2px solid transparent; padding: 6px 10px; border-radius: 6px 6px 0 0; cursor: pointer; }
-  .subtabs [role=tab][aria-selected="true"] { background: #222; border-bottom-color: #ff7a18; }
-  .subtab-panel[hidden] { display: none !important; }
-  </style>
 </section>
