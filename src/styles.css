@@ -215,7 +215,11 @@ button:hover { background: var(--primary-700); }
   border-radius: 10px;
   background: var(--panel-2);
 }
-.program-logo { grid-area: logo; width: 56px; height: 56px; object-fit: contain; border-radius: 8px; background: #12151d; }
+.program-logo-wrap { grid-area: logo; position: relative; width: 56px; height: 56px; }
+.program-logo { width: 100%; height: 100%; object-fit: contain; border-radius: 8px; background: #12151d; display: block; }
+.exe-status { position: absolute; right: -2px; bottom: -2px; width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 10px; line-height: 1; }
+.exe-status.ok { background: #1f6f3f; border-color: #2e8b57; color: #dff7e6; }
+.exe-status.missing { background: #6f1f2a; border-color: #a33a45; color: #ffe5e8; }
 .program-main { grid-area: main; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .program-title { font-weight: 600; display: flex; align-items: center; gap: 8px; min-width: 0; }
 .program-title .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -226,6 +230,7 @@ button:hover { background: var(--primary-700); }
 .program-actions .secondary { background: #2a3753; }
 .program-actions .ghost { background: transparent; border-color: var(--border); }
 .program-actions .ghost:hover { background: #222a3a; }
+.program-actions button:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* Better hover to distinguish rows */
 .program-row:hover { background: #263043; border-color: #2e3b55; }
