@@ -32,9 +32,9 @@
     <div class="grid grid-2">
       <div>
         <h3>Microphone</h3>
-        <div class="row">
+        <div class="row wrap device-row">
           <label for="mic-select">Input:</label>
-          <select id="mic-select" aria-label="Select microphone"></select>
+          <select id="mic-select" class="device-select" aria-label="Select microphone"></select>
           <button id="mic-start">Start</button>
           <button id="mic-stop" disabled>Stop</button>
           <label class="muted" style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="mic-monitor"> Monitor</label>
@@ -51,16 +51,16 @@
       </div>
       <div>
         <h3>Speakers</h3>
-        <div class="row">
+        <div class="row wrap device-row">
           <label for="spk-select">Output:</label>
-          <select id="spk-select" aria-label="Select speakers"></select>
+          <select id="spk-select" class="device-select" aria-label="Select speakers"></select>
           <button id="spk-left">Left</button>
           <button id="spk-right">Right</button>
           <button id="spk-both">Both</button>
           <button id="spk-sweep" class="ghost">Stereo sweep</button>
           <button id="spk-stop" class="ghost" title="Stop playback">Stop</button>
         </div>
-        <div class="row">
+        <div class="row wrap">
           <label for="spk-volume">Volume:</label>
           <input id="spk-volume" type="range" min="0" max="1" step="0.01" value="0.5" style="width:200px" />
           <span class="muted" id="spk-status" role="status" aria-live="polite" style="margin-left:auto">Idle</span>

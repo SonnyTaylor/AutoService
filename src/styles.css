@@ -441,6 +441,20 @@ details[open] summary { color: var(--text); }
 }
 
 [data-page="component-test"] .row.wrap { flex-wrap: wrap; }
+[data-page="component-test"] .device-row { align-items: stretch; }
+[data-page="component-test"] .device-select {
+  min-width: 180px;
+  max-width: 100%;
+  flex: 1 1 260px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+}
+@media (max-width: 720px) {
+  [data-page="component-test"] .device-select { flex-basis: 100%; }
+}
 [data-page="component-test"] .media-row { display: flex; justify-content: center; }
 [data-page="component-test"] video#camera-video {
   width: min(100%, 1100px);
