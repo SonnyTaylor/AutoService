@@ -442,7 +442,14 @@ details[open] summary { color: var(--text); }
 
 [data-page="component-test"] .row.wrap { flex-wrap: wrap; }
 [data-page="component-test"] .media-row { display: flex; justify-content: center; }
-[data-page="component-test"] video#camera-video { max-width: 100%; width: 480px; height: 270px; background: #000; border-radius: 6px; }
+[data-page="component-test"] video#camera-video {
+  width: min(100%, 1100px);
+  max-height: clamp(260px, 50vh, 800px);
+  aspect-ratio: 16 / 9;
+  height: auto;
+  background: #000;
+  border-radius: 6px;
+}
 
 [data-page="component-test"] .kbd-readout {
   min-height: 24px;
@@ -458,7 +465,7 @@ details[open] summary { color: var(--text); }
 
 [data-page="component-test"] .mouse-area {
   border: 1px dashed #566078;
-  min-height: 160px;
+  min-height: clamp(220px, 40vh, 600px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -470,7 +477,7 @@ details[open] summary { color: var(--text); }
 [data-page="component-test"] .display-area {
   border: 1px solid var(--border);
   border-radius: 8px;
-  height: 220px;
+  height: clamp(240px, 45vh, 720px);
   background: #000;
   margin-top: 8px;
 }
