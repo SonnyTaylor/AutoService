@@ -29,7 +29,14 @@ async function loadPage(route) {
   if (!content) return;
   content.setAttribute("aria-busy", "true");
   try {
-    const res = await fetch(`pages/${route}.html`, { cache: "no-cache" });
+    // map logical routes to foldered page files
+    const pathMap = {
+      scans: 'scans/index',
+      service: 'scans/options',
+      'service-run': 'scans/run',
+    };
+    const pagePath = pathMap[route] || route;
+    const res = await fetch(`pages/${pagePath}.html`, { cache: "no-cache" });
     const html = await res.text();
     content.innerHTML = html;
     // Focus the main landmark for a11y
@@ -37,7 +44,8 @@ async function loadPage(route) {
 
     // Try to load optional page controller: /pages/<route>.js
     try {
-      const mod = await import(`./pages/${route}.js?ts=${Date.now()}`);
+      const scriptPath = pathMap[route] || route;
+      const mod = await import(`./pages/${scriptPath}.js?ts=${Date.now()}`);
       if (typeof mod.initPage === "function") {
         await mod.initPage();
       }

@@ -19,20 +19,12 @@ const TASKS = [
 ];
 
 function presetDefaults(preset) {
-  // You can tweak which tasks are included by default here
   if (preset === 'complete-general') {
-    return TASKS.map(t => t.id); // everything on
+    return TASKS.map(t => t.id);
   }
   if (preset === 'general') {
-    return [
-      'virus',
-      'junk_cleanup',
-      'registry_cleanup',
-      'storage_report',
-      'windows_updates',
-    ];
+    return ['virus','junk_cleanup','registry_cleanup','storage_report','windows_updates'];
   }
-  // custom: start with nothing preselected
   return [];
 }
 
@@ -102,7 +94,6 @@ export async function initPage() {
       presetLabel: humanPreset(preset),
       tasks: chosenTasks,
       createdAt: new Date().toISOString(),
-      // room for future: per-task options, paths, flags, etc.
     };
     try {
       sessionStorage.setItem('autoservice.runConfig', JSON.stringify(cfg));
