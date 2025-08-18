@@ -6,16 +6,18 @@ function getHashQuery() {
 }
 
 const TASKS = [
-  { id: 'virus', label: 'Virus scanning/removal (malware, rootkits, adware, PUP)' },
-  { id: 'cpu_bench', label: 'CPU Benchmark' },
-  { id: 'gpu_bench', label: 'GPU Benchmark' },
-  { id: 'drive_bench', label: 'Drive Benchmark' },
-  { id: 'battery_report', label: 'Battery Report' },
-  { id: 'storage_report', label: 'Storage/SMART Report' },
-  { id: 'registry_cleanup', label: 'Registry Cleanup' },
-  { id: 'junk_cleanup', label: 'Junk/Temp Cleanup' },
-  { id: 'driver_updates', label: 'Driver Updates' },
-  { id: 'windows_updates', label: 'Windows Updates' },
+    { id: 'virus', label: 'Virus scanning/removal (malware, rootkits, adware, PUP)' },
+    { id: 'junk_cleanup', label: 'Junk/Temp Cleanup' },
+    { id: 'registry_cleanup', label: 'Registry Cleanup' },
+    { id: 'startup_cleanup', label: 'Startup Programs Cleanup' },
+    { id: 'browser_cleanup', label: 'Browser Cache/Cookies Cleanup' },
+    { id: 'cpu_bench', label: 'CPU Benchmark' },
+    { id: 'gpu_bench', label: 'GPU Benchmark' },
+    { id: 'drive_bench', label: 'Drive Benchmark' },
+    { id: 'battery_report', label: 'Battery Report' },
+    { id: 'storage_report', label: 'Storage/SMART Report' },
+    { id: 'driver_updates', label: 'Driver Updates' },
+    { id: 'windows_updates', label: 'Windows Updates' },
 ];
 
 function presetDefaults(preset) {
