@@ -754,14 +754,22 @@ details[open] summary { color: var(--text); }
 [data-page="component-test"] #panel-mouse .mouse-area { margin-top: 6px; }
 
 /* Network: improve readability for info/results and tighten spacing */
-[data-page="component-test"] #panel-network .grid { margin-top: 12px; }
-[data-page="component-test"] #panel-network .row { align-items: center; }
+[data-page="component-test"] #panel-network > * + * { margin-top: 12px; }
+[data-page="component-test"] #panel-network h2 { margin: 0; }
+[data-page="component-test"] #panel-network h2 + .row { margin-top: 18px; }
+[data-page="component-test"] #panel-network .grid { margin: 0; gap: 16px; }
+[data-page="component-test"] #panel-network .row { align-items: center; gap: 12px; margin: 0; }
+/* Extra space between the buttons row and the "Overall" row */
+[data-page="component-test"] #panel-network .row + .row { margin-top: 18px; }
+[data-page="component-test"] #panel-network .net-kpis { margin: 16px 0 12px; }
+[data-page="component-test"] #panel-network .net-kpis.stat-grid { gap: 12px; }
 [data-page="component-test"] #panel-network .net-kpis .stat .value { font-size: 1.05rem; }
-[data-page="component-test"] #panel-network .list { list-style: none; padding-left: 0; }
+[data-page="component-test"] #panel-network .list { list-style: none; padding-left: 0; gap: 14px; }
+[data-page="component-test"] #panel-network h3 { margin: 0 0 8px; color: var(--muted); }
 
 /* Network info/results: card-like list items */
 [data-page="component-test"] #panel-network .list > li {
-  padding: 10px 12px;
+  padding: 12px 14px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: #202636;
