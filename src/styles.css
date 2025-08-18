@@ -571,6 +571,15 @@ details[open] summary { color: var(--text); }
 [data-page="component-test"] .grid { display: grid; gap: 12px; }
 [data-page="component-test"] .grid-2 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 
+/* Keyboard external iframe */
+[data-page="component-test"] .kb-external-frame {
+  width: 100%;
+  height: clamp(360px, 55vh, 820px);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #0f141f;
+}
+
 /* =============================== */
 /* Revamped Audio UI               */
 /* =============================== */

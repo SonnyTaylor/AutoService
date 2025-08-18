@@ -138,6 +138,12 @@ export async function initPage() {
   const kbPressed = qs('#keyboard-pressed');
   const kbClear = qs('#keyboard-clear');
   const kbCapture = qs('#keyboard-capture');
+  const kbModeInternal = qs('#kb-mode-internal');
+  const kbModeExternal = qs('#kb-mode-external');
+  const kbInternalWrap = qs('#keyboard-internal');
+  const kbExternalWrap = qs('#keyboard-external');
+  const kbIframe = qs('#kb-iframe');
+  const kbOpen = qs('#kb-open');
   const down = new Set();
 
   function renderPressed() {
@@ -166,6 +172,40 @@ export async function initPage() {
   kbClear?.addEventListener('click', () => { down.clear(); renderPressed(); kbCurrent.textContent = ''; });
   window.addEventListener('keydown', onKeyDown);
   window.addEventListener('keyup', onKeyUp);
+
+  // Keyboard mode switching
+  function setKbMode(mode) {
+    const internal = mode !== 'external';
+    if (kbInternalWrap) kbInternalWrap.hidden = !internal;
+    if (kbExternalWrap) kbExternalWrap.hidden = internal;
+    if (kbOpen) kbOpen.style.display = internal ? 'none' : '';
+    // Toggle internal capture availability
+    if (kbCapture) {
+      if (internal) {
+        kbCapture.disabled = false;
+      } else {
+        kbCapture.checked = false;
+        kbCapture.disabled = true;
+        // Clear any internal state/readouts when switching away
+        down.clear();
+        renderPressed();
+        if (kbCurrent) kbCurrent.textContent = '';
+      }
+    }
+    try { localStorage.setItem('ct.kbMode', internal ? 'internal' : 'external'); } catch {}
+  }
+  function initKbMode() {
+    let mode = 'internal';
+    try { mode = localStorage.getItem('ct.kbMode') || mode; } catch {}
+    if (kbModeInternal && kbModeExternal) {
+      kbModeInternal.checked = mode === 'internal';
+      kbModeExternal.checked = mode === 'external';
+    }
+    setKbMode(mode);
+  }
+  kbModeInternal?.addEventListener('change', () => setKbMode('internal'));
+  kbModeExternal?.addEventListener('change', () => setKbMode('external'));
+  initKbMode();
 
   // ---------- Mouse / Trackpad ----------
   const mouseArea = qs('#mouse-area');
@@ -794,6 +834,8 @@ export async function initPage() {
     stopCamera();
   stopMic();
   stopTone();
+  // ensure keyboard iframe stops loading if present
+  if (kbIframe) kbIframe.src = 'about:blank';
     window.removeEventListener('beforeunload', cleanup);
   };
   window.addEventListener('beforeunload', cleanup, { once: true });

@@ -103,12 +103,30 @@
   <!-- Keyboard Test -->
   <section class="card subtab-panel" id="panel-keyboard" role="tabpanel" aria-labelledby="tab-keyboard" hidden>
     <h2 id="keyboard-title">Keyboard</h2>
-    <p class="muted">Press keys to verify detection. Modifiers and key codes are shown below.</p>
-    <div id="keyboard-current" class="kbd-readout" aria-live="polite"></div>
-    <div id="keyboard-pressed" class="kbd-keys" aria-label="Currently pressed keys"></div>
-    <div class="row">
-      <button id="keyboard-clear">Clear</button>
-      <label><input type="checkbox" id="keyboard-capture" checked /> Capture keystrokes</label>
+    <div class="row" aria-label="Keyboard tester mode">
+      <span class="muted">Mode</span>
+      <label><input type="radio" name="kb-mode" id="kb-mode-internal" value="internal" checked /> Internal</label>
+      <label><input type="radio" name="kb-mode" id="kb-mode-external" value="external" /> External</label>
+      <a id="kb-open" class="ghost" href="https://mostafa-abbasi.github.io/KeyboardTester/" target="_blank" rel="noopener" style="margin-left:auto; display:none">Open in browser</a>
+    </div>
+    <div id="keyboard-internal">
+      <p class="muted">Press keys to verify detection. Modifiers and key codes are shown below.</p>
+      <div id="keyboard-current" class="kbd-readout" aria-live="polite"></div>
+      <div id="keyboard-pressed" class="kbd-keys" aria-label="Currently pressed keys"></div>
+      <div class="row">
+        <button id="keyboard-clear">Clear</button>
+        <label><input type="checkbox" id="keyboard-capture" checked /> Capture keystrokes</label>
+      </div>
+    </div>
+    <div id="keyboard-external" hidden>
+      <iframe
+        id="kb-iframe"
+        class="kb-external-frame"
+        title="External Keyboard Tester"
+        loading="lazy"
+        src="https://mostafa-abbasi.github.io/KeyboardTester/"
+      ></iframe>
+      <p class="muted" style="margin-top:8px">If the preview is blocked by security settings, use "Open in browser".</p>
     </div>
   </section>
 
