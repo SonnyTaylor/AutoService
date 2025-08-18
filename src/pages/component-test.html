@@ -111,7 +111,21 @@
     </div>
     <div id="keyboard-internal">
       <p class="muted">Press keys to verify detection. Modifiers and key codes are shown below.</p>
-      <div id="keyboard-current" class="kbd-readout" aria-live="polite"></div>
+
+      <div class="stat-grid kbd-kpis">
+        <div class="stat"><div class="label">Last key</div><div class="value" id="kb-last-key">—</div></div>
+        <div class="stat"><div class="label">Code</div><div class="value" id="kb-last-code">—</div></div>
+        <div class="stat"><div class="label">Location</div><div class="value" id="kb-last-loc">—</div></div>
+        <div class="stat"><div class="label">Repeat</div><div class="value" id="kb-last-repeat">No</div></div>
+      </div>
+
+      <div class="kbd-mods" role="group" aria-label="Modifier keys">
+        <span id="mod-ctrl" class="mod-key" title="Control">Ctrl</span>
+        <span id="mod-shift" class="mod-key" title="Shift">Shift</span>
+        <span id="mod-alt" class="mod-key" title="Alt/Option">Alt</span>
+        <span id="mod-meta" class="mod-key" title="Meta/Win/Command">Meta</span>
+      </div>
+
       <div id="keyboard-pressed" class="kbd-keys" aria-label="Currently pressed keys"></div>
       <div class="row">
         <button id="keyboard-clear">Clear</button>

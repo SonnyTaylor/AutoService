@@ -516,6 +516,29 @@ details[open] summary { color: var(--text); }
   min-height: 24px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
+[data-page="component-test"] .kbd-kpis .stat .value { font-size: 1.05rem; }
+[data-page="component-test"] .kbd-mods {
+  display: inline-flex;
+  gap: 8px;
+  margin: 8px 0 4px;
+}
+[data-page="component-test"] .mod-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #1b2130;
+  color: var(--muted);
+  font-weight: 600;
+}
+[data-page="component-test"] .mod-key.active {
+  background: #213a2a;
+  border-color: #2f6b4a;
+  color: #dff7e6;
+}
 [data-page="component-test"] .kbd-keys { display: flex; flex-wrap: wrap; gap: 6px; min-height: 36px; }
 [data-page="component-test"] .kbd-keys .key {
   border: 1px solid var(--border);

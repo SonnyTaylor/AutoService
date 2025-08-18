@@ -134,10 +134,18 @@ export async function initPage() {
   camStop?.addEventListener('click', stopCamera);
 
   // ---------- Keyboard ----------
-  const kbCurrent = qs('#keyboard-current');
+  const kbCurrent = qs('#keyboard-current'); // may be null if UI streamlining removed it
   const kbPressed = qs('#keyboard-pressed');
   const kbClear = qs('#keyboard-clear');
   const kbCapture = qs('#keyboard-capture');
+  const kbLastKey = qs('#kb-last-key');
+  const kbLastCode = qs('#kb-last-code');
+  const kbLastLoc = qs('#kb-last-loc');
+  const kbLastRepeat = qs('#kb-last-repeat');
+  const modCtrl = qs('#mod-ctrl');
+  const modShift = qs('#mod-shift');
+  const modAlt = qs('#mod-alt');
+  const modMeta = qs('#mod-meta');
   const kbModeInternal = qs('#kb-mode-internal');
   const kbModeExternal = qs('#kb-mode-external');
   const kbInternalWrap = qs('#keyboard-internal');
@@ -159,7 +167,18 @@ export async function initPage() {
   function onKeyDown(e) {
     if (!kbCapture?.checked) return;
     down.add(e.code);
-    kbCurrent.textContent = `${e.key} (${e.code})` + (e.repeat ? ' [repeat]' : '');
+  if (kbCurrent) kbCurrent.textContent = `${e.key} (${e.code})` + (e.repeat ? ' [repeat]' : '');
+    if (kbLastKey) kbLastKey.textContent = String(e.key);
+    if (kbLastCode) kbLastCode.textContent = String(e.code);
+    if (kbLastLoc) {
+      const locMap = { 0: 'Standard', 1: 'Left', 2: 'Right', 3: 'Numpad' };
+      kbLastLoc.textContent = locMap[e.location] || String(e.location);
+    }
+    if (kbLastRepeat) kbLastRepeat.textContent = e.repeat ? 'Yes' : 'No';
+    if (modCtrl) modCtrl.classList.toggle('active', e.ctrlKey);
+    if (modShift) modShift.classList.toggle('active', e.shiftKey);
+    if (modAlt) modAlt.classList.toggle('active', e.altKey);
+    if (modMeta) modMeta.classList.toggle('active', e.metaKey);
     renderPressed();
     // prevent space from scrolling within test area
     if (e.code === 'Space') e.preventDefault();
@@ -167,9 +186,13 @@ export async function initPage() {
   function onKeyUp(e) {
     if (!kbCapture?.checked) return;
     down.delete(e.code);
+    if (modCtrl) modCtrl.classList.toggle('active', e.ctrlKey);
+    if (modShift) modShift.classList.toggle('active', e.shiftKey);
+    if (modAlt) modAlt.classList.toggle('active', e.altKey);
+    if (modMeta) modMeta.classList.toggle('active', e.metaKey);
     renderPressed();
   }
-  kbClear?.addEventListener('click', () => { down.clear(); renderPressed(); kbCurrent.textContent = ''; });
+  kbClear?.addEventListener('click', () => { down.clear(); renderPressed(); if (kbCurrent) kbCurrent.textContent = ''; });
   window.addEventListener('keydown', onKeyDown);
   window.addEventListener('keyup', onKeyUp);
 
@@ -189,7 +212,7 @@ export async function initPage() {
         // Clear any internal state/readouts when switching away
         down.clear();
         renderPressed();
-        if (kbCurrent) kbCurrent.textContent = '';
+  if (kbCurrent) kbCurrent.textContent = '';
       }
     }
     try { localStorage.setItem('ct.kbMode', internal ? 'internal' : 'external'); } catch {}
