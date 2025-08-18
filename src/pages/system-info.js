@@ -262,6 +262,47 @@ function render(info) {
   section.insertAdjacentHTML('beforeend', makeCollapsible('CPU', cpuHtml));
 
   // RAM
+  // DIMM details table (Windows extras)
+  let dimmHtml = '';
+  if (ex && Array.isArray(ex.ram_modules) && ex.ram_modules.length) {
+    const mapFF = (n) => {
+      // Common Win32 FormFactor codes
+      const m = { 8: 'DIMM', 12: 'SODIMM' };
+      return n in m ? m[n] : (n!=null?String(n):'-');
+    };
+    const dimmRows = ex.ram_modules.map(m => {
+      const cap = Number(m?.Capacity||0);
+      const speed = m?.Speed!=null ? `${m.Speed} MHz` : '-';
+      const volt = m?.ConfiguredVoltage!=null ? `${Number(m.ConfiguredVoltage)/1000} V` : '-';
+      const dtype = m?.MemoryType!=null ? String(m.MemoryType) : '-';
+      const ff = mapFF(Number(m?.FormFactor));
+      const width = (m?.DataWidth!=null||m?.TotalWidth!=null) ? `${m?.DataWidth??'-'}/${m?.TotalWidth??'-'}` : '-';
+      return `<tr>
+        <td>${escapeHtml(m?.BankLabel||'-')}</td>
+        <td>${escapeHtml(m?.DeviceLocator||'-')}</td>
+        <td>${formatBytes(cap)}</td>
+        <td>${speed}</td>
+        <td>${escapeHtml(m?.Manufacturer||'-')}</td>
+        <td>${escapeHtml(m?.PartNumber||'-')}</td>
+        <td>${escapeHtml(m?.SerialNumber||'-')}</td>
+        <td>${dtype}</td>
+        <td>${ff}</td>
+        <td>${volt}</td>
+        <td>${width}</td>
+      </tr>`;
+    }).join('');
+    dimmHtml = `
+      <div class="table-block"><div class="table-wrap">
+        <table class="table data-table">
+          <thead><tr>
+            <th>Bank</th><th>Locator</th><th>Capacity</th><th>Speed</th><th>Manufacturer</th><th>Part #</th><th>Serial</th><th>Type</th><th>Form</th><th>Voltage</th><th>Width D/T</th>
+          </tr></thead>
+          <tbody>${dimmRows}</tbody>
+        </table>
+      </div></div>
+    `;
+  }
+
   const ramHtml = `
     <div class="table-block"><div class="table-wrap">
       <table class="table kv-table">
@@ -272,6 +313,7 @@ function render(info) {
         </tbody>
       </table>
     </div></div>
+    ${dimmHtml}
   `;
   section.insertAdjacentHTML('beforeend', makeCollapsible('RAM', ramHtml));
 

@@ -394,7 +394,7 @@ fn collect_windows_extra(app: &tauri::AppHandle) -> Option<ExtraInfo> {
         }
     };
 
-    let ram_modules = parse_json_array(run_pwsh("Get-CimInstance Win32_PhysicalMemory | Select-Object BankLabel, DeviceLocator, Manufacturer, Capacity, Speed, SerialNumber, PartNumber | ConvertTo-Json -Compress"));
+    let ram_modules = parse_json_array(run_pwsh("Get-CimInstance Win32_PhysicalMemory | Select-Object BankLabel, DeviceLocator, Manufacturer, Capacity, Speed, SerialNumber, PartNumber, MemoryType, FormFactor, ConfiguredVoltage, DataWidth, TotalWidth | ConvertTo-Json -Compress"));
     let cpu_wmi = parse_json_array(run_pwsh("Get-CimInstance Win32_Processor | Select-Object Name, Manufacturer, NumberOfCores, NumberOfLogicalProcessors, MaxClockSpeed, LoadPercentage | ConvertTo-Json -Compress"));
     let video_ctrl_ex = parse_json_array(run_pwsh("Get-CimInstance Win32_VideoController | Select-Object Name, AdapterRAM, DriverVersion, VideoModeDescription | ConvertTo-Json -Compress"));
     let baseboard = parse_json_array(run_pwsh("Get-CimInstance Win32_BaseBoard | Select-Object Manufacturer, Product, SerialNumber | ConvertTo-Json -Compress"));
