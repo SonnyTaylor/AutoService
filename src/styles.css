@@ -26,7 +26,7 @@ body {
 header {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 1000; /* ensure always above page content */
   background: var(--panel);
   border-bottom: 1px solid var(--border);
 }
@@ -705,3 +705,7 @@ details[open] summary { color: var(--text); }
     display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px;
   }
 }
+
+/* Keep audio headers under the global sticky header and avoid overlap on scroll */
+[data-page="component-test"] .audio-card-header { position: relative; z-index: 1; }
+[data-page="component-test"] .audio-card { scroll-margin-top: 72px; }
