@@ -1,8 +1,8 @@
 [package]
 name = "rustservice"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "a Windows 10/11 USB-based diagnostic and cleanup tool designed to automatically run virus scanners, hardware diagnostics, and stress tests, then generate detailed reports for customers or users. It aims to streamline tech support tasks by providing a one-stop toolkit for system health checks, cleaning, and component testing."
+authors = ["SonnyTaylor"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
