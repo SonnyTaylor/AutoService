@@ -2,6 +2,7 @@
 
 const routes = [
   "scans",
+  "service",
   "system-info",
   "shortcuts",
   "programs",
@@ -14,11 +15,12 @@ const routes = [
 
 function normalizeHash() {
   const hash = window.location.hash || "#\/scans";
-  // ensure format #/route
+  // ensure format #/route[?query]
   if (!hash.startsWith("#/")) return "#/scans";
   const route = hash.slice(2);
-  if (!routes.includes(route)) return "#/scans";
-  return `#/${route}`;
+  const [name, query] = route.split("?", 2);
+  if (!routes.includes(name)) return "#/scans";
+  return `#/${name}${query ? `?${query}` : ""}`;
 }
 
 async function loadPage(route) {
@@ -64,8 +66,9 @@ function onRouteChange() {
     return;
   }
   const route = hash.slice(2);
-  setActiveTab(route);
-  loadPage(route);
+  const [name] = route.split("?", 2);
+  setActiveTab(name);
+  loadPage(name);
 }
 
 window.addEventListener("hashchange", onRouteChange);
