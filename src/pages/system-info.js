@@ -75,7 +75,8 @@ function render(info) {
         <h1 style="margin-bottom:4px;">System Info</h1>
   <p class="muted" style="margin:0;">Hardware, software, and drivers at a glance.</p>
       </div>
-      <div>
+      <div style="display:flex; gap:8px; flex-wrap: wrap;">
+        <button id=\"sysinfo-toggle-all-btn\" class=\"ghost\">Collapse all</button>
         <button id=\"sysinfo-refresh-btn\" class=\"ghost\">Refresh</button>
       </div>
     </div>
@@ -433,6 +434,36 @@ function render(info) {
 
   // Activate collapsibles
   initCollapsibles(section);
+
+  // Collapse/Expand All control
+  const toggleAllBtn = document.getElementById('sysinfo-toggle-all-btn');
+  const headers = Array.from(section.querySelectorAll('.collapsible-header'));
+  const updateToggleAllLabel = () => {
+    const allExpanded = headers.length && headers.every(h => h.getAttribute('aria-expanded') === 'true');
+    if (toggleAllBtn) toggleAllBtn.textContent = allExpanded ? 'Collapse all' : 'Expand all';
+  };
+  updateToggleAllLabel();
+  if (toggleAllBtn) {
+    toggleAllBtn.addEventListener('click', () => {
+      const allExpanded = headers.length && headers.every(h => h.getAttribute('aria-expanded') === 'true');
+      const target = !allExpanded; // if all expanded, collapse; else expand
+      headers.forEach((header) => {
+        header.setAttribute('aria-expanded', target ? 'true' : 'false');
+        const body = header.nextElementSibling;
+        const chev = header.querySelector('.chevron');
+        if (body) body.style.display = target ? '' : 'none';
+        if (chev) chev.textContent = target ? '▾' : '▸';
+      });
+      updateToggleAllLabel();
+    });
+    // Keep label in sync when user toggles individual sections
+    section.addEventListener('click', (e) => {
+      if (e.target.closest('.collapsible-header')) setTimeout(updateToggleAllLabel, 0);
+    });
+    section.addEventListener('keydown', (e) => {
+      if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('.collapsible-header')) setTimeout(updateToggleAllLabel, 0);
+    });
+  }
 }
 
 function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
