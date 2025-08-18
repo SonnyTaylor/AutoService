@@ -709,3 +709,39 @@ details[open] summary { color: var(--text); }
 /* Keep audio headers under the global sticky header and avoid overlap on scroll */
 [data-page="component-test"] .audio-card-header { position: relative; z-index: 1; }
 [data-page="component-test"] .audio-card { scroll-margin-top: 72px; }
+
+/* =============================== */
+/* Component Test – targeted tweaks */
+/* =============================== */
+
+/* Mouse: add a small gap between KPIs and testing area */
+[data-page="component-test"] #panel-mouse .mouse-kpis { margin-bottom: 10px; }
+[data-page="component-test"] #panel-mouse .mouse-area { margin-top: 6px; }
+
+/* Network: improve readability for info/results and tighten spacing */
+[data-page="component-test"] #panel-network .grid { margin-top: 12px; }
+[data-page="component-test"] #panel-network .row { align-items: center; }
+[data-page="component-test"] #panel-network .net-kpis .stat .value { font-size: 1.05rem; }
+[data-page="component-test"] #panel-network .list { list-style: none; padding-left: 0; }
+
+/* Network info/results: card-like list items */
+[data-page="component-test"] #panel-network .list > li {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #202636;
+}
+[data-page="component-test"] #panel-network .list > li:hover { background: #263043; border-color: #2e3b55; }
+
+/* Display: make the test area feel like an app panel */
+[data-page="component-test"] #panel-display .row { margin-bottom: 12px; }
+[data-page="component-test"] .display-area {
+  min-height: 300px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #121722;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
+}
+
