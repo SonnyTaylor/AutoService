@@ -3,6 +3,7 @@
 const routes = [
   "scans",
   "service",
+  "service-run",
   "system-info",
   "shortcuts",
   "programs",

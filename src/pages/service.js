@@ -96,8 +96,17 @@ export async function initPage() {
 
   startBtn?.addEventListener('click', () => {
     const chosenTasks = getSelection();
-    // Placeholder: later we’ll trigger the runs; for now log or navigate
-    console.log('Start service with tasks:', chosenTasks);
-    // Future: navigate to a run/progress page like #/run?tasks=...
+    const cfg = {
+      id: `run_${Date.now()}`,
+      preset,
+      presetLabel: humanPreset(preset),
+      tasks: chosenTasks,
+      createdAt: new Date().toISOString(),
+      // room for future: per-task options, paths, flags, etc.
+    };
+    try {
+      sessionStorage.setItem('autoservice.runConfig', JSON.stringify(cfg));
+    } catch {}
+    window.location.hash = '#/service-run';
   });
 }
