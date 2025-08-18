@@ -571,12 +571,126 @@ details[open] summary { color: var(--text); }
 [data-page="component-test"] .grid { display: grid; gap: 12px; }
 [data-page="component-test"] .grid-2 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 
-/* Network section result styles */
-[data-page="component-test"] #panel-network .list { gap: 8px; }
-[data-page="component-test"] #panel-network .list li { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: #202636; }
-[data-page="component-test"] #panel-network .list li.pass { border-color: #2f6b4a; background: #213a2a; }
-[data-page="component-test"] #panel-network .list li.fail { border-color: #6b422b; background: #3a2b24; }
-[data-page="component-test"] #panel-network .list li.note { opacity: 0.85; }
+/* =============================== */
+/* Revamped Audio UI               */
+/* =============================== */
 
-/* Space between mouse KPIs and test area */
-[data-page="component-test"] .mouse-kpis { margin: 10px 0 14px; }
+[data-page="component-test"] .audio-panel { padding-top: 14px; }
+[data-page="component-test"] .audio-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+[data-page="component-test"] .audio-card {
+  background: #1b2130;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  display: grid; gap: 10px;
+}
+[data-page="component-test"] .audio-card-header {
+  display: flex; align-items: center; gap: 10px; justify-content: space-between;
+}
+[data-page="component-test"] .audio-card-header .title { font-weight: 600; color: var(--text); display:inline-flex; align-items:center; gap:8px; }
+[data-page="component-test"] .audio-card-header .icon { filter: saturate(0.9); }
+
+[data-page="component-test"] .btn-group { display: inline-flex; gap: 8px; flex-wrap: wrap; }
+[data-page="component-test"] .btn-group.grow { flex: 1; }
+[data-page="component-test"] .device-label { min-width: 64px; color: var(--muted); }
+[data-page="component-test"] .toggle { display: inline-flex; align-items: center; gap: 6px; }
+
+/* Single VU meter */
+[data-page="component-test"] .vu-wrap { display: grid; gap: 8px; }
+[data-page="component-test"] .vu {
+  position: relative;
+  height: 12px;
+  background: #121722;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+[data-page="component-test"] .vu-fill {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  background: linear-gradient(90deg, #37b24d, #ffd43b 55%, #ff6b6b 90%);
+  width: 0%;
+}
+[data-page="component-test"] .vu-peak {
+  position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; opacity: 0.7; right: 10%;
+}
+
+/* Stereo meters */
+[data-page="component-test"] .stereo-vu { display: grid; gap: 8px; margin-top: 6px; }
+[data-page="component-test"] .stereo-row { display: grid; grid-template-columns: 22px 1fr; gap: 8px; align-items: center; }
+[data-page="component-test"] .stereo-row .ch { color: var(--muted); font-weight: 600; text-align: center; }
+
+/* Mini oscilloscope area */
+[data-page="component-test"] .scope-wrap { background: #121722; border: 1px solid var(--border); border-radius: 10px; padding: 6px; }
+[data-page="component-test"] .audio-scope { width: 100%; height: 72px; display: block; }
+
+/* Volume row spacing */
+[data-page="component-test"] .vol-row input[type="range"] { width: min(360px, 60%); }
+
+[data-page="component-test"] .audio-note { margin: 2px 0 0; }
+
+@media (max-width: 680px) {
+  [data-page="component-test"] .audio-card { padding: 12px; }
+  [data-page="component-test"] .vol-row input[type="range"] { width: 100%; }
+}
+
+/* Fix tall select/controls in audio device rows */
+[data-page="component-test"] .audio-card .device-row {
+  align-items: center;
+}
+[data-page="component-test"] .audio-card select.device-select {
+  height: 40px; /* align with buttons */
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+
+/* =============================== */
+/* Audio UI refinements (overrides) */
+/* =============================== */
+[data-page="component-test"] .audio-panel { padding-top: 14px; font-size: 0.95rem; }
+
+/* Standardize header appearance and height */
+[data-page="component-test"] .audio-card-header {
+  background: #121722;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  min-height: 36px;
+}
+[data-page="component-test"] .audio-card-header .status .badge {
+  padding: 2px 8px; font-size: 0.75rem; line-height: 1;
+}
+
+/* Normalize control sizing */
+[data-page="component-test"] .audio-panel button { min-height: 40px; }
+[data-page="component-test"] .audio-card select.device-select { line-height: 24px; height: 40px; }
+
+/* Device rows as grid for consistent placement */
+[data-page="component-test"] .audio-card .device-row {
+  display: grid;
+  grid-template-columns: auto minmax(220px, 1fr) auto auto;
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 8px;
+}
+[data-page="component-test"] .audio-card .device-row .btn-group { justify-self: end; }
+[data-page="component-test"] .audio-card .device-row .device-select { min-width: 200px; }
+[data-page="component-test"] .btn-group.grow { justify-content: flex-end; }
+
+/* Small screens: stack neatly and make buttons grid */
+@media (max-width: 680px) {
+  [data-page="component-test"] .audio-card .device-row { grid-template-columns: 1fr; }
+  [data-page="component-test"] .audio-card .device-row .device-label,
+  [data-page="component-test"] .audio-card .device-row .device-select,
+  [data-page="component-test"] .audio-card .device-row .toggle,
+  [data-page="component-test"] .audio-card .device-row .btn-group {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+  }
+  [data-page="component-test"] .audio-card .device-row .btn-group {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px;
+  }
+}

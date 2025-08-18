@@ -27,45 +27,75 @@
   </section>
 
   <!-- Audio Test -->
-  <section class="card subtab-panel" id="panel-audio" role="tabpanel" aria-labelledby="tab-audio" hidden>
+  <section class="card subtab-panel audio-panel" id="panel-audio" role="tabpanel" aria-labelledby="tab-audio" hidden>
     <h2 id="audio-title">Audio</h2>
-    <div class="grid grid-2">
-      <div>
-        <h3>Microphone</h3>
+
+    <div class="audio-grid">
+      <!-- Microphone card -->
+      <div class="audio-card mic">
+        <header class="audio-card-header">
+          <div class="title"><span class="icon" aria-hidden="true">🎤</span> Microphone</div>
+          <div class="status"><span id="mic-status" class="badge">Idle</span></div>
+        </header>
+
         <div class="row wrap device-row">
-          <label for="mic-select">Input:</label>
+          <label for="mic-select" class="device-label">Input</label>
           <select id="mic-select" class="device-select" aria-label="Select microphone"></select>
-          <button id="mic-start">Start</button>
-          <button id="mic-stop" disabled>Stop</button>
-          <label class="muted" style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="mic-monitor"> Monitor</label>
+          <label class="toggle muted"><input type="checkbox" id="mic-monitor"> Monitor</label>
+          <div class="btn-group">
+            <button id="mic-start">Start</button>
+            <button id="mic-stop" disabled>Stop</button>
+          </div>
         </div>
-        <div class="stat-grid">
+
+        <div class="stat-grid kpis">
           <div class="stat"><div class="label">Level (RMS)</div><div class="value" id="mic-kpi-level">— dB</div></div>
           <div class="stat"><div class="label">Peak</div><div class="value" id="mic-kpi-peak">— dB</div></div>
           <div class="stat"><div class="label">Clipping</div><div class="value" id="mic-kpi-clip">0</div></div>
-          <div class="stat"><div class="label">Status</div><div class="value"><span id="mic-status" class="badge">Idle</span></div></div>
         </div>
-        <div class="row" aria-label="Microphone level meter">
-          <div class="meter" style="flex:1;min-width:220px"><div id="mic-meter" class="meter-fill" style="width:0%"></div></div>
+
+        <div class="vu-wrap" aria-label="Microphone level meter">
+          <div class="vu" role="meter" aria-valuemin="0" aria-valuemax="100">
+            <div id="mic-meter" class="vu-fill" style="width:0%"></div>
+            <div class="vu-peak" aria-hidden="true"></div>
+          </div>
         </div>
+
+        
+
+        <p class="audio-note muted">Tip: If device names show as generic, start the mic once to grant permission and reveal labels.</p>
       </div>
-      <div>
-        <h3>Speakers</h3>
+
+      <!-- Speakers card -->
+      <div class="audio-card spk">
+        <header class="audio-card-header">
+          <div class="title"><span class="icon" aria-hidden="true">🔊</span> Speakers</div>
+          <div class="status"><span id="spk-status" class="badge">Idle</span></div>
+        </header>
+
         <div class="row wrap device-row">
-          <label for="spk-select">Output:</label>
+          <label for="spk-select" class="device-label">Output</label>
           <select id="spk-select" class="device-select" aria-label="Select speakers"></select>
-          <button id="spk-left">Left</button>
-          <button id="spk-right">Right</button>
-          <button id="spk-both">Both</button>
-          <button id="spk-sweep" class="ghost">Stereo sweep</button>
-          <button id="spk-stop" class="ghost" title="Stop playback">Stop</button>
+          <div class="btn-group grow">
+            <button id="spk-left" title="Play tone on left channel">Left</button>
+            <button id="spk-right" title="Play tone on right channel">Right</button>
+            <button id="spk-both" title="Play tone on both channels">Both</button>
+            <button id="spk-sweep" class="ghost" title="Sweep from low to high frequency">Stereo sweep</button>
+            <button id="spk-stop" class="ghost" title="Stop playback">Stop</button>
+          </div>
         </div>
-        <div class="row wrap">
-          <label for="spk-volume">Volume:</label>
-          <input id="spk-volume" type="range" min="0" max="1" step="0.01" value="0.5" style="width:200px" />
-          <span class="muted" id="spk-status" role="status" aria-live="polite" style="margin-left:auto">Idle</span>
+
+        <div class="row wrap vol-row">
+          <label for="spk-volume">Volume</label>
+          <input id="spk-volume" type="range" min="0" max="1" step="0.01" value="0.5" />
         </div>
-        <p id="spk-note" class="muted" style="margin:8px 0 0"></p>
+
+        <div class="stereo-vu" aria-hidden="true">
+          <div class="stereo-row"><span class="ch">L</span><div class="vu"><div class="vu-fill" style="width:0%"></div></div></div>
+          <div class="stereo-row"><span class="ch">R</span><div class="vu"><div class="vu-fill" style="width:0%"></div></div></div>
+        </div>
+
+        <p id="spk-note" class="muted audio-note">Selecting an output device depends on browser support for setSinkId.</p>
       </div>
     </div>
   </section>
