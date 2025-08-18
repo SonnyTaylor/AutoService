@@ -1,5 +1,5 @@
 # AutoService
-![AutoService HackaTime Badge](https://hackatime-badge.hackclub.com/U091U1C7EFL/autoservice)
+![AutoService HackaTime Badge](https://hackatime-badge.hackclub.com/U091U1C7EFL/RustService)
 
 **AutoService** is a Windows 10/11 USB-based diagnostic and cleanup tool designed to automatically run virus scanners, hardware diagnostics, and stress tests, then generate detailed reports for customers or users. It aims to streamline tech support tasks by providing a one-stop toolkit for system health checks, cleaning, and component testing.
 
