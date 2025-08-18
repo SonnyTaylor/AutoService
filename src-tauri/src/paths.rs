@@ -1,19 +1,28 @@
-use std::{env, path::{Path, PathBuf}};
+use std::{
+    env,
+    path::{Path, PathBuf},
+};
 
-fn exists_dir(p: &Path) -> bool { p.is_dir() }
+fn exists_dir(p: &Path) -> bool {
+    p.is_dir()
+}
 
 pub fn resolve_data_dir() -> PathBuf {
     // 1) Environment override (works for dev and prod)
     if let Some(val) = env::var_os("AUTOSERVICE_DATA_DIR") {
         let p = PathBuf::from(val);
-        if exists_dir(&p) { return p; }
+        if exists_dir(&p) {
+            return p;
+        }
     }
 
     // 2) Sibling 'data' folder next to executable (USB deployment)
     if let Ok(exe) = env::current_exe() {
         if let Some(dir) = exe.parent() {
             let p = dir.join("data");
-            if exists_dir(&p) { return p; }
+            if exists_dir(&p) {
+                return p;
+            }
         }
     }
 
@@ -26,7 +35,8 @@ pub fn resolve_data_dir() -> PathBuf {
     }
 
     // 4) Last resort: current dir /data
-    env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
+    env::current_dir()
+        .unwrap_or_else(|_| PathBuf::from("."))
         .join("data")
 }
 

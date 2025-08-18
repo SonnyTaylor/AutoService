@@ -1,12 +1,12 @@
-use sysinfo::{System, Components, Disks, Networks, Users, Cpu};
+use sysinfo::{Components, Cpu, Disks, Networks, System, Users};
 
 use crate::models::{
-    BatteryInfo, CpuCoreInfo, CpuInfo, DiskInfo, GpuInfo, LoadAvgInfo, MemoryInfo, MotherboardInfo,
-    NetworkInfo, ProductInfo, SensorInfo, SystemInfo,
+    BatteryInfo, CpuCoreInfo, CpuInfo, DiskInfo, ExtraInfo, GpuInfo, LoadAvgInfo, MemoryInfo,
+    MotherboardInfo, NetworkInfo, ProductInfo, SensorInfo, SystemInfo,
 };
 
 #[tauri::command]
-pub fn get_system_info() -> Result<SystemInfo, String> {
+pub fn get_system_info(app: tauri::AppHandle) -> Result<SystemInfo, String> {
     let mut sys = System::new_all();
     sys.refresh_all();
 
@@ -14,16 +14,30 @@ pub fn get_system_info() -> Result<SystemInfo, String> {
     std::thread::sleep(sysinfo::MINIMUM_CPU_UPDATE_INTERVAL);
     sys.refresh_cpu_usage();
     let cpus: &[Cpu] = sys.cpus();
-    let brand = cpus.first().map(|c| c.brand().to_string()).unwrap_or_default();
+    let brand = cpus
+        .first()
+        .map(|c| c.brand().to_string())
+        .unwrap_or_default();
     let vendor_id = cpus.first().map(|c| c.vendor_id().to_string());
     let frequency_mhz = cpus.first().map(|c| c.frequency() as u64).unwrap_or(0);
     let num_logical = cpus.len();
     let num_physical = System::physical_core_count();
     let cores: Vec<CpuCoreInfo> = cpus
         .iter()
-        .map(|c| CpuCoreInfo { name: c.name().to_string(), frequency_mhz: c.frequency() as u64, usage_percent: c.cpu_usage() })
+        .map(|c| CpuCoreInfo {
+            name: c.name().to_string(),
+            frequency_mhz: c.frequency() as u64,
+            usage_percent: c.cpu_usage(),
+        })
         .collect();
-    let cpu = CpuInfo { brand, vendor_id, frequency_mhz, num_physical_cores: num_physical, num_logical_cpus: num_logical, cores };
+    let cpu = CpuInfo {
+        brand,
+        vendor_id,
+        frequency_mhz,
+        num_physical_cores: num_physical,
+        num_logical_cpus: num_logical,
+        cores,
+    };
 
     let total = sys.total_memory();
     let available = sys.available_memory();
@@ -31,7 +45,14 @@ pub fn get_system_info() -> Result<SystemInfo, String> {
     let free = sys.free_memory();
     let swap_total = sys.total_swap();
     let swap_used = sys.used_swap();
-    let memory = MemoryInfo { total, available, used, free, swap_total, swap_used };
+    let memory = MemoryInfo {
+        total,
+        available,
+        used,
+        free,
+        swap_total,
+        swap_used,
+    };
 
     let disks_list = Disks::new_with_refreshed_list();
     let disks: Vec<DiskInfo> = disks_list
@@ -70,7 +91,10 @@ pub fn get_system_info() -> Result<SystemInfo, String> {
     let components = Components::new_with_refreshed_list();
     let sensors: Vec<SensorInfo> = components
         .iter()
-        .map(|c| SensorInfo { label: c.label().to_string(), temperature_c: c.temperature().unwrap_or(0.0) })
+        .map(|c| SensorInfo {
+            label: c.label().to_string(),
+            temperature_c: c.temperature().unwrap_or(0.0),
+        })
         .collect();
 
     let gpus: Vec<GpuInfo> = {
@@ -96,7 +120,9 @@ pub fn get_system_info() -> Result<SystemInfo, String> {
 
         let has_hw = all.iter().any(|g| g.device_type.as_deref() != Some("Cpu"));
         let filtered: Vec<GpuInfo> = if has_hw {
-            all.into_iter().filter(|g| g.device_type.as_deref() != Some("Cpu")).collect()
+            all.into_iter()
+                .filter(|g| g.device_type.as_deref() != Some("Cpu"))
+                .collect()
         } else {
             all
         };
@@ -149,7 +175,11 @@ pub fn get_system_info() -> Result<SystemInfo, String> {
             .filter_map(|g| {
                 let v = g.vendor.unwrap_or(0);
                 let d = g.device.unwrap_or(0);
-                if v != 0 && d != 0 { Some(v) } else { None }
+                if v != 0 && d != 0 {
+                    Some(v)
+                } else {
+                    None
+                }
             })
             .collect();
 
@@ -158,16 +188,22 @@ pub fn get_system_info() -> Result<SystemInfo, String> {
             .filter(|g| {
                 let v = g.vendor.unwrap_or(0);
                 let d = g.device.unwrap_or(0);
-                if d == 0 && vendor_with_real.contains(&v) { return false; }
+                if d == 0 && vendor_with_real.contains(&v) {
+                    return false;
+                }
                 true
             })
             .collect();
 
         out.sort_by(|a, b| {
             let av = a.vendor.unwrap_or(0).cmp(&b.vendor.unwrap_or(0));
-            if av != std::cmp::Ordering::Equal { return av; }
+            if av != std::cmp::Ordering::Equal {
+                return av;
+            }
             let ad = a.device.unwrap_or(0).cmp(&b.device.unwrap_or(0));
-            if ad != std::cmp::Ordering::Equal { return ad; }
+            if ad != std::cmp::Ordering::Equal {
+                return ad;
+            }
             a.name.to_lowercase().cmp(&b.name.to_lowercase())
         });
         out
@@ -199,6 +235,9 @@ pub fn get_system_info() -> Result<SystemInfo, String> {
     });
 
     let la = System::load_average();
+    // Collect extra Windows-specific info via shell when available
+    let extra: Option<ExtraInfo> = collect_windows_extra(&app);
+
     let info = SystemInfo {
         os: sysinfo::System::long_os_version(),
         hostname: System::host_name(),
@@ -217,15 +256,26 @@ pub fn get_system_info() -> Result<SystemInfo, String> {
         batteries,
         motherboard,
         product,
-        load_avg: LoadAvgInfo { one: la.one, five: la.five, fifteen: la.fifteen },
+        load_avg: LoadAvgInfo {
+            one: la.one,
+            five: la.five,
+            fifteen: la.fifteen,
+        },
+        extra,
     };
 
     Ok(info)
 }
 
 fn get_batteries_info() -> Result<Vec<BatteryInfo>, String> {
-    let manager = match battery::Manager::new() { Ok(m) => m, Err(_) => return Ok(Vec::new()) };
-    let list = match manager.batteries() { Ok(b) => b, Err(_) => return Ok(Vec::new()) };
+    let manager = match battery::Manager::new() {
+        Ok(m) => m,
+        Err(_) => return Ok(Vec::new()),
+    };
+    let list = match manager.batteries() {
+        Ok(b) => b,
+        Err(_) => return Ok(Vec::new()),
+    };
     let mut out = Vec::new();
     for item in list {
         if let Ok(batt) = item {
@@ -245,8 +295,134 @@ fn get_batteries_info() -> Result<Vec<BatteryInfo>, String> {
             let temp_c = batt.temperature().map(|t| t.value as f32);
             let ttf = batt.time_to_full().map(|d| d.value as u64);
             let tte = batt.time_to_empty().map(|d| d.value as u64);
-            out.push(BatteryInfo { vendor, model, serial, technology, state, percentage, cycle_count, state_of_health_pct: soh, energy_wh, energy_full_wh, energy_full_design_wh, voltage_v, temperature_c: temp_c, time_to_full_sec: ttf, time_to_empty_sec: tte });
+            out.push(BatteryInfo {
+                vendor,
+                model,
+                serial,
+                technology,
+                state,
+                percentage,
+                cycle_count,
+                state_of_health_pct: soh,
+                energy_wh,
+                energy_full_wh,
+                energy_full_design_wh,
+                voltage_v,
+                temperature_c: temp_c,
+                time_to_full_sec: ttf,
+                time_to_empty_sec: tte,
+            });
         }
     }
     Ok(out)
+}
+
+#[cfg(target_os = "windows")]
+fn collect_windows_extra(app: &tauri::AppHandle) -> Option<ExtraInfo> {
+    use tauri_plugin_shell::ShellExt;
+
+    let shell = app.shell();
+    let run_pwsh = |script: &str| -> Option<String> {
+        let s = script.to_string();
+        let fut = shell
+            .command("powershell.exe")
+            .args(["-NoProfile", "-NonInteractive", "-Command", &s])
+            .output();
+        match tauri::async_runtime::block_on(fut) {
+            Ok(out) if out.status.success() => {
+                let v = String::from_utf8_lossy(&out.stdout).trim().to_string();
+                Some(v)
+            }
+            _ => None,
+        }
+    };
+
+    // Secure Boot state
+    let secure_boot = run_pwsh("(Confirm-SecureBootUEFI) 2>$null | Out-String")
+        .map(|s| s.lines().last().unwrap_or("").trim().to_string())
+        .filter(|s| !s.is_empty());
+
+    // TPM
+    let tpm_summary = run_pwsh("Get-Tpm | Select-Object -Property TpmPresent, TpmReady, ManagedAuthLevel, OwnerAuth, SpecVersion | ConvertTo-Json -Compress");
+
+    // BIOS
+    let bios_json = run_pwsh("Get-CimInstance -ClassName Win32_BIOS | Select-Object Manufacturer, SMBIOSBIOSVersion, ReleaseDate | ConvertTo-Json -Compress");
+    let (bios_vendor, bios_version, bios_release_date) = bios_json
+        .and_then(|j| serde_json::from_str::<serde_json::Value>(&j).ok())
+        .map(|v| {
+            let vendor = v.get("Manufacturer").and_then(|x| x.as_str()).map(|s| s.to_string());
+            let ver = v
+                .get("SMBIOSBIOSVersion")
+                .and_then(|x| x.as_str())
+                .map(|s| s.to_string());
+            let date = v.get("ReleaseDate").and_then(|x| x.as_str()).map(|s| s.to_string());
+            (vendor, ver, date)
+        })
+        .unwrap_or((None, None, None));
+
+    // Installed Windows updates (hotfixes)
+    let hotfixes: Vec<String> = run_pwsh("Get-HotFix | Select-Object -ExpandProperty HotFixID | Out-String")
+        .map(|s| s.lines().map(|l| l.trim().to_string()).filter(|l| !l.is_empty()).collect())
+        .unwrap_or_default();
+
+    // Video controllers
+    let video_controllers: Vec<String> = run_pwsh("Get-CimInstance Win32_VideoController | Select-Object -ExpandProperty Name | Out-String")
+        .map(|s| s.lines().map(|l| l.trim().to_string()).filter(|l| !l.is_empty()).collect())
+        .unwrap_or_default();
+
+    // Physical disks summary
+    let physical_disks: Vec<String> = run_pwsh("Get-PhysicalDisk | Select-Object FriendlyName, MediaType, Size | ForEach-Object { \"$($_.FriendlyName) ($($_.MediaType)) $(\"{0:N1}\" -f ($_.Size/1GB)) GB\" } | Out-String")
+        .map(|s| s.lines().map(|l| l.trim().to_string()).filter(|l| !l.is_empty()).collect())
+        .unwrap_or_default();
+
+    // .NET version (highest installed)
+    let dotnet_version = run_pwsh("(Get-ChildItem 'HKLM:SOFTWARE\\Microsoft\\NET Framework Setup\\NDP' -Recurse | Get-ItemProperty -Name Version -ErrorAction SilentlyContinue | Sort-Object Version | Select-Object -Last 1).Version | Out-String")
+        .map(|s| s.lines().last().unwrap_or("").trim().to_string())
+        .filter(|s| !s.is_empty());
+
+    // Extended JSON collections (we will be permissive with shape)
+    let parse_json_array = |s: Option<String>| -> Vec<serde_json::Value> {
+        if let Some(txt) = s {
+            // PowerShell emits single object without [] when one result; normalize to array
+            match serde_json::from_str::<serde_json::Value>(&txt) {
+                Ok(serde_json::Value::Array(arr)) => arr,
+                Ok(other) => vec![other],
+                Err(_) => Vec::new(),
+            }
+        } else {
+            Vec::new()
+        }
+    };
+
+    let ram_modules = parse_json_array(run_pwsh("Get-CimInstance Win32_PhysicalMemory | Select-Object BankLabel, DeviceLocator, Manufacturer, Capacity, Speed, SerialNumber, PartNumber, MemoryType, FormFactor, ConfiguredVoltage, DataWidth, TotalWidth | ConvertTo-Json -Compress"));
+    let cpu_wmi = parse_json_array(run_pwsh("Get-CimInstance Win32_Processor | Select-Object Name, Manufacturer, NumberOfCores, NumberOfLogicalProcessors, MaxClockSpeed, LoadPercentage | ConvertTo-Json -Compress"));
+    let video_ctrl_ex = parse_json_array(run_pwsh("Get-CimInstance Win32_VideoController | Select-Object Name, AdapterRAM, DriverVersion, VideoModeDescription | ConvertTo-Json -Compress"));
+    let baseboard = parse_json_array(run_pwsh("Get-CimInstance Win32_BaseBoard | Select-Object Manufacturer, Product, SerialNumber | ConvertTo-Json -Compress"));
+    let disk_drives = parse_json_array(run_pwsh("Get-CimInstance Win32_DiskDrive | Select-Object Model, InterfaceType, MediaType, Size | ConvertTo-Json -Compress"));
+    let nic_enabled = parse_json_array(run_pwsh("Get-CimInstance Win32_NetworkAdapter | Where-Object {$_.NetEnabled -eq $true} | Select-Object Name, MACAddress, Speed | ConvertTo-Json -Compress"));
+    let computer_system = parse_json_array(run_pwsh("Get-CimInstance Win32_ComputerSystem | ConvertTo-Json -Compress"));
+
+    Some(ExtraInfo {
+        secure_boot,
+        tpm_summary,
+        bios_vendor,
+        bios_version,
+        bios_release_date,
+        hotfixes,
+        video_controllers,
+        physical_disks,
+        dotnet_version,
+    ram_modules,
+    cpu_wmi,
+    video_ctrl_ex,
+    baseboard,
+    disk_drives,
+    nic_enabled,
+    computer_system,
+    })
+}
+
+#[cfg(not(target_os = "windows"))]
+fn collect_windows_extra(_app: &tauri::AppHandle) -> Option<ExtraInfo> {
+    None
 }

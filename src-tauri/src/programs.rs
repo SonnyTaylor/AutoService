@@ -1,9 +1,12 @@
-use std::{fs, path::{Path, PathBuf}};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 use uuid::Uuid;
 
-use crate::{paths, state::AppState};
 use crate::icons::get_logo_from_exe;
 use crate::models::{ProgramDiskEntry, ProgramEntry};
+use crate::{paths, state::AppState};
 
 #[tauri::command]
 pub fn list_programs(state: tauri::State<AppState>) -> Result<Vec<ProgramEntry>, String> {
@@ -29,7 +32,10 @@ pub fn list_programs(state: tauri::State<AppState>) -> Result<Vec<ProgramEntry>,
 }
 
 #[tauri::command]
-pub fn save_program(state: tauri::State<AppState>, mut program: ProgramEntry) -> Result<(), String> {
+pub fn save_program(
+    state: tauri::State<AppState>,
+    mut program: ProgramEntry,
+) -> Result<(), String> {
     let settings_path = programs_json_path(state.data_dir.as_path());
     if program.logo_data_url.is_empty() {
         if let Ok(Some(url)) = get_logo_from_exe(state.data_dir.as_path(), &program.exe_path) {
@@ -62,7 +68,9 @@ pub fn remove_program(state: tauri::State<AppState>, id: Uuid) -> Result<(), Str
 #[tauri::command]
 pub fn launch_program(state: tauri::State<AppState>, program: ProgramEntry) -> Result<(), String> {
     #[cfg(not(windows))]
-    { return Err("Programs launch only supported on Windows".into()); }
+    {
+        return Err("Programs launch only supported on Windows".into());
+    }
     #[cfg(windows)]
     {
         use std::process::Command;
@@ -70,7 +78,10 @@ pub fn launch_program(state: tauri::State<AppState>, program: ProgramEntry) -> R
         if !Path::new(&exe_full).is_file() {
             return Err(format!("Executable not found: {}", exe_full));
         }
-        let ps = format!("Start-Process -FilePath \"{}\"", exe_full.replace('`', "``").replace('"', "`\""));
+        let ps = format!(
+            "Start-Process -FilePath \"{}\"",
+            exe_full.replace('`', "``").replace('"', "`\"")
+        );
         Command::new("powershell.exe")
             .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps])
             .spawn()
@@ -125,8 +136,12 @@ fn read_programs_file(path: &Path) -> Vec<ProgramEntry> {
 }
 
 fn write_programs_file(path: &Path, list: &Vec<ProgramEntry>) -> Result<(), String> {
-    let parent = path.parent().ok_or_else(|| "Invalid settings path".to_string())?;
-    if let Err(e) = fs::create_dir_all(parent) { return Err(e.to_string()); }
+    let parent = path
+        .parent()
+        .ok_or_else(|| "Invalid settings path".to_string())?;
+    if let Err(e) = fs::create_dir_all(parent) {
+        return Err(e.to_string());
+    }
     let disk: Vec<ProgramDiskEntry> = list
         .iter()
         .map(|p| ProgramDiskEntry {

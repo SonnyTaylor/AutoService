@@ -89,10 +89,14 @@ pub fn launch_shortcut(id: &str) -> Result<(), String> {
             "about_windows" => start_detached("winver.exe", &[]),
             "settings_power_sleep" => start_detached("explorer.exe", &["ms-settings:powersleep"]),
             "settings_update" => start_detached("explorer.exe", &["ms-settings:windowsupdate"]),
-            "settings_apps_features" => start_detached("explorer.exe", &["ms-settings:appsfeatures"]),
+            "settings_apps_features" => {
+                start_detached("explorer.exe", &["ms-settings:appsfeatures"])
+            }
             "settings_network" => start_detached("explorer.exe", &["ms-settings:network"]),
             "settings_windows_security" => start_detached("explorer.exe", &["windowsdefender:"]),
-            "control_troubleshooting" => start_detached("control.exe", &["/name", "Microsoft.Troubleshooting"]),
+            "control_troubleshooting" => {
+                start_detached("control.exe", &["/name", "Microsoft.Troubleshooting"])
+            }
             _ => Err(format!("Unknown shortcut id: {}", id)),
         }
     }
