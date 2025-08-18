@@ -348,12 +348,14 @@ export async function initPage() {
   const kpiDl = qs('#net-kpi-dl');
 
   async function networkQuickTest() {
-    netStatus.textContent = 'Running…';
-    netInfo.innerHTML = '';
-    netResults.innerHTML = '';
-    netHealth.textContent = 'Testing…';
-    netHealth.className = 'badge';
-    netSummary.textContent = '';
+  // Clear UI and mark as running
+  netStatus.textContent = 'Running…';
+  netStatus.className = 'badge info';
+  netInfo.innerHTML = '';
+  netResults.innerHTML = '';
+  netHealth.textContent = 'Testing…';
+  netHealth.className = 'badge';
+  netSummary.textContent = '';
 
     // Connection info
     const items = [];
@@ -486,20 +488,40 @@ export async function initPage() {
     } else {
       grade = 'Poor'; cls += ' warn';
     }
-  netHealth.textContent = grade;
+    netHealth.textContent = grade;
     netHealth.className = cls;
-  netSummary.textContent = `${successCount}/${total} checks passed • median ${med} ms, avg ${avg} ms`;
-  if (kpiMed) kpiMed.textContent = `${med} ms`;
-  if (kpiAvg) kpiAvg.textContent = `${avg} ms`;
-  if (kpiLoss) kpiLoss.textContent = `${Math.max(0, Math.round(100 - (successCount/total)*100))}%`;
+    netSummary.textContent = `${successCount}/${total} checks passed • median ${med} ms, avg ${avg} ms`;
+    if (kpiMed) kpiMed.textContent = `${med} ms`;
+    if (kpiAvg) kpiAvg.textContent = `${avg} ms`;
+    if (kpiLoss) kpiLoss.textContent = `${Math.max(0, Math.round(100 - (successCount/total)*100))}%`;
 
-    netStatus.textContent = 'Done';
+    // Finalize status with clearer outcome
+    if (successCount === total) {
+      netStatus.textContent = 'Completed: All checks passed';
+      netStatus.className = 'badge ok';
+    } else if (successCount > 0) {
+      netStatus.textContent = `Completed: ${total - successCount} failed`;
+      netStatus.className = 'badge warn';
+    } else {
+      netStatus.textContent = 'Completed: All checks failed';
+      netStatus.className = 'badge error';
+    }
   }
-  netBtn?.addEventListener('click', networkQuickTest);
+  netBtn?.addEventListener('click', async () => {
+    if (netBtn) netBtn.disabled = true;
+    if (netBtnExt) netBtnExt.disabled = true;
+    try {
+      await networkQuickTest();
+    } finally {
+      if (netBtn) netBtn.disabled = false;
+      if (netBtnExt) netBtnExt.disabled = false;
+    }
+  });
 
   // Extended test: runs quick test plus multiple pings and download throughput sample
   netBtnExt?.addEventListener('click', async () => {
     netBtnExt.disabled = true;
+    if (netBtn) netBtn.disabled = true;
     await networkQuickTest();
   const header = document.createElement('li');
   header.textContent = '--- Extended ---';
@@ -550,7 +572,8 @@ export async function initPage() {
   dlLi.textContent = `Throughput sample: FAIL (${e.message})`;
   dlLi.classList.add('fail');
     }
-    netBtnExt.disabled = false;
+  netBtnExt.disabled = false;
+  if (netBtn) netBtn.disabled = false;
   });
 
   // ---------- Display ----------
