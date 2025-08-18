@@ -5,6 +5,41 @@ const { Command } = window.__TAURI__?.shell || {};
 
 function $(sel, root = document) { return root.querySelector(sel); }
 
+// Build a collapsible section HTML string
+function makeCollapsible(title, contentHtml) {
+  const id = `c${Math.random().toString(36).slice(2, 8)}`;
+  return `
+    <div class="collapsible" data-id="${id}">
+      <div class="collapsible-header" role="button" tabindex="0" aria-expanded="true">
+        <span class="chevron" aria-hidden="true" style="display:inline-block; width:1.2em;">▾</span>
+        <span class="title">${escapeHtml(title)}</span>
+      </div>
+      <div class="collapsible-body">
+        ${contentHtml}
+      </div>
+    </div>
+  `;
+}
+
+// Activate collapsible toggle interactions inside a container
+function initCollapsibles(container) {
+  const headers = container.querySelectorAll('.collapsible-header');
+  headers.forEach((header) => {
+    const onToggle = () => {
+      const body = header.nextElementSibling;
+      const chev = header.querySelector('.chevron');
+      const expanded = header.getAttribute('aria-expanded') === 'true';
+      header.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+      if (body) body.style.display = expanded ? 'none' : '';
+      if (chev) chev.textContent = expanded ? '▸' : '▾';
+    };
+    header.addEventListener('click', onToggle);
+    header.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(); }
+    });
+  });
+}
+
 function formatBytes(bytes) {
   if (!Number.isFinite(bytes)) return "-";
   const units = ["B", "KB", "MB", "GB", "TB", "PB"]; let i = 0; let v = bytes;
@@ -86,8 +121,7 @@ function render(info) {
   }
   if (ex?.dotnet_version) osExtraRows.push(`<tr><th>.NET</th><td>${escapeHtml(ex.dotnet_version)}</td></tr>`);
 
-  section.insertAdjacentHTML('beforeend', `
-    <div class="section-title">OS Info</div>
+  const osHtml = `
     <div class="table-block"><div class="table-wrap">
       <table class="table kv-table">
         <tbody>
@@ -100,14 +134,14 @@ function render(info) {
         </tbody>
       </table>
     </div></div>
-  `);
+  `;
+  section.insertAdjacentHTML('beforeend', makeCollapsible('OS Info', osHtml));
 
   // Windows Updates table removed per request
 
   // System / Product info (if available)
   if (info.product) {
-    section.insertAdjacentHTML('beforeend', `
-      <div class="section-title">System</div>
+    const sysHtml = `
       <div class="table-block"><div class="table-wrap">
         <table class="table kv-table">
           <tbody>
@@ -121,19 +155,19 @@ function render(info) {
           </tbody>
         </table>
       </div></div>
-    `);
+    `;
+    section.insertAdjacentHTML('beforeend', makeCollapsible('System', sysHtml));
   }
 
   // Motherboard (if available)
   if (info.motherboard) {
-  // BIOS details (Windows) belong with motherboard
-  const biosRows = [];
-  if (ex?.bios_vendor) biosRows.push(`<tr><th>BIOS Vendor</th><td>${escapeHtml(ex.bios_vendor)}</td></tr>`);
-  if (ex?.bios_version) biosRows.push(`<tr><th>BIOS Version</th><td>${escapeHtml(ex.bios_version)}</td></tr>`);
-  if (ex?.bios_release_date) biosRows.push(`<tr><th>BIOS Release</th><td>${escapeHtml(ex.bios_release_date)}</td></tr>`);
+    // BIOS details (Windows) belong with motherboard
+    const biosRows = [];
+    if (ex?.bios_vendor) biosRows.push(`<tr><th>BIOS Vendor</th><td>${escapeHtml(ex.bios_vendor)}</td></tr>`);
+    if (ex?.bios_version) biosRows.push(`<tr><th>BIOS Version</th><td>${escapeHtml(ex.bios_version)}</td></tr>`);
+    if (ex?.bios_release_date) biosRows.push(`<tr><th>BIOS Release</th><td>${escapeHtml(ex.bios_release_date)}</td></tr>`);
 
-  section.insertAdjacentHTML('beforeend', `
-      <div class="section-title">Motherboard</div>
+    const mbHtml = `
       <div class="table-block"><div class="table-wrap">
         <table class="table kv-table">
           <tbody>
@@ -142,11 +176,12 @@ function render(info) {
             ${info.motherboard.version?`<tr><th>Version</th><td>${escapeHtml(info.motherboard.version)}</td></tr>`:''}
             ${info.motherboard.serial_number?`<tr><th>Serial</th><td>${escapeHtml(info.motherboard.serial_number)}</td></tr>`:''}
             ${info.motherboard.asset_tag?`<tr><th>Asset Tag</th><td>${escapeHtml(info.motherboard.asset_tag)}</td></tr>`:''}
-      ${biosRows.join('')}
+            ${biosRows.join('')}
           </tbody>
         </table>
       </div></div>
-    `);
+    `;
+    section.insertAdjacentHTML('beforeend', makeCollapsible('Motherboard', mbHtml));
   }
 
   // CPU
@@ -164,8 +199,7 @@ function render(info) {
       }).join('')}
     </div>
   ` : '';
-  section.insertAdjacentHTML('beforeend', `
-    <div class="section-title">CPU</div>
+  const cpuHtml = `
     <div class="table-block"><div class="table-wrap">
       <table class="table kv-table">
         <tbody>
@@ -181,11 +215,11 @@ function render(info) {
         </tbody>
       </table>
     </div></div>
-  `);
+  `;
+  section.insertAdjacentHTML('beforeend', makeCollapsible('CPU', cpuHtml));
 
   // RAM
-  section.insertAdjacentHTML('beforeend', `
-    <div class="section-title">RAM</div>
+  const ramHtml = `
     <div class="table-block"><div class="table-wrap">
       <table class="table kv-table">
         <tbody>
@@ -195,35 +229,35 @@ function render(info) {
         </tbody>
       </table>
     </div></div>
-  `);
+  `;
+  section.insertAdjacentHTML('beforeend', makeCollapsible('RAM', ramHtml));
 
   // GPU — prefer Rust info; fall back to Windows video controller details
+  let gpuHtml = '';
   if (info.gpus && info.gpus.length) {
-    section.insertAdjacentHTML('beforeend', `
-      <div class="section-title">GPU</div>
+    const rows = info.gpus.map(g => {
+      const vendor = (g.vendor ?? null) !== null ? String(g.vendor) : '';
+      const device = (g.device ?? null) !== null ? String(g.device) : '';
+      const dtype = g.device_type || '';
+      const driver = [g.driver, g.driver_info].filter(Boolean).join(' ');
+      const backend = g.backend || '';
+      return `<tr>
+        <td>${escapeHtml(g.name)}</td>
+        <td>${escapeHtml(vendor || '-')}</td>
+        <td>${escapeHtml(device || '-')}</td>
+        <td>${escapeHtml(dtype || '-')}</td>
+        <td>${escapeHtml(driver || '-')}</td>
+        <td>${escapeHtml(backend || '-')}</td>
+      </tr>`;
+    }).join('');
+    gpuHtml = `
       <div class="table-block"><div class="table-wrap">
         <table class="table data-table">
           <thead><tr><th>Name</th><th>Vendor</th><th>Device</th><th>Type</th><th>Driver</th><th>Backend</th></tr></thead>
-          <tbody>
-            ${info.gpus.map(g => {
-              const vendor = (g.vendor ?? null) !== null ? String(g.vendor) : '';
-              const device = (g.device ?? null) !== null ? String(g.device) : '';
-              const dtype = g.device_type || '';
-              const driver = [g.driver, g.driver_info].filter(Boolean).join(' ');
-              const backend = g.backend || '';
-              return `<tr>
-                <td>${escapeHtml(g.name)}</td>
-                <td>${escapeHtml(vendor || '-')}</td>
-                <td>${escapeHtml(device || '-')}</td>
-                <td>${escapeHtml(dtype || '-')}</td>
-                <td>${escapeHtml(driver || '-')}</td>
-                <td>${escapeHtml(backend || '-')}</td>
-              </tr>`;
-            }).join('')}
-          </tbody>
+          <tbody>${rows}</tbody>
         </table>
       </div></div>
-    `);
+    `;
   } else if (ex && Array.isArray(ex.video_ctrl_ex) && ex.video_ctrl_ex.length) {
     const vRows = ex.video_ctrl_ex.map(v => `<tr>
       <td>${escapeHtml(v?.Name||'-')}</td>
@@ -231,27 +265,25 @@ function render(info) {
       <td>${escapeHtml(v?.DriverVersion||'-')}</td>
       <td>${escapeHtml(v?.VideoModeDescription||'-')}</td>
     </tr>`).join('');
-    section.insertAdjacentHTML('beforeend', `
-      <div class="section-title">GPU</div>
+    gpuHtml = `
       <div class="table-block"><div class="table-wrap">
         <table class="table data-table">
           <thead><tr><th>Name</th><th>VRAM</th><th>Driver</th><th>Mode</th></tr></thead>
           <tbody>${vRows}</tbody>
         </table>
       </div></div>
-    `);
+    `;
   } else {
-    section.insertAdjacentHTML('beforeend', `
-      <div class="section-title">GPU</div>
+    gpuHtml = `
       <div class="table-block"><div class="table-wrap">
         <div class="empty-state">No GPU info available</div>
       </div></div>
-    `);
+    `;
   }
+  section.insertAdjacentHTML('beforeend', makeCollapsible('GPU', gpuHtml));
 
-  // Storage
-  section.insertAdjacentHTML('beforeend', `
-    <div class="section-title">Storage</div>
+  // Storage (volumes + physical drives)
+  let storageHtml = `
     <div class="table-block"><div class="table-wrap">
       <table class="table data-table">
         <thead>
@@ -280,9 +312,7 @@ function render(info) {
         </tbody>
       </table>
     </div></div>
-  `);
-
-  // Physical Drives (device-level) — from Windows extras
+  `;
   if (ex && Array.isArray(ex.disk_drives) && ex.disk_drives.length) {
     const ddRows = ex.disk_drives.map(d => `<tr>
       <td>${escapeHtml(d?.Model||'-')}</td>
@@ -290,7 +320,7 @@ function render(info) {
       <td>${escapeHtml(d?.MediaType||'-')}</td>
       <td>${d?.Size?formatBytes(Number(d.Size)):'-'}</td>
     </tr>`).join('');
-    section.insertAdjacentHTML('beforeend', `
+    storageHtml += `
       <div class="table-block"><div class="table-wrap">
         <table class="table data-table">
           <thead>
@@ -299,12 +329,12 @@ function render(info) {
           <tbody>${ddRows}</tbody>
         </table>
       </div></div>
-    `);
+    `;
   }
+  section.insertAdjacentHTML('beforeend', makeCollapsible('Storage', storageHtml));
 
   // Network
-  section.insertAdjacentHTML('beforeend', `
-    <div class="section-title">Network</div>
+  const netHtml = `
     <div class="table-block"><div class="table-wrap">
       <table class="table data-table">
         <thead>
@@ -327,7 +357,8 @@ function render(info) {
         </tbody>
       </table>
     </div></div>
-  `);
+  `;
+  section.insertAdjacentHTML('beforeend', makeCollapsible('Network', netHtml));
 
   // Advanced moved to bottom — rendered after Battery
 
@@ -337,15 +368,15 @@ function render(info) {
       ? info.batteries
       : (info.battery ? [info.battery] : []); // backward compatibility
 
-    section.insertAdjacentHTML('beforeend', `<div class="section-title">Battery</div>`);
+    let battHtml = '';
     if (!batteries.length) {
-      section.insertAdjacentHTML('beforeend', `
+      battHtml = `
         <div class="table-block"><div class="table-wrap">
           <div class="empty-state">No batteries detected</div>
         </div></div>
-      `);
+      `;
     } else {
-      batteries.forEach((batt, idx) => {
+      battHtml = batteries.map((batt, idx) => {
         const pct = batt.percentage ?? 0;
         const stateBadgeClass = pct >= 50 ? 'ok' : pct >= 20 ? '' : 'warn';
         const idBits = [batt.vendor, batt.model].filter(Boolean).join(' ');
@@ -356,12 +387,11 @@ function render(info) {
           batt.energy_full_design_wh != null ? `Design ${batt.energy_full_design_wh.toFixed(1)} Wh` : null,
         ].filter(Boolean).join(' • ');
 
-  // Health as its own row with a color badge
-  const healthPct = batt.state_of_health_pct;
-  const healthClass = healthPct == null ? '' : (healthPct >= 80 ? 'ok' : (healthPct >= 60 ? '' : 'warn'));
-  const healthLabel = healthPct == null ? '' : (healthPct >= 80 ? 'Good' : (healthPct >= 60 ? 'Fair' : 'Poor'));
+        const healthPct = batt.state_of_health_pct;
+        const healthClass = healthPct == null ? '' : (healthPct >= 80 ? 'ok' : (healthPct >= 60 ? '' : 'warn'));
+        const healthLabel = healthPct == null ? '' : (healthPct >= 80 ? 'Good' : (healthPct >= 60 ? 'Fair' : 'Poor'));
 
-        section.insertAdjacentHTML('beforeend', `
+        return `
           <div class="table-block"><div class="table-wrap">
             <table class="table kv-table">
               <tbody>
@@ -376,9 +406,10 @@ function render(info) {
               </tbody>
             </table>
           </div></div>
-        `);
-      });
+        `;
+      }).join('');
     }
+    section.insertAdjacentHTML('beforeend', makeCollapsible('Battery', battHtml));
   }
 
   // Sensors section intentionally removed per request
@@ -399,6 +430,9 @@ function render(info) {
       }
     });
   }
+
+  // Activate collapsibles
+  initCollapsibles(section);
 }
 
 function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }

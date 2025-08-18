@@ -387,6 +387,53 @@ details[open] summary { color: var(--text); }
 .empty-state { padding: 16px; color: var(--muted); text-align: center; }
 
 /* =============================== */
+/* Collapsibles (System Info)      */
+/* =============================== */
+.collapsible { margin: 12px 0 16px; }
+.collapsible-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #202636;
+  cursor: pointer;
+  user-select: none;
+}
+.collapsible-header:hover { background: #222a3a; border-color: #2e3b55; }
+.collapsible-header .title { font-size: 1rem; font-weight: 600; color: var(--muted); }
+.collapsible-header[aria-expanded="true"] .title { color: var(--text); }
+.collapsible-header .chevron {
+  width: 20px; height: 20px; min-width: 20px;
+  display: inline-block;
+  position: relative;
+  color: var(--muted);
+  background: #1b2130;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  transition: transform 160ms ease, color 160ms ease, background 160ms ease, border-color 160ms ease;
+  font-size: 0; /* hide any text glyph inside */
+}
+.collapsible-header .chevron::before {
+  content: "";
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%) rotate(0deg);
+  width: 0; height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 7px solid currentColor; /* right-pointing triangle */
+}
+.collapsible-header[aria-expanded="true"] .chevron {
+  transform: rotate(90deg); /* down */
+  color: var(--text);
+  background: #24314a;
+  border-color: #2b416b;
+}
+.collapsible-body { margin-top: 8px; }
+
+/* =============================== */
 /* Sub-tabs (used in Component Test and others) */
 /* =============================== */
 
