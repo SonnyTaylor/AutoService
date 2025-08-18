@@ -668,13 +668,16 @@ export async function initPage() {
         audioEl.srcObject = msDest.stream;
         audioEl.style.display = 'none';
         document.body.appendChild(audioEl);
+        // Ensure playback starts when created (Chromium may require explicit play)
+        audioEl.play?.().catch(() => {});
       }
       const deviceId = spkSel?.value || 'default';
       if (deviceId) {
         audioEl.setSinkId(deviceId).then(() => {
-          spkNote.textContent = '';
+          if (spkNote) spkNote.textContent = '';
+          audioEl.play?.().catch(() => {});
         }).catch(err => {
-          spkNote.textContent = `Output select failed: ${err.message}`;
+          if (spkNote) spkNote.textContent = `Output select failed: ${err.message}`;
         });
       }
       return msDest;
@@ -695,6 +698,8 @@ export async function initPage() {
 
   function startTone({ left = 0, right = 0, freq = 440 }) {
     const ctx = ensureAudioContext();
+    // Resume context on user gesture if needed
+    try { ctx.resume?.(); } catch {}
     stopTone();
     osc = ctx.createOscillator();
     osc.type = 'sine';
@@ -722,6 +727,7 @@ export async function initPage() {
 
   spkSweep?.addEventListener('click', () => {
     const ctx = ensureAudioContext();
+    try { ctx.resume?.(); } catch {}
     stopTone();
     const duration = 4; // seconds
     const start = ctx.currentTime;
