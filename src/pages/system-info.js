@@ -28,9 +28,6 @@ function render(info) {
   const usedMem = info.memory.used;
   const totalMem = info.memory.total || 1;
   const memPct = Math.min(100, Math.round((usedMem / totalMem) * 100));
-  const load1 = info.load_avg?.one ?? 0;
-  const load5 = info.load_avg?.five ?? 0;
-  const load15 = info.load_avg?.fifteen ?? 0;
 
   // Clear and scaffold
   const section = document.querySelector('section.page[data-page="system-info"]');
@@ -57,8 +54,6 @@ function render(info) {
           <tr><th>Build</th><td>${escapeHtml(info.os_version || '-')}</td></tr>
           <tr><th>Hostname</th><td>${escapeHtml(info.hostname || '-')}</td></tr>
           <tr><th>Uptime</th><td>${formatDuration(info.uptime_seconds)}</td></tr>
-          <tr><th>Load (1/5/15)</th><td>${load1.toFixed(2)} / ${load5.toFixed(2)} / ${load15.toFixed(2)}</td></tr>
-          <tr><th>Users</th><td>${(info.users || []).length}</td></tr>
         </tbody>
       </table>
     </div></div>
@@ -104,8 +99,11 @@ function render(info) {
         <tbody>
           <tr><th>Model</th><td>${escapeHtml(info.cpu.brand)}</td></tr>
           <tr><th>Vendor</th><td>${escapeHtml(info.cpu.vendor_id || '-')}</td></tr>
-          <tr><th>Cores/Threads</th><td>${info.cpu.num_physical_cores ?? '-'}C / ${info.cpu.num_logical_cpus}T</td></tr>
-          <tr><th>Frequency</th><td>${info.cpu.frequency_mhz} MHz</td></tr>
+          <tr><th>Cores / Threads</th><td>
+            <span class="badge">Physical: ${info.cpu.num_physical_cores ?? '-' }C</span>
+            <span class="badge" style="margin-left:6px;">Logical: ${info.cpu.num_logical_cpus}T</span>
+          </td></tr>
+          <tr><th>Frequency</th><td>${info.cpu.frequency_mhz ? (info.cpu.frequency_mhz/1000).toFixed(2) + ' GHz' : '-'}</td></tr>
           ${avgCpu!=null?`<tr><th>CPU Usage</th><td>${avgCpu}%<div class="progress" aria-label="cpu usage"><div class="bar" style="width:${avgCpu}%;"></div></div></td></tr>`:''}
           ${perCoreGrid?`<tr><th>Per-core usage</th><td>${perCoreGrid}</td></tr>`:''}
         </tbody>
@@ -234,11 +232,15 @@ function render(info) {
         const idBits = [batt.vendor, batt.model].filter(Boolean).join(' ');
         const details = [
           batt.cycle_count != null ? `${batt.cycle_count} cycles` : null,
-          batt.state_of_health_pct != null ? `${batt.state_of_health_pct.toFixed(0)}% health` : null,
           batt.voltage_v != null ? `${batt.voltage_v.toFixed(2)} V` : null,
           batt.energy_full_wh != null ? `Full ${batt.energy_full_wh.toFixed(1)} Wh` : null,
           batt.energy_full_design_wh != null ? `Design ${batt.energy_full_design_wh.toFixed(1)} Wh` : null,
         ].filter(Boolean).join(' • ');
+
+  // Health as its own row with a color badge
+  const healthPct = batt.state_of_health_pct;
+  const healthClass = healthPct == null ? '' : (healthPct >= 80 ? 'ok' : (healthPct >= 60 ? '' : 'warn'));
+  const healthLabel = healthPct == null ? '' : (healthPct >= 80 ? 'Good' : (healthPct >= 60 ? 'Fair' : 'Poor'));
 
         section.insertAdjacentHTML('beforeend', `
           <div class="table-block"><div class="table-wrap">
@@ -248,6 +250,7 @@ function render(info) {
                 ${idBits?`<tr><th>Identity</th><td>${escapeHtml(idBits)}</td></tr>`:''}
                 ${batt.serial?`<tr><th>Serial</th><td>${escapeHtml(batt.serial)}</td></tr>`:''}
                 ${batt.technology?`<tr><th>Technology</th><td>${escapeHtml(batt.technology)}</td></tr>`:''}
+                ${healthPct!=null?`<tr><th>Health</th><td><span class="badge ${healthClass}">${Number(healthPct).toFixed(0)}%</span>${healthLabel?` <span class="muted" style="margin-left:8px;">${healthLabel}</span>`:''}</td></tr>`:''}
                 ${details?`<tr><th>Details</th><td class="muted">${details}</td></tr>`:''}
                 ${batt.time_to_full_sec!=null?`<tr><th>To full</th><td>${formatDuration(batt.time_to_full_sec)}</td></tr>`:''}
                 ${batt.time_to_empty_sec!=null?`<tr><th>To empty</th><td>${formatDuration(batt.time_to_empty_sec)}</td></tr>`:''}
