@@ -364,6 +364,31 @@ button:hover { background: var(--primary-700); }
 [data-page="scans"] .scan-row .title { font-weight: 600; font-size: 1.2rem; }
 [data-page="scans"] .scan-row .desc { font-size: 0.98rem; }
 
+/* =============================== */
+/* Service Options page            */
+/* =============================== */
+[data-page="service"] .service-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 8px 0 14px;
+}
+[data-page="service"] .service-toolbar .spacer { flex: 1; }
+[data-page="service"] .task-list { display: grid; gap: 10px; }
+[data-page="service"] .task-row {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #202636;
+}
+[data-page="service"] .task-row:hover { background: #263043; border-color: #2e3b55; }
+[data-page="service"] .task-row input[type="checkbox"] { width: 18px; height: 18px; }
+[data-page="service"] .task-row .name { font-weight: 600; }
+
 /* Progress bars (e.g., memory/disk usage) */
 .progress { height: 8px; background: #1b2130; border-radius: 999px; overflow: hidden; border: 1px solid var(--border); }
 .progress > .bar { height: 100%; background: linear-gradient(90deg, var(--primary), #7aa8ff); width: 0%; }

@@ -2,18 +2,18 @@
   <h1 id="service-title">Service Options</h1>
   <p class="muted" id="service-sub"></p>
 
-  <div class="card">
-    <div class="card-title">Preset</div>
-    <div class="card-body">
-      <div id="preset-readout" class="badge info">Loading…</div>
-      <p class="muted">This page will show the options for your preset or let you pick if you chose Custom Service.</p>
-    </div>
+  <div class="service-toolbar">
+    <button class="ghost" id="back-btn" aria-label="Back to Scans">Back</button>
+    <div class="spacer"></div>
+    <div id="preset-pill" class="badge info" aria-live="polite">Preset: …</div>
+    <button id="service-start" disabled>Start</button>
   </div>
 
   <div class="card">
-    <div class="card-title">Next</div>
+    <div class="card-title">Pick what to run</div>
     <div class="card-body">
-      <p class="muted">Further UI coming next: selectable tasks (malware scan, benchmarks, reports, cleanups), plus Start to run.</p>
+      <div id="task-list" class="task-list" role="group" aria-label="Tasks"></div>
     </div>
   </div>
+
 </section>
