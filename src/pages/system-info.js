@@ -5,6 +5,47 @@ const { Command } = window.__TAURI__?.shell || {};
 
 function $(sel, root = document) { return root.querySelector(sel); }
 
+// Simple in-session cache (also persisted in sessionStorage across tab switches)
+const SYSINFO_CACHE_KEY = 'sysinfo.cache.v1';
+const SYSINFO_CACHE_TS_KEY = 'sysinfo.cache.ts.v1';
+let sysinfoCache = null; // object
+let sysinfoCacheTs = null; // number (ms)
+
+function loadCache() {
+  try {
+    const raw = sessionStorage.getItem(SYSINFO_CACHE_KEY);
+    const ts = Number(sessionStorage.getItem(SYSINFO_CACHE_TS_KEY) || '');
+    if (raw) {
+      sysinfoCache = JSON.parse(raw);
+      sysinfoCacheTs = Number.isFinite(ts) ? ts : null;
+    }
+  } catch {}
+}
+
+function saveCache(info, ts) {
+  sysinfoCache = info;
+  sysinfoCacheTs = ts;
+  try {
+    sessionStorage.setItem(SYSINFO_CACHE_KEY, JSON.stringify(info));
+    sessionStorage.setItem(SYSINFO_CACHE_TS_KEY, String(ts));
+  } catch {}
+}
+
+function formatTimeShort(ms) {
+  if (!ms) return '';
+  try {
+    const d = new Date(ms);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch { return ''; }
+}
+
+function setLastRefreshedLabel(container, ms) {
+  const el = container.querySelector('#sysinfo-last-refreshed');
+  if (!el) return;
+  if (!ms) { el.textContent = ''; return; }
+  el.textContent = `Updated ${formatTimeShort(ms)}`;
+}
+
 // Build a collapsible section HTML string
 function makeCollapsible(title, contentHtml) {
   const id = `c${Math.random().toString(36).slice(2, 8)}`;
@@ -77,7 +118,8 @@ function render(info) {
       </div>
       <div style="display:flex; gap:8px; flex-wrap: wrap;">
         <button id=\"sysinfo-toggle-all-btn\" class=\"ghost\">Collapse all</button>
-        <button id=\"sysinfo-refresh-btn\" class=\"ghost\">Refresh</button>
+  <button id=\"sysinfo-refresh-btn\" class=\"ghost\">Refresh</button>
+  <span id=\"sysinfo-last-refreshed\" class=\"muted\" style=\"font-size:.85rem; align-self:center;\"></span>
       </div>
     </div>
   `;
@@ -423,6 +465,16 @@ function render(info) {
       btn.textContent = 'Refreshing…';
       try {
         const data = await invoke('get_system_info');
+        // Optional: keep the Windows caption nicety on refresh too
+        if (Command && navigator.userAgent.includes('Windows')) {
+          try {
+            const cmd = await Command.create('exec-sh', ['-c', 'wmic os get Caption | more +1']).execute();
+            const osCaption = (cmd?.stdout || '').trim();
+            if (osCaption) data.os = osCaption;
+          } catch {}
+        }
+        const now = Date.now();
+        saveCache(data, now);
         render(data);
       } catch (e) {
         console.error(e);
@@ -434,6 +486,8 @@ function render(info) {
 
   // Activate collapsibles
   initCollapsibles(section);
+  // Timestamp label (after toolbar exists)
+  setLastRefreshedLabel(section, sysinfoCacheTs);
 
   // Collapse/Expand All control
   const toggleAllBtn = document.getElementById('sysinfo-toggle-all-btn');
@@ -476,16 +530,23 @@ export async function initPage() {
   skel.textContent = 'Loading system information…';
   container.appendChild(skel);
   try {
+    // If we have a cached copy for this session, use it
+    if (sysinfoCache == null) loadCache();
+    if (sysinfoCache) {
+      render(sysinfoCache);
+      return;
+    }
+    // Otherwise fetch fresh, then cache
     const info = await invoke('get_system_info');
-    // Optional client-side augmentation via shell (non-blocking)
     if (Command && navigator.userAgent.includes('Windows')) {
       try {
-        // Example: get Windows edition via shell as a nicety
         const cmd = await Command.create('exec-sh', ['-c', 'wmic os get Caption | more +1']).execute();
         const osCaption = (cmd?.stdout || '').trim();
         if (osCaption) info.os = osCaption;
       } catch {}
     }
+    const now = Date.now();
+    saveCache(info, now);
     render(info);
   } catch (e) {
     container.innerHTML = '<section class="page"><h1>System Info</h1><p class="muted">Failed to read system information.</p></section>';
