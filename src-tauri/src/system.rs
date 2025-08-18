@@ -1,12 +1,12 @@
 use sysinfo::{Components, Cpu, Disks, Networks, System, Users};
 
 use crate::models::{
-    BatteryInfo, CpuCoreInfo, CpuInfo, DiskInfo, GpuInfo, LoadAvgInfo, MemoryInfo, MotherboardInfo,
-    NetworkInfo, ProductInfo, SensorInfo, SystemInfo,
+    BatteryInfo, CpuCoreInfo, CpuInfo, DiskInfo, ExtraInfo, GpuInfo, LoadAvgInfo, MemoryInfo,
+    MotherboardInfo, NetworkInfo, ProductInfo, SensorInfo, SystemInfo,
 };
 
 #[tauri::command]
-pub fn get_system_info() -> Result<SystemInfo, String> {
+pub fn get_system_info(app: tauri::AppHandle) -> Result<SystemInfo, String> {
     let mut sys = System::new_all();
     sys.refresh_all();
 
@@ -235,6 +235,9 @@ pub fn get_system_info() -> Result<SystemInfo, String> {
     });
 
     let la = System::load_average();
+    // Collect extra Windows-specific info via shell when available
+    let extra: Option<ExtraInfo> = collect_windows_extra(&app);
+
     let info = SystemInfo {
         os: sysinfo::System::long_os_version(),
         hostname: System::host_name(),
@@ -258,6 +261,7 @@ pub fn get_system_info() -> Result<SystemInfo, String> {
             five: la.five,
             fifteen: la.fifteen,
         },
+        extra,
     };
 
     Ok(info)
@@ -311,4 +315,114 @@ fn get_batteries_info() -> Result<Vec<BatteryInfo>, String> {
         }
     }
     Ok(out)
+}
+
+#[cfg(target_os = "windows")]
+fn collect_windows_extra(app: &tauri::AppHandle) -> Option<ExtraInfo> {
+    use tauri_plugin_shell::ShellExt;
+
+    let shell = app.shell();
+    let run_pwsh = |script: &str| -> Option<String> {
+        let s = script.to_string();
+        let fut = shell
+            .command("powershell.exe")
+            .args(["-NoProfile", "-NonInteractive", "-Command", &s])
+            .output();
+        match tauri::async_runtime::block_on(fut) {
+            Ok(out) if out.status.success() => {
+                let v = String::from_utf8_lossy(&out.stdout).trim().to_string();
+                Some(v)
+            }
+            _ => None,
+        }
+    };
+
+    // Secure Boot state
+    let secure_boot = run_pwsh("(Confirm-SecureBootUEFI) 2>$null | Out-String")
+        .map(|s| s.lines().last().unwrap_or("").trim().to_string())
+        .filter(|s| !s.is_empty());
+
+    // TPM
+    let tpm_summary = run_pwsh("Get-Tpm | Select-Object -Property TpmPresent, TpmReady, ManagedAuthLevel, OwnerAuth, SpecVersion | ConvertTo-Json -Compress");
+
+    // BIOS
+    let bios_json = run_pwsh("Get-CimInstance -ClassName Win32_BIOS | Select-Object Manufacturer, SMBIOSBIOSVersion, ReleaseDate | ConvertTo-Json -Compress");
+    let (bios_vendor, bios_version, bios_release_date) = bios_json
+        .and_then(|j| serde_json::from_str::<serde_json::Value>(&j).ok())
+        .map(|v| {
+            let vendor = v.get("Manufacturer").and_then(|x| x.as_str()).map(|s| s.to_string());
+            let ver = v
+                .get("SMBIOSBIOSVersion")
+                .and_then(|x| x.as_str())
+                .map(|s| s.to_string());
+            let date = v.get("ReleaseDate").and_then(|x| x.as_str()).map(|s| s.to_string());
+            (vendor, ver, date)
+        })
+        .unwrap_or((None, None, None));
+
+    // Installed Windows updates (hotfixes)
+    let hotfixes: Vec<String> = run_pwsh("Get-HotFix | Select-Object -ExpandProperty HotFixID | Out-String")
+        .map(|s| s.lines().map(|l| l.trim().to_string()).filter(|l| !l.is_empty()).collect())
+        .unwrap_or_default();
+
+    // Video controllers
+    let video_controllers: Vec<String> = run_pwsh("Get-CimInstance Win32_VideoController | Select-Object -ExpandProperty Name | Out-String")
+        .map(|s| s.lines().map(|l| l.trim().to_string()).filter(|l| !l.is_empty()).collect())
+        .unwrap_or_default();
+
+    // Physical disks summary
+    let physical_disks: Vec<String> = run_pwsh("Get-PhysicalDisk | Select-Object FriendlyName, MediaType, Size | ForEach-Object { \"$($_.FriendlyName) ($($_.MediaType)) $(\"{0:N1}\" -f ($_.Size/1GB)) GB\" } | Out-String")
+        .map(|s| s.lines().map(|l| l.trim().to_string()).filter(|l| !l.is_empty()).collect())
+        .unwrap_or_default();
+
+    // .NET version (highest installed)
+    let dotnet_version = run_pwsh("(Get-ChildItem 'HKLM:SOFTWARE\\Microsoft\\NET Framework Setup\\NDP' -Recurse | Get-ItemProperty -Name Version -ErrorAction SilentlyContinue | Sort-Object Version | Select-Object -Last 1).Version | Out-String")
+        .map(|s| s.lines().last().unwrap_or("").trim().to_string())
+        .filter(|s| !s.is_empty());
+
+    // Extended JSON collections (we will be permissive with shape)
+    let parse_json_array = |s: Option<String>| -> Vec<serde_json::Value> {
+        if let Some(txt) = s {
+            // PowerShell emits single object without [] when one result; normalize to array
+            match serde_json::from_str::<serde_json::Value>(&txt) {
+                Ok(serde_json::Value::Array(arr)) => arr,
+                Ok(other) => vec![other],
+                Err(_) => Vec::new(),
+            }
+        } else {
+            Vec::new()
+        }
+    };
+
+    let ram_modules = parse_json_array(run_pwsh("Get-CimInstance Win32_PhysicalMemory | Select-Object BankLabel, DeviceLocator, Manufacturer, Capacity, Speed, SerialNumber, PartNumber | ConvertTo-Json -Compress"));
+    let cpu_wmi = parse_json_array(run_pwsh("Get-CimInstance Win32_Processor | Select-Object Name, Manufacturer, NumberOfCores, NumberOfLogicalProcessors, MaxClockSpeed, LoadPercentage | ConvertTo-Json -Compress"));
+    let video_ctrl_ex = parse_json_array(run_pwsh("Get-CimInstance Win32_VideoController | Select-Object Name, AdapterRAM, DriverVersion, VideoModeDescription | ConvertTo-Json -Compress"));
+    let baseboard = parse_json_array(run_pwsh("Get-CimInstance Win32_BaseBoard | Select-Object Manufacturer, Product, SerialNumber | ConvertTo-Json -Compress"));
+    let disk_drives = parse_json_array(run_pwsh("Get-CimInstance Win32_DiskDrive | Select-Object Model, InterfaceType, MediaType, Size | ConvertTo-Json -Compress"));
+    let nic_enabled = parse_json_array(run_pwsh("Get-CimInstance Win32_NetworkAdapter | Where-Object {$_.NetEnabled -eq $true} | Select-Object Name, MACAddress, Speed | ConvertTo-Json -Compress"));
+    let computer_system = parse_json_array(run_pwsh("Get-CimInstance Win32_ComputerSystem | ConvertTo-Json -Compress"));
+
+    Some(ExtraInfo {
+        secure_boot,
+        tpm_summary,
+        bios_vendor,
+        bios_version,
+        bios_release_date,
+        hotfixes,
+        video_controllers,
+        physical_disks,
+        dotnet_version,
+    ram_modules,
+    cpu_wmi,
+    video_ctrl_ex,
+    baseboard,
+    disk_drives,
+    nic_enabled,
+    computer_system,
+    })
+}
+
+#[cfg(not(target_os = "windows"))]
+fn collect_windows_extra(_app: &tauri::AppHandle) -> Option<ExtraInfo> {
+    None
 }

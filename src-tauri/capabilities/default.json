@@ -9,6 +9,7 @@
     "core:default",
     "opener:default",
     "dialog:default",
-    "shell:default"
+  "shell:default",
+  { "identifier": "shell:allow-execute" }
   ]
 }

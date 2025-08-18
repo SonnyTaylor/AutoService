@@ -21,6 +21,9 @@ pub struct SystemInfo {
     pub motherboard: Option<MotherboardInfo>,
     pub product: Option<ProductInfo>,
     pub load_avg: LoadAvgInfo,
+    // Optional bucket for platform-specific extra info gathered via shell commands.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub extra: Option<ExtraInfo>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -139,6 +142,44 @@ pub struct LoadAvgInfo {
     pub one: f64,
     pub five: f64,
     pub fifteen: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ExtraInfo {
+    // Windows-specific extras
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub secure_boot: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tpm_summary: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bios_vendor: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bios_version: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bios_release_date: Option<String>,
+    #[serde(default)]
+    pub hotfixes: Vec<String>,
+    #[serde(default)]
+    pub video_controllers: Vec<String>,
+    #[serde(default)]
+    pub physical_disks: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dotnet_version: Option<String>,
+    // Extended details (Windows) as JSON objects for flexible rendering
+    #[serde(default)]
+    pub ram_modules: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub cpu_wmi: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub video_ctrl_ex: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub baseboard: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub disk_drives: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub nic_enabled: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub computer_system: Vec<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

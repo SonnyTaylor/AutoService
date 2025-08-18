@@ -1,5 +1,7 @@
 // System Info page controller
 const { invoke } = window.__TAURI__.core;
+// Shell plugin is globally exposed via withGlobalTauri
+const { Command } = window.__TAURI__?.shell || {};
 
 function $(sel, root = document) { return root.querySelector(sel); }
 
@@ -232,6 +234,8 @@ function render(info) {
     </div></div>
   `);
 
+  // Advanced moved to bottom — rendered after Battery
+
   // Battery (always render; supports multiple)
   {
     const batteries = Array.isArray(info.batteries)
@@ -284,6 +288,120 @@ function render(info) {
 
   // Sensors section intentionally removed per request
 
+  // Advanced (Windows extras) — last
+  if (info.extra) {
+    const ex = info.extra;
+    const section = document.querySelector('section.page[data-page="system-info"]');
+
+    const hotfixes = Array.isArray(ex.hotfixes) && ex.hotfixes.length
+      ? `<ul>${ex.hotfixes.slice(0, 20).map(h => `<li><code>${escapeHtml(h)}</code></li>`).join('')}${ex.hotfixes.length>20?`<li class="muted">…and ${ex.hotfixes.length-20} more</li>`:''}</ul>`
+      : '-';
+    const gpus2 = Array.isArray(ex.video_controllers) && ex.video_controllers.length
+      ? ex.video_controllers.map(escapeHtml).join('<br>')
+      : '-';
+    const pdisks = Array.isArray(ex.physical_disks) && ex.physical_disks.length
+      ? ex.physical_disks.map(escapeHtml).join('<br>')
+      : '-';
+
+    const mkKV = (rows) => `
+      <div class="table-block"><div class="table-wrap">
+        <table class="table kv-table"><tbody>
+          ${rows.join('')}
+        </tbody></table>
+      </div></div>`;
+    const mkDataTable = (headers, rows) => `
+      <div class="table-block"><div class="table-wrap">
+        <table class="table data-table">
+          <thead><tr>${headers.map(h=>`<th>${escapeHtml(h)}</th>`).join('')}</tr></thead>
+          <tbody>${rows.join('')}</tbody>
+        </table>
+      </div></div>`;
+
+    // RAM modules
+    const ramRows = (ex.ram_modules||[]).map(m => {
+      const cap = Number(m?.Capacity||0);
+      const speed = m?.Speed!=null ? `${m.Speed} MHz` : '-';
+      return `<tr>
+        <td>${escapeHtml(m?.BankLabel||'-')}</td>
+        <td>${escapeHtml(m?.DeviceLocator||'-')}</td>
+        <td>${escapeHtml(m?.Manufacturer||'-')}</td>
+        <td>${formatBytes(cap)}</td>
+        <td>${speed}</td>
+        <td>${escapeHtml(m?.SerialNumber||'-')}</td>
+        <td>${escapeHtml(m?.PartNumber||'-')}</td>
+      </tr>`;
+    });
+    // CPU WMI
+    const cpuRows = (ex.cpu_wmi||[]).map(c => `<tr>
+      <td>${escapeHtml(c?.Name||'-')}</td>
+      <td>${escapeHtml(c?.Manufacturer||'-')}</td>
+      <td>${c?.NumberOfCores??'-'}</td>
+      <td>${c?.NumberOfLogicalProcessors??'-'}</td>
+      <td>${c?.MaxClockSpeed?`${(Number(c.MaxClockSpeed)/1000).toFixed(2)} GHz`:'-'}</td>
+      <td>${c?.LoadPercentage??'-'}%</td>
+    </tr>`);
+    // Video controller extended
+    const vRows = (ex.video_ctrl_ex||[]).map(v => `<tr>
+      <td>${escapeHtml(v?.Name||'-')}</td>
+      <td>${v?.AdapterRAM?formatBytes(Number(v.AdapterRAM)):'-'}</td>
+      <td>${escapeHtml(v?.DriverVersion||'-')}</td>
+      <td>${escapeHtml(v?.VideoModeDescription||'-')}</td>
+    </tr>`);
+    // Baseboard
+    const bbRows = (ex.baseboard||[]).map(b => `<tr>
+      <td>${escapeHtml(b?.Manufacturer||'-')}</td>
+      <td>${escapeHtml(b?.Product||'-')}</td>
+      <td>${escapeHtml(b?.SerialNumber||'-')}</td>
+    </tr>`);
+    // Disk drives
+    const ddRows = (ex.disk_drives||[]).map(d => `<tr>
+      <td>${escapeHtml(d?.Model||'-')}</td>
+      <td>${escapeHtml(d?.InterfaceType||'-')}</td>
+      <td>${escapeHtml(d?.MediaType||'-')}</td>
+      <td>${d?.Size?formatBytes(Number(d.Size)):'-'}</td>
+    </tr>`);
+    // NIC enabled
+    const nicRows = (ex.nic_enabled||[]).map(n => `<tr>
+      <td>${escapeHtml(n?.Name||'-')}</td>
+      <td>${escapeHtml(n?.MACAddress||'-')}</td>
+      <td>${n?.Speed!=null?`${(Number(n.Speed)/1e9).toFixed(2)} Gbps`:'-'}</td>
+    </tr>`);
+
+    // Computer System (first entry summary)
+    let compKV = '';
+    if (Array.isArray(ex.computer_system) && ex.computer_system.length) {
+      const c = ex.computer_system[0] || {};
+      compKV = mkKV([
+        `<tr><th>Computer</th><td>${escapeHtml(c?.Name||'-')}</td></tr>`,
+        `<tr><th>Domain</th><td>${escapeHtml(c?.Domain||'-')}</td></tr>`,
+        `<tr><th>Model</th><td>${escapeHtml(c?.Model||'-')}</td></tr>`,
+        `<tr><th>Manufacturer</th><td>${escapeHtml(c?.Manufacturer||'-')}</td></tr>`,
+        `<tr><th>Total RAM</th><td>${c?.TotalPhysicalMemory?formatBytes(Number(c.TotalPhysicalMemory)):'-'}</td></tr>`,
+      ]);
+    }
+
+    const adv = `
+      <div class="section-title">Advanced</div>
+      ${mkKV([
+        ex.secure_boot?`<tr><th>Secure Boot</th><td>${escapeHtml(ex.secure_boot)}</td></tr>`:'',
+        ex.tpm_summary?`<tr><th>TPM</th><td><pre style="white-space:pre-wrap;">${escapeHtml(ex.tpm_summary)}</pre></td></tr>`:'',
+        (ex.bios_vendor||ex.bios_version||ex.bios_release_date)?`<tr><th>BIOS</th><td>${escapeHtml([ex.bios_vendor, ex.bios_version, ex.bios_release_date].filter(Boolean).join(' • '))}</td></tr>`:'',
+        ex.dotnet_version?`<tr><th>.NET</th><td>${escapeHtml(ex.dotnet_version)}</td></tr>`:'',
+        `<tr><th>Video Controllers</th><td>${gpus2}</td></tr>`,
+        `<tr><th>Physical Disks</th><td>${pdisks}</td></tr>`,
+        `<tr><th>Hotfixes</th><td>${hotfixes}</td></tr>`,
+      ].filter(Boolean))}
+      ${compKV}
+      ${ramRows.length?mkDataTable(['Bank','Locator','Manufacturer','Capacity','Speed','Serial','Part #'], ramRows):''}
+      ${cpuRows.length?mkDataTable(['Name','Vendor','#Cores','#Threads','Max Clock','Load'], cpuRows):''}
+      ${vRows.length?mkDataTable(['Name','VRAM','Driver','Mode'], vRows):''}
+      ${bbRows.length?mkDataTable(['Manufacturer','Product','Serial'], bbRows):''}
+      ${ddRows.length?mkDataTable(['Model','Interface','Media Type','Size'], ddRows):''}
+      ${nicRows.length?mkDataTable(['Name','MAC','Speed'], nicRows):''}
+    `;
+    section.insertAdjacentHTML('beforeend', adv);
+  }
+
   // Bind refresh
   const btn = document.getElementById('sysinfo-refresh-btn');
   if (btn) {
@@ -313,6 +431,15 @@ export async function initPage() {
   container.appendChild(skel);
   try {
     const info = await invoke('get_system_info');
+    // Optional client-side augmentation via shell (non-blocking)
+    if (Command && navigator.userAgent.includes('Windows')) {
+      try {
+        // Example: get Windows edition via shell as a nicety
+        const cmd = await Command.create('exec-sh', ['-c', 'wmic os get Caption | more +1']).execute();
+        const osCaption = (cmd?.stdout || '').trim();
+        if (osCaption) info.os = osCaption;
+      } catch {}
+    }
     render(info);
   } catch (e) {
     container.innerHTML = '<section class="page"><h1>System Info</h1><p class="muted">Failed to read system information.</p></section>';
