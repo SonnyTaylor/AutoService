@@ -51,7 +51,11 @@ pub fn save_program(
     }
     let mut list = read_programs_file(&settings_path);
     match list.iter_mut().find(|p| p.id == program.id) {
-        Some(existing) => *existing = program,
+        Some(existing) => {
+            // Preserve launch_count unless explicitly provided (frontend doesn't send it)
+            program.launch_count = existing.launch_count;
+            *existing = program
+        }
         None => list.push(program),
     }
     write_programs_file(&settings_path, &list)
@@ -82,11 +86,21 @@ pub fn launch_program(state: tauri::State<AppState>, program: ProgramEntry) -> R
             "Start-Process -FilePath \"{}\"",
             exe_full.replace('`', "``").replace('"', "`\"")
         );
+        // Spawn the process first; if successful, increment and persist the launch counter.
         Command::new("powershell.exe")
             .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps])
             .spawn()
-            .map(|_| ())
             .map_err(|e| format!("Failed to start program: {}", e))
+            .and_then(|_| {
+                // Increment launch_count and persist
+                let settings_path = programs_json_path(state.data_dir.as_path());
+                let mut list = read_programs_file(&settings_path);
+                if let Some(p) = list.iter_mut().find(|p| p.id == program.id) {
+                    // Saturating add to avoid overflow
+                    p.launch_count = p.launch_count.saturating_add(1);
+                }
+                write_programs_file(&settings_path, &list).map(|_| ())
+            })
     }
 }
 
@@ -125,6 +139,7 @@ fn read_programs_file(path: &Path) -> Vec<ProgramEntry> {
                     exe_path: d.exe_path,
                     logo_data_url: d.logo_data_url,
                     exe_exists: false,
+                    launch_count: d.launch_count,
                 })
                 .collect();
         }
@@ -151,6 +166,7 @@ fn write_programs_file(path: &Path, list: &Vec<ProgramEntry>) -> Result<(), Stri
             description: p.description.clone(),
             exe_path: p.exe_path.clone(),
             logo_data_url: p.logo_data_url.clone(),
+            launch_count: p.launch_count,
         })
         .collect();
     let data = serde_json::to_string_pretty(&disk).map_err(|e| e.to_string())?;

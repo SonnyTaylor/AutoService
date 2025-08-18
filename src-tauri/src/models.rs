@@ -192,6 +192,9 @@ pub struct ProgramEntry {
     pub logo_data_url: String,
     #[serde(default)]
     pub exe_exists: bool,
+    // Number of times the program has been launched from the app
+    #[serde(default)]
+    pub launch_count: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -202,4 +205,7 @@ pub struct ProgramDiskEntry {
     pub description: String,
     pub exe_path: String,
     pub logo_data_url: String,
+    // Persisted launch counter (default to 0 when missing in older files)
+    #[serde(default)]
+    pub launch_count: u32,
 }

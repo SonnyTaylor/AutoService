@@ -5,6 +5,7 @@ let state = {
   all: [],
   filtered: [],
   query: "",
+  sort: "name-asc", // default sort
   editing: null, // program object being edited or null
 };
 
@@ -26,7 +27,11 @@ function renderList() {
         <span class="exe-status ${p.exe_exists ? "ok" : "missing"}" title="${p.exe_exists ? "Executable found" : "Executable missing"}">${p.exe_exists ? "✓" : "✕"}</span>
       </div>
       <div class="program-main">
-        <div class="program-title" title="${escapeHtml(p.name)}${p.version ? ` — ${escapeHtml(p.version)}` : ''}"><span class="name">${escapeHtml(p.name)}</span> <span class="ver">${escapeHtml(p.version || "")}</span></div>
+        <div class="program-title" title="${escapeHtml(p.name)}${p.version ? ` — ${escapeHtml(p.version)}` : ''}">
+          <span class="name">${escapeHtml(p.name)}</span>
+          <span class="ver">${escapeHtml(p.version || "")}</span>
+          <span class="muted usage" title="Times launched">(${p.launch_count || 0})</span>
+        </div>
         <div class="program-desc" title="${escapeHtml(p.description || "")}">${escapeHtml(p.description || "")}</div>
         <div class="program-path muted" title="${escapeHtml(p.exe_path)}">${escapeHtml(p.exe_path)}</div>
       </div>
@@ -49,7 +54,11 @@ function renderList() {
       const action = btn.getAttribute("data-action");
       if (action === "launch") {
         btn.disabled = true;
-        try { await invoke("launch_program", { program: prog }); } finally { btn.disabled = false; }
+        try {
+          await invoke("launch_program", { program: prog });
+          // Refresh list to update launch counters
+          await loadPrograms();
+        } finally { btn.disabled = false; }
       } else if (action === "edit") {
         openEditor(prog);
       } else if (action === "remove") {
@@ -73,14 +82,32 @@ async function loadPrograms() {
 
 function applyFilter() {
   const q = state.query.trim().toLowerCase();
-  state.filtered = q ? state.all.filter(p => `${p.name} ${p.description} ${p.version}`.toLowerCase().includes(q)) : [...state.all];
+  const base = q ? state.all.filter(p => `${p.name} ${p.description} ${p.version}`.toLowerCase().includes(q)) : [...state.all];
+  // Sort
+  const sort = state.sort;
+  base.sort((a, b) => {
+    switch (sort) {
+      case "name-desc":
+        return (b.name || "").localeCompare(a.name || "", undefined, { sensitivity: "base" });
+      case "used-desc":
+        return (b.launch_count || 0) - (a.launch_count || 0) || (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" });
+      case "used-asc":
+        return (a.launch_count || 0) - (b.launch_count || 0) || (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" });
+      case "name-asc":
+      default:
+        return (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" });
+    }
+  });
+  state.filtered = base;
   renderList();
 }
 
 function wireToolbar() {
   const search = document.querySelector("#program-search");
+  const sortSel = document.querySelector("#program-sort");
   const addBtn = document.querySelector("#program-add-btn");
   search?.addEventListener("input", () => { state.query = search.value; applyFilter(); });
+  sortSel?.addEventListener("change", () => { state.sort = sortSel.value; applyFilter(); });
   addBtn?.addEventListener("click", () => openEditor());
 }
 
