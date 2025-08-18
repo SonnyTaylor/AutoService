@@ -1,43 +1,47 @@
 <section class="page" data-page="settings">
   <h1>Settings</h1>
-  <p class="muted">Preferences, paths, and reporting options.</p>
+  <p class="muted">Configure AutoService behavior.</p>
 
-  <div style="margin-top:12px">
-    <h2 style="font-size:1rem;margin:0 0 8px;">Data folder</h2>
-    <p class="muted">AutoService looks for a sibling <code>data</code> folder next to the executable (USB), or uses the environment variable <code>AUTOSERVICE_DATA_DIR</code>. In development, it falls back to <code>./data</code> at the repo root.</p>
-    <div id="data-paths" style="display:grid;grid-template-columns:max-content 1fr auto;gap:8px;align-items:center;"></div>
+  <div style="display:grid;grid-template-columns: 220px 1fr; gap:16px; align-items:start; margin-top:12px;">
+    <!-- Left sidebar navigation -->
+    <aside class="card" style="position:sticky; top:10px; padding:8px;">
+      <div class="card-title">Sections</div>
+      <nav class="list" id="settings-nav">
+        <button class="shortcut-btn active" data-target="programs" style="justify-content:flex-start;">Programs</button>
+      </nav>
+    </aside>
+
+    <!-- Right content area -->
+    <div id="settings-content">
+      <!-- Programs pane -->
+      <div class="card" data-pane="programs">
+        <div class="card-title">
+          <span>Programs</span>
+        </div>
+        <div class="card-body" style="gap:10px;">
+          <!-- Intentionally left blank for now -->
+        </div>
+      </div>
+    </div>
   </div>
 
   <script type="module">
-    const { invoke, convertFileSrc } = window.__TAURI__.core;
-    const container = document.querySelector('#data-paths');
-
-    function row(label, value) {
-      const r = document.createElement('div');
-      r.style.display = 'contents';
-      const l = document.createElement('div'); l.textContent = label + ':';
-      const v = document.createElement('div'); v.textContent = value; v.style.wordBreak = 'break-all';
-      const b = document.createElement('button'); b.textContent = 'Copy';
-      b.addEventListener('click', async () => {
-        await navigator.clipboard.writeText(value);
-        b.textContent = 'Copied'; setTimeout(()=> b.textContent='Copy', 1000);
+    // Nav switching
+    const nav = document.getElementById('settings-nav');
+    const panes = Array.from(document.querySelectorAll('[data-pane]'));
+    function showPane(id) {
+      panes.forEach(p => p.style.display = p.getAttribute('data-pane') === id ? '' : 'none');
+      Array.from(nav.querySelectorAll('button')).forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-target') === id);
       });
-      r.append(l, v, b);
-      return r;
     }
+    nav.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-target]');
+      if (!btn) return;
+      showPane(btn.getAttribute('data-target'));
+    });
 
-    try {
-      const paths = await invoke('get_data_dirs');
-      container.append(
-        row('Root', String(paths.data)),
-        row('Reports', String(paths.reports)),
-        row('Programs', String(paths.programs)),
-        row('Settings', String(paths.settings)),
-        row('Resources', String(paths.resources)),
-      );
-    } catch (e) {
-      container.textContent = 'Failed to load data directories.';
-      console.error(e);
-    }
+    // Initial pane
+    showPane('programs');
   </script>
 </section>

@@ -8,6 +8,7 @@ mod programs;
 mod shortcuts;
 mod state;
 mod system;
+mod settings;
 
 use tauri::Manager;
 
@@ -16,6 +17,7 @@ use crate::icons::{read_image_as_data_url, suggest_logo_from_exe};
 use crate::programs::{launch_program, list_programs, remove_program, save_program};
 use crate::shortcuts::launch_shortcut;
 use crate::state::AppState;
+use crate::settings::{load_app_settings, save_app_settings};
 use crate::system::get_system_info;
 
 #[tauri::command]
@@ -62,7 +64,9 @@ pub fn run() {
             launch_program,
             suggest_logo_from_exe,
             read_image_as_data_url,
-            get_system_info
+            get_system_info,
+            load_app_settings,
+            save_app_settings
         ])
         .setup(|app| {
             // Optionally, set current directory to data dir for simpler relative paths
