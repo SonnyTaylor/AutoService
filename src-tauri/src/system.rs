@@ -1,4 +1,4 @@
-use sysinfo::{System, Components, Disks, Networks, Users, Cpu};
+use sysinfo::{Components, Cpu, Disks, Networks, System, Users};
 
 use crate::models::{
     BatteryInfo, CpuCoreInfo, CpuInfo, DiskInfo, GpuInfo, LoadAvgInfo, MemoryInfo, MotherboardInfo,
@@ -14,16 +14,30 @@ pub fn get_system_info() -> Result<SystemInfo, String> {
     std::thread::sleep(sysinfo::MINIMUM_CPU_UPDATE_INTERVAL);
     sys.refresh_cpu_usage();
     let cpus: &[Cpu] = sys.cpus();
-    let brand = cpus.first().map(|c| c.brand().to_string()).unwrap_or_default();
+    let brand = cpus
+        .first()
+        .map(|c| c.brand().to_string())
+        .unwrap_or_default();
     let vendor_id = cpus.first().map(|c| c.vendor_id().to_string());
     let frequency_mhz = cpus.first().map(|c| c.frequency() as u64).unwrap_or(0);
     let num_logical = cpus.len();
     let num_physical = System::physical_core_count();
     let cores: Vec<CpuCoreInfo> = cpus
         .iter()
-        .map(|c| CpuCoreInfo { name: c.name().to_string(), frequency_mhz: c.frequency() as u64, usage_percent: c.cpu_usage() })
+        .map(|c| CpuCoreInfo {
+            name: c.name().to_string(),
+            frequency_mhz: c.frequency() as u64,
+            usage_percent: c.cpu_usage(),
+        })
         .collect();
-    let cpu = CpuInfo { brand, vendor_id, frequency_mhz, num_physical_cores: num_physical, num_logical_cpus: num_logical, cores };
+    let cpu = CpuInfo {
+        brand,
+        vendor_id,
+        frequency_mhz,
+        num_physical_cores: num_physical,
+        num_logical_cpus: num_logical,
+        cores,
+    };
 
     let total = sys.total_memory();
     let available = sys.available_memory();
@@ -31,7 +45,14 @@ pub fn get_system_info() -> Result<SystemInfo, String> {
     let free = sys.free_memory();
     let swap_total = sys.total_swap();
     let swap_used = sys.used_swap();
-    let memory = MemoryInfo { total, available, used, free, swap_total, swap_used };
+    let memory = MemoryInfo {
+        total,
+        available,
+        used,
+        free,
+        swap_total,
+        swap_used,
+    };
 
     let disks_list = Disks::new_with_refreshed_list();
     let disks: Vec<DiskInfo> = disks_list
@@ -70,7 +91,10 @@ pub fn get_system_info() -> Result<SystemInfo, String> {
     let components = Components::new_with_refreshed_list();
     let sensors: Vec<SensorInfo> = components
         .iter()
-        .map(|c| SensorInfo { label: c.label().to_string(), temperature_c: c.temperature().unwrap_or(0.0) })
+        .map(|c| SensorInfo {
+            label: c.label().to_string(),
+            temperature_c: c.temperature().unwrap_or(0.0),
+        })
         .collect();
 
     let gpus: Vec<GpuInfo> = {
@@ -96,7 +120,9 @@ pub fn get_system_info() -> Result<SystemInfo, String> {
 
         let has_hw = all.iter().any(|g| g.device_type.as_deref() != Some("Cpu"));
         let filtered: Vec<GpuInfo> = if has_hw {
-            all.into_iter().filter(|g| g.device_type.as_deref() != Some("Cpu")).collect()
+            all.into_iter()
+                .filter(|g| g.device_type.as_deref() != Some("Cpu"))
+                .collect()
         } else {
             all
         };
@@ -149,7 +175,11 @@ pub fn get_system_info() -> Result<SystemInfo, String> {
             .filter_map(|g| {
                 let v = g.vendor.unwrap_or(0);
                 let d = g.device.unwrap_or(0);
-                if v != 0 && d != 0 { Some(v) } else { None }
+                if v != 0 && d != 0 {
+                    Some(v)
+                } else {
+                    None
+                }
             })
             .collect();
 
@@ -158,16 +188,22 @@ pub fn get_system_info() -> Result<SystemInfo, String> {
             .filter(|g| {
                 let v = g.vendor.unwrap_or(0);
                 let d = g.device.unwrap_or(0);
-                if d == 0 && vendor_with_real.contains(&v) { return false; }
+                if d == 0 && vendor_with_real.contains(&v) {
+                    return false;
+                }
                 true
             })
             .collect();
 
         out.sort_by(|a, b| {
             let av = a.vendor.unwrap_or(0).cmp(&b.vendor.unwrap_or(0));
-            if av != std::cmp::Ordering::Equal { return av; }
+            if av != std::cmp::Ordering::Equal {
+                return av;
+            }
             let ad = a.device.unwrap_or(0).cmp(&b.device.unwrap_or(0));
-            if ad != std::cmp::Ordering::Equal { return ad; }
+            if ad != std::cmp::Ordering::Equal {
+                return ad;
+            }
             a.name.to_lowercase().cmp(&b.name.to_lowercase())
         });
         out
@@ -217,15 +253,25 @@ pub fn get_system_info() -> Result<SystemInfo, String> {
         batteries,
         motherboard,
         product,
-        load_avg: LoadAvgInfo { one: la.one, five: la.five, fifteen: la.fifteen },
+        load_avg: LoadAvgInfo {
+            one: la.one,
+            five: la.five,
+            fifteen: la.fifteen,
+        },
     };
 
     Ok(info)
 }
 
 fn get_batteries_info() -> Result<Vec<BatteryInfo>, String> {
-    let manager = match battery::Manager::new() { Ok(m) => m, Err(_) => return Ok(Vec::new()) };
-    let list = match manager.batteries() { Ok(b) => b, Err(_) => return Ok(Vec::new()) };
+    let manager = match battery::Manager::new() {
+        Ok(m) => m,
+        Err(_) => return Ok(Vec::new()),
+    };
+    let list = match manager.batteries() {
+        Ok(b) => b,
+        Err(_) => return Ok(Vec::new()),
+    };
     let mut out = Vec::new();
     for item in list {
         if let Ok(batt) = item {
@@ -245,7 +291,23 @@ fn get_batteries_info() -> Result<Vec<BatteryInfo>, String> {
             let temp_c = batt.temperature().map(|t| t.value as f32);
             let ttf = batt.time_to_full().map(|d| d.value as u64);
             let tte = batt.time_to_empty().map(|d| d.value as u64);
-            out.push(BatteryInfo { vendor, model, serial, technology, state, percentage, cycle_count, state_of_health_pct: soh, energy_wh, energy_full_wh, energy_full_design_wh, voltage_v, temperature_c: temp_c, time_to_full_sec: ttf, time_to_empty_sec: tte });
+            out.push(BatteryInfo {
+                vendor,
+                model,
+                serial,
+                technology,
+                state,
+                percentage,
+                cycle_count,
+                state_of_health_pct: soh,
+                energy_wh,
+                energy_full_wh,
+                energy_full_design_wh,
+                voltage_v,
+                temperature_c: temp_c,
+                time_to_full_sec: ttf,
+                time_to_empty_sec: tte,
+            });
         }
     }
     Ok(out)

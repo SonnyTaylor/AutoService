@@ -1,5 +1,8 @@
-use std::{fs, path::{Path, PathBuf}};
 use image::GenericImageView;
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 use uuid::Uuid;
 
 use crate::paths;
@@ -10,14 +13,21 @@ pub fn read_image_as_data_url(path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn suggest_logo_from_exe(state: tauri::State<crate::state::AppState>, exe_path: String) -> Result<Option<String>, String> {
+pub fn suggest_logo_from_exe(
+    state: tauri::State<crate::state::AppState>,
+    exe_path: String,
+) -> Result<Option<String>, String> {
     get_logo_from_exe(state.data_dir.as_path(), &exe_path)
 }
 
 pub fn load_image_data_url(path: &Path) -> Result<String, String> {
     let bytes = fs::read(path).map_err(|e| format!("Failed to read image: {}", e))?;
     let b64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &bytes);
-    let mime = match path.extension().and_then(|e| e.to_str()).map(|s| s.to_ascii_lowercase()) {
+    let mime = match path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|s| s.to_ascii_lowercase())
+    {
         Some(ext) if ext == "png" => "image/png",
         Some(ext) if ext == "jpg" || ext == "jpeg" => "image/jpeg",
         Some(ext) if ext == "ico" => "image/x-icon",
@@ -28,7 +38,11 @@ pub fn load_image_data_url(path: &Path) -> Result<String, String> {
 
 pub fn get_logo_from_exe(data_root: &Path, exe_path: &str) -> Result<Option<String>, String> {
     let p0 = PathBuf::from(exe_path);
-    let p = if p0.is_absolute() { p0 } else { data_root.join(&p0) };
+    let p = if p0.is_absolute() {
+        p0
+    } else {
+        data_root.join(&p0)
+    };
 
     #[cfg(windows)]
     {
@@ -50,12 +64,16 @@ pub fn get_logo_from_exe(data_root: &Path, exe_path: &str) -> Result<Option<Stri
             let ico = dir.join(format!("{}.ico", stem.to_string_lossy()));
             if ico.exists() {
                 if let Ok(bytes) = fs::read(&ico) {
-                    if let Ok(png) = ico_bytes_to_png_data_url(&bytes) { return Ok(Some(png)); }
+                    if let Ok(png) = ico_bytes_to_png_data_url(&bytes) {
+                        return Ok(Some(png));
+                    }
                 }
                 return Ok(load_image_data_url(&ico).ok());
             }
             let png = dir.join(format!("{}.png", stem.to_string_lossy()));
-            if png.exists() { return Ok(load_image_data_url(&png).ok()); }
+            if png.exists() {
+                return Ok(load_image_data_url(&png).ok());
+            }
         }
         if let Ok(read) = fs::read_dir(dir) {
             for entry in read.flatten() {
@@ -64,7 +82,9 @@ pub fn get_logo_from_exe(data_root: &Path, exe_path: &str) -> Result<Option<Stri
                     let ext_l = ext.to_ascii_lowercase();
                     if ext_l == "ico" {
                         if let Ok(bytes) = fs::read(&path) {
-                            if let Ok(png) = ico_bytes_to_png_data_url(&bytes) { return Ok(Some(png)); }
+                            if let Ok(png) = ico_bytes_to_png_data_url(&bytes) {
+                                return Ok(Some(png));
+                            }
                         }
                         return Ok(load_image_data_url(&path).ok());
                     } else if ext_l == "png" {
@@ -80,18 +100,25 @@ pub fn get_logo_from_exe(data_root: &Path, exe_path: &str) -> Result<Option<Stri
 #[cfg(windows)]
 fn find_iconsext_exe(data_root: &Path) -> Option<PathBuf> {
     let (_reports, _programs, _settings, resources) = paths::subdirs(data_root);
-    let exe = resources.join("bin").join("iconsextract").join("iconsext.exe");
-    if exe.exists() { Some(exe) } else { None }
+    let exe = resources
+        .join("bin")
+        .join("iconsextract")
+        .join("iconsext.exe");
+    if exe.exists() {
+        Some(exe)
+    } else {
+        None
+    }
 }
 
 #[cfg(windows)]
-fn extract_with_iconsext(iconsext_path: &Path, target_exe: &Path) -> Result<Option<String>, String> {
+fn extract_with_iconsext(
+    iconsext_path: &Path,
+    target_exe: &Path,
+) -> Result<Option<String>, String> {
     use std::process::Command;
 
-    let tmp_dir = std::env::temp_dir().join(format!(
-        "autoservice_iconsextract_{}",
-        Uuid::new_v4()
-    ));
+    let tmp_dir = std::env::temp_dir().join(format!("autoservice_iconsextract_{}", Uuid::new_v4()));
     if let Err(e) = std::fs::create_dir_all(&tmp_dir) {
         return Err(format!("Failed to create temp dir: {}", e));
     }
@@ -116,14 +143,25 @@ fn extract_with_iconsext(iconsext_path: &Path, target_exe: &Path) -> Result<Opti
     if let Ok(read_dir) = std::fs::read_dir(&tmp_dir) {
         for entry in read_dir.flatten() {
             let path = entry.path();
-            if !path.is_file() { continue; }
-            let ext_l = path.extension().and_then(|e| e.to_str()).map(|s| s.to_ascii_lowercase());
+            if !path.is_file() {
+                continue;
+            }
+            let ext_l = path
+                .extension()
+                .and_then(|e| e.to_str())
+                .map(|s| s.to_ascii_lowercase());
             match ext_l.as_deref() {
                 Some("png") => {
                     if let Ok(bytes) = fs::read(&path) {
-                        if let Ok(img) = image::load_from_memory_with_format(&bytes, image::ImageFormat::Png) {
+                        if let Ok(img) =
+                            image::load_from_memory_with_format(&bytes, image::ImageFormat::Png)
+                        {
                             let (w, h) = img.dimensions();
-                            if best_png.as_ref().map(|(bw, bh, _)| w * h > *bw * *bh).unwrap_or(true) {
+                            if best_png
+                                .as_ref()
+                                .map(|(bw, bh, _)| w * h > *bw * *bh)
+                                .unwrap_or(true)
+                            {
                                 best_png = Some((w, h, bytes));
                             }
                         }
@@ -131,9 +169,15 @@ fn extract_with_iconsext(iconsext_path: &Path, target_exe: &Path) -> Result<Opti
                 }
                 Some("ico") => {
                     if let Ok(bytes) = fs::read(&path) {
-                        if let Ok(img) = image::load_from_memory_with_format(&bytes, image::ImageFormat::Ico) {
+                        if let Ok(img) =
+                            image::load_from_memory_with_format(&bytes, image::ImageFormat::Ico)
+                        {
                             let (w, h) = img.dimensions();
-                            if best_ico.as_ref().map(|(bw, bh, _)| w * h > *bw * *bh).unwrap_or(true) {
+                            if best_ico
+                                .as_ref()
+                                .map(|(bw, bh, _)| w * h > *bw * *bh)
+                                .unwrap_or(true)
+                            {
                                 best_ico = Some((w, h, bytes));
                             }
                         }

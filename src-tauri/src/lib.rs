@@ -2,11 +2,11 @@
 mod paths;
 
 // New modules for organization
-mod state;
-mod models;
 mod icons;
+mod models;
 mod programs;
 mod shortcuts;
+mod state;
 mod system;
 
 use tauri::Manager;
@@ -46,7 +46,10 @@ pub fn run() {
     }
 
     tauri::Builder::default()
-        .manage(AppState { data_dir: Arc::new(data_root) })
+        .plugin(tauri_plugin_shell::init())
+        .manage(AppState {
+            data_dir: Arc::new(data_root),
+        })
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
@@ -63,7 +66,14 @@ pub fn run() {
         ])
         .setup(|app| {
             // Optionally, set current directory to data dir for simpler relative paths
-            if let Some(state) = app.state::<AppState>().inner().clone().data_dir.as_ref().to_str() {
+            if let Some(state) = app
+                .state::<AppState>()
+                .inner()
+                .clone()
+                .data_dir
+                .as_ref()
+                .to_str()
+            {
                 let _ = std::env::set_current_dir(state);
             }
             Ok(())

@@ -24,19 +24,59 @@ pub struct SystemInfo {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CpuInfo { pub brand: String, pub vendor_id: Option<String>, pub frequency_mhz: u64, pub num_physical_cores: Option<usize>, pub num_logical_cpus: usize, pub cores: Vec<CpuCoreInfo> }
+pub struct CpuInfo {
+    pub brand: String,
+    pub vendor_id: Option<String>,
+    pub frequency_mhz: u64,
+    pub num_physical_cores: Option<usize>,
+    pub num_logical_cpus: usize,
+    pub cores: Vec<CpuCoreInfo>,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CpuCoreInfo { pub name: String, pub frequency_mhz: u64, pub usage_percent: f32 }
+pub struct CpuCoreInfo {
+    pub name: String,
+    pub frequency_mhz: u64,
+    pub usage_percent: f32,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MemoryInfo { pub total: u64, pub available: u64, pub used: u64, pub free: u64, pub swap_total: u64, pub swap_used: u64 }
+pub struct MemoryInfo {
+    pub total: u64,
+    pub available: u64,
+    pub used: u64,
+    pub free: u64,
+    pub swap_total: u64,
+    pub swap_used: u64,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DiskInfo { pub name: String, pub file_system: String, pub mount_point: String, pub total_space: u64, pub available_space: u64, pub is_removable: bool, pub is_read_only: bool, pub kind: String, pub read_bytes: u64, pub written_bytes: u64 }
+pub struct DiskInfo {
+    pub name: String,
+    pub file_system: String,
+    pub mount_point: String,
+    pub total_space: u64,
+    pub available_space: u64,
+    pub is_removable: bool,
+    pub is_read_only: bool,
+    pub kind: String,
+    pub read_bytes: u64,
+    pub written_bytes: u64,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NetworkInfo { pub interface: String, pub mac: Option<String>, pub mtu: u64, pub ips: Vec<String>, pub received: u64, pub transmitted: u64, pub total_received: u64, pub total_transmitted: u64, pub errors_rx: u64, pub errors_tx: u64 }
+pub struct NetworkInfo {
+    pub interface: String,
+    pub mac: Option<String>,
+    pub mtu: u64,
+    pub ips: Vec<String>,
+    pub received: u64,
+    pub transmitted: u64,
+    pub total_received: u64,
+    pub total_transmitted: u64,
+    pub errors_rx: u64,
+    pub errors_tx: u64,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GpuInfo {
@@ -50,19 +90,56 @@ pub struct GpuInfo {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SensorInfo { pub label: String, pub temperature_c: f32 }
+pub struct SensorInfo {
+    pub label: String,
+    pub temperature_c: f32,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BatteryInfo { pub vendor: Option<String>, pub model: Option<String>, pub serial: Option<String>, pub technology: Option<String>, pub state: String, pub percentage: f32, pub cycle_count: Option<u32>, pub state_of_health_pct: Option<f32>, pub energy_wh: Option<f32>, pub energy_full_wh: Option<f32>, pub energy_full_design_wh: Option<f32>, pub voltage_v: Option<f32>, pub temperature_c: Option<f32>, pub time_to_full_sec: Option<u64>, pub time_to_empty_sec: Option<u64> }
+pub struct BatteryInfo {
+    pub vendor: Option<String>,
+    pub model: Option<String>,
+    pub serial: Option<String>,
+    pub technology: Option<String>,
+    pub state: String,
+    pub percentage: f32,
+    pub cycle_count: Option<u32>,
+    pub state_of_health_pct: Option<f32>,
+    pub energy_wh: Option<f32>,
+    pub energy_full_wh: Option<f32>,
+    pub energy_full_design_wh: Option<f32>,
+    pub voltage_v: Option<f32>,
+    pub temperature_c: Option<f32>,
+    pub time_to_full_sec: Option<u64>,
+    pub time_to_empty_sec: Option<u64>,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MotherboardInfo { pub vendor: Option<String>, pub name: Option<String>, pub version: Option<String>, pub serial_number: Option<String>, pub asset_tag: Option<String> }
+pub struct MotherboardInfo {
+    pub vendor: Option<String>,
+    pub name: Option<String>,
+    pub version: Option<String>,
+    pub serial_number: Option<String>,
+    pub asset_tag: Option<String>,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProductInfo { pub vendor: Option<String>, pub name: Option<String>, pub family: Option<String>, pub version: Option<String>, pub serial_number: Option<String>, pub sku: Option<String>, pub uuid: Option<String> }
+pub struct ProductInfo {
+    pub vendor: Option<String>,
+    pub name: Option<String>,
+    pub family: Option<String>,
+    pub version: Option<String>,
+    pub serial_number: Option<String>,
+    pub sku: Option<String>,
+    pub uuid: Option<String>,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LoadAvgInfo { pub one: f64, pub five: f64, pub fifteen: f64 }
+pub struct LoadAvgInfo {
+    pub one: f64,
+    pub five: f64,
+    pub fifteen: f64,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProgramEntry {
