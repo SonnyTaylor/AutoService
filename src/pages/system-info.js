@@ -59,6 +59,26 @@ function render(info) {
     </div></div>
   `);
 
+  // System / Product info (if available)
+  if (info.product) {
+    section.insertAdjacentHTML('beforeend', `
+      <div class="section-title">System</div>
+      <div class="table-block"><div class="table-wrap">
+        <table class="table kv-table">
+          <tbody>
+            ${info.product.vendor?`<tr><th>Vendor</th><td>${escapeHtml(info.product.vendor)}</td></tr>`:''}
+            ${info.product.name?`<tr><th>Model</th><td>${escapeHtml(info.product.name)}</td></tr>`:''}
+            ${info.product.family?`<tr><th>Family</th><td>${escapeHtml(info.product.family)}</td></tr>`:''}
+            ${info.product.version?`<tr><th>Version</th><td>${escapeHtml(info.product.version)}</td></tr>`:''}
+            ${info.product.serial_number?`<tr><th>Serial</th><td>${escapeHtml(info.product.serial_number)}</td></tr>`:''}
+            ${info.product.sku?`<tr><th>SKU</th><td>${escapeHtml(info.product.sku)}</td></tr>`:''}
+            ${info.product.uuid?`<tr><th>UUID</th><td><code>${escapeHtml(info.product.uuid)}</code></td></tr>`:''}
+          </tbody>
+        </table>
+      </div></div>
+    `);
+  }
+
   // Motherboard (if available)
   if (info.motherboard) {
     section.insertAdjacentHTML('beforeend', `
