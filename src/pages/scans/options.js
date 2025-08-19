@@ -5,6 +5,9 @@ function getHashQuery() {
   return new URLSearchParams(hash.slice(idx + 1));
 }
 
+const { invoke } = window.__TAURI__?.core || {};
+const { Command } = window.__TAURI__?.shell || {};
+
 const TASKS = [
     { id: 'virus', label: 'Virus scanning/removal (malware, rootkits, adware, PUP)' },
     { id: 'junk_cleanup', label: 'Junk/Temp Cleanup' },
@@ -84,9 +87,9 @@ function renderTasks(selectedIds) {
       sub.className = 'subtasks';
       sub.innerHTML = `
         <div class="sub-title muted">Pick at least one engine:</div>
-        <label class="sub-row"><input type="checkbox" class="virus-engine" value="kvrt" /> <span>KVRT</span></label>
-        <label class="sub-row"><input type="checkbox" class="virus-engine" value="clamav" /> <span>ClamAV</span></label>
-        <label class="sub-row"><input type="checkbox" class="virus-engine" value="defender" /> <span>Windows Defender</span></label>
+  <label class="sub-row" data-engine="kvrt"><input type="checkbox" class="virus-engine" value="kvrt" /> <span>KVRT</span> <span class="badge error" data-status hidden>Missing</span></label>
+  <label class="sub-row" data-engine="clamav"><input type="checkbox" class="virus-engine" value="clamav" /> <span>ClamAV</span> <span class="badge error" data-status hidden>Missing</span></label>
+  <label class="sub-row" data-engine="defender"><input type="checkbox" class="virus-engine" value="defender" /> <span>Windows Defender</span> <span class="badge error" data-status hidden>Missing</span></label>
         <div id="virus-engine-hint" class="badge warn" hidden>Choose at least one engine to enable Virus scanning</div>
       `;
       wrap.appendChild(sub);
@@ -116,10 +119,69 @@ function renderTasks(selectedIds) {
         }
         updateStartEnabled();
       });
+
+      // Async: detect availability of engines and disable missing ones
+      (async () => {
+        const availability = await detectVirusEnginesAvailability();
+        Object.entries(availability).forEach(([key, ok]) => {
+          const row = sub.querySelector(`label.sub-row[data-engine="${key}"]`);
+          const cb = row?.querySelector('input.virus-engine');
+          const status = row?.querySelector('[data-status]');
+          if (!row || !cb) return;
+          if (ok) {
+            cb.disabled = false;
+            if (status) status.hidden = true;
+          } else {
+            cb.checked = false;
+            cb.disabled = true;
+            if (status) {
+              status.textContent = 'Missing';
+              status.classList.remove('ok');
+              status.classList.add('error');
+              status.hidden = false;
+            }
+          }
+        });
+        // After disabling unavailable engines, sync and validate
+        const anySel = engineCbs.some(cb => cb.checked);
+        if (mainCb) mainCb.checked = anySel;
+        updateStartEnabled();
+      })();
     }
   });
   wrap.querySelectorAll('input.task-checkbox[type="checkbox"]').forEach(cb => cb.addEventListener('change', updateStartEnabled));
   updateStartEnabled();
+}
+
+async function detectVirusEnginesAvailability() {
+  const result = { kvrt: false, clamav: false, defender: false };
+  try {
+    const list = invoke ? await invoke('list_programs') : [];
+    const has = (pred) => Array.isArray(list) && list.some(pred);
+    const lc = (s) => String(s || '').toLowerCase();
+    // KVRT
+    result.kvrt = has(p => {
+      const h = lc(`${p.name} ${p.description} ${p.exe_path}`);
+      return h.includes('kvrt');
+    });
+    // ClamAV (clamscan.exe typical)
+    result.clamav = has(p => {
+      const h = lc(`${p.name} ${p.description} ${p.exe_path}`);
+      return h.includes('clamav') || h.includes('clamscan') || h.includes('clamdscan');
+    });
+  } catch {}
+  // Defender via PowerShell path resolution
+  if (Command) {
+    try {
+      const ps = await Command.create('powershell', [
+        '-NoProfile','-ExecutionPolicy','Bypass','-Command',
+        "Test-Path (Get-ChildItem -Path \"$env:ProgramData\\Microsoft\\Windows Defender\\Platform\" -Directory | Sort-Object Name -Descending | Select-Object -First 1 | ForEach-Object { Join-Path $_.FullName 'MpCmdRun.exe' }) | Write-Output"
+      ]).execute();
+      const out = (ps.stdout || '').trim();
+      result.defender = out.toLowerCase() === 'true';
+    } catch {}
+  }
+  return result;
 }
 
 export async function initPage() {
