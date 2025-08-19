@@ -10,6 +10,19 @@
     "opener:default",
     "dialog:default",
   "shell:default",
-  { "identifier": "shell:allow-execute" }
+  {
+    "identifier": "shell:allow-execute",
+    "allow": [{
+      "name": "powershell",
+      "cmd": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        { "validator": ".*" }
+      ]
+    }]
+  }
   ]
 }
