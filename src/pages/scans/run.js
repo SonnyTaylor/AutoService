@@ -1,3 +1,5 @@
+const { Command } = window.__TAURI__.shell;
+
 function loadRunConfig() {
   try {
     const raw = sessionStorage.getItem('autoservice.runConfig');
@@ -41,6 +43,7 @@ export async function initPage() {
   runPreset.textContent = `Preset: ${cfg.presetLabel}`;
 
   runSteps.innerHTML = '';
+  const stepEls = [];
   cfg.tasks.forEach((taskId, idx) => {
     const li = document.createElement('li');
     li.className = 'run-step state-pending';
@@ -53,10 +56,111 @@ export async function initPage() {
       <span class="step-meta muted">Queued</span>
     `;
     runSteps.appendChild(li);
+    stepEls.push(li);
   });
 
   runBack?.addEventListener('click', () => {
     const qp = new URLSearchParams({ preset: cfg.preset });
     window.location.hash = `#/service?${qp.toString()}`;
   });
+
+  const logEl = document.getElementById('run-log');
+  const appendLog = (line) => {
+    if (!logEl) return;
+    const ts = new Date().toLocaleTimeString();
+    logEl.textContent += `\n[${ts}] ${line}`;
+    logEl.scrollTop = logEl.scrollHeight;
+  };
+
+  const setStepState = (idx, state, meta) => {
+    const el = stepEls[idx];
+    if (!el) return;
+    el.className = `run-step state-${state}`;
+    const metaEl = el.querySelector('.step-meta');
+    if (metaEl) metaEl.textContent = meta || (state === 'running' ? 'Running' : state === 'ok' ? 'Done' : state === 'fail' ? 'Failed' : 'Queued');
+  };
+
+  // Resolve the path to MpCmdRun.exe via PowerShell (latest Platform folder)
+  async function resolveMpCmdRunPath() {
+    try {
+  const ps = Command.create('powershell', [
+        '-NoProfile',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-Command',
+        "(Get-ChildItem -Path \"$env:ProgramData\\Microsoft\\Windows Defender\\Platform\" -Directory | Sort-Object Name -Descending | Select-Object -First 1 | ForEach-Object { Join-Path $_.FullName 'MpCmdRun.exe' })"
+      ]);
+      const res = await ps.execute();
+      const out = (res.stdout || '').trim();
+      return out || null;
+    } catch (e) {
+      appendLog(`Failed to resolve MpCmdRun.exe path: ${e.message || e}`);
+      return null;
+    }
+  }
+
+  async function runDefenderQuickScan() {
+    appendLog('Windows Defender: resolving MpCmdRun.exe path…');
+    const exePath = await resolveMpCmdRunPath();
+    if (!exePath) {
+      throw new Error('Could not find MpCmdRun.exe');
+    }
+    appendLog(`Windows Defender: using ${exePath}`);
+
+    // Update signatures (best effort)
+    try {
+      appendLog('Windows Defender: updating signatures…');
+  const upd = await Command.create('powershell', [
+        '-NoProfile',
+        '-ExecutionPolicy', 'Bypass',
+        '-Command', `& '${exePath.replace(/'/g, "''")}' -SignatureUpdate`
+      ]).execute();
+      if (upd.code !== 0) appendLog(`Signature update exited with code ${upd.code}`);
+      if (upd.stdout) appendLog(upd.stdout.trim());
+      if (upd.stderr) appendLog(upd.stderr.trim());
+    } catch (e) {
+      appendLog(`Signature update error: ${e.message || e}`);
+    }
+
+    // Quick scan
+    appendLog('Windows Defender: starting quick scan…');
+  const scan = await Command.create('powershell', [
+      '-NoProfile',
+      '-ExecutionPolicy', 'Bypass',
+      '-Command', `& '${exePath.replace(/'/g, "''")}' -Scan -ScanType 1`
+    ]).execute();
+    if (scan.stdout) appendLog(scan.stdout.trim());
+    if (scan.stderr) appendLog(scan.stderr.trim());
+    if (scan.code !== 0) {
+      throw new Error(`Quick scan exited with code ${scan.code}`);
+    }
+  }
+
+  // Execute tasks sequentially; start with implementing Defender within the Virus step
+  (async () => {
+    for (let i = 0; i < cfg.tasks.length; i++) {
+      const taskId = cfg.tasks[i];
+      try {
+        setStepState(i, 'running');
+        if (taskId === 'virus') {
+          const engines = Array.isArray(cfg.virusEngines) ? cfg.virusEngines : [];
+          // Implement Defender first; other engines can be added similarly
+          if (engines.includes('defender')) {
+            await runDefenderQuickScan();
+          } else {
+            appendLog('Virus scan: Defender not selected; skipping.');
+          }
+        } else {
+          // Placeholder for other services; mark as done immediately for now
+          appendLog(`${stepLabel(taskId)}: not implemented yet.`);
+        }
+        setStepState(i, 'ok');
+      } catch (e) {
+        appendLog(`${stepLabel(taskId)} failed: ${e.message || e}`);
+        setStepState(i, 'fail');
+        // continue to next tasks; optionally break if needed
+      }
+    }
+    appendLog('All steps processed.');
+  })();
 }
