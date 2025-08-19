@@ -10,7 +10,7 @@ const REQUIRED = [
   { key: 'kvrt', name: 'KVRT', match: ['kvrt'], hint: 'KVRT.exe' },
   { key: 'defender', name: 'Windows Defender (MpCmdRun)', match: ['mpcmdrun', 'windows defender'], hint: 'Resolved automatically' , detector: detectDefender },
   { key: 'furmark2', name: 'Furmark 2', match: ['furmark'], hint: 'FurMark.exe' },
-  { key: 'stressng', name: 'StressNG', match: ['stressng','stress-ng'], hint: 'stress-ng.exe' },
+  { key: 'prime95', name: 'Prime95', match: ['prime95'], hint: 'prime95.exe' },
   { key: 'sdi', name: 'Snappy Driver Installer', match: ['snappy', 'sdi'], hint: 'SDI*\SDI*.exe' },
   { key: 'gsmartcontrol', name: 'GSmartControl', match: ['gsmartcontrol'], hint: 'gsmartcontrol.exe' },
 ];
