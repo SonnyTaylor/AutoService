@@ -44,9 +44,12 @@ export async function initPage() {
   cfg.tasks.forEach((taskId, idx) => {
     const li = document.createElement('li');
     li.className = 'run-step state-pending';
+    const extra = (taskId === 'virus' && Array.isArray(cfg.virusEngines) && cfg.virusEngines.length)
+      ? ` <span class="muted">(${cfg.virusEngines.join(', ')})</span>`
+      : '';
     li.innerHTML = `
       <span class="state-dot" aria-hidden="true"></span>
-      <span class="step-name">${stepLabel(taskId)}</span>
+      <span class="step-name">${stepLabel(taskId)}${extra}</span>
       <span class="step-meta muted">Queued</span>
     `;
     runSteps.appendChild(li);
