@@ -13,7 +13,8 @@
   gap: 16px;
   /* Exactly fill available viewport: 3 equal rows that always fit without scrolling */
   grid-template-rows: repeat(3, 1fr);
-  height: calc(100dvh - var(--scans-chrome, 260px));
+  /* Height is computed dynamically in JS to avoid any scrollbars from rounding/padding. */
+  min-height: 0;
   overflow: hidden;
 }
 [data-page="scans"] .scan-row {
