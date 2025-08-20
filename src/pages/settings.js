@@ -6,6 +6,7 @@ const { Command } = window.__TAURI__?.shell || {};
 const REQUIRED = [
   { key: 'ccleaner', name: 'CCleaner', match: ['ccleaner'], hint: 'CCleaner.exe', prefer: 'CCleaner/CCleaner64.exe' },
   { key: 'bleachbit', name: 'BleachBit', match: ['bleachbit'], hint: 'bleachbit.exe' },
+  { key: 'adwcleaner', name: 'AdwCleaner', match: ['adwcleaner'], hint: 'adwcleaner.exe' },
   { key: 'clamav', name: 'ClamAV', match: ['clamav', 'clamscan'], hint: 'clamscan.exe' },
   { key: 'kvrt', name: 'KVRT', match: ['kvrt'], hint: 'KVRT.exe' },
   { key: 'defender', name: 'Windows Defender (MpCmdRun)', match: ['mpcmdrun', 'windows defender'], hint: 'Resolved automatically' , detector: detectDefender },
