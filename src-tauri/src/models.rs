@@ -209,3 +209,14 @@ pub struct ProgramDiskEntry {
     #[serde(default)]
     pub launch_count: u32,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ToolStatus {
+    pub key: String,
+    pub name: String,
+    pub exists: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hint: Option<String>,
+}

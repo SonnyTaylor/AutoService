@@ -86,6 +86,13 @@ async function renderRequired() {
 
   listEl.innerHTML = rows || '<div class="muted">No items.</div>';
 
+  // Publish a global cache of tool statuses for other pages to use
+  try {
+    const statuses = await invoke('get_tool_statuses');
+    // Store in sessionStorage so other pages (e.g., scans) can read without refetching
+    sessionStorage.setItem('tool.statuses.v1', JSON.stringify(statuses || []));
+  } catch {}
+
   listEl.querySelectorAll('.row').forEach(row => {
     row.addEventListener('click', async (e) => {
       const btn = e.target.closest('button[data-action="locate"]');

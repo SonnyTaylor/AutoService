@@ -5,7 +5,7 @@ use std::{
 use uuid::Uuid;
 
 use crate::icons::get_logo_from_exe;
-use crate::models::{ProgramDiskEntry, ProgramEntry};
+use crate::models::{ProgramDiskEntry, ProgramEntry, ToolStatus};
 use crate::{paths, state::AppState};
 
 #[tauri::command]
@@ -125,6 +125,104 @@ fn resolve_exe_path(data_root: &Path, exe_path: &str) -> String {
     }
     candidate1.to_string_lossy().to_string()
 }
+
+/// Returns a list of tool statuses based on known required tools and saved program entries.
+/// Frontend can use this to know what tools are available globally (e.g., virus scanners).
+#[tauri::command]
+pub fn get_tool_statuses(state: tauri::State<AppState>) -> Result<Vec<ToolStatus>, String> {
+    // Load saved programs and resolve existence
+    let data_root = state.data_dir.as_path();
+    let settings_path = programs_json_path(data_root);
+    let mut list = read_programs_file(&settings_path);
+    for p in &mut list {
+        let full = resolve_exe_path(data_root, &p.exe_path);
+        p.exe_exists = Path::new(&full).is_file();
+    }
+
+    // Define a minimal set of known tool keys so pages can query consistently.
+    // Keep names aligned with Settings REQUIRED list.
+    let required: &[(&str, &str, &str)] = &[
+        ("ccleaner", "CCleaner", "CCleaner.exe"),
+        ("bleachbit", "BleachBit", "bleachbit.exe"),
+        ("adwcleaner", "AdwCleaner", "adwcleaner.exe"),
+        ("clamav", "ClamAV", "clamscan.exe"),
+        ("kvrt", "KVRT", "KVRT.exe"),
+        ("defender", "Windows Defender (MpCmdRun)", "MpCmdRun.exe"),
+        ("furmark2", "Furmark 2", "FurMark.exe"),
+        ("prime95", "Prime95", "prime95.exe"),
+        ("sdi", "Snappy Driver Installer", "SDI.exe"),
+        ("gsmartcontrol", "GSmartControl", "gsmartcontrol.exe"),
+    ];
+
+    let mut out = Vec::with_capacity(required.len());
+    for (key, name, hint) in required.iter().copied() {
+        // Simple fuzzy match against saved entries
+        let mut path: Option<String> = None;
+        let mut exists = false;
+        for p in &list {
+            let hay = format!("{} {} {}", p.name, p.description, p.exe_path).to_lowercase();
+            if hay.contains(key) || hay.contains(name.to_lowercase().as_str()) {
+                let full = resolve_exe_path(data_root, &p.exe_path);
+                exists = Path::new(&full).is_file();
+                path = Some(full);
+                break;
+            }
+        }
+
+        // Special-case Defender: try system detection when not found via saved entries
+        if key == "defender" && !exists {
+            if let Some(def_path) = find_defender_mpcmdrun() {
+                exists = true;
+                path = Some(def_path);
+            }
+        }
+
+        out.push(ToolStatus {
+            key: key.to_string(),
+            name: name.to_string(),
+            exists,
+            path,
+            hint: Some(hint.to_string()),
+        });
+    }
+    Ok(out)
+}
+
+#[cfg(windows)]
+fn find_defender_mpcmdrun() -> Option<String> {
+    use std::env;
+    use std::fs;
+    use std::path::PathBuf;
+    let base = env::var_os("ProgramData")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("C:\\ProgramData"));
+    let platform_dir = base
+        .join("Microsoft")
+        .join("Windows Defender")
+        .join("Platform");
+    let mut best_dir: Option<PathBuf> = None;
+    let entries = fs::read_dir(&platform_dir).ok()?;
+    for entry in entries.flatten() {
+        if let Ok(ft) = entry.file_type() {
+            if ft.is_dir() {
+                let p = entry.path();
+                match (&best_dir, p.file_name().and_then(|s| s.to_str())) {
+                    (None, Some(_)) => best_dir = Some(p),
+                    (Some(cur), Some(name)) => {
+                        let cur_name = cur.file_name().and_then(|s| s.to_str()).unwrap_or("");
+                        if name > cur_name { best_dir = Some(p); }
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+    let exe = best_dir?.join("MpCmdRun.exe");
+    if exe.is_file() { Some(exe.to_string_lossy().to_string()) } else { None }
+}
+
+#[cfg(not(windows))]
+fn find_defender_mpcmdrun() -> Option<String> { None }
 
 fn read_programs_file(path: &Path) -> Vec<ProgramEntry> {
     if let Ok(data) = fs::read_to_string(path) {
