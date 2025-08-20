@@ -1,3 +1,4 @@
+import { getToolStatuses } from '../../utils/tools.js';
 function getHashQuery() {
   const hash = window.location.hash || '';
   const idx = hash.indexOf('?');
@@ -90,6 +91,7 @@ function renderTasks(selectedIds) {
   <label class="sub-row" data-engine="kvrt"><input type="checkbox" class="virus-engine" value="kvrt" /> <span>KVRT</span> <span class="badge error" data-status hidden>Missing</span></label>
   <label class="sub-row" data-engine="clamav"><input type="checkbox" class="virus-engine" value="clamav" /> <span>ClamAV</span> <span class="badge error" data-status hidden>Missing</span></label>
   <label class="sub-row" data-engine="defender"><input type="checkbox" class="virus-engine" value="defender" /> <span>Windows Defender</span> <span class="badge error" data-status hidden>Missing</span></label>
+  <label class="sub-row" data-engine="adwcleaner"><input type="checkbox" class="virus-engine" value="adwcleaner" /> <span>AdwCleaner</span> <span class="badge error" data-status hidden>Missing</span></label>
         <div id="virus-engine-hint" class="badge warn" hidden>Choose at least one engine to enable Virus scanning</div>
       `;
       wrap.appendChild(sub);
@@ -130,7 +132,12 @@ function renderTasks(selectedIds) {
           if (!row || !cb) return;
           if (ok) {
             cb.disabled = false;
-            if (status) status.hidden = true;
+            if (status) {
+              status.textContent = 'Found';
+              status.classList.remove('error');
+              status.classList.add('ok');
+              status.hidden = false;
+            }
           } else {
             cb.checked = false;
             cb.disabled = true;
@@ -154,33 +161,15 @@ function renderTasks(selectedIds) {
 }
 
 async function detectVirusEnginesAvailability() {
-  const result = { kvrt: false, clamav: false, defender: false };
+  const result = { kvrt: false, clamav: false, defender: false, adwcleaner: false };
   try {
-    const list = invoke ? await invoke('list_programs') : [];
-    const has = (pred) => Array.isArray(list) && list.some(pred);
-    const lc = (s) => String(s || '').toLowerCase();
-    // KVRT
-    result.kvrt = has(p => {
-      const h = lc(`${p.name} ${p.description} ${p.exe_path}`);
-      return h.includes('kvrt');
-    });
-    // ClamAV (clamscan.exe typical)
-    result.clamav = has(p => {
-      const h = lc(`${p.name} ${p.description} ${p.exe_path}`);
-      return h.includes('clamav') || h.includes('clamscan') || h.includes('clamdscan');
-    });
+    const statuses = await getToolStatuses();
+    const byKey = Object.fromEntries((Array.isArray(statuses) ? statuses : []).map(s => [s.key, s]));
+    result.kvrt = !!byKey.kvrt?.exists;
+    result.clamav = !!byKey.clamav?.exists;
+    result.defender = !!byKey.defender?.exists;
+    result.adwcleaner = !!byKey.adwcleaner?.exists;
   } catch {}
-  // Defender via PowerShell path resolution
-  if (Command) {
-    try {
-      const ps = await Command.create('powershell', [
-        '-NoProfile','-ExecutionPolicy','Bypass','-Command',
-        "Test-Path (Get-ChildItem -Path \"$env:ProgramData\\Microsoft\\Windows Defender\\Platform\" -Directory | Sort-Object Name -Descending | Select-Object -First 1 | ForEach-Object { Join-Path $_.FullName 'MpCmdRun.exe' }) | Write-Output"
-      ]).execute();
-      const out = (ps.stdout || '').trim();
-      result.defender = out.toLowerCase() === 'true';
-    } catch {}
-  }
   return result;
 }
 
