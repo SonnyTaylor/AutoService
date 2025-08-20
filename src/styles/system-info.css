@@ -130,12 +130,14 @@
 .loading-title { font-weight: 600; }
 
 .spinner {
+  display: inline-block;
+  vertical-align: middle;
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  border: 3px solid transparent;
-  border-top-color: #8fd5ff; /* matches cool temp accent */
-  border-right-color: #8fd5ff;
+  box-sizing: border-box;
+  border: 3px solid var(--border); /* track */
+  border-top-color: #8fd5ff;       /* accent arc */
   animation: spin 0.9s linear infinite;
 }
 .spinner.sm { width: 14px; height: 14px; border-width: 2px; }
