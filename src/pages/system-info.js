@@ -504,7 +504,7 @@ function render(info) {
   if (btn) {
     btn.addEventListener('click', async () => {
       btn.disabled = true;
-      btn.textContent = 'Refreshing…';
+  btn.innerHTML = '<span class="spinner sm" aria-hidden="true"></span><span style="margin-left:8px;">Refreshing…</span>';
       try {
         const data = await invoke('get_system_info');
         // Optional: keep the Windows caption nicety on refresh too
@@ -568,8 +568,8 @@ export async function initPage() {
   const container = document.querySelector('[data-page="system-info"]');
   if (!container) return;
   const skel = document.createElement('div');
-  skel.className = 'muted';
-  skel.textContent = 'Loading system information…';
+  skel.className = 'loading center';
+  skel.innerHTML = '<div class="spinner" aria-hidden="true"></div><div><div class="loading-title">Loading system information…</div><div class="muted">Collecting hardware and OS details</div></div>';
   container.appendChild(skel);
   try {
     // If we have a cached copy for this session, use it

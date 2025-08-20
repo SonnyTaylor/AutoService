@@ -113,3 +113,31 @@
   border-color: #2b416b;
 }
 .collapsible-body { margin-top: 8px; }
+
+/* =============================== */
+/* Loading indicators               */
+/* =============================== */
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-2);
+}
+.loading.center { justify-content: center; min-height: 100px; }
+.loading-title { font-weight: 600; }
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  border-top-color: #8fd5ff; /* matches cool temp accent */
+  border-right-color: #8fd5ff;
+  animation: spin 0.9s linear infinite;
+}
+.spinner.sm { width: 14px; height: 14px; border-width: 2px; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
