@@ -1,0 +1,88 @@
+/* Shortcuts page layout */
+.shortcut-toolbar {
+  position: sticky;
+  top: 0; /* sticks under the header */
+  z-index: 5;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  margin: -10px -12px 14px; /* extend to page edges */
+  background: linear-gradient(180deg, var(--panel) 70%, rgba(0,0,0,0) 100%);
+  backdrop-filter: blur(4px);
+}
+
+.shortcut-search {
+  flex: 1;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.shortcut-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+
+@media (min-width: 1200px) {
+  .shortcut-list {
+    grid-template-columns: 1fr 1fr; /* two columns of categories on wide screens */
+  }
+}
+
+.category {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.category-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.category-header h2 {
+  font-size: 1rem;
+  margin: 0;
+  color: var(--muted);
+}
+
+.shortcut-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+@media (min-width: 1600px) {
+  .shortcut-grid {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+  }
+}
+
+.shortcut-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel-2);
+  color: var(--text);
+  text-align: left;
+  min-height: 56px;
+}
+
+.shortcut-btn:hover {
+  background: #263043;
+  border-color: #2e3b55;
+}
+
+.shortcut-btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}

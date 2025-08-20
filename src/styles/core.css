@@ -1,0 +1,135 @@
+:root {
+  --bg: #0f1115;
+  --panel: #171a21;
+  --panel-2: #1f2430;
+  --text: #e6eaf2;
+  --muted: #a3adbf;
+  --primary: #4f8cff;
+  --primary-700: #3d6fd1;
+  --border: #2a3140;
+
+  color-scheme: dark;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Top tab bar */
+header {
+  position: sticky;
+  top: 0;
+  z-index: 1000; /* ensure always above page content */
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.tab-bar {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  overflow-x: auto;
+  padding: 10px;
+}
+
+.tab {
+  color: var(--muted);
+  text-decoration: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  color: var(--text);
+  background: var(--panel-2);
+}
+
+.tab.active {
+  color: var(--text);
+  background: #21304a;
+  border-color: #2b416b;
+}
+
+/* Page container */
+.page-container { padding: 16px 16px 32px; }
+
+.page {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.page h1 { font-size: 1.25rem; margin: 0 0 12px; }
+
+.muted { color: var(--muted); }
+
+/* Buttons and inputs baseline */
+button, input, select { font: inherit; color: var(--text); }
+
+button {
+  background: var(--primary);
+  color: white;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+button:hover { background: var(--primary-700); }
+
+/* Generic ghost button (used in System Info toolbar) */
+.ghost { background: transparent; border: 1px solid var(--border); }
+.ghost:hover { background: #222a3a; }
+
+/* Reduce focus outlines only to keyboard nav */
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* Reusable cards and lists for System Info */
+.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 14px; margin-bottom: 14px; }
+.card { background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+.card-title { font-weight: 600; margin-bottom: 6px; color: var(--muted); }
+.card-body { display: grid; gap: 4px; }
+.list { display: flex; flex-direction: column; gap: 12px; }
+.row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; padding: 10px; border: 1px solid var(--border); border-radius: 10px; background: #202636; }
+.row .name { font-weight: 600; }
+.row .main { min-width: 0; }
+.row .main .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .meta { text-align: right; white-space: nowrap; display: grid; gap: 4px; }
+.row:hover { background: #263043; border-color: #2e3b55; }
+
+/* Spacing between stacked cards inside a page (e.g., Storage, Network, Graphics, Sensors) */
+.page > .card { margin-top: 16px; }
+.page > .card:first-of-type { margin-top: 0; }
+
+/* KPI stats inside cards */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 8px; }
+.stat { background: #1b2130; border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; display: grid; gap: 2px; }
+.stat .label { color: var(--muted); font-size: 0.8rem; }
+.stat .value { font-weight: 600; }
+
+/* Badges */
+.badge { display: inline-block; padding: 2px 6px; font-size: 0.75rem; border-radius: 999px; border: 1px solid #2b416b; background: #24314a; color: var(--text); }
+.badge.warn { background: #3a2b24; border-color: #6b422b; }
+.badge.ok { background: #213a2a; border-color: #2f6b4a; }
+/* Additional badge variants for clearer states */
+.badge.info { background: #1e2b45; border-color: #33507a; }
+.badge.error { background: #4a1e1e; border-color: #7a3333; }
+
+/* Progress bars (e.g., memory/disk usage) */
+.progress { height: 8px; background: #1b2130; border-radius: 999px; overflow: hidden; border: 1px solid var(--border); }
+.progress > .bar { height: 100%; background: linear-gradient(90deg, var(--primary), #7aa8ff); width: 0%; }
+
+/* Details summary tweaks */
+details summary { cursor: pointer; color: var(--muted); }
+details[open] summary { color: var(--text); }
+
+/* Empty state inside table wrap */
+.empty-state { padding: 16px; color: var(--muted); text-align: center; }

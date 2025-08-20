@@ -1,0 +1,32 @@
+/* =============================== */
+/* Scans page                      */
+/* =============================== */
+[data-page="scans"] .scan-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin: 6px 0 12px;
+}
+[data-page="scans"] .scan-options {
+  display: grid;
+  gap: 14px;
+  /* Make the three rows use most of the viewport height */
+  grid-template-rows: repeat(3, 1fr);
+  min-height: clamp(480px, 68vh, 900px);
+}
+[data-page="scans"] .scan-row {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 20px;
+  min-height: 140px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-2);
+  cursor: pointer;
+}
+[data-page="scans"] .scan-row:hover { background: #263043; border-color: #2e3b55; }
+[data-page="scans"] .scan-row input[type="radio"] { width: 22px; height: 22px; }
+[data-page="scans"] .scan-row .row-main { display: grid; gap: 4px; }
+[data-page="scans"] .scan-row .title { font-weight: 600; font-size: 1.2rem; }
+[data-page="scans"] .scan-row .desc { font-size: 0.98rem; }
