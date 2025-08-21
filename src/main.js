@@ -7,6 +7,7 @@ const routes = [
   "system-info",
   "shortcuts",
   "programs",
+  "scripts",
   "stress-test",
   "component-test",
   "diagnostic",

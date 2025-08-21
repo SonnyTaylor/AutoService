@@ -1,0 +1,77 @@
+<section class="page" data-page="scripts">
+  <h1>Scripts</h1>
+  <p class="muted">Create and run custom scripts or commands. Saved to data/settings/scripts.json.</p>
+
+  <div class="toolbar programs-toolbar">
+    <input id="script-search" class="shortcut-search" type="search" placeholder="Search scripts..." />
+    <select id="script-sort" title="Sort scripts">
+      <option value="name-asc">Name (A–Z)</option>
+      <option value="name-desc">Name (Z–A)</option>
+      <option value="used-desc">Most run</option>
+      <option value="used-asc">Least run</option>
+    </select>
+    <button id="script-add-btn">Add</button>
+  </div>
+
+  <div class="scripts-list"></div>
+
+  <dialog id="script-editor" class="program-editor">
+    <form method="dialog" id="script-form">
+      <div class="editor-grid">
+        <div class="fields-col" style="grid-column: 1 / -1">
+          <label>Name
+            <input id="s-name" type="text" required />
+          </label>
+          <label>Version
+            <input id="s-version" type="text" />
+          </label>
+          <label>Description
+            <textarea id="s-desc" rows="3"></textarea>
+          </label>
+          <label>Runner
+            <div class="input-with-btn">
+              <select id="s-runner">
+                <option value="powershell">PowerShell</option>
+                <option value="cmd">CMD</option>
+              </select>
+            </div>
+          </label>
+          <fieldset class="inline">
+            <legend>Source</legend>
+            <label class="radio">
+              <input type="radio" name="s-source" value="file" checked /> File path
+            </label>
+            <label class="radio">
+              <input type="radio" name="s-source" value="link" /> URL
+            </label>
+            <label class="radio">
+              <input type="radio" name="s-source" value="inline" /> Command text
+            </label>
+          </fieldset>
+          <div id="s-source-file" class="source-row">
+            <label>Script file
+              <div class="input-with-btn">
+                <input id="s-file" type="text" placeholder="Path to .ps1 / .cmd / .bat" />
+                <button type="button" id="s-pick-file" class="secondary">Browse</button>
+              </div>
+            </label>
+          </div>
+          <div id="s-source-link" class="source-row" hidden>
+            <label>URL
+              <input id="s-url" type="url" placeholder="https://..." />
+            </label>
+          </div>
+          <div id="s-source-inline" class="source-row" hidden>
+            <label>Command text
+              <textarea id="s-inline" rows="4" placeholder="Enter script/command"></textarea>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="editor-actions">
+        <button type="button" id="s-cancel" class="ghost">Cancel</button>
+        <button type="button" id="s-save">Save</button>
+      </div>
+    </form>
+  </dialog>
+</section>

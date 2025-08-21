@@ -1,4 +1,5 @@
 data/settings/programs.json
+data/settings/scripts.json
 # Logs
 logs
 *.log

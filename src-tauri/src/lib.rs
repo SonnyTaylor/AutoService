@@ -9,6 +9,7 @@ mod shortcuts;
 mod state;
 mod system;
 mod settings;
+mod scripts;
 
 use tauri::Manager;
 
@@ -16,6 +17,7 @@ use tauri::Manager;
 use crate::icons::{read_image_as_data_url, suggest_logo_from_exe};
 use crate::programs::{get_tool_statuses, launch_program, list_programs, remove_program, save_program};
 use crate::shortcuts::launch_shortcut;
+use crate::scripts::{list_scripts, save_script, remove_script, run_script};
 use crate::state::AppState;
 use crate::settings::{load_app_settings, save_app_settings};
 use crate::system::get_system_info;
@@ -63,6 +65,10 @@ pub fn run() {
             remove_program,
             launch_program,
             get_tool_statuses,
+            list_scripts,
+            save_script,
+            remove_script,
+            run_script,
             suggest_logo_from_exe,
             read_image_as_data_url,
             get_system_info,

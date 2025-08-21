@@ -220,3 +220,26 @@ pub struct ToolStatus {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hint: Option<String>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ScriptEntry {
+    pub id: Uuid,
+    pub name: String,
+    pub version: String,
+    pub description: String,
+    // runner: powershell | cmd
+    pub runner: String,
+    // source: file | link | inline
+    pub source: String,
+    #[serde(default)]
+    pub path: String,
+    #[serde(default)]
+    pub url: String,
+    #[serde(default)]
+    pub inline: String,
+    #[serde(default)]
+    pub run_count: u32,
+    // computed only at runtime, not persisted
+    #[serde(default, skip_serializing)]
+    pub path_exists: bool,
+}
