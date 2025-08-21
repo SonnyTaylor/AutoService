@@ -25,14 +25,13 @@ export async function initPage() {
       if (!el) return;
       if (n === name) el.removeAttribute('hidden'); else el.setAttribute('hidden', '');
     });
-    // Persist
-    try { localStorage.setItem('ct.subtab', name); } catch {}
+  // Do not persist tab selection
   }
   function initialTab() {
-    let name = 'camera';
-    try { name = localStorage.getItem('ct.subtab') || name; } catch {}
-    if (!panels[name]) name = 'camera';
-    activateTab(name);
+  // Always start on the default tab
+  const defaultTab = 'camera';
+  const name = panels[defaultTab] ? defaultTab : Object.keys(panels).find(n => panels[n]) || defaultTab;
+  activateTab(name);
     const btn = tabButtons.find(b => b.dataset.tab === name);
     btn?.focus({ preventScroll: true });
   }
