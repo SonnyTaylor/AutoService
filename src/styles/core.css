@@ -23,6 +23,33 @@ body {
   color: var(--text);
 }
 
+/* Custom window titlebar (Tauri decorations disabled) */
+.titlebar { 
+  height: 34px; 
+  background: linear-gradient(90deg, #141923, #1b2230); 
+  user-select: none; 
+  display: grid; 
+  grid-template-columns: 1fr auto; 
+  align-items: center; 
+  padding: 0 6px 0 10px; 
+  gap: 8px; 
+  position: fixed; 
+  top: 0; left: 0; right: 0; 
+  z-index: 1200; 
+  border-bottom: 1px solid var(--border);
+}
+.titlebar .drag { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--muted); }
+.titlebar .title { font-weight: 500; letter-spacing: .5px; }
+.titlebar .controls { display: flex; }
+.titlebar button { appearance: none; width: 38px; height: 26px; border: none; background: transparent; display: flex; align-items: center; justify-content: center; border-radius: 6px; color: var(--muted); cursor: pointer; }
+.titlebar button:hover { background: #243048; color: var(--text); }
+.titlebar button#titlebar-close:hover { background: #5b2b2b; color: #ffdddd; }
+
+/* Shift app content below custom titlebar */
+body > header { margin-top: 34px; }
+/* Ensure page container accounts for fixed titlebar */
+.page-container { padding-top: 16px; }
+
 /* Top tab bar */
 header {
   position: sticky;

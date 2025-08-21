@@ -80,4 +80,14 @@ function onRouteChange() {
 }
 
 window.addEventListener("hashchange", onRouteChange);
-window.addEventListener("DOMContentLoaded", onRouteChange);
+window.addEventListener("DOMContentLoaded", () => {
+  onRouteChange();
+  // Wire custom titlebar controls
+  const { getCurrentWindow } = window.__TAURI__.window || {};
+  if (getCurrentWindow) {
+    const appWindow = getCurrentWindow();
+    document.getElementById('titlebar-minimize')?.addEventListener('click', () => appWindow.minimize());
+    document.getElementById('titlebar-maximize')?.addEventListener('click', () => appWindow.toggleMaximize());
+    document.getElementById('titlebar-close')?.addEventListener('click', () => appWindow.close());
+  }
+});

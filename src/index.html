@@ -16,6 +16,22 @@
     <script type="module" src="/main.js" defer></script>
   </head>
   <body>
+    <div class="titlebar" id="titlebar">
+      <div class="drag" data-tauri-drag-region>
+        <span class="title">AutoService</span>
+      </div>
+      <div class="controls">
+        <button id="titlebar-minimize" title="Minimize" aria-label="Minimize window">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M5 13v-2h14v2H5Z"/></svg>
+        </button>
+        <button id="titlebar-maximize" title="Maximize" aria-label="Maximize window">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v16H4V4m2 4v10h12V8H6Z"/></svg>
+        </button>
+        <button id="titlebar-close" title="Close" aria-label="Close window">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </div>
+    </div>
     <header>
       <nav class="tab-bar" aria-label="Primary">
         <a class="tab" data-route="scans" href="#/scans">Scans</a>

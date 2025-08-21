@@ -9,20 +9,25 @@
     "core:default",
     "opener:default",
     "dialog:default",
-  "shell:default",
-  {
-    "identifier": "shell:allow-execute",
-    "allow": [{
-      "name": "powershell",
-      "cmd": "powershell.exe",
-      "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-Command",
-        { "validator": ".*" }
-      ]
-    }]
-  }
+    "shell:default",
+    "core:window:default",
+    "core:window:allow-start-dragging",
+    "core:window:allow-minimize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-close",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [{
+        "name": "powershell",
+        "cmd": "powershell.exe",
+        "args": [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-Command",
+          { "validator": ".*" }
+        ]
+      }]
+    }
   ]
 }
