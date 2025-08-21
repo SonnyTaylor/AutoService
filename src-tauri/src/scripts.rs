@@ -1,6 +1,7 @@
 use std::{fs, path::{Path, PathBuf}};
 
 use uuid::Uuid;
+use tauri::Manager;
 
 use crate::{models::ScriptEntry, paths, state::AppState};
 
@@ -36,9 +37,8 @@ pub fn list_scripts(state: tauri::State<AppState>) -> Result<Vec<ScriptEntry>, S
             if p.is_absolute() {
                 p.is_file()
             } else {
-                // try relative to data root
-                let candidate1 = data_root.join(&p);
-                candidate1.is_file()
+                let candidate = data_root.join(&p);
+                candidate.is_file()
             }
         } else { true };
     }
@@ -48,10 +48,22 @@ pub fn list_scripts(state: tauri::State<AppState>) -> Result<Vec<ScriptEntry>, S
 #[tauri::command]
 pub fn save_script(state: tauri::State<AppState>, script: ScriptEntry) -> Result<(), String> {
     let settings_path = scripts_json_path(state.data_dir.as_path());
+    let mut entry = script;
+    // For file source, if the path is absolute and under data root, store relative for portability
+    if entry.source == "file" {
+        let p = PathBuf::from(&entry.path);
+        if p.is_absolute() {
+            let data_root = state.data_dir.as_path();
+            if let Ok(stripped) = p.strip_prefix(data_root) {
+                entry.path = stripped.to_string_lossy().to_string();
+            }
+        }
+    }
+
     let mut list = read_scripts_file(&settings_path);
-    match list.iter_mut().find(|p| p.id == script.id) {
-        Some(existing) => { *existing = script; }
-        None => list.push(script),
+    match list.iter_mut().find(|p| p.id == entry.id) {
+        Some(existing) => { *existing = entry; }
+        None => list.push(entry),
     }
     write_scripts_file(&settings_path, &list)
 }
@@ -79,12 +91,20 @@ pub async fn run_script(app: tauri::AppHandle, script: ScriptEntry) -> Result<()
         let cmd_name = if runner == "cmd" { "cmd.exe" } else { "powershell.exe" };
 
         let mut args: Vec<String> = Vec::new();
+        // Resolve file path relative to data dir when needed
+        let data_root = app.state::<AppState>().data_dir.clone();
+        let resolve_path = |p: String| -> String {
+            let pb = PathBuf::from(&p);
+            if pb.is_absolute() { return p; }
+            data_root.join(pb).to_string_lossy().to_string()
+        };
+
         if runner == "cmd" {
             // use /C to run and exit
             args.push("/C".into());
             match script.source.as_str() {
                 "file" => {
-                    let path = script.path;
+                    let path = resolve_path(script.path);
                     if path.trim().is_empty() { return Err("Script path is empty".into()); }
                     args.push(path);
                 }
@@ -102,7 +122,7 @@ pub async fn run_script(app: tauri::AppHandle, script: ScriptEntry) -> Result<()
             args.push("Bypass".into());
             match script.source.as_str() {
                 "file" => {
-                    let path = script.path;
+                    let path = resolve_path(script.path);
                     if path.trim().is_empty() { return Err("Script path is empty".into()); }
                     args.push("-File".into());
                     args.push(path);

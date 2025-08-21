@@ -29,25 +29,18 @@
             <textarea id="s-desc" rows="3"></textarea>
           </label>
           <label>Runner
-            <div class="input-with-btn">
-              <select id="s-runner">
-                <option value="powershell">PowerShell</option>
-                <option value="cmd">CMD</option>
-              </select>
-            </div>
+            <select id="s-runner">
+              <option value="powershell">PowerShell</option>
+              <option value="cmd">CMD</option>
+            </select>
           </label>
-          <fieldset class="inline">
-            <legend>Source</legend>
-            <label class="radio">
-              <input type="radio" name="s-source" value="file" checked /> File path
-            </label>
-            <label class="radio">
-              <input type="radio" name="s-source" value="link" /> URL
-            </label>
-            <label class="radio">
-              <input type="radio" name="s-source" value="inline" /> Command text
-            </label>
-          </fieldset>
+          <label>Source
+            <select id="s-source">
+              <option value="file">File path</option>
+              <option value="link">URL</option>
+              <option value="inline">Command text</option>
+            </select>
+          </label>
           <div id="s-source-file" class="source-row">
             <label>Script file
               <div class="input-with-btn">

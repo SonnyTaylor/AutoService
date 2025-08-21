@@ -104,3 +104,61 @@
   .logo-col img { width: 120px; height: 120px; }
   .editor-actions { flex-wrap: wrap; }
 }
+
+/* Scripts page tweaks (re-use Programs styles) */
+/* Match scripts toolbar select styling with programs */
+.programs-toolbar #script-sort {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  height: 40px;
+  line-height: 1.2;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: right 12px center, right 6px center;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 28px;
+}
+.programs-toolbar #script-sort:hover { background: #222a3a; }
+.programs-toolbar #script-sort:disabled { opacity: 0.6; }
+
+/* Remove logo column for scripts list */
+.scripts-list .program-row {
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "main actions";
+}
+.scripts-list .program-logo-wrap { display: none; }
+
+/* Make selects in editors look like inputs */
+.program-editor .fields-col select {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  appearance: none;
+  -webkit-appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: right 12px center, right 6px center;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 28px;
+}
+
+/* Responsive stacking for scripts list without logo */
+@media (max-width: 820px) {
+  .scripts-list .program-row {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "main"
+      "actions";
+  }
+}

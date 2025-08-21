@@ -27,10 +27,7 @@ function renderList() {
   }
   list.innerHTML = items.map(p => `
     <div class="program-row" data-id="${p.id}">
-      <div class="program-logo-wrap">
-        <img class="program-logo" src="./assets/tauri.svg" alt="script icon"/>
-        <span class="exe-status ${p.exists ? "ok" : "missing"}" title="${p.exists ? "Found" : "Missing"}">${p.exists ? "✓" : "✕"}</span>
-      </div>
+      <div class="program-logo-wrap"></div>
       <div class="program-main">
         <div class="program-title" title="${escapeHtml(p.name)}${p.version ? ` — ${escapeHtml(p.version)}` : ''}">
           <span class="name">${escapeHtml(p.name)}</span>
@@ -149,8 +146,8 @@ function openEditor(item) {
   $("#s-desc").value = state.editing.description;
   $("#s-runner").value = state.editing.runner;
   const source = state.editing.source || 'file';
-  const radios = document.querySelectorAll('input[name="s-source"]');
-  radios.forEach(r => { r.checked = (r.value === source); });
+  const sourceSel = document.querySelector('#s-source');
+  if (sourceSel) sourceSel.value = source;
   setSourceUI(source);
   $("#s-file").value = state.editing.path || "";
   $("#s-url").value = state.editing.url || "";
@@ -164,9 +161,8 @@ function wireEditor() {
   const cancel = $("#s-cancel");
   const save = $("#s-save");
   const runnerSel = $("#s-runner");
-  const radios = $all('input[name="s-source"]');
-
-  radios.forEach(r => r.addEventListener('change', () => setSourceUI(r.value)));
+  const sourceSel = document.querySelector('#s-source');
+  sourceSel?.addEventListener('change', () => setSourceUI(sourceSel.value));
 
   fileBtn?.addEventListener("click", async () => {
     const open = window.__TAURI__?.dialog?.open;
@@ -184,7 +180,8 @@ function wireEditor() {
   cancel?.addEventListener("click", () => dlg.close());
 
   save?.addEventListener("click", async () => {
-    const src = document.querySelector('input[name="s-source"]:checked')?.value || 'file';
+    const sourceSel = document.querySelector('#s-source');
+    const src = sourceSel?.value || 'file';
     state.editing.name = $("#s-name").value.trim();
     state.editing.version = $("#s-version").value.trim();
     state.editing.description = $("#s-desc").value.trim();
