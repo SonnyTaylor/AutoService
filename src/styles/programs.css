@@ -35,6 +35,11 @@
   flex-direction: column;
   gap: 12px;
 }
+.scripts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 .program-row {
   display: grid;
   grid-template-columns: 56px 1fr auto;

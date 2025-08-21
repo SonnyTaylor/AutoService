@@ -88,9 +88,13 @@ pub async fn run_script(app: tauri::AppHandle, script: ScriptEntry) -> Result<()
 
         let shell = app.shell();
         let runner = script.runner.to_lowercase();
-        let cmd_name = if runner == "cmd" { "cmd.exe" } else { "powershell.exe" };
+        let is_admin = runner.ends_with("-admin");
+        let is_cmd = runner.starts_with("cmd");
 
-        let mut args: Vec<String> = Vec::new();
+        // Helper to quote for PowerShell single-quoted strings
+        fn ps_quote(s: &str) -> String { format!("'{}'", s.replace("'", "''")) }
+
+    // args are built per-branch below
         // Resolve file path relative to data dir when needed
         let data_root = app.state::<AppState>().data_dir.clone();
         let resolve_path = |p: String| -> String {
@@ -98,48 +102,85 @@ pub async fn run_script(app: tauri::AppHandle, script: ScriptEntry) -> Result<()
             if pb.is_absolute() { return p; }
             data_root.join(pb).to_string_lossy().to_string()
         };
+        let output = if is_admin {
+            // Build elevated start via PowerShell: Start-Process -Verb RunAs -FilePath <target> -ArgumentList @('arg1','arg2',...)
+            let (target, inner_args): (String, Vec<String>) = if is_cmd {
+                let mut v = vec!["/C".to_string()];
+                match script.source.as_str() {
+                    "file" => {
+                        let path = resolve_path(script.path);
+                        if path.trim().is_empty() { return Err("Script path is empty".into()); }
+                        v.push(path);
+                    }
+                    "link" => {
+                        v.push(format!("curl -sL {} | cmd", script.url));
+                    }
+                    _ => v.push(script.inline),
+                }
+                ("cmd.exe".to_string(), v)
+            } else {
+                let mut v = vec!["-NoProfile".to_string(), "-ExecutionPolicy".to_string(), "Bypass".to_string()];
+                match script.source.as_str() {
+                    "file" => {
+                        let path = resolve_path(script.path);
+                        if path.trim().is_empty() { return Err("Script path is empty".into()); }
+                        v.push("-File".to_string());
+                        v.push(path);
+                    }
+                    "link" => {
+                        v.push("-Command".to_string());
+                        v.push(format!("Invoke-Expression (Invoke-WebRequest -UseBasicParsing -Uri '{}').Content", script.url));
+                    }
+                    _ => {
+                        v.push("-Command".to_string());
+                        v.push(script.inline);
+                    }
+                }
+                ("powershell.exe".to_string(), v)
+            };
 
-        if runner == "cmd" {
-            // use /C to run and exit
-            args.push("/C".into());
+            let args_ps = format!(
+                "Start-Process -FilePath {} -Verb RunAs -ArgumentList @({})",
+                ps_quote(&target),
+                inner_args.iter().map(|a| ps_quote(a)).collect::<Vec<_>>().join(",")
+            );
+
+            shell
+                .command("powershell.exe")
+                .args(["-NoProfile","-ExecutionPolicy","Bypass","-Command", &args_ps])
+                .output()
+                .await
+                .map_err(|e| e.to_string())?
+        } else if is_cmd {
+            let mut v: Vec<String> = vec!["/C".into()];
             match script.source.as_str() {
                 "file" => {
                     let path = resolve_path(script.path);
                     if path.trim().is_empty() { return Err("Script path is empty".into()); }
-                    args.push(path);
+                    v.push(path);
                 }
-                "link" => {
-                    args.push(format!("curl -sL {} | cmd", script.url));
-                }
-                _ => {
-                    args.push(script.inline);
-                }
+                "link" => v.push(format!("curl -sL {} | cmd", script.url)),
+                _ => v.push(script.inline),
             }
+            shell.command("cmd.exe").args(v).output().await.map_err(|e| e.to_string())?
         } else {
-            // PowerShell. Use -NoProfile -ExecutionPolicy Bypass
-            args.push("-NoProfile".into());
-            args.push("-ExecutionPolicy".into());
-            args.push("Bypass".into());
+            let mut v: Vec<String> = vec!["-NoProfile".into(), "-ExecutionPolicy".into(), "Bypass".into()];
             match script.source.as_str() {
                 "file" => {
                     let path = resolve_path(script.path);
                     if path.trim().is_empty() { return Err("Script path is empty".into()); }
-                    args.push("-File".into());
-                    args.push(path);
+                    v.push("-File".into());
+                    v.push(path);
                 }
                 "link" => {
-                    let ps = format!("Invoke-Expression (Invoke-WebRequest -UseBasicParsing -Uri '{}').Content", script.url);
-                    args.push("-Command".into());
-                    args.push(ps);
+                    v.push("-Command".into());
+                    v.push(format!("Invoke-Expression (Invoke-WebRequest -UseBasicParsing -Uri '{}').Content", script.url));
                 }
-                _ => {
-                    args.push("-Command".into());
-                    args.push(script.inline);
-                }
+                _ => { v.push("-Command".into()); v.push(script.inline); }
             }
-        }
+            shell.command("powershell.exe").args(v).output().await.map_err(|e| e.to_string())?
+        };
 
-        let output = shell.command(cmd_name).args(args).output().await.map_err(|e| e.to_string())?;
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
             return Err(format!("Script failed (code {:?}): {}", output.status.code(), stderr));
