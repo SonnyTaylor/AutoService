@@ -8,10 +8,8 @@ const routes = [
   "shortcuts",
   "programs",
   "scripts",
-  "stress-test",
+  "reports",
   "component-test",
-  "diagnostic",
-  "tools",
   "settings",
 ];
 
