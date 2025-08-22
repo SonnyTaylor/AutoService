@@ -15,12 +15,19 @@
 html, body { 
   height: 100%; 
   overscroll-behavior: none;
+  /* Prevent unwanted auto-scrolling */
+  scroll-behavior: auto;
+  overflow-anchor: none;
 }
 
 body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
+  /* Space for titlebar + header to avoid content jumping */
+  padding-top: calc(34px + 52px); /* titlebar height + header height */
+  /* Force initial scroll position */
+  scroll-padding-top: calc(34px + 52px);
 }
 
 /* Custom window titlebar (Tauri decorations disabled) */
@@ -35,7 +42,7 @@ body {
   gap: 8px; 
   position: fixed; 
   top: 0; left: 0; right: 0; 
-  z-index: 1200; 
+  z-index: 3; /* Lower than header to ensure tabs stay visible */
   border-bottom: 1px solid var(--border);
 }
 .titlebar .drag { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--muted); }
@@ -45,16 +52,21 @@ body {
 .titlebar button:hover { background: #243048; color: var(--text); }
 .titlebar button#titlebar-close:hover { background: #5b2b2b; color: #ffdddd; }
 
-/* Shift app content below custom titlebar */
-body > header { margin-top: 34px; }
-/* Ensure page container accounts for fixed titlebar */
-.page-container { padding-top: 16px; }
+/* Ensure sticky header sits just below fixed custom titlebar (34px) */
+/* Removed previous margin-top approach to avoid overlap hiding tabs under titlebar */
+.page-container { 
+  position: relative;
+  z-index: 1; /* Ensure content scrolls under header */
+  padding-top: 16px;
+}
 
 /* Top tab bar */
 header {
-  position: sticky;
-  top: 0;
-  z-index: 1000; /* ensure always above page content */
+  position: fixed; /* Change to fixed to stay above titlebar */
+  top: 34px; /* Position directly below titlebar */
+  left: 0;
+  right: 0;
+  z-index: 4; /* Above titlebar to ensure tabs always visible */
   background: var(--panel);
   border-bottom: 1px solid var(--border);
 }

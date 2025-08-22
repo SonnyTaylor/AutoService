@@ -37,9 +37,12 @@ async function loadPage(route) {
     const pagePath = pathMap[route] || route;
     const res = await fetch(`pages/${pagePath}.html`, { cache: "no-cache" });
     const html = await res.text();
+    // Reset scroll before content change
+    window.scrollTo(0, 0);
     content.innerHTML = html;
-    // Focus the main landmark for a11y
-    content.focus();
+    
+    // Focus the main landmark for a11y but prevent auto-scrolling
+    content.focus({ preventScroll: true });
 
     // Try to load optional page controller: /pages/<route>.js
     try {
