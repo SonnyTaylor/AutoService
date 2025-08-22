@@ -10,6 +10,7 @@ const SYSINFO_CACHE_KEY = 'sysinfo.cache.v1';
 const SYSINFO_CACHE_TS_KEY = 'sysinfo.cache.ts.v1';
 let sysinfoCache = null; // object
 let sysinfoCacheTs = null; // number (ms)
+let prewarmPromise = null; // background in-flight promise
 
 function loadCache() {
   try {
@@ -594,4 +595,33 @@ export async function initPage() {
     container.innerHTML = '<section class="page"><h1>System Info</h1><p class="muted">Failed to read system information.</p></section>';
     console.error(e);
   }
+}
+
+// Background prefetch for system info so first navigation is instant.
+// Safe idempotent: repeated calls reuse single promise; resolves to info object.
+export function prewarmSystemInfo({ force = false } = {}) {
+  // If we already have cache (this session) and not forcing, return it.
+  if (!force && sysinfoCache) return Promise.resolve(sysinfoCache);
+  if (prewarmPromise) return prewarmPromise;
+  // Kick off background fetch
+  prewarmPromise = (async () => {
+    try {
+      const info = await invoke('get_system_info');
+      // Optional Windows caption enhancement (cheap, ignore errors)
+      if (Command && navigator.userAgent.includes('Windows')) {
+        try {
+          const cmd = await Command.create('exec-sh', ['-c', 'wmic os get Caption | more +1']).execute();
+          const osCaption = (cmd?.stdout || '').trim();
+          if (osCaption) info.os = osCaption;
+        } catch {}
+      }
+      saveCache(info, Date.now());
+      return info;
+    } catch (e) {
+      // Reset so a later attempt can retry.
+      prewarmPromise = null;
+      throw e;
+    }
+  })();
+  return prewarmPromise;
 }

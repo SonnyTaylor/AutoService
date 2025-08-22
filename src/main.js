@@ -85,6 +85,15 @@ function onRouteChange() {
 window.addEventListener("hashchange", onRouteChange);
 window.addEventListener("DOMContentLoaded", () => {
   onRouteChange();
+  // Background prewarm of system info so navigating there is instant.
+  (async () => {
+    try {
+      const mod = await import('./pages/system-info.js');
+      if (typeof mod.prewarmSystemInfo === 'function') {
+        mod.prewarmSystemInfo();
+      }
+    } catch {}
+  })();
   // Wire custom titlebar controls
   const { getCurrentWindow } = window.__TAURI__.window || {};
   if (getCurrentWindow) {
