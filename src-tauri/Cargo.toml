@@ -32,4 +32,5 @@ sysinfo = "0.37"
 battery = "0.7.8"
 wgpu = "26.0.1"
 tauri-plugin-shell = "2"
+tokio = { version = "1", features = ["macros"] }
 
