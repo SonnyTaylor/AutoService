@@ -16,6 +16,7 @@ use tauri::Manager;
 // Bring command fns into scope for generate_handler!
 use crate::icons::{read_image_as_data_url, suggest_logo_from_exe};
 use crate::programs::{get_tool_statuses, launch_program, list_programs, remove_program, save_program};
+use crate::programs::run_defender_scan;
 use crate::shortcuts::launch_shortcut;
 use crate::scripts::{list_scripts, save_script, remove_script, run_script};
 use crate::state::AppState;
@@ -65,6 +66,7 @@ pub fn run() {
             remove_program,
             launch_program,
             get_tool_statuses,
+            run_defender_scan,
             list_scripts,
             save_script,
             remove_script,

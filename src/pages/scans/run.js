@@ -101,6 +101,23 @@ export async function initPage() {
 
   async function runDefenderQuickScan() {
     appendLog('Windows Defender: resolving MpCmdRun.exe path…');
+    // Prefer backend-invoked scan when available (returns JSON with stdout/stderr)
+    if (typeof window.__TAURI__?.invoke === 'function') {
+      appendLog('Windows Defender: invoking backend scan...');
+      try {
+        const res = await window.__TAURI__.invoke('run_defender_scan');
+        appendLog('Windows Defender: backend scan completed.');
+        try { appendLog(JSON.stringify(res)); } catch { appendLog(String(res)); }
+        if (res?.quick_scan?.code && res.quick_scan.code !== 0) {
+          throw new Error(`Quick scan exited with code ${res.quick_scan.code}`);
+        }
+        return;
+      } catch (e) {
+        appendLog(`Backend scan failed: ${e.message || e}`);
+        appendLog('Falling back to local PowerShell execution');
+      }
+    }
+
     const exePath = await resolveMpCmdRunPath();
     if (!exePath) {
       throw new Error('Could not find MpCmdRun.exe');
