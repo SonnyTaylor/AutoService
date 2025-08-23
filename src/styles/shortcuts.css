@@ -77,6 +77,12 @@
   min-height: 56px;
 }
 
+.shortcut-btn .ph-icon {
+  font-size: 22px;
+  opacity: 0.9;
+  flex-shrink: 0;
+}
+
 .shortcut-btn:hover {
   background: #263043;
   border-color: #2e3b55;
