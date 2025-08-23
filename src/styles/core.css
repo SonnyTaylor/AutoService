@@ -142,10 +142,15 @@ label > span.muted { text-transform: uppercase; letter-spacing: .5px; font-weigh
 
 /* Technician links form layout tweaked */
 #tech-link-form { gap: 12px !important; }
-#tech-link-form input { width: 100%; }
-/* Ensure side-by-side inputs have proper vertical rhythm */
-#tech-link-form label { min-width:180px; }
-#tech-link-form label + label { margin-top:0; }
+/* Use a dedicated class for the technician input row to avoid colliding with .row globals */
+.tech-input-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.tech-input-row label { min-width: 0; }
+.tech-input-row input { width: 100%; box-sizing: border-box; }
+/* For larger screens keep title narrower and url wider but prevent overlap */
+.tech-input-row .tech-input-title { flex: 1 1 220px; min-width: 160px; }
+.tech-input-row .tech-input-url { flex: 2 1 360px; min-width: 220px; }
+/* Ensure when the global .row class is used elsewhere it doesn't affect this form */
+.tech-input-row.row { display: flex; }
 
 /* Full-page technician link view (no card chrome) */
 .tech-link-full { position: fixed; top: calc(34px + 52px); left:0; right:0; bottom:0; background: #0b0e13; display:flex; }
