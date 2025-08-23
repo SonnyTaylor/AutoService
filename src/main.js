@@ -1,6 +1,8 @@
 // Minimal hash router that loads pages from /pages/*.html into #content
 
-const routes = [
+// Base static routes; technician custom links will be appended at runtime
+let dynamicTechRoutes = [];
+const baseRoutes = [
   "scans",
   "service",
   "service-run",
@@ -13,13 +15,15 @@ const routes = [
   "settings",
 ];
 
+function allRoutes() { return [...baseRoutes, ...dynamicTechRoutes]; }
+
 function normalizeHash() {
   const hash = window.location.hash || "#\/scans";
   // ensure format #/route[?query]
   if (!hash.startsWith("#/")) return "#/scans";
   const route = hash.slice(2);
   const [name, query] = route.split("?", 2);
-  if (!routes.includes(name)) return "#/scans";
+  if (!allRoutes().includes(name)) return "#/scans";
   return `#/${name}${query ? `?${query}` : ""}`;
 }
 
@@ -34,6 +38,25 @@ async function loadPage(route) {
       service: 'scans/options',
       'service-run': 'scans/run',
     };
+    if (nameIsDynamicTech(route)) {
+      // dynamic technician page served by a shared template
+      const res = await fetch(`pages/technician-link.html`, { cache: "no-cache" }).catch(() => null);
+      if (res && res.ok) {
+        const html = await res.text();
+        window.scrollTo(0,0);
+        content.innerHTML = html;
+        content.focus({ preventScroll: true });
+        try {
+          const mod = await import(`./pages/technician-link.js?ts=${Date.now()}`);
+          if (typeof mod.showTechnicianLink === 'function') {
+            const linkId = route.split('/')?.[1] || route; // store after tech-
+            await mod.showTechnicianLink(route.replace(/^tech-/, ''));
+          }
+        } catch {}
+        content.setAttribute("aria-busy", "false");
+        return;
+      }
+    }
     const pagePath = pathMap[route] || route;
     const res = await fetch(`pages/${pagePath}.html`, { cache: "no-cache" });
     const html = await res.text();
@@ -82,6 +105,36 @@ function onRouteChange() {
   loadPage(name);
 }
 
+function nameIsDynamicTech(name){ return name.startsWith('tech-'); }
+
+async function refreshTechnicianTabs(){
+  // Load settings and rebuild dynamic tabs area
+  let settings = {};
+  try { settings = await window.__TAURI__.core.invoke('load_app_settings'); } catch {}
+  const links = settings?.technician_links || [];
+  dynamicTechRoutes = links.map(l => `tech-${l.id}`);
+  const nav = document.querySelector('.tab-bar');
+  if (!nav) return;
+  // Remove old dynamic items
+  nav.querySelectorAll('.tab.tech-link').forEach(el => el.remove());
+  nav.querySelectorAll('.tab-divider-tech').forEach(el => el.remove());
+  if (!links.length) { return; }
+  // Insert divider then links
+  const insertPoint = nav.querySelector('.tab-dynamic-insert-point');
+  const divider = document.createElement('span');
+  divider.className = 'tab-divider-tech';
+  divider.style.cssText = 'display:inline-block;width:1px;height:24px;background:var(--border-color,#444);margin:0 4px;align-self:center;';
+  insertPoint?.before(divider);
+  links.forEach(link => {
+    const a = document.createElement('a');
+    a.className = 'tab tech-link';
+    a.textContent = link.title || link.url;
+    a.href = `#/tech-${link.id}`;
+    a.setAttribute('data-route', `tech-${link.id}`);
+    insertPoint?.before(a);
+  });
+}
+
 window.addEventListener("hashchange", onRouteChange);
 window.addEventListener("DOMContentLoaded", () => {
   onRouteChange();
@@ -102,4 +155,7 @@ window.addEventListener("DOMContentLoaded", () => {
     document.getElementById('titlebar-maximize')?.addEventListener('click', () => appWindow.toggleMaximize());
     document.getElementById('titlebar-close')?.addEventListener('click', () => appWindow.close());
   }
+  refreshTechnicianTabs();
+  // Listen for custom event to refresh tabs when settings change
+  window.addEventListener('technician-links-updated', refreshTechnicianTabs);
 });

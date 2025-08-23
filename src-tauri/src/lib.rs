@@ -86,6 +86,12 @@ pub fn run() {
                 .to_str()
             {
                 let _ = std::env::set_current_dir(state);
+                // Configure WebView2 user data folder to live inside portable data dir for persistence across PCs
+                // This ensures cookies/localStorage for technician links stay on the USB drive.
+                let webview_profile = std::path::Path::new(state).join("webview_profile");
+                if std::fs::create_dir_all(&webview_profile).is_ok() {
+                    std::env::set_var("WEBVIEW2_USER_DATA_FOLDER", &webview_profile);
+                }
             }
             Ok(())
         })

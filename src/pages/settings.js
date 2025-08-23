@@ -128,6 +128,102 @@ async function renderRequired() {
 
 export async function initPage() {
   // Only run on settings page when present
-  if (!document.querySelector('[data-page="settings"]')) return;
+  const root = document.querySelector('[data-page="settings"]');
+  if (!root) return;
+  // Prevent double-initialization when reloading route
+  if (root.dataset.controllerInitialized) return;
+  root.dataset.controllerInitialized = '1';
+
   await renderRequired();
+
+  // ---- Sidebar pane navigation (moved from inline <script>) ----
+  const nav = root.querySelector('#settings-nav');
+  function panes() { return Array.from(root.querySelectorAll('[data-pane]')); }
+  function showPane(id){
+    panes().forEach(p => {
+      const match = p.getAttribute('data-pane') === id;
+      p.style.display = match ? '' : 'none';
+    });
+    if (nav) {
+      Array.from(nav.querySelectorAll('button[data-target]')).forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-target') === id);
+      });
+    }
+  }
+  nav?.addEventListener('click', e => {
+    const btn = e.target.closest('button[data-target]');
+    if (!btn) return;
+    showPane(btn.getAttribute('data-target'));
+  });
+  showPane('programs');
+
+  // ---- Technician links management (moved from inline <script>) ----
+  (async function(){
+    const { invoke } = window.__TAURI__.core || {};
+    if (!invoke) return;
+    let settings = {};
+    async function load(){
+      try { settings = await invoke('load_app_settings'); } catch { settings = {}; }
+      if(!settings.technician_links) settings.technician_links = [];
+    }
+    function save(){ return invoke('save_app_settings', { data: settings }); }
+    function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
+    function renderLinks(){
+      const list = root.querySelector('#tech-links-list');
+      if(!list) return;
+      const arr = settings.technician_links;
+      if(!arr.length){ list.innerHTML = '<div class="muted">No links added.</div>'; return; }
+      list.innerHTML = arr.map(l => `<div class="row" data-id="${l.id}"><div class="main"><div class="name">${escapeHtml(l.title||l.url)}</div><div class="muted" style="font-size:11px;">${escapeHtml(l.url)}</div></div><div class="meta" style="display:flex;gap:6px;"><button data-action="edit" class="ghost" title="Edit" style="min-width:42px;">Edit</button><button data-action="remove" class="danger" title="Remove" style="min-width:42px;">✕</button></div></div>`).join('');
+      list.querySelectorAll('button[data-action="remove"]').forEach(btn=>{
+        btn.addEventListener('click', e => { e.stopPropagation(); const id = btn.closest('.row').getAttribute('data-id'); settings.technician_links = settings.technician_links.filter(x=>x.id!==id); save().then(()=>{ dispatchEvent(new Event('technician-links-updated')); renderLinks(); }); });
+      });
+      const dialog = root.querySelector('#tech-link-editor');
+      const form = root.querySelector('#tech-link-edit-form');
+      const titleInput = root.querySelector('#t-edit-title');
+      const urlInput = root.querySelector('#t-edit-url');
+      const cancelBtn = root.querySelector('#t-edit-cancel');
+      let editingId = null;
+      cancelBtn?.addEventListener('click', () => dialog?.close());
+      form?.addEventListener('submit', async e => {
+        e.preventDefault();
+        if (!editingId) return;
+        const item = settings.technician_links.find(x=>x.id===editingId);
+        if (!item) return;
+        item.title = titleInput.value.trim();
+        item.url = urlInput.value.trim();
+        await save();
+        dialog.close();
+        dispatchEvent(new Event('technician-links-updated'));
+        renderLinks();
+      });
+      list.querySelectorAll('button[data-action="edit"]').forEach(btn => {
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          const id = btn.closest('.row')?.getAttribute('data-id');
+          const item = settings.technician_links.find(x=>x.id===id);
+          if(!item) return;
+          editingId = id;
+          titleInput.value = item.title || '';
+          urlInput.value = item.url || '';
+          dialog.showModal();
+          titleInput.focus();
+        });
+      });
+    }
+    await load();
+    renderLinks();
+    const form = root.querySelector('#tech-link-form');
+    form?.addEventListener('submit', async e => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      const title = (fd.get('title')||'').toString().trim();
+      const url = (fd.get('url')||'').toString().trim();
+      if(!title || !url) return;
+      settings.technician_links.push({ id: crypto.randomUUID(), title, url });
+      await save();
+      form.reset();
+      renderLinks();
+      dispatchEvent(new Event('technician-links-updated'));
+    });
+  })();
 }

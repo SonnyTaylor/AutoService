@@ -8,6 +8,7 @@
       <div class="card-title">Sections</div>
       <nav class="list" id="settings-nav">
         <button class="shortcut-btn active" data-target="programs" style="justify-content:flex-start;">Programs</button>
+  <button class="shortcut-btn" data-target="technician" style="justify-content:flex-start;">Technician</button>
       </nav>
     </aside>
 
@@ -22,26 +23,44 @@
           <div class="list" id="req-programs-list" aria-live="polite"></div>
         </div>
       </div>
+      <!-- Technician pane -->
+      <div class="card" data-pane="technician" style="display:none;">
+        <div class="card-title"><span>Technician Links</span></div>
+        <div class="card-body" style="gap:12px;">
+          <p class="muted" style="margin-top:0;">Add web tools you use frequently. They appear as tabs on the top bar. Data (cookies, localStorage) will persist on the USB via the app webview profile.</p>
+          <form id="tech-link-form" class="row" style="gap:8px;align-items:flex-end;flex-wrap:wrap;">
+            <label style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:180px;">
+              <span class="muted" style="font-size:12px;">Title</span>
+              <input type="text" name="title" placeholder="e.g. HelpDesk" required />
+            </label>
+            <label style="display:flex;flex-direction:column;gap:4px;flex:2;min-width:260px;">
+              <span class="muted" style="font-size:12px;">URL</span>
+              <input type="url" name="url" placeholder="https://example.com" required />
+            </label>
+            <button type="submit" class="primary">Add</button>
+          </form>
+          <div class="list" id="tech-links-list" aria-live="polite"></div>
+          <dialog id="tech-link-editor" class="program-editor" style="width:min(520px,92vw);">
+            <form method="dialog" id="tech-link-edit-form" style="display:flex;flex-direction:column;gap:14px;">
+              <h3 style="margin:0;font-size:1rem;">Edit Link</h3>
+              <label style="display:flex;flex-direction:column;gap:6px;">
+                <span class="muted" style="font-size:12px;">Title</span>
+                <input id="t-edit-title" type="text" required />
+              </label>
+              <label style="display:flex;flex-direction:column;gap:6px;">
+                <span class="muted" style="font-size:12px;">URL</span>
+                <input id="t-edit-url" type="url" required />
+              </label>
+              <div style="display:flex;justify-content:flex-end;gap:10px;">
+                <button type="button" id="t-edit-cancel" class="ghost">Cancel</button>
+                <button type="submit" id="t-edit-save">Save</button>
+              </div>
+            </form>
+          </dialog>
+        </div>
+      </div>
     </div>
   </div>
 
-  <script type="module">
-    // Nav switching
-    const nav = document.getElementById('settings-nav');
-    const panes = Array.from(document.querySelectorAll('[data-pane]'));
-    function showPane(id) {
-      panes.forEach(p => p.style.display = p.getAttribute('data-pane') === id ? '' : 'none');
-      Array.from(nav.querySelectorAll('button')).forEach(b => {
-        b.classList.toggle('active', b.getAttribute('data-target') === id);
-      });
-    }
-    nav.addEventListener('click', (e) => {
-      const btn = e.target.closest('button[data-target]');
-      if (!btn) return;
-      showPane(btn.getAttribute('data-target'));
-    });
-
-    // Initial pane
-    showPane('programs');
-  </script>
+  <!-- Page logic handled by settings.js controller (initPage) -->
 </section>

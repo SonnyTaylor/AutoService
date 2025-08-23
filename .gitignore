@@ -1,5 +1,6 @@
 data/settings/programs.json
 data/settings/scripts.json
+data\webview_profile
 # Logs
 logs
 *.log
@@ -27,3 +28,4 @@ dist-ssr
 
 # Syncthing
 .stfolder/
+data/settings/app_settings.json

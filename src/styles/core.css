@@ -30,6 +30,10 @@ body {
   scroll-padding-top: calc(34px + 52px);
 }
 
+/* Technician dynamic tabs */
+.tab-bar .tab.tech-link { font-style: normal; }
+.tab-bar .tab-divider-tech { opacity: .6; }
+
 /* Custom window titlebar (Tauri decorations disabled) */
 .titlebar { 
   height: 34px; 
@@ -115,6 +119,40 @@ header {
 
 /* Buttons and inputs baseline */
 button, input, select { font: inherit; color: var(--text); }
+
+/* Unified input styling */
+input[type="text"], input[type="url"], input[type="search"], input[type="number"], select, textarea {
+  background: #1b2130;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  line-height: 1.2;
+  transition: border-color .15s, background-color .15s, box-shadow .15s;
+  min-height: 38px;
+}
+input[type="text"]:focus, input[type="url"]:focus, input[type="search"]:focus, input[type="number"]:focus, select:focus, textarea:focus {
+  border-color: #335d9b;
+  outline: 0;
+  box-shadow: 0 0 0 1px #335d9b;
+}
+input[type="text"]::placeholder, input[type="url"]::placeholder { color: #5f6a7d; }
+
+/* Compact label helper text */
+label > span.muted { text-transform: uppercase; letter-spacing: .5px; font-weight: 500; }
+
+/* Technician links form layout tweaked */
+#tech-link-form { gap: 12px !important; }
+#tech-link-form input { width: 100%; }
+/* Ensure side-by-side inputs have proper vertical rhythm */
+#tech-link-form label { min-width:180px; }
+#tech-link-form label + label { margin-top:0; }
+
+/* Full-page technician link view (no card chrome) */
+.tech-link-full { position: fixed; top: calc(34px + 52px); left:0; right:0; bottom:0; background: #0b0e13; display:flex; }
+.tech-link-full iframe { flex:1; width:100%; height:100%; border:0; background:#111; }
+
+/* Hide the default page padding when we use tech-link-full */
+body:has(.tech-link-full) .page-container { padding:0; }
 
 button {
   background: var(--primary);
