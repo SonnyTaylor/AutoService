@@ -1,5 +1,5 @@
 [package]
-name = "rustservice"
+name = "autoservice"
 version = "0.1.0"
 description = "a Windows 10/11 USB-based diagnostic and cleanup tool designed to automatically run virus scanners, hardware diagnostics, and stress tests, then generate detailed reports for customers or users. It aims to streamline tech support tasks by providing a one-stop toolkit for system health checks, cleaning, and component testing."
 authors = ["SonnyTaylor"]
@@ -11,7 +11,7 @@ edition = "2021"
 # The `_lib` suffix may seem redundant but it is necessary
 # to make the lib name unique and wouldn't conflict with the bin name.
 # This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
-name = "rustservice_lib"
+name = "autoservice_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

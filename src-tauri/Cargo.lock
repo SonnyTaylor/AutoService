@@ -291,6 +291,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
 
 [[package]]
+name = "autoservice"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "battery",
+ "exeico",
+ "image 0.24.9",
+ "once_cell",
+ "serde",
+ "serde_json",
+ "sysinfo",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-opener",
+ "tauri-plugin-shell",
+ "tokio",
+ "uuid",
+ "wgpu",
+]
+
+[[package]]
 name = "av1-grain"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4028,28 +4050,6 @@ dependencies = [
  "libc",
  "linux-raw-sys",
  "windows-sys 0.60.2",
-]
-
-[[package]]
-name = "rustservice"
-version = "0.1.0"
-dependencies = [
- "base64 0.22.1",
- "battery",
- "exeico",
- "image 0.24.9",
- "once_cell",
- "serde",
- "serde_json",
- "sysinfo",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-opener",
- "tauri-plugin-shell",
- "tokio",
- "uuid",
- "wgpu",
 ]
 
 [[package]]

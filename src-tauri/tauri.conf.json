@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "rustservice",
+  "productName": "AutoService",
   "version": "0.1.0",
-  "identifier": "com.sonny-taylor.rustservice",
+  "identifier": "com.sonny-taylor.autoservice",
   "build": {
     "frontendDist": "../src"
   },
@@ -10,7 +10,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "RustService",
+  "title": "AutoService",
         "width": 800,
         "height": 600,
         "decorations": false
