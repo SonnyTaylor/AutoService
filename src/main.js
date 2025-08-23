@@ -39,23 +39,15 @@ async function loadPage(route) {
       'service-run': 'scans/run',
     };
     if (nameIsDynamicTech(route)) {
-      // dynamic technician page served by a shared template
-      const res = await fetch(`pages/technician-link.html`, { cache: "no-cache" }).catch(() => null);
-      if (res && res.ok) {
-        const html = await res.text();
-        window.scrollTo(0,0);
-        content.innerHTML = html;
-        content.focus({ preventScroll: true });
-        try {
-          const mod = await import(`./pages/technician-link.js?ts=${Date.now()}`);
-          if (typeof mod.showTechnicianLink === 'function') {
-            const linkId = route.split('/')?.[1] || route; // store after tech-
-            await mod.showTechnicianLink(route.replace(/^tech-/, ''));
-          }
-        } catch {}
-        content.setAttribute("aria-busy", "false");
-        return;
-      }
+      // dynamic technician pages are now shown in a persistent iframe container
+      try {
+        const mod = await import(`./pages/technician-link.js?ts=${Date.now()}`);
+        if (typeof mod.showTechnicianLink === 'function') {
+          await mod.showTechnicianLink(route.replace(/^tech-/, ''));
+          content.setAttribute("aria-busy", "false");
+          return;
+        }
+      } catch {}
     }
     const pagePath = pathMap[route] || route;
     const res = await fetch(`pages/${pagePath}.html`, { cache: "no-cache" });
@@ -66,6 +58,12 @@ async function loadPage(route) {
     
     // Focus the main landmark for a11y but prevent auto-scrolling
     content.focus({ preventScroll: true });
+
+    // Ensure any persistent technician webviews are hidden when loading a normal page
+    try {
+      const modHide = await import('./pages/technician-link.js');
+      if (typeof modHide.hideTechnicianLinks === 'function') modHide.hideTechnicianLinks();
+    } catch {}
 
     // Try to load optional page controller: /pages/<route>.js
     try {
