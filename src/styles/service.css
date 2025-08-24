@@ -1,14 +1,20 @@
-/* =============================== */
-/* Service Options page            */
-/* =============================== */
+/* Service page styles */
 [data-page="service"] .service-toolbar {
   display: flex;
   gap: 10px;
   align-items: center;
   margin: 8px 0 14px;
 }
-[data-page="service"] .service-toolbar .spacer { flex: 1; }
-[data-page="service"] .task-list { display: grid; gap: 10px; }
+[data-page="service"] .service-toolbar .spacer {
+  flex: 1;
+}
+
+[data-page="service"] .task-list {
+  display: grid;
+  gap: 10px;
+}
+
+/* Task row */
 [data-page="service"] .task-row {
   display: grid;
   grid-template-columns: 22px 1fr;
@@ -17,11 +23,31 @@
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: #202636;
+  background: var(--panel-alt);
 }
-[data-page="service"] .task-row:hover { background: #263043; border-color: #2e3b55; }
-[data-page="service"] .task-row input[type="checkbox"] { width: 18px; height: 18px; }
-[data-page="service"] .task-row .name { font-weight: 600; }
-[data-page="service"] .subtasks { padding: 8px 12px 6px 36px; display: grid; gap: 6px; }
-[data-page="service"] .subtasks .sub-title { font-size: 0.9rem; }
-[data-page="service"] .subtasks .sub-row { display: inline-flex; align-items: center; gap: 8px; }
+[data-page="service"] .task-row:hover {
+  background: var(--panel-hover);
+  border-color: #2e3b55;
+}
+[data-page="service"] .task-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+[data-page="service"] .task-row .name {
+  font-weight: 600;
+}
+
+/* Subtasks */
+[data-page="service"] .subtasks {
+  padding: 8px 36px 6px 12px;
+  display: grid;
+  gap: 6px;
+}
+[data-page="service"] .subtasks .sub-title {
+  font-size: 0.9rem;
+}
+[data-page="service"] .subtasks .sub-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}

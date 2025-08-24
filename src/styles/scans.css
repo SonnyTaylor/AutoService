@@ -26,25 +26,24 @@
   min-height: 0; /* allow rows to shrink to fit small windows */
   border: 1px solid transparent; /* allow gradient border */
   border-radius: 12px;
-  background:
-    linear-gradient(var(--panel-2), var(--panel-2)) padding-box,
+  background: linear-gradient(var(--panel-2), var(--panel-2)) padding-box,
     linear-gradient(180deg, #2b3446, #3a4763) border-box;
   cursor: pointer;
-  transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+  transition: background-color 120ms ease, border-color 120ms ease,
+    box-shadow 120ms ease, transform 120ms ease;
   will-change: background-color, box-shadow, transform;
 }
 [data-page="scans"] .scan-row:hover {
-  background:
-    linear-gradient(#263043, #263043) padding-box,
+  background: linear-gradient(#263043, #263043) padding-box,
     linear-gradient(180deg, #34507b, #44639a) border-box;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
   transform: translateY(-1px);
 }
 [data-page="scans"] .scan-row:has(input:checked) {
-  background:
-    linear-gradient(#21304a, #21304a) padding-box,
+  background: linear-gradient(#21304a, #21304a) padding-box,
     linear-gradient(180deg, #3b5fb0, #6e98ff) border-box;
-  box-shadow: 0 8px 22px rgba(16, 44, 96, 0.45), inset 0 0 0 1px rgba(111, 168, 255, 0.15);
+  box-shadow: 0 8px 22px rgba(16, 44, 96, 0.45),
+    inset 0 0 0 1px rgba(111, 168, 255, 0.15);
 }
 [data-page="scans"] .scan-row:has(input:focus-visible) {
   outline: 2px solid var(--primary);
@@ -55,12 +54,23 @@
   height: 22px;
   accent-color: var(--primary);
 }
-[data-page="scans"] .scan-row .row-main { display: grid; gap: 4px; }
-[data-page="scans"] .scan-row .title { font-weight: 700; font-size: 1.1rem; letter-spacing: 0.2px; }
-[data-page="scans"] .scan-row .desc { font-size: 0.98rem; }
+[data-page="scans"] .scan-row .row-main {
+  display: grid;
+  gap: 4px;
+}
+[data-page="scans"] .scan-row .title {
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: 0.2px;
+}
+[data-page="scans"] .scan-row .desc {
+  font-size: 0.98rem;
+}
 
 /* Muted description color harmonized with theme */
-[data-page="scans"] .scan-row .desc.muted { color: var(--muted); }
+[data-page="scans"] .scan-row .desc.muted {
+  color: var(--muted);
+}
 
 /* Disabled state for Start button */
 [data-page="scans"] .scan-toolbar button:disabled {
@@ -71,6 +81,10 @@
 
 /* Respect reduced motion preferences */
 @media (prefers-reduced-motion: reduce) {
-  [data-page="scans"] .scan-row { transition: none; }
-  [data-page="scans"] .scan-row:hover { transform: none; }
+  [data-page="scans"] .scan-row {
+    transition: none;
+  }
+  [data-page="scans"] .scan-row:hover {
+    transform: none;
+  }
 }

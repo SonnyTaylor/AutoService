@@ -1,16 +1,50 @@
 /* Sensors grid */
-.sensor-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
-.sensor { background: #202636; border: 1px solid var(--border); border-radius: 10px; padding: 10px; display: grid; gap: 6px; }
-.sensor .label { color: var(--muted); font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sensor .temp { font-weight: 700; }
-.sensor .temp.cool { color: #8fd5ff; }
-.sensor .temp.warm { color: #ffd37a; }
-.sensor .temp.hot { color: #ff8f8f; }
+.sensor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+.sensor {
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  display: grid;
+  gap: 6px;
+}
+.sensor .label {
+  color: var(--muted);
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sensor .temp {
+  font-weight: 700;
+}
+.sensor .temp.cool {
+  color: #8fd5ff;
+}
+.sensor .temp.warm {
+  color: #ffd37a;
+}
+.sensor .temp.hot {
+  color: #ff8f8f;
+}
 
 /* Temperature coloring when used outside .sensor cards */
-.temp.cool { color: #8fd5ff; font-weight: 700; }
-.temp.warm { color: #ffd37a; font-weight: 700; }
-.temp.hot  { color: #ff8f8f; font-weight: 700; }
+.temp.cool {
+  color: #8fd5ff;
+  font-weight: 700;
+}
+.temp.warm {
+  color: #ffd37a;
+  font-weight: 700;
+}
+.temp.hot {
+  color: #ff8f8f;
+  font-weight: 700;
+}
 
 /* =============================== */
 /* Stacked tables for System Info  */
@@ -25,17 +59,33 @@
 }
 
 /* Generic table block wrapper to allow horizontal scroll on narrow screens */
-.table-block { margin: 8px 0 16px; }
+.table-block {
+  margin: 8px 0 16px;
+}
 .table-wrap {
   overflow-x: auto;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--panel-2);
 }
-.table { width: 100%; border-collapse: collapse; min-width: 520px; }
-.table th, .table td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
-.table tr:last-child th, .table tr:last-child td { border-bottom: none; }
-.table tr:hover td { background: #263043; }
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 520px;
+}
+.table th,
+.table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.table tr:last-child th,
+.table tr:last-child td {
+  border-bottom: none;
+}
+.table tr:hover td {
+  background: var(--panel-hover);
+}
 
 /* Key-Value (two-column) tables */
 .kv-table th {
@@ -45,7 +95,9 @@
   font-weight: 500;
   background: transparent;
 }
-.kv-table td { color: var(--text); }
+.kv-table td {
+  color: var(--text);
+}
 
 /* Data tables with header */
 .data-table thead th {
@@ -56,7 +108,9 @@
 }
 
 /* Inline progress for usage rows inside tables */
-.table .progress { margin-top: 6px; }
+.table .progress {
+  margin-top: 6px;
+}
 
 /* Per-core usage grid */
 .per-core-grid {
@@ -64,13 +118,24 @@
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 8px 12px;
 }
-.per-core-item { display: grid; gap: 6px; }
-.per-core-name { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 0.9rem; }
+.per-core-item {
+  display: grid;
+  gap: 6px;
+}
+.per-core-name {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
 
 /* =============================== */
 /* Collapsibles (System Info)      */
 /* =============================== */
-.collapsible { margin: 12px 0 16px; }
+.collapsible {
+  margin: 12px 0 16px;
+}
 .collapsible-header {
   display: flex;
   align-items: center;
@@ -78,30 +143,44 @@
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: #202636;
+  background: var(--panel-alt);
   cursor: pointer;
   user-select: none;
 }
-.collapsible-header:hover { background: #222a3a; border-color: #2e3b55; }
-.collapsible-header .title { font-size: 1rem; font-weight: 600; color: var(--muted); }
-.collapsible-header[aria-expanded="true"] .title { color: var(--text); }
+.collapsible-header:hover {
+  background: #222a3a;
+  border-color: #2e3b55;
+}
+.collapsible-header .title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.collapsible-header[aria-expanded="true"] .title {
+  color: var(--text);
+}
 .collapsible-header .chevron {
-  width: 20px; height: 20px; min-width: 20px;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
   display: inline-block;
   position: relative;
   color: var(--muted);
   background: #1b2130;
   border: 1px solid var(--border);
   border-radius: 999px;
-  transition: transform 160ms ease, color 160ms ease, background 160ms ease, border-color 160ms ease;
+  transition: transform 160ms ease, color 160ms ease, background 160ms ease,
+    border-color 160ms ease;
   font-size: 0; /* hide any text glyph inside */
 }
 .collapsible-header .chevron::before {
   content: "";
   position: absolute;
-  top: 50%; left: 50%;
+  top: 50%;
+  left: 50%;
   transform: translate(-50%, -50%) rotate(0deg);
-  width: 0; height: 0;
+  width: 0;
+  height: 0;
   border-top: 5px solid transparent;
   border-bottom: 5px solid transparent;
   border-left: 7px solid currentColor; /* right-pointing triangle */
@@ -112,7 +191,9 @@
   background: #24314a;
   border-color: #2b416b;
 }
-.collapsible-body { margin-top: 8px; }
+.collapsible-body {
+  margin-top: 8px;
+}
 
 /* =============================== */
 /* Loading indicators               */
@@ -126,8 +207,13 @@
   border-radius: 10px;
   background: var(--panel-2);
 }
-.loading.center { justify-content: center; min-height: 100px; }
-.loading-title { font-weight: 600; }
+.loading.center {
+  justify-content: center;
+  min-height: 100px;
+}
+.loading-title {
+  font-weight: 600;
+}
 
 .spinner {
   display: inline-block;
@@ -137,9 +223,17 @@
   border-radius: 50%;
   box-sizing: border-box;
   border: 3px solid var(--border); /* track */
-  border-top-color: #8fd5ff;       /* accent arc */
+  border-top-color: #8fd5ff; /* accent arc */
   animation: spin 0.9s linear infinite;
 }
-.spinner.sm { width: 14px; height: 14px; border-width: 2px; }
+.spinner.sm {
+  width: 14px;
+  height: 14px;
+  border-width: 2px;
+}
 
-@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
