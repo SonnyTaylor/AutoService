@@ -12,7 +12,7 @@
 }
 
 /* Override base button style for tab buttons */
-.subtabs [role=tab] {
+.subtabs [role="tab"] {
   appearance: none;
   background: var(--panel-2);
   color: var(--muted);
@@ -23,11 +23,18 @@
   cursor: pointer;
 }
 
-.subtabs [role=tab]:hover {
+.subtabs [role="tab"]:hover {
   color: var(--text);
   background: #222a3a;
 }
 
-.subtabs [role=tab][aria-selected="true"] { color: var(--text); background: #21304a; border-color: #2b416b; border-bottom-color: var(--primary); }
+.subtabs [role="tab"][aria-selected="true"] {
+  color: var(--text);
+  background: #21304a;
+  border-color: #2b416b;
+  border-bottom-color: var(--primary);
+}
 
-.subtab-panel[hidden] { display: none !important; }
+.subtab-panel[hidden] {
+  display: none !important;
+}
