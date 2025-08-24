@@ -1,7 +1,17 @@
+/* Core design tokens (centralized). Adding a few new ones for repeated literals. */
 :root {
+  /* Layout chrome sizes */
+  --titlebar-height: 34px;
+  --topbar-height: 52px;
+  --chrome-offset: calc(var(--titlebar-height) + var(--topbar-height));
+
+  /* Palette */
   --bg: #0f1115;
   --panel: #171a21;
-  --panel-2: #1f2430;
+  --panel-2: #1f2430; /* main raised surface */
+  --panel-alt: #202636; /* frequently used alt surface */
+  --panel-accent: #1b2130; /* darker inset surface */
+  --panel-hover: #263043; /* common hover state */
   --text: #e6eaf2;
   --muted: #a3adbf;
   --primary: #4f8cff;
