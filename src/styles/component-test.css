@@ -56,7 +56,7 @@
   padding: 6px 10px;
   border-radius: 8px;
   border: 1px solid var(--border);
-  background: #1b2130;
+  background: var(--panel-accent);
   color: var(--muted);
   font-weight: 600;
 }
@@ -95,7 +95,7 @@
 
 /* Mouse tester visuals */
 [data-page="component-test"] .mouse-buttons-visual { display: inline-flex; gap: 6px; margin-left: 8px; vertical-align: middle; }
-[data-page="component-test"] .mouse-btn { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 4px; border: 1px solid var(--border); background: #1b2130; color: var(--muted); font-size: 0.75rem; }
+[data-page="component-test"] .mouse-btn { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 4px; border: 1px solid var(--border); background: var(--panel-accent); color: var(--muted); font-size: 0.75rem; }
 [data-page="component-test"] .mouse-btn.active { background: #213a2a; border-color: #2f6b4a; color: #dff7e6; }
 
 [data-page="component-test"] .cursor-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--primary); position: absolute; transform: translate(-50%, -50%); box-shadow: 0 0 0 2px rgba(79,140,255,0.4); }
@@ -105,7 +105,7 @@
 [data-page="component-test"] .meter {
   width: 240px;
   height: 10px;
-  background: #1b2130;
+  background: var(--panel-accent);
   border: 1px solid var(--border);
   border-radius: 999px;
   overflow: hidden;
@@ -140,7 +140,7 @@
   gap: 14px;
 }
 [data-page="component-test"] .audio-card {
-  background: #1b2130;
+  background: var(--panel-accent);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 14px;

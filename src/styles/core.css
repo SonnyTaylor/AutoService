@@ -125,7 +125,7 @@ button, input, select { font: inherit; color: var(--text); }
 
 /* Unified input styling */
 input[type="text"], input[type="url"], input[type="search"], input[type="number"], select, textarea {
-  background: #1b2130;
+  background: var(--panel-accent);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 8px 10px;
@@ -199,7 +199,7 @@ button:hover { background: var(--primary-700); }
 
 /* KPI stats inside cards */
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 8px; }
-.stat { background: #1b2130; border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; display: grid; gap: 2px; }
+.stat { background: var(--panel-accent); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; display: grid; gap: 2px; }
 .stat .label { color: var(--muted); font-size: 0.8rem; }
 .stat .value { font-weight: 600; }
 
@@ -212,7 +212,7 @@ button:hover { background: var(--primary-700); }
 .badge.error { background: #4a1e1e; border-color: #7a3333; }
 
 /* Progress bars (e.g., memory/disk usage) */
-.progress { height: 8px; background: #1b2130; border-radius: 999px; overflow: hidden; border: 1px solid var(--border); }
+.progress { height: 8px; background: var(--panel-accent); border-radius: 999px; overflow: hidden; border: 1px solid var(--border); }
 .progress > .bar { height: 100%; background: linear-gradient(90deg, var(--primary), #7aa8ff); width: 0%; }
 
 /* Details summary tweaks */
