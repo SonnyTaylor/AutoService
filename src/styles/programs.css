@@ -50,6 +50,7 @@
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--panel-2);
+  transition: background-color .15s, border-color .15s; /* smooth hover */
 }
 .program-logo-wrap { grid-area: logo; position: relative; width: 56px; height: 56px; }
 .program-logo { width: 100%; height: 100%; object-fit: contain; border-radius: 8px; background: #12151d; display: block; }
