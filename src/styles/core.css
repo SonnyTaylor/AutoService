@@ -35,9 +35,9 @@ body {
   background: var(--bg);
   color: var(--text);
   /* Space for titlebar + header to avoid content jumping */
-  padding-top: calc(34px + 52px); /* titlebar height + header height */
+  padding-top: var(--chrome-offset);
   /* Force initial scroll position */
-  scroll-padding-top: calc(34px + 52px);
+  scroll-padding-top: var(--chrome-offset);
 }
 
 /* Technician dynamic tabs */
@@ -66,18 +66,18 @@ body {
 .titlebar button:hover { background: #243048; color: var(--text); }
 .titlebar button#titlebar-close:hover { background: #5b2b2b; color: #ffdddd; }
 
-/* Ensure sticky header sits just below fixed custom titlebar (34px) */
-/* Removed previous margin-top approach to avoid overlap hiding tabs under titlebar */
+/* Ensure sticky header sits just below fixed custom titlebar */
+/* Consolidated .page-container definition (was duplicated). */
 .page-container { 
   position: relative;
-  z-index: 1; /* Ensure content scrolls under header */
-  padding-top: 16px;
+  z-index: 1; /* Content may scroll under header */
+  padding: 16px 16px 32px;
 }
 
 /* Top tab bar */
 header {
-  position: fixed; /* Change to fixed to stay above titlebar */
-  top: 34px; /* Position directly below titlebar */
+  position: fixed; /* Stay above titlebar */
+  top: var(--titlebar-height); /* Below custom titlebar */
   left: 0;
   right: 0;
   z-index: 4; /* Above titlebar to ensure tabs always visible */
@@ -107,14 +107,7 @@ header {
   background: var(--panel-2);
 }
 
-.tab.active {
-  color: var(--text);
-  background: #21304a;
-  border-color: #2b416b;
-}
-
-/* Page container */
-.page-container { padding: 16px 16px 32px; }
+.tab.active { color: var(--text); background: #21304a; border-color: #2b416b; }
 
 .page {
   background: var(--panel);
@@ -163,7 +156,7 @@ label > span.muted { text-transform: uppercase; letter-spacing: .5px; font-weigh
 .tech-input-row.row { display: flex; }
 
 /* Full-page technician link view (no card chrome) */
-.tech-link-full { position: fixed; top: calc(34px + 52px); left:0; right:0; bottom:0; background: #0b0e13; display:flex; }
+.tech-link-full { position: fixed; top: var(--chrome-offset); left:0; right:0; bottom:0; background: #0b0e13; display:flex; }
 .tech-link-full iframe { flex:1; width:100%; height:100%; border:0; background:#111; }
 
 /* Hide the default page padding when we use tech-link-full */

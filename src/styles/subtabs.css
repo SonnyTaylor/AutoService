@@ -28,11 +28,6 @@
   background: #222a3a;
 }
 
-.subtabs [role=tab][aria-selected="true"] {
-  color: var(--text);
-  background: #21304a; /* match top tab active */
-  border-color: #2b416b; /* match top tab border */
-  border-bottom-color: var(--primary);
-}
+.subtabs [role=tab][aria-selected="true"] { color: var(--text); background: #21304a; border-color: #2b416b; border-bottom-color: var(--primary); }
 
 .subtab-panel[hidden] { display: none !important; }
