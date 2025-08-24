@@ -83,10 +83,7 @@
   flex-shrink: 0;
 }
 
-.shortcut-btn:hover {
-  background: #263043;
-  border-color: #2e3b55;
-}
+.shortcut-btn:hover { background: var(--panel-hover); border-color: #2e3b55; }
 
 .shortcut-btn:disabled {
   opacity: 0.6;

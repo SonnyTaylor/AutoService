@@ -35,7 +35,7 @@
 .table { width: 100%; border-collapse: collapse; min-width: 520px; }
 .table th, .table td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
 .table tr:last-child th, .table tr:last-child td { border-bottom: none; }
-.table tr:hover td { background: #263043; }
+.table tr:hover td { background: var(--panel-hover); }
 
 /* Key-Value (two-column) tables */
 .kv-table th {

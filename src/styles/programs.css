@@ -69,7 +69,7 @@
 .program-actions button:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* Better hover to distinguish rows */
-.program-row:hover { background: #263043; border-color: #2e3b55; }
+.program-row:hover { background: var(--panel-hover); border-color: #2e3b55; }
 
 /* Add subtle labels on tighter layouts so sections don't blend */
 @media (max-width: 900px) {

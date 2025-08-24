@@ -175,7 +175,7 @@ button:hover { background: var(--primary-700); }
 
 /* Generic ghost button (used in System Info toolbar) */
 .ghost { background: transparent; border: 1px solid var(--border); }
-.ghost:hover { background: #222a3a; }
+.ghost:hover { background: var(--panel-hover); }
 
 /* Reduce focus outlines only to keyboard nav */
 :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
