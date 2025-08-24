@@ -17,9 +17,9 @@
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: #202636;
+  background: var(--panel-alt);
 }
-[data-page="service"] .task-row:hover { background: #263043; border-color: #2e3b55; }
+[data-page="service"] .task-row:hover { background: var(--panel-hover); border-color: #2e3b55; }
 [data-page="service"] .task-row input[type="checkbox"] { width: 18px; height: 18px; }
 [data-page="service"] .task-row .name { font-weight: 600; }
 [data-page="service"] .subtasks { padding: 8px 12px 6px 36px; display: grid; gap: 6px; }

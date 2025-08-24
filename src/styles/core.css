@@ -186,12 +186,12 @@ button:hover { background: var(--primary-700); }
 .card-title { font-weight: 600; margin-bottom: 6px; color: var(--muted); }
 .card-body { display: grid; gap: 4px; }
 .list { display: flex; flex-direction: column; gap: 12px; }
-.row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; padding: 10px; border: 1px solid var(--border); border-radius: 10px; background: #202636; }
+.row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; padding: 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel-alt); }
 .row .name { font-weight: 600; }
 .row .main { min-width: 0; }
 .row .main .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row .meta { text-align: right; white-space: nowrap; display: grid; gap: 4px; }
-.row:hover { background: #263043; border-color: #2e3b55; }
+.row:hover { background: var(--panel-hover); border-color: #2e3b55; }
 
 /* Spacing between stacked cards inside a page (e.g., Storage, Network, Graphics, Sensors) */
 .page > .card { margin-top: 16px; }

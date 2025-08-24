@@ -4,7 +4,7 @@
 [data-page="service-run"] .run-steps { list-style: none; padding-left: 0; display: grid; gap: 8px; }
 [data-page="service-run"] .run-step {
   display: grid; grid-template-columns: 14px 1fr auto; align-items: center; gap: 10px;
-  padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: #202636;
+  padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel-alt);
 }
 [data-page="service-run"] .run-step .state-dot { width: 10px; height: 10px; border-radius: 50%; background: #6b7280; display: inline-block; }
 [data-page="service-run"] .run-step.state-pending .state-dot { background: #6b7280; }
