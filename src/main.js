@@ -3,7 +3,6 @@
 // Base static routes; technician custom links will be appended at runtime
 let dynamicTechRoutes = [];
 const baseRoutes = [
-  "scans",
   "service",
   "service-run",
   "service-report",
@@ -19,12 +18,12 @@ const baseRoutes = [
 function allRoutes() { return [...baseRoutes, ...dynamicTechRoutes]; }
 
 function normalizeHash() {
-  const hash = window.location.hash || "#\/scans";
+  const hash = window.location.hash || "#\/service";
   // ensure format #/route[?query]
-  if (!hash.startsWith("#/")) return "#/scans";
+  if (!hash.startsWith("#/")) return "#/service";
   const route = hash.slice(2);
   const [name, query] = route.split("?", 2);
-  if (!allRoutes().includes(name)) return "#/scans";
+  if (!allRoutes().includes(name)) return "#/service";
   return `#/${name}${query ? `?${query}` : ""}`;
 }
 
@@ -35,10 +34,9 @@ async function loadPage(route) {
   try {
     // map logical routes to foldered page files
     const pathMap = {
-      scans: 'scans/index',
-      service: 'scans/options',
-      'service-run': 'scans/run',
-  'service-report': 'scans/report',
+      service: 'service/index',
+      'service-run': 'service/run',
+      'service-report': 'service/report',
     };
     if (nameIsDynamicTech(route)) {
       // dynamic technician pages are now shown in a persistent iframe container
