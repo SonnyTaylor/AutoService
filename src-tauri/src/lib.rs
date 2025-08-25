@@ -5,22 +5,25 @@ mod paths;
 mod icons;
 mod models;
 mod programs;
+mod scripts;
+mod servicing;
+mod settings;
 mod shortcuts;
 mod state;
 mod system;
-mod settings;
-mod scripts;
 
 use tauri::Manager;
 
 // Bring command fns into scope for generate_handler!
 use crate::icons::{read_image_as_data_url, suggest_logo_from_exe};
-use crate::programs::{get_tool_statuses, launch_program, list_programs, remove_program, save_program};
-use crate::programs::run_defender_scan;
-use crate::shortcuts::launch_shortcut;
-use crate::scripts::{list_scripts, save_script, remove_script, run_script};
-use crate::state::AppState;
+use crate::programs::{
+    get_tool_statuses, launch_program, list_programs, remove_program, save_program,
+};
+use crate::scripts::{list_scripts, remove_script, run_script, save_script};
+use crate::servicing::run_defender_scan;
 use crate::settings::{load_app_settings, save_app_settings};
+use crate::shortcuts::launch_shortcut;
+use crate::state::AppState;
 use crate::system::get_system_info;
 
 #[tauri::command]
