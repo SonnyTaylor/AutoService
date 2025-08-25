@@ -6,6 +6,7 @@ const baseRoutes = [
   "scans",
   "service",
   "service-run",
+  "service-report",
   "system-info",
   "shortcuts",
   "programs",
@@ -37,6 +38,7 @@ async function loadPage(route) {
       scans: 'scans/index',
       service: 'scans/options',
       'service-run': 'scans/run',
+  'service-report': 'scans/report',
     };
     if (nameIsDynamicTech(route)) {
       // dynamic technician pages are now shown in a persistent iframe container

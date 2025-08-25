@@ -16,6 +16,16 @@ function stepLabel(id) {
   return id;
 }
 
+// --- Helper: parse Defender output for threat counts ---
+function parseDefenderThreats(stdout) {
+  if (!stdout) return 0;
+  const m = stdout.match(/Threats? Found\s*:\s*(\d+)/i);
+  if (m) return parseInt(m[1], 10) || 0;
+  // Fallback: count lines that look like individual threats
+  const lines = stdout.split(/\r?\n/).filter(l => /Threat\s+:/i.test(l));
+  return lines.length;
+}
+
 export async function initPage() {
   const cfg = loadRunConfig();
   const runSteps = document.getElementById('run-steps');
@@ -70,6 +80,17 @@ export async function initPage() {
     if (metaEl) metaEl.textContent = meta || (state === 'running' ? 'Running' : state === 'ok' ? 'Done' : state === 'fail' ? 'Failed' : 'Queued');
   };
 
+  // Structured result object for report page
+  const runResult = {
+    runId: cfg.id,
+    startedAt: new Date().toISOString(),
+    tasks: [],
+    overallStatus: 'running',
+    aggregates: { threatsFound: 0 },
+  };
+  function persistRunResult() { try { sessionStorage.setItem('autoservice.runResult', JSON.stringify(runResult)); } catch {}
+  }
+
   // Resolve the path to MpCmdRun.exe via PowerShell (latest Platform folder)
   async function resolveMpCmdRunPath() {
     try {
@@ -101,7 +122,8 @@ export async function initPage() {
         if (res?.quick_scan?.code && res.quick_scan.code !== 0) {
           throw new Error(`Quick scan exited with code ${res.quick_scan.code}`);
         }
-        return;
+        const threats = parseDefenderThreats(res?.quick_scan?.stdout || '');
+        return { outputs: [res?.signature_update?.stdout || '', res?.quick_scan?.stdout || ''].filter(Boolean), threatsFound: threats };
       } catch (e) {
         appendLog(`Backend scan failed: ${e.message || e}`);
         appendLog('Falling back to local PowerShell execution');
@@ -141,30 +163,50 @@ export async function initPage() {
     if (scan.code !== 0) {
       throw new Error(`Quick scan exited with code ${scan.code}`);
     }
+    const threats = parseDefenderThreats(scan.stdout || '');
+    return { outputs: [scan.stdout || ''].filter(Boolean), threatsFound: threats };
   }
 
   // Execute tasks sequentially; only Virus/Defender is implemented.
   (async () => {
     for (let i = 0; i < cfg.tasks.length; i++) {
       const taskId = cfg.tasks[i];
+      const taskRec = { id: taskId, label: stepLabel(taskId), status: 'pending', startedAt: new Date().toISOString(), outputs: [] };
+      runResult.tasks.push(taskRec);
       try {
         setStepState(i, 'running');
+        taskRec.status = 'running';
         if (taskId === 'virus') {
           const engines = Array.isArray(cfg.virusEngines) ? cfg.virusEngines : [];
-          if (engines.includes('defender')) {
-            await runDefenderQuickScan();
-          } else {
-            appendLog('Virus scan: Defender not selected; nothing to run.');
-          }
+            if (engines.includes('defender')) {
+              const r = await runDefenderQuickScan();
+              if (r?.outputs) taskRec.outputs.push(...r.outputs);
+              if (typeof r?.threatsFound === 'number') {
+                taskRec.threatsFound = r.threatsFound;
+                runResult.aggregates.threatsFound += r.threatsFound;
+              }
+            } else {
+              appendLog('Virus scan: Defender not selected; nothing to run.');
+            }
         } else {
           appendLog(`${stepLabel(taskId)}: not implemented.`);
         }
-        setStepState(i, 'ok');
+        taskRec.status = 'ok';
+        taskRec.endedAt = new Date().toISOString();
+        setStepState(i, 'ok', taskRec.threatsFound != null ? `${taskRec.threatsFound} threat${taskRec.threatsFound === 1 ? '' : 's'}` : undefined);
       } catch (e) {
         appendLog(`${stepLabel(taskId)} failed: ${e.message || e}`);
+        taskRec.status = 'fail';
+        taskRec.endedAt = new Date().toISOString();
+        taskRec.error = e.message || String(e);
         setStepState(i, 'fail');
       }
+      persistRunResult();
     }
-    appendLog('All steps processed.');
+    runResult.endedAt = new Date().toISOString();
+    runResult.overallStatus = runResult.tasks.some(t => t.status === 'fail') ? 'failed' : 'ok';
+    persistRunResult();
+    appendLog('All steps processed. Preparing report…');
+    setTimeout(() => { window.location.hash = '#/service-report'; }, 700);
   })();
 }
