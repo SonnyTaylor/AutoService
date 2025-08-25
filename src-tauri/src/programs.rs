@@ -169,14 +169,6 @@ pub fn get_tool_statuses(state: tauri::State<AppState>) -> Result<Vec<ToolStatus
             }
         }
 
-        // Special-case Defender: try system detection when not found via saved entries
-        if key == "defender" && !exists {
-            if let Some(def_path) = crate::servicing::find_defender_mpcmdrun() {
-                exists = true;
-                path = Some(def_path);
-            }
-        }
-
         out.push(ToolStatus {
             key: key.to_string(),
             name: name.to_string(),

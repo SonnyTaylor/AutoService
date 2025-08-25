@@ -6,7 +6,6 @@ mod icons;
 mod models;
 mod programs;
 mod scripts;
-mod servicing;
 mod settings;
 mod shortcuts;
 mod state;
@@ -20,7 +19,6 @@ use crate::programs::{
     get_tool_statuses, launch_program, list_programs, remove_program, save_program,
 };
 use crate::scripts::{list_scripts, remove_script, run_script, save_script};
-use crate::servicing::run_defender_scan;
 use crate::settings::{load_app_settings, save_app_settings};
 use crate::shortcuts::launch_shortcut;
 use crate::state::AppState;
@@ -69,7 +67,6 @@ pub fn run() {
             remove_program,
             launch_program,
             get_tool_statuses,
-            run_defender_scan,
             list_scripts,
             save_script,
             remove_script,
