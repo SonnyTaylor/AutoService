@@ -9,27 +9,15 @@ function getHashQuery() {
 const { invoke } = window.__TAURI__?.core || {};
 const { Command } = window.__TAURI__?.shell || {};
 
+// Only the Virus step (Windows Defender) is implemented for now.
 const TASKS = [
-    { id: 'virus', label: 'Virus scanning/removal (malware, rootkits, adware, PUP)' },
-    { id: 'junk_cleanup', label: 'Junk/Temp Cleanup' },
-    { id: 'registry_cleanup', label: 'Registry Cleanup' },
-    { id: 'startup_cleanup', label: 'Startup Programs Cleanup' },
-    { id: 'browser_cleanup', label: 'Browser Cache/Cookies Cleanup' },
-    { id: 'cpu_bench', label: 'CPU Benchmark' },
-    { id: 'gpu_bench', label: 'GPU Benchmark' },
-    { id: 'drive_bench', label: 'Drive Benchmark' },
-    { id: 'battery_report', label: 'Battery Report' },
-    { id: 'storage_report', label: 'Storage/SMART Report' },
-    { id: 'driver_updates', label: 'Driver Updates' },
-    { id: 'windows_updates', label: 'Windows Updates' },
+  { id: 'virus', label: 'Virus scanning/removal (Windows Defender)' },
 ];
 
 function presetDefaults(preset) {
-  if (preset === 'complete-general') {
-    return TASKS.map(t => t.id);
-  }
-  if (preset === 'general') {
-    return ['virus','junk_cleanup','registry_cleanup','storage_report','windows_updates'];
+  // Map presets to the single implemented task
+  if (preset === 'complete-general' || preset === 'general') {
+    return ['virus'];
   }
   return [];
 }
@@ -86,14 +74,12 @@ function renderTasks(selectedIds) {
     if (task.id === 'virus') {
       const sub = document.createElement('div');
       sub.className = 'subtasks';
-      sub.innerHTML = `
-        <div class="sub-title muted">Pick at least one engine:</div>
-  <label class="sub-row" data-engine="kvrt"><input type="checkbox" class="virus-engine" value="kvrt" /> <span>KVRT</span> <span class="badge error" data-status hidden>Missing</span></label>
-  <label class="sub-row" data-engine="clamav"><input type="checkbox" class="virus-engine" value="clamav" /> <span>ClamAV</span> <span class="badge error" data-status hidden>Missing</span></label>
+  // Only show Windows Defender as the available engine for now.
+  sub.innerHTML = `
+    <div class="sub-title muted">Pick at least one engine:</div>
   <label class="sub-row" data-engine="defender"><input type="checkbox" class="virus-engine" value="defender" /> <span>Windows Defender</span> <span class="badge error" data-status hidden>Missing</span></label>
-  <label class="sub-row" data-engine="adwcleaner"><input type="checkbox" class="virus-engine" value="adwcleaner" /> <span>AdwCleaner</span> <span class="badge error" data-status hidden>Missing</span></label>
-        <div id="virus-engine-hint" class="badge warn" hidden>Choose at least one engine to enable Virus scanning</div>
-      `;
+    <div id="virus-engine-hint" class="badge warn" hidden>Choose at least one engine to enable Virus scanning</div>
+  `;
       wrap.appendChild(sub);
 
       // Behavior: the main Virus checkbox reflects whether any engine is selected
@@ -161,14 +147,12 @@ function renderTasks(selectedIds) {
 }
 
 async function detectVirusEnginesAvailability() {
-  const result = { kvrt: false, clamav: false, defender: false, adwcleaner: false };
+  // We only care about Defender availability in the current implementation.
+  const result = { defender: false };
   try {
     const statuses = await getToolStatuses();
     const byKey = Object.fromEntries((Array.isArray(statuses) ? statuses : []).map(s => [s.key, s]));
-    result.kvrt = !!byKey.kvrt?.exists;
-    result.clamav = !!byKey.clamav?.exists;
     result.defender = !!byKey.defender?.exists;
-    result.adwcleaner = !!byKey.adwcleaner?.exists;
   } catch {}
   return result;
 }

@@ -11,19 +11,9 @@ function loadRunConfig() {
 }
 
 function stepLabel(id) {
-  const map = {
-    virus: 'Virus scanning/removal',
-    cpu_bench: 'CPU Benchmark',
-    gpu_bench: 'GPU Benchmark',
-    drive_bench: 'Drive Benchmark',
-    battery_report: 'Battery Report',
-    storage_report: 'Storage/SMART Report',
-    registry_cleanup: 'Registry Cleanup',
-    junk_cleanup: 'Junk/Temp Cleanup',
-    driver_updates: 'Driver Updates',
-    windows_updates: 'Windows Updates',
-  };
-  return map[id] || id;
+  // Only the virus step is implemented for now.
+  if (id === 'virus') return 'Virus scanning/removal';
+  return id;
 }
 
 export async function initPage() {
@@ -153,7 +143,7 @@ export async function initPage() {
     }
   }
 
-  // Execute tasks sequentially; start with implementing Defender within the Virus step
+  // Execute tasks sequentially; only Virus/Defender is implemented.
   (async () => {
     for (let i = 0; i < cfg.tasks.length; i++) {
       const taskId = cfg.tasks[i];
@@ -161,21 +151,18 @@ export async function initPage() {
         setStepState(i, 'running');
         if (taskId === 'virus') {
           const engines = Array.isArray(cfg.virusEngines) ? cfg.virusEngines : [];
-          // Implement Defender first; other engines can be added similarly
           if (engines.includes('defender')) {
             await runDefenderQuickScan();
           } else {
-            appendLog('Virus scan: Defender not selected; skipping.');
+            appendLog('Virus scan: Defender not selected; nothing to run.');
           }
         } else {
-          // Placeholder for other services; mark as done immediately for now
-          appendLog(`${stepLabel(taskId)}: not implemented yet.`);
+          appendLog(`${stepLabel(taskId)}: not implemented.`);
         }
         setStepState(i, 'ok');
       } catch (e) {
         appendLog(`${stepLabel(taskId)} failed: ${e.message || e}`);
         setStepState(i, 'fail');
-        // continue to next tasks; optionally break if needed
       }
     }
     appendLog('All steps processed.');
