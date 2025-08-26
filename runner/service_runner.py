@@ -1,10 +1,13 @@
 import sys
 import json
 import subprocess
-import re
+import os
 import argparse
 import logging
 from typing import List, Dict, Any
+
+# Local service imports
+from services.bleachbit_service import run_bleachbit_clean  # type: ignore
 
 # Configure basic logging to stderr for debugging purposes.
 # The final report will be printed to stdout.
@@ -15,152 +18,7 @@ logging.basicConfig(
 )
 
 
-def parse_bleachbit_output(output: str) -> Dict[str, Any]:
-    """
-    Parses the stdout from bleachbit_console.exe to extract structured data.
-
-    Args:
-        output: The captured stdout string from the BleachBit process.
-
-    Returns:
-        A dictionary containing extracted metrics like space recovered and files deleted.
-    """
-    summary = {
-        "space_recovered_bytes": 0,
-        "files_deleted": 0,
-        "special_operations": 0,
-        "errors": 0,
-    }
-
-    # Regex patterns to find specific lines in the output
-    patterns = {
-        # Looks for "Disk space recovered: 1.23MB"
-        "space_recovered_bytes": re.compile(
-            r"Disk space recovered:\s*(\d+(\.\d+)?)\s*([kKmMgG]B)?"
-        ),
-        # Looks for "Files deleted: 123"
-        "files_deleted": re.compile(r"Files deleted:\s*(\d+)"),
-        # Looks for "Special operations: 4"
-        "special_operations": re.compile(r"Special operations:\s*(\d+)"),
-        # Looks for "Errors: 1"
-        "errors": re.compile(r"Errors:\s*(\d+)"),
-    }
-
-    # Helper to convert units like KB, MB, GB to bytes
-    def convert_to_bytes(value, unit):
-        if unit:
-            unit = unit.lower()
-            if unit.startswith("k"):
-                return value * 1024
-            if unit.startswith("m"):
-                return value * 1024**2
-            if unit.startswith("g"):
-                return value * 1024**3
-        return value
-
-    for line in output.splitlines():
-        if "Disk space recovered" in line:
-            match = patterns["space_recovered_bytes"].search(line)
-            if match:
-                value = float(match.group(1))
-                unit = match.group(3)
-                summary["space_recovered_bytes"] = int(convert_to_bytes(value, unit))
-        elif "Files deleted" in line:
-            match = patterns["files_deleted"].search(line)
-            if match:
-                summary["files_deleted"] = int(match.group(1))
-        elif "Special operations" in line:
-            match = patterns["special_operations"].search(line)
-            if match:
-                summary["special_operations"] = int(match.group(1))
-        elif "Errors" in line:
-            match = patterns["errors"].search(line)
-            if match:
-                summary["errors"] = int(match.group(1))
-
-    return summary
-
-
-def run_bleachbit_clean(task: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Executes the BleachBit cleaning task.
-
-    This function constructs and runs the BleachBit command-line tool,
-    captures its output, and returns a structured result dictionary.
-
-    Args:
-        task: A dictionary containing task details, including 'executable_path'
-              and a list of 'options' (cleaners to run).
-
-    Returns:
-        A dictionary summarizing the execution result.
-    """
-    logging.info("Starting BleachBit task.")
-    exec_path = task.get("executable_path")
-    options = task.get("options", [])  # Default to empty list if not provided
-
-    if not exec_path:
-        logging.error("BleachBit task failed: 'executable_path' not provided.")
-        return {
-            "task_type": "bleachbit_clean",
-            "status": "failure",
-            "summary": {"error": "Executable path was missing."},
-        }
-
-    # Construct the command: e.g., "bleachbit_console.exe --clean system.tmp system.recycle_bin"
-    command = [exec_path, "--clean"] + options
-    logging.info(f"Executing command: {' '.join(command)}")
-
-    try:
-        # Run the command. text=True decodes stdout/stderr as UTF-8.
-        # capture_output=True is equivalent to stdout=PIPE, stderr=PIPE.
-        process = subprocess.run(
-            command,
-            capture_output=True,
-            text=True,
-            check=False,  # We handle the return code manually
-            encoding="utf-8",
-            errors="replace",  # Handle potential encoding errors in tool output
-        )
-
-        if process.returncode != 0:
-            logging.error(
-                f"BleachBit process exited with error code {process.returncode}."
-            )
-            return {
-                "task_type": "bleachbit_clean",
-                "status": "failure",
-                "summary": {
-                    "error": f"Process exited with code {process.returncode}.",
-                    "details": process.stderr.strip(),
-                },
-            }
-
-        logging.info("BleachBit task completed successfully.")
-
-        # Parse the output to get actionable data
-        summary_data = parse_bleachbit_output(process.stdout)
-
-        return {
-            "task_type": "bleachbit_clean",
-            "status": "success",
-            "summary": summary_data,
-        }
-
-    except FileNotFoundError:
-        logging.error(f"BleachBit executable not found at '{exec_path}'.")
-        return {
-            "task_type": "bleachbit_clean",
-            "status": "failure",
-            "summary": {"error": f"File not found: {exec_path}"},
-        }
-    except Exception as e:
-        logging.error(f"An unexpected error occurred while running BleachBit: {e}")
-        return {
-            "task_type": "bleachbit_clean",
-            "status": "failure",
-            "summary": {"error": f"An unexpected exception occurred: {str(e)}"},
-        }
+"""BleachBit functionality refactored into services.bleachbit_service."""
 
 
 # --- Modular Task Dispatcher ---
@@ -184,22 +42,32 @@ def main():
     parser.add_argument(
         "json_input",
         type=str,
-        help="A JSON string defining the sequence of automation tasks to run.",
+        help="Either a JSON string or a path to a JSON file defining tasks.",
     )
     args = parser.parse_args()
 
-    try:
-        input_data = json.loads(args.json_input)
-        tasks = input_data.get("tasks", [])
-    except json.JSONDecodeError:
-        logging.error("Failed to decode input JSON.")
-        final_report = {
-            "overall_status": "failure",
-            "error": "Invalid JSON input provided.",
-            "results": [],
-        }
-        print(json.dumps(final_report, indent=2))
-        sys.exit(1)
+    raw_input = args.json_input
+    input_data = None
+    # Allow passing a filename instead of raw JSON
+    if os.path.exists(raw_input) and os.path.isfile(raw_input):
+        try:
+            with open(raw_input, "r", encoding="utf-8") as f:
+                input_data = json.load(f)
+        except Exception as e:  # noqa: BLE001
+            logging.error(f"Failed reading JSON file: {e}")
+    if input_data is None:
+        try:
+            input_data = json.loads(raw_input)
+        except json.JSONDecodeError:
+            logging.error("Failed to decode input JSON.")
+            final_report = {
+                "overall_status": "failure",
+                "error": "Invalid JSON input provided.",
+                "results": [],
+            }
+            print(json.dumps(final_report, indent=2))
+            sys.exit(1)
+    tasks = input_data.get("tasks", [])
 
     all_results = []
     overall_success = True
