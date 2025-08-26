@@ -80,6 +80,35 @@ fn main() {
         bin_dir.display()
     );
 
+    // Choose PyInstaller work and spec paths inside the Cargo OUT_DIR so
+    // PyInstaller doesn't write build artifacts into the source tree
+    // (which would cause cargo to repeatedly detect changes and rebuild).
+    let out_dir = match std::env::var("OUT_DIR") {
+        Ok(v) => PathBuf::from(v),
+        Err(_) => bin_dir.clone(),
+    };
+
+    let workpath = out_dir.join("pyinstaller_work");
+    let specpath = out_dir.join("pyinstaller_spec");
+
+    if let Err(e) = fs::create_dir_all(&workpath) {
+        println!(
+            "cargo:warning=Failed to create pyinstaller workpath {}: {}",
+            workpath.display(),
+            e
+        );
+    }
+    if let Err(e) = fs::create_dir_all(&specpath) {
+        println!(
+            "cargo:warning=Failed to create pyinstaller specpath {}: {}",
+            specpath.display(),
+            e
+        );
+    }
+
+    let workpath_str = workpath.to_str().unwrap_or(bin_dir_str);
+    let specpath_str = specpath.to_str().unwrap_or(bin_dir_str);
+
     let status = Command::new("python")
         .arg("-m")
         .arg("PyInstaller")
@@ -87,6 +116,10 @@ fn main() {
         .arg("--noconfirm")
         .arg("--distpath")
         .arg(bin_dir_str)
+        .arg("--workpath")
+        .arg(workpath_str)
+        .arg("--specpath")
+        .arg(specpath_str)
         .arg("--name")
         .arg("service_runner")
         .arg(py_src.to_str().unwrap())
