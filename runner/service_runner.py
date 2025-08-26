@@ -105,7 +105,6 @@ def run_bleachbit_clean(task: Dict[str, Any]) -> Dict[str, Any]:
             "task_type": "bleachbit_clean",
             "status": "failure",
             "summary": {"error": "Executable path was missing."},
-            "raw_log": "",
         }
 
     # Construct the command: e.g., "bleachbit_console.exe --clean system.tmp system.recycle_bin"
@@ -124,9 +123,6 @@ def run_bleachbit_clean(task: Dict[str, Any]) -> Dict[str, Any]:
             errors="replace",  # Handle potential encoding errors in tool output
         )
 
-        # Combine stdout and stderr for the raw log
-        raw_log = f"--- STDOUT ---\n{process.stdout}\n--- STDERR ---\n{process.stderr}"
-
         if process.returncode != 0:
             logging.error(
                 f"BleachBit process exited with error code {process.returncode}."
@@ -138,7 +134,6 @@ def run_bleachbit_clean(task: Dict[str, Any]) -> Dict[str, Any]:
                     "error": f"Process exited with code {process.returncode}.",
                     "details": process.stderr.strip(),
                 },
-                "raw_log": raw_log,
             }
 
         logging.info("BleachBit task completed successfully.")
@@ -150,7 +145,6 @@ def run_bleachbit_clean(task: Dict[str, Any]) -> Dict[str, Any]:
             "task_type": "bleachbit_clean",
             "status": "success",
             "summary": summary_data,
-            "raw_log": raw_log,
         }
 
     except FileNotFoundError:
@@ -159,7 +153,6 @@ def run_bleachbit_clean(task: Dict[str, Any]) -> Dict[str, Any]:
             "task_type": "bleachbit_clean",
             "status": "failure",
             "summary": {"error": f"File not found: {exec_path}"},
-            "raw_log": "",
         }
     except Exception as e:
         logging.error(f"An unexpected error occurred while running BleachBit: {e}")
@@ -167,7 +160,6 @@ def run_bleachbit_clean(task: Dict[str, Any]) -> Dict[str, Any]:
             "task_type": "bleachbit_clean",
             "status": "failure",
             "summary": {"error": f"An unexpected exception occurred: {str(e)}"},
-            "raw_log": "",
         }
 
 
@@ -230,7 +222,6 @@ def main():
                     "summary": {
                         "reason": f"No handler implemented for this task type."
                     },
-                    "raw_log": "",
                 }
             )
 
