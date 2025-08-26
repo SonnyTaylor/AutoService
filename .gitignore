@@ -34,3 +34,4 @@ data/settings/app_settings.json
 # Ignore pyinstaller build artifacts and produced service exe
 src-tauri/py_build
 data/resources/bin/service_runner.exe
+src-tauri/bin/service_runner.exe
