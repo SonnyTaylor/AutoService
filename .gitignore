@@ -35,3 +35,5 @@ data/settings/app_settings.json
 src-tauri/py_build
 data/resources/bin/service_runner.exe
 src-tauri/bin/service_runner.exe
+src-tauri/build/service_runner
+src-tauri/service_runner.spec
