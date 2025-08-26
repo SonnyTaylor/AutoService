@@ -166,6 +166,8 @@ def run_adwcleaner_clean(task: Dict[str, Any]) -> Dict[str, Any]:
 
     logger.info(f"Executing command: {' '.join(command)}")
 
+    # Attempt to run the command. If we hit a Windows elevation error (WinError 740)
+    # try retrying using an elevated PowerShell Start-Process invocation.
     try:
         process = subprocess.run(
             command,
@@ -189,6 +191,47 @@ def run_adwcleaner_clean(task: Dict[str, Any]) -> Dict[str, Any]:
             "status": "failure",
             "summary": {"error": f"Executable not found: {exec_path}"},
         }
+    except OSError as ose:  # handle WinError cases (e.g., requires elevation)
+        winerr = getattr(ose, "winerror", None)
+        if winerr == 740:
+            logger.warning(
+                "AdwCleaner execution requires elevation (WinError 740). Retrying via PowerShell Start-Process -Verb RunAs."
+            )
+            ps_cmd = _build_powershell_command(exec_path, working_path)
+            logger.info(f"Retrying with elevated command: {' '.join(ps_cmd)}")
+            try:
+                process = subprocess.run(
+                    ps_cmd,
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    check=False,
+                    timeout=timeout,
+                )
+            except subprocess.TimeoutExpired:
+                logger.error("AdwCleaner elevated process timed out.")
+                return {
+                    "task_type": "adwcleaner_clean",
+                    "status": "failure",
+                    "summary": {
+                        "error": f"Timed out after {timeout} seconds (elevated run)."
+                    },
+                }
+            except Exception as e2:  # noqa: BLE001
+                logger.exception("Elevated PowerShell retry failed.")
+                return {
+                    "task_type": "adwcleaner_clean",
+                    "status": "failure",
+                    "summary": {"error": f"Elevated retry failed: {e2}"},
+                }
+        else:
+            logger.exception("Unexpected OSError while running AdwCleaner.")
+            return {
+                "task_type": "adwcleaner_clean",
+                "status": "failure",
+                "summary": {"error": f"Unexpected OSError: {ose}"},
+            }
     except Exception as e:  # noqa: BLE001
         logger.exception("Unexpected exception while running AdwCleaner.")
         return {
