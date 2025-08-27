@@ -68,8 +68,11 @@ def parse_adwcleaner_log(log_path: str) -> Dict[str, Any]:
 
             # section content
             if current_section:
+                if line.startswith("########## EOF"):
+                    # Stop parsing at EOF marker
+                    break
+
                 if isinstance(current_section, tuple):
-                    # goes into browsers dict
                     key = current_section[1]
                     if "No malicious" not in line and line:
                         summary["browsers"].setdefault(key, []).append(line)
@@ -77,6 +80,8 @@ def parse_adwcleaner_log(log_path: str) -> Dict[str, Any]:
                     if (
                         "No malicious" not in line
                         and "No Preinstalled" not in line
+                        and not line.startswith("AdwCleaner[")
+                        and not line.startswith("########## EOF")
                         and line
                     ):
                         summary[current_section].append(line)
