@@ -32,6 +32,15 @@
       "stress_cpu": true,
       "stress_memory": true,
       "stress_gpu": true
+    },
+    {
+      "type": "furmark_stress_test",
+      "executable_path": "..\\data\\programs\\FurMark2 - 2.9.0\\furmark.exe",
+      "duration_seconds": 60,
+      "width": 1920,
+      "height": 1080,
+      "demo": "furmark-gl",
+      "extra_args": ["--no-gui"]
     }
   ]
 }
