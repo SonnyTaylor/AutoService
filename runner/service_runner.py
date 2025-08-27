@@ -1,10 +1,19 @@
-import sys
-import json
-import subprocess
-import os
-import argparse
-import logging
+import sys, os, ctypes, json, subprocess, argparse, logging
 from typing import List, Dict, Any
+
+
+def is_admin():
+    try:
+        return ctypes.windll.shell32.IsUserAnAdmin()
+    except:
+        return False
+
+
+if not is_admin():
+    # Relaunch script with admin rights
+    params = " ".join([f'"{x}"' for x in sys.argv])
+    ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, params, None, 1)
+    sys.exit(0)
 
 # Local service imports
 from services.bleachbit_service import run_bleachbit_clean  # type: ignore
