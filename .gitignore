@@ -39,8 +39,8 @@ src-tauri/build/service_runner
 src-tauri/service_runner.spec
 
 # Ignore service runner json files
-runner/*.json
-runner/sample_tasks/*.json
+# runner/*.json
+# runner/sample_tasks/*.json
 
 # Ignore python cache files
 __pycache__/

@@ -1,0 +1,13 @@
+{
+  "tasks": [
+    {
+      "type": "heavyload_stress_test",
+      "executable_path": "..\\data\\programs\\HeavyLoad - 4.0\\HeavyLoad.exe",
+      "duration_minutes": 1,
+      "headless": false,
+      "stress_cpu": true,
+      "stress_memory": true,
+      "stress_gpu": true
+    }
+  ]
+}

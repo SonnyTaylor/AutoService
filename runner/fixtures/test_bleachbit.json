@@ -1,0 +1,22 @@
+{
+  "tasks": [
+    {
+      "type": "bleachbit_clean",
+      "executable_path": "..\\data\\programs\\BleachBit - 5.0.0\\BleachBit-Portable\\bleachbit_console.exe",
+      "options": [
+        "system.tmp",
+        "system.recycle_bin",
+        "system.prefetch",
+        "google_chrome.cache",
+        "google_chrome.vacuum",
+        "firefox.cache",
+        "firefox.vacuum",
+        "microsoft_edge.cache",
+        "microsoft_edge.vacuum",
+        "windows_media_player.cache",
+        "java.cache",
+        "flash.cache"
+      ]
+    }
+  ]
+}

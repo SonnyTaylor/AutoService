@@ -1,0 +1,37 @@
+{
+  "tasks": [
+    {
+      "type": "adwcleaner_clean",
+      "executable_path": "..\\data\\programs\\AdwCleaner - 8.5.0\\adwcleaner.exe",
+      "working_path": "..\\data\\logs",
+      "clean_preinstalled": false
+    },
+    {
+      "type": "bleachbit_clean",
+      "executable_path": "..\\data\\programs\\BleachBit - 5.0.0\\BleachBit-Portable\\bleachbit_console.exe",
+      "options": [
+        "system.tmp",
+        "system.recycle_bin",
+        "system.prefetch",
+        "google_chrome.cache",
+        "google_chrome.vacuum",
+        "firefox.cache",
+        "firefox.vacuum",
+        "microsoft_edge.cache",
+        "microsoft_edge.vacuum",
+        "windows_media_player.cache",
+        "java.cache",
+        "flash.cache"
+      ]
+    },
+    {
+      "type": "heavyload_stress_test",
+      "executable_path": "..\\data\\programs\\HeavyLoad - 4.0\\HeavyLoad.exe",
+      "duration_minutes": 1,
+      "headless": false,
+      "stress_cpu": true,
+      "stress_memory": true,
+      "stress_gpu": true
+    }
+  ]
+}
