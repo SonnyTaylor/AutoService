@@ -7,6 +7,14 @@ mod paths {
     include!("src/paths.rs");
 }
 
+// Easy-to-change constants for where the generated Python executable is placed
+// and what it is named. Change these to control the target location or name
+// without digging through the build logic.
+const BIN_DIR_NAME: &str = "bin";
+const PYTHON_RUNNER_STEM: &str = "service_runner"; // PyInstaller --name
+const PYTHON_RUNNER_EXE_NAME: &str = "service_runner.exe"; // final exe name in bin dir
+const PYTHON_COMMAND: &str = "python"; // program used to invoke PyInstaller
+
 fn main() {
     // Let Tauri's build steps run as usual.
     tauri_build::build();
@@ -22,7 +30,7 @@ fn main() {
 
     // Build path to data/resources/bin
     let (_reports, _programs, _settings, resources) = paths::subdirs(&data_root);
-    let bin_dir = resources.join("bin");
+    let bin_dir = resources.join(BIN_DIR_NAME);
     if let Err(e) = fs::create_dir_all(&bin_dir) {
         println!(
             "cargo:warning=Failed to create bin directory {}: {}",
@@ -47,7 +55,7 @@ fn main() {
 
     // Target executable path in the bin folder. We'll remove it first so the
     // new build effectively overwrites the previous one.
-    let target_exe = bin_dir.join("service_runner.exe");
+    let target_exe = bin_dir.join(PYTHON_RUNNER_EXE_NAME);
     if target_exe.exists() {
         if let Err(e) = fs::remove_file(&target_exe) {
             println!(
@@ -109,7 +117,7 @@ fn main() {
     let workpath_str = workpath.to_str().unwrap_or(bin_dir_str);
     let specpath_str = specpath.to_str().unwrap_or(bin_dir_str);
 
-    let status = Command::new("python")
+    let status = Command::new(PYTHON_COMMAND)
         .arg("-m")
         .arg("PyInstaller")
         .arg("--onefile")
@@ -121,7 +129,7 @@ fn main() {
         .arg("--specpath")
         .arg(specpath_str)
         .arg("--name")
-        .arg("service_runner")
+        .arg(PYTHON_RUNNER_STEM)
         .arg(py_src.to_str().unwrap())
         .status();
 
