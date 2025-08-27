@@ -18,6 +18,7 @@ if not is_admin():
 # Local service imports
 from services.bleachbit_service import run_bleachbit_clean  # type: ignore
 from services.adwcleaner_service import run_adwcleaner_clean  # type: ignore
+from services.furmark_service import run_furmark_test  # type: ignore
 
 # Configure basic logging to stderr for debugging purposes.
 # The final report will be printed to stdout.
@@ -37,6 +38,7 @@ logging.basicConfig(
 TASK_HANDLERS = {
     "bleachbit_clean": run_bleachbit_clean,
     "adwcleaner_clean": run_adwcleaner_clean,
+    "furmark_stress_test": run_furmark_test,
     # "kvrt_scan": run_kvrt_scan, # Example for the future
     # "windows_defender_scan": run_windows_defender_scan, # Example for the future
 }
