@@ -57,6 +57,14 @@ def main():
         type=str,
         help="Either a JSON string or a path to a JSON file defining tasks.",
     )
+    parser.add_argument(
+        "--output-file",
+        "-o",
+        dest="output_file",
+        type=str,
+        default=None,
+        help="Optional path to write the final JSON report. If omitted, no file is written.",
+    )
     args = parser.parse_args()
 
     raw_input = args.json_input
@@ -112,7 +120,23 @@ def main():
     }
 
     # Print the final JSON report to stdout for the parent process (AutoService) to capture.
-    print(json.dumps(final_report, indent=2))
+    report_json = json.dumps(final_report, indent=2)
+    print(report_json)
+
+    # Write the final report to disk only if the user supplied --output-file.
+    output_path = args.output_file
+    if output_path:
+        try:
+            dirpath = os.path.dirname(output_path)
+            if dirpath:
+                os.makedirs(dirpath, exist_ok=True)
+            with open(output_path, "w", encoding="utf-8") as out_f:
+                out_f.write(report_json)
+            logging.info(f"Final report written to '{output_path}'")
+        except Exception as e:  # noqa: BLE001
+            logging.error(f"Failed to write final report to '{output_path}': {e}")
+    else:
+        logging.info("No --output-file provided; final report not written to disk.")
 
 
 if __name__ == "__main__":
