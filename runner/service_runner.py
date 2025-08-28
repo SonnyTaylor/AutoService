@@ -23,6 +23,7 @@ from services.heavyload_service import run_heavyload_stress_test  # type: ignore
 from services.smartctl_service import run_smartctl_report  # type: ignore
 from services.sfc_service import run_sfc_scan  # type: ignore
 from services.dism_service import run_dism_health_check  # type: ignore
+from services.ai_startup_service import run_ai_startup_disable  # type: ignore
 
 # Configure basic logging to stderr for debugging purposes.
 # The final report will be printed to stdout.
@@ -47,6 +48,7 @@ TASK_HANDLERS = {
     "smartctl_report": run_smartctl_report,
     "sfc_scan": run_sfc_scan,
     "dism_health_check": run_dism_health_check,
+    "ai_startup_disable": run_ai_startup_disable,
     # "kvrt_scan": run_kvrt_scan, # Example for the future
     # "windows_defender_scan": run_windows_defender_scan, # Example for the future
 }
