@@ -245,6 +245,17 @@ def run_ai_startup_disable(task: Dict[str, Any]) -> Dict[str, Any]:
     model = task.get("model")
     apply_changes = bool(task.get("apply_changes", False))
 
+    # Support environment-backed API keys in fixtures or tasks.
+    # If the task's api_key is a string like "env:VARNAME" we will read that
+    # environment variable. If no api_key is provided, fall back to common
+    # env var names to avoid embedding secrets in fixtures.
+    if isinstance(api_key, str) and api_key.startswith("env:"):
+        env_var = api_key.split(":", 1)[1]
+        api_key = os.getenv(env_var)
+    if not api_key:
+        # Try project-specific and common env var names
+        api_key = os.getenv("AUTOSERVICE_OPENAI_KEY") or os.getenv("OPENAI_API_KEY")
+
     if not api_key or not model:
         return {
             "task_type": "ai_startup_disable",

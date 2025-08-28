@@ -46,3 +46,9 @@ src-tauri/service_runner.spec
 __pycache__/
 *.py[cod]
 
+# Environment files (keep real secrets out of the repo)
+.env
+.env.local
+# Keep an example env file tracked
+!.env.example
+
