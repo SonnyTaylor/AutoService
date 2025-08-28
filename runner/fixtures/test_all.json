@@ -41,6 +41,11 @@
       "height": 1080,
       "demo": "furmark-gl",
       "extra_args": ["--no-gui"]
+    },
+    {
+      "type": "smartctl_report",
+      "executable_path": "..\\data\\programs\\GSmartControl - 2.0.2\\smartctl.exe",
+      "detail_level": "basic"
     }
   ]
 }
