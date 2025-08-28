@@ -1,0 +1,10 @@
+{
+  "tasks": [
+    {
+      "type": "ai_startup_disable",
+      "api_key": "env:AUTOSERVICE_OPENAI_KEY",
+      "model": "gpt-4o-mini",
+      "apply_changes": false
+    }
+  ]
+}
