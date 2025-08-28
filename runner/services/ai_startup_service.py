@@ -4,6 +4,16 @@ import re
 import logging
 from typing import Dict, Any, List
 
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+
+    env_path = os.path.join(os.path.dirname(__file__), "..", "fixtures", ".env")
+    load_dotenv(env_path)
+except ImportError:
+    # python-dotenv not installed, continue without loading .env
+    pass
+
 logger = logging.getLogger(__name__)
 
 try:
