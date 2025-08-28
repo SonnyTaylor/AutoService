@@ -292,13 +292,52 @@ def run_smartctl_report(task: Dict[str, Any]) -> Dict[str, Any]:
 
     scan_data = scan_res["data"]
     devices = scan_data.get("devices", []) if isinstance(scan_data, dict) else []
-    device_names = [
-        d.get("name") for d in devices if isinstance(d, dict) and d.get("name")
-    ]
+
+    available_names: List[str] = []
+    skipped_devices: List[Dict[str, str]] = []
+
+    def _is_usb_device(dev: Dict[str, Any]) -> bool:
+        # Heuristics: many scan entries include type/protocol/info_name that mention USB
+        t = dev.get("type")
+        proto = dev.get("protocol")
+        info = dev.get("info_name") or dev.get("name")
+        if t and "usb" in str(t).lower():
+            return True
+        if proto and "usb" in str(proto).lower():
+            return True
+        if info and "usb" in str(info).lower():
+            return True
+        return False
+
+    for d in devices:
+        if not isinstance(d, dict):
+            continue
+        name = d.get("name")
+        if not name:
+            continue
+        if _is_usb_device(d):
+            skipped_devices.append({"device": name, "reason": "usb"})
+            continue
+        available_names.append(name)
+
+    device_names = available_names
 
     if requested_devices:
-        # Keep only requested devices present in scan
-        device_names = [n for n in device_names if n in requested_devices]
+        # Keep only requested devices present in scan (and not skipped)
+        requested_filtered = [n for n in device_names if n in requested_devices]
+        # Record requested devices that were skipped or missing
+        for n in requested_devices:
+            if n not in requested_filtered:
+                was_skipped = any(s.get("device") == n for s in skipped_devices)
+                skipped_devices.append(
+                    {
+                        "device": n,
+                        "reason": "requested_but_skipped_or_missing"
+                        if was_skipped
+                        else "requested_but_missing",
+                    }
+                )
+        device_names = requested_filtered
 
     results: List[Dict[str, Any]] = []
     errors: List[Dict[str, Any]] = []
@@ -311,6 +350,45 @@ def run_smartctl_report(task: Dict[str, Any]) -> Dict[str, Any]:
             errors.append({"device": device_name, "error": res.get("error")})
             continue
         device_json = res["data"]
+        stderr_text = res.get("stderr") or ""
+
+        # If smartctl emitted messages about USB bridges or missing -d args, skip device
+        lower_err = stderr_text.lower()
+        usb_indicators = [
+            "usb",
+            "unknown usb bridge",
+            "please specify device type",
+            "usbjmicron",
+            "usbasm",
+        ]
+        if any(ind in lower_err for ind in usb_indicators):
+            skipped_devices.append(
+                {
+                    "device": device_name,
+                    "reason": "usb_or_bridge",
+                    "stderr": stderr_text,
+                }
+            )
+            continue
+
+        # If parsed JSON lacks identifying fields (no device name and no model), skip
+        has_name = False
+        dev_obj = (
+            device_json.get("device")
+            if isinstance(device_json.get("device"), dict)
+            else None
+        )
+        if (dev_obj and dev_obj.get("name")) or device_json.get("name"):
+            has_name = True
+        if not has_name and not device_json.get("model_name"):
+            skipped_devices.append(
+                {
+                    "device": device_name,
+                    "reason": "no_identity",
+                    "note": "parsed JSON missing name/model",
+                }
+            )
+            continue
         basic = _build_basic_summary(device_json)
         if detail_level == "full":
             results.append({"basic": basic, "raw": device_json})
@@ -323,6 +401,9 @@ def run_smartctl_report(task: Dict[str, Any]) -> Dict[str, Any]:
         "queried_devices": len(device_names),
         "scan_command": scan_res.get("command"),
     }
+    # Include skipped devices (e.g., USB) for visibility
+    if "skipped_devices" in locals() and skipped_devices:
+        summary["skipped_devices"] = skipped_devices
     if errors:
         summary["errors"] = errors
         if status == "success":  # partial success
