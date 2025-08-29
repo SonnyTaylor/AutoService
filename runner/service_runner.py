@@ -148,14 +148,20 @@ def main():
     all_results = []
     overall_success = True
 
-    for task in tasks:
+    for idx, task in enumerate(tasks):
         task_type = task.get("type")
         handler = TASK_HANDLERS.get(task_type)
 
         if handler:
+            logging.info("TASK START: %s (#%d)", task_type, idx + 1)
             result = handler(task)
             if result.get("status") == "failure":
                 overall_success = False
+                logging.info("TASK FAIL: %s", task_type)
+            elif result.get("status") == "skipped":
+                logging.info("TASK SKIP: %s", task_type)
+            else:
+                logging.info("TASK OK: %s", task_type)
             all_results.append(result)
         else:
             logging.warning(f"No handler found for task type '{task_type}'. Skipping.")
