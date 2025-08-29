@@ -25,11 +25,20 @@ fn main() {
     let original_exe = bin_dir.join(PYTHON_RUNNER_EXE_NAME);
 
     // Diagnostic info to help when the expected files are not found during CI
-    println!("cargo:warning=build.rs manifest_dir={}", manifest_dir.display());
+    println!(
+        "cargo:warning=build.rs manifest_dir={}",
+        manifest_dir.display()
+    );
     println!("cargo:warning=build.rs repo_root={}", repo_root.display());
     println!("cargo:warning=build.rs bin_dir={}", bin_dir.display());
-    println!("cargo:warning=build.rs expected_original_exe={}", original_exe.display());
-    println!("cargo:warning=build.rs original_exe_exists={}", original_exe.exists());
+    println!(
+        "cargo:warning=build.rs expected_original_exe={}",
+        original_exe.display()
+    );
+    println!(
+        "cargo:warning=build.rs original_exe_exists={}",
+        original_exe.exists()
+    );
     println!("cargo:warning=build.rs TARGET_env={:?}", env::var("TARGET"));
 
     // Also ensure a copy exists inside the `src-tauri/binaries` folder
@@ -42,11 +51,24 @@ fn main() {
         let dest_suffixed = manifest_bin_dir.join(&suffixed_name);
         if source_suffixed.exists() {
             if let Err(e) = fs::create_dir_all(&manifest_bin_dir) {
-                println!("cargo:warning=Failed to create manifest binaries dir {}: {}", manifest_bin_dir.display(), e);
+                println!(
+                    "cargo:warning=Failed to create manifest binaries dir {}: {}",
+                    manifest_bin_dir.display(),
+                    e
+                );
             }
             match fs::copy(&source_suffixed, &dest_suffixed) {
-                Ok(_) => println!("cargo:warning=Copied {} -> {}", source_suffixed.display(), dest_suffixed.display()),
-                Err(e) => println!("cargo:warning=Failed to copy {} -> {}: {}", source_suffixed.display(), dest_suffixed.display(), e),
+                Ok(_) => println!(
+                    "cargo:warning=Copied {} -> {}",
+                    source_suffixed.display(),
+                    dest_suffixed.display()
+                ),
+                Err(e) => println!(
+                    "cargo:warning=Failed to copy {} -> {}: {}",
+                    source_suffixed.display(),
+                    dest_suffixed.display(),
+                    e
+                ),
             }
         } else {
             println!("cargo:warning=Source suffixed binary {} does not exist yet; it will be created later if PyInstaller runs", source_suffixed.display());
@@ -58,11 +80,22 @@ fn main() {
             let suffixed_path = bin_dir.join(&suffixed_name);
             if !suffixed_path.exists() {
                 if let Err(e) = fs::create_dir_all(&bin_dir) {
-                    println!("cargo:warning=Failed to create binaries dir {}: {}", bin_dir.display(), e);
+                    println!(
+                        "cargo:warning=Failed to create binaries dir {}: {}",
+                        bin_dir.display(),
+                        e
+                    );
                 }
                 match fs::copy(&original_exe, &suffixed_path) {
-                    Ok(_) => println!("cargo:warning=Created platform-specific binary copy {}", suffixed_path.display()),
-                    Err(e) => println!("cargo:warning=Failed to create platform-specific copy {}: {}", suffixed_path.display(), e),
+                    Ok(_) => println!(
+                        "cargo:warning=Created platform-specific binary copy {}",
+                        suffixed_path.display()
+                    ),
+                    Err(e) => println!(
+                        "cargo:warning=Failed to create platform-specific copy {}: {}",
+                        suffixed_path.display(),
+                        e
+                    ),
                 }
             }
         } else {
@@ -225,7 +258,10 @@ fn main() {
                         e
                     );
                 } else {
-                    println!("cargo:warning=Created platform-specific binary copy {}", suffixed_path.display());
+                    println!(
+                        "cargo:warning=Created platform-specific binary copy {}",
+                        suffixed_path.display()
+                    );
                 }
             }
             Err(_) => {
