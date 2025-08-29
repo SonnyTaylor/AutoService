@@ -18,11 +18,71 @@ import { getToolPath, getToolStatuses } from "../../utils/tools.js";
 const capitalize = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : "");
 
 let TOOL_CACHE = null;
-/** Fetches tool path by key with caching */
-async function toolPath(key) {
+let PROGRAMS_CACHE = null;
+let DATA_DIRS_CACHE = null;
+/** Fetches tool path by key (or keys) with caching and fallback to saved programs */
+async function toolPath(keyOrKeys) {
   if (!TOOL_CACHE) TOOL_CACHE = await getToolStatuses();
-  const hit = TOOL_CACHE.find((t) => t.key === key);
-  return hit?.path || null;
+  const keys = Array.isArray(keyOrKeys) ? keyOrKeys : [keyOrKeys];
+  for (const k of keys) {
+    const hit = TOOL_CACHE.find((t) => t.key === k);
+    if (hit?.path) return hit.path;
+  }
+  // Fallback: look up in saved programs if present (e.g., HeavyLoad, FurMark2)
+  const progs = await listPrograms();
+  const dirs = await getDataDirs();
+  if (Array.isArray(progs)) {
+    for (const k of keys) {
+      const lower = String(k || "").toLowerCase();
+      const entry = progs.find((p) => {
+        const hay = `${p.name} ${p.description} ${p.exe_path}`.toLowerCase();
+        return p.exe_exists && hay.includes(lower);
+      });
+      if (entry && entry.exe_path) {
+        return resolveProgramFullPath(entry.exe_path, dirs);
+      }
+    }
+  }
+  return null;
+}
+
+async function listPrograms() {
+  if (PROGRAMS_CACHE) return PROGRAMS_CACHE;
+  try {
+    const { core } = window.__TAURI__ || {};
+    const inv = core?.invoke;
+    PROGRAMS_CACHE = inv ? await inv('list_programs') : [];
+  } catch {
+    PROGRAMS_CACHE = [];
+  }
+  return PROGRAMS_CACHE;
+}
+
+async function getDataDirs() {
+  if (DATA_DIRS_CACHE) return DATA_DIRS_CACHE;
+  try {
+    const { core } = window.__TAURI__ || {};
+    const inv = core?.invoke;
+    DATA_DIRS_CACHE = inv ? await inv('get_data_dirs') : {};
+  } catch {
+    DATA_DIRS_CACHE = {};
+  }
+  return DATA_DIRS_CACHE;
+}
+
+function resolveProgramFullPath(exePath, dirs) {
+  if (!exePath) return null;
+  if (/^[a-zA-Z]:\\|^\\\\/.test(exePath)) return exePath; // absolute or UNC
+  const dataRoot = dirs?.data;
+  const programsDir = dirs?.programs;
+  if (dataRoot) {
+    // Try dataRoot + exePath
+    return dataRoot.replace(/[\\/]+$/, '') + '/' + exePath.replace(/^\/+/, '');
+  }
+  if (programsDir) {
+    return programsDir.replace(/[\\/]+$/, '') + '/' + exePath.replace(/^\/+/, '');
+  }
+  return exePath;
 }
 
 // ---- Task Definitions -----------------------------------------------------

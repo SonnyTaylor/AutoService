@@ -6,9 +6,11 @@ const { Command } = window.__TAURI__?.shell || {};
 const REQUIRED = [
   { key: 'adwcleaner', name: 'AdwCleaner', match: ['adwcleaner'], hint: 'adwcleaner.exe' },
   { key: 'bleachbit', name: 'BleachBit', match: ['bleachbit'], hint: 'bleachbit.exe' },
-  { key: 'smartctl', name: 'smartctl', match: ['smartctl', 'smartmontools'], hint: 'smartctl.exe' },
-  { key: 'heavyload', name: 'HeavyLoad', match: ['heavyload'], hint: 'heavyload.exe' },
-  { key: 'furmark', name: 'FurMark', match: ['furmark'], hint: 'FurMark.exe' },
+  // Prefer the CLI smartctl.exe explicitly; avoid matching gsmartcontrol.exe
+  { key: 'smartctl', name: 'smartctl', match: ['smartctl.exe', ' smartctl '], hint: 'smartctl.exe' },
+  { key: 'heavyload', name: 'HeavyLoad', match: ['heavyload', 'heavyload.exe'], hint: 'heavyload.exe' },
+  // Prefer CLI furmark.exe; avoid FurMark_GUI.exe
+  { key: 'furmark', name: 'FurMark', match: ['furmark.exe', ' furmark '], hint: 'furmark.exe' },
 ];
 
 function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
@@ -19,7 +21,13 @@ async function loadProgramsFile() {
 
 function fuzzyMatch(entry, names) {
   const hay = `${entry.name} ${entry.description} ${entry.exe_path}`.toLowerCase();
-  return names.some(n => hay.includes(n));
+  const inc = names.some(n => hay.includes(n.toLowerCase()));
+  if (!inc) return false;
+  // Exclude GUI variants when matching FurMark
+  if (hay.includes('furmark_gui.exe')) return false;
+  // Exclude gsmartcontrol.exe for smartctl requirement
+  if (hay.includes('gsmartcontrol.exe')) return false;
+  return true;
 }
 
 async function pickExe(defaultPath) {
