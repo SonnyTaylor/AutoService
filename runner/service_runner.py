@@ -1,4 +1,4 @@
-import sys, os, ctypes, json, subprocess, argparse, logging
+import sys, os, ctypes, json, subprocess, argparse, logging, time
 from typing import List, Dict, Any
 
 
@@ -45,11 +45,8 @@ from services.ai_startup_service import run_ai_startup_disable  # type: ignore
 
 # Configure basic logging to stderr for debugging purposes.
 # The final report will be printed to stdout.
-logging.basicConfig(
-    level=logging.INFO,
-    stream=sys.stderr,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-)
+_DEFAULT_LOG_FMT = "%(asctime)s - %(levelname)s - %(message)s"
+logging.basicConfig(level=logging.INFO, stream=sys.stderr, format=_DEFAULT_LOG_FMT)
 
 
 """BleachBit functionality refactored into services.bleachbit_service."""
@@ -93,7 +90,37 @@ def main():
         default=None,
         help="Optional path to write the final JSON report. If omitted, no file is written.",
     )
+    parser.add_argument(
+        "--log-file",
+        dest="log_file",
+        type=str,
+        default=None,
+        help="Optional path to write a live log file (in addition to stderr).",
+    )
     args = parser.parse_args()
+
+    # Configure file logging if requested
+    if args.log_file:
+        try:
+            os.makedirs(os.path.dirname(args.log_file), exist_ok=True)
+            fh = logging.FileHandler(args.log_file, encoding="utf-8")
+            fh.setFormatter(logging.Formatter(_DEFAULT_LOG_FMT))
+            logging.getLogger().addHandler(fh)
+            logging.info("Log file initialized: %s", args.log_file)
+        except Exception as e:  # noqa: BLE001
+            logging.error("Failed to initialize log file '%s': %s", args.log_file, e)
+
+    # Elevation (Windows only)
+    if os.name == "nt" and not is_admin():
+        logging.info("Attempting to elevate privileges via UAC prompt…")
+        # Preserve arguments; include script/module path in argv for Python launched interpreter
+        argv = sys.argv[0:]
+        code = relaunch_elevated(argv)
+        if code != 0:
+            logging.error("Elevation failed or cancelled (code %s)", code)
+            sys.exit(code)
+        # Relaunch initiated successfully; exit unelevated instance so elevated one can proceed
+        sys.exit(0)
 
     raw_input = args.json_input
     input_data = None
