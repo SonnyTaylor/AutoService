@@ -414,7 +414,7 @@ export async function initPage() {
         <span class="grab" aria-hidden="true">⋮⋮</span>
         <span class="main">
           <span class="name">${label}</span>
-          <span class="meta">${group}</span>
+          <span class="meta">${group} ${renderAvailabilityBadge(id)}</span>
         </span>
       </div>
     `;
