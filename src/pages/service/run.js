@@ -49,9 +49,9 @@ const ATOMIC_TASKS = {
     const p = await toolPath('smartctl');
     return { type: 'smartctl_report', executable_path: p, detail_level: 'basic' };
   }},
-  furmark_stress_test: { label: 'GPU Stress (FurMark)', group: 'Stress', params: { seconds: 60 }, async build(state){
+  furmark_stress_test: { label: 'GPU Stress (FurMark)', group: 'Stress', params: { minutes: 1 }, async build(state){
     const p = await toolPath('furmark');
-    return { type: 'furmark_stress_test', executable_path: p, duration_seconds: state.params.seconds||60, width: 1920, height: 1080, demo: 'furmark-gl', extra_args: ['--no-gui'] };
+    return { type: 'furmark_stress_test', executable_path: p, duration_minutes: state.params.minutes||1, width: 1920, height: 1080, demo: 'furmark-gl', extra_args: ['--no-gui'] };
   }},
   heavyload_stress_cpu: { label: 'CPU Stress (HeavyLoad)', group: 'Stress', params: { minutes: 1 }, async build(state){
     const p = await toolPath('heavyload');
@@ -103,7 +103,7 @@ export async function initPage(){
   const state = {};
   // GPU sub-selections
   const gpuSubs = { furmark: true, heavyload: false }; // default: FurMark only
-  const gpuParams = { furmarkSeconds: 60, heavyloadMinutes: 1 };
+  const gpuParams = { furmarkMinutes: 1, heavyloadMinutes: 1 };
 
   // Initialize from preset
   const base = preset ? PRESET_MAP[preset] : PRESET_MAP[mode] || PRESET_MAP.custom;
@@ -120,10 +120,14 @@ export async function initPage(){
   function renderPalette(){
     paletteEl.innerHTML = '';
     order.forEach(id => {
+      // skip individual GPU stress tasks, use parent only
+      if (id === 'furmark_stress_test' || id === 'heavyload_stress_gpu') return;
       paletteEl.appendChild(renderItem(id));
     });
     // Also append non-selected (for adding) at end
     Object.keys(ATOMIC_TASKS).concat(GPU_PARENT_ID).forEach(id => {
+      // skip individual GPU stress tasks
+      if (id === 'furmark_stress_test' || id === 'heavyload_stress_gpu') return;
       if (!selection.has(id)) paletteEl.appendChild(renderItem(id));
     });
     nextBtn.disabled = selection.size === 0;
@@ -136,13 +140,13 @@ export async function initPage(){
     li.className = 'task-item';
     li.dataset.id = id;
     const selected = selection.has(id);
-    li.draggable = selected; // only draggable when active
+  li.draggable = false; // dragging disabled per user request
     const orderIdx = selected ? [...order].indexOf(id) + 1 : null;
     const label = isGpuParent ? 'GPU Stress' : ATOMIC_TASKS[id]?.label || id;
     const group = isGpuParent ? 'Stress' : ATOMIC_TASKS[id]?.group || '';
     // Build inner HTML
     li.innerHTML = `
-      <div class="task-row${isGpuParent?' gpu-parent':''}">
+      <div class="task-row">
         <input type="checkbox" ${selected?'checked':''} aria-label="Select task ${label}">
         <span class="grab" aria-hidden="true">⋮⋮</span>
         <span class="main">
@@ -182,17 +186,21 @@ export async function initPage(){
       });
     }
 
-    // GPU Parent sub-options
-    if (isGpuParent) {
+    // GPU Parent sub-options, only when selected
+    if (isGpuParent && selected) {
       const sub = document.createElement('div');
-      sub.className = `gpu-sub ${selected?'' :'disabled'}`;
+      sub.className = 'gpu-sub';
       sub.innerHTML = `
-        <label><input type="checkbox" data-sub="furmark" ${gpuSubs.furmark?'checked':''} ${!selected?'disabled':''}> FurMark <input type="number" class="dur" data-sub-dur="furmarkSeconds" value="${gpuParams.furmarkSeconds}" min="10" max="3600" step="10" ${!selected?'disabled':''} title="Seconds"/></label>
-        <label><input type="checkbox" data-sub="heavyload" ${gpuSubs.heavyload?'checked':''} ${!selected?'disabled':''}> HeavyLoad <input type="number" class="dur" data-sub-dur="heavyloadMinutes" value="${gpuParams.heavyloadMinutes}" min="1" max="240" step="1" ${!selected?'disabled':''} title="Minutes"/></label>
+        <label><input type="checkbox" data-sub="furmark" ${gpuSubs.furmark?'checked':''}> FurMark <input type="number" class="dur" data-sub-dur="furmarkMinutes" value="${gpuParams.furmarkMinutes}" min="1" max="240" step="1" title="Minutes"/></label>
+        <label><input type="checkbox" data-sub="heavyload" ${gpuSubs.heavyload?'checked':''}> HeavyLoad <input type="number" class="dur" data-sub-dur="heavyloadMinutes" value="${gpuParams.heavyloadMinutes}" min="1" max="240" step="1" title="Minutes"/></label>
       `;
       row.appendChild(sub);
       sub.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.addEventListener('change', () => { gpuSubs[cb.dataset.sub] = cb.checked; updateJson(); }));
-      sub.querySelectorAll('input.dur').forEach(inp => inp.addEventListener('change', () => { const k = inp.dataset.subDur; gpuParams[k] = Number(inp.value)||gpuParams[k]; updateJson(); }));
+      sub.querySelectorAll('input.dur').forEach(inp => inp.addEventListener('change', () => {
+        const k = inp.dataset.subDur;
+        gpuParams[k] = Number(inp.value) || gpuParams[k];
+        updateJson();
+      }));
     }
 
     // Checkbox toggle
@@ -207,34 +215,6 @@ export async function initPage(){
       renderPalette();
     });
 
-    // Drag logic
-    li.addEventListener('dragstart', e => {
-      if (!selection.has(id)) { e.preventDefault(); return; }
-      e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/x-task-id', id);
-      li.classList.add('dragging');
-    });
-    li.addEventListener('dragend', () => li.classList.remove('dragging'));
-    li.addEventListener('dragover', e => {
-      const dragId = e.dataTransfer.getData('text/x-task-id');
-      if (!dragId || dragId === id || !selection.has(dragId) || !selection.has(id)) return; // only reorder among selected
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-    });
-    li.addEventListener('drop', e => {
-      const dragId = e.dataTransfer.getData('text/x-task-id');
-      if (!dragId || dragId === id) return;
-      if (!selection.has(dragId) || !selection.has(id)) return;
-      e.preventDefault();
-      const from = order.indexOf(dragId); const to = order.indexOf(id);
-      if (from === -1 || to === -1) return;
-      order.splice(from,1);
-      // Place before target depending on vertical center
-      const rect = li.getBoundingClientRect();
-      const before = (e.clientY - rect.top) < rect.height/2;
-      order.splice(before?to:to+1,0,dragId);
-      renderPalette();
-    });
     return li;
   }
 
@@ -245,7 +225,7 @@ export async function initPage(){
       if (!selection.has(id)) continue;
       if (id === GPU_PARENT_ID) {
         if (gpuSubs.furmark) {
-          const built = await ATOMIC_TASKS.furmark_stress_test.build({ params: { seconds: gpuParams.furmarkSeconds } });
+          const built = await ATOMIC_TASKS.furmark_stress_test.build({ params: { minutes: gpuParams.furmarkMinutes } });
           result.push(built);
         }
         if (gpuSubs.heavyload) {
