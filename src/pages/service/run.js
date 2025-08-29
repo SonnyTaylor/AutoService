@@ -487,20 +487,21 @@ export async function initPage() {
 
   function renderPalette() {
     paletteEl.innerHTML = "";
+    const appended = new Set();
     order.forEach((id) => {
-      if (!["furmark_stress_test", "heavyload_stress_gpu"].includes(id))
-        paletteEl.appendChild(renderItem(id));
+      if (!selection.has(id)) return;
+      if (["furmark_stress_test", "heavyload_stress_gpu"].includes(id)) return;
+      paletteEl.appendChild(renderItem(id));
+      appended.add(id);
     });
     Object.keys(ATOMIC_TASKS)
       .concat(GPU_PARENT_ID)
       .forEach((id) => {
-        if (
-          !["furmark_stress_test", "heavyload_stress_gpu"].includes(id) &&
-          !selection.has(id)
-        )
-          paletteEl.appendChild(renderItem(id));
+        if (["furmark_stress_test", "heavyload_stress_gpu"].includes(id)) return;
+        if (appended.has(id)) return;
+        if (!selection.has(id)) paletteEl.appendChild(renderItem(id));
       });
-    nextBtn.disabled = selection.size === 0;
+    validateNext(tasksCountRunnable());
     updateJson();
   }
 
@@ -537,8 +538,173 @@ export async function initPage() {
     jsonEl.textContent = "Generating...";
     const tasks = await generateTasksArray();
     jsonEl.textContent = JSON.stringify({ tasks }, null, 2);
+    persist();
   }
+
+  // Availability + controls
+  toolStatuses = await getToolStatuses();
+  // Also load program list to improve availability detection
+  try {
+    const { core } = window.__TAURI__ || {};
+    const inv = core?.invoke;
+    PROGRAMS_CACHE = inv ? await inv('list_programs') : [];
+  } catch { PROGRAMS_CACHE = []; }
+
+  btnSelectAll?.addEventListener("click", () => {
+    Object.keys(ATOMIC_TASKS).concat(GPU_PARENT_ID).forEach((id) =>
+      selection.add(id)
+    );
+    if (!order.includes(GPU_PARENT_ID)) order.push(GPU_PARENT_ID);
+    persist();
+    renderPalette();
+  });
+  btnDeselectAll?.addEventListener("click", () => {
+    selection.clear();
+    persist();
+    renderPalette();
+  });
+  btnReset?.addEventListener("click", () => {
+    sessionStorage.removeItem(PERSIST_KEY);
+    order = [];
+    selection.clear();
+    Object.keys(state).forEach((k) => delete state[k]);
+    Object.assign(gpuSubs, { furmark: true, heavyload: false });
+    Object.assign(gpuParams, { furmarkMinutes: 1, heavyloadMinutes: 1 });
+    const base = preset
+      ? PRESET_MAP[preset]
+      : PRESET_MAP[mode] || PRESET_MAP.custom;
+    base.forEach((id) => {
+      selection.add(id);
+      order.push(id);
+    });
+    Object.entries(ATOMIC_TASKS).forEach(([id, def]) => {
+      if (def.params) state[id] = { params: { ...def.params } };
+    });
+    renderPalette();
+  });
+  btnCopyJson?.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(jsonEl.textContent || "{}");
+      btnCopyJson.textContent = "Copied";
+      setTimeout(() => (btnCopyJson.textContent = "Copy JSON"), 1200);
+    } catch {}
+  });
+
+  // Keyboard reordering on focused rows (ArrowUp/Down + Ctrl to move)
+  paletteEl.addEventListener("keydown", (e) => {
+    const row = e.target?.closest?.(".task-item");
+    if (!row) return;
+    const id = row.dataset.id;
+    if (!id) return;
+    const idx = order.indexOf(id);
+    if (e.key === "ArrowUp" && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      moveInOrder(idx, Math.max(0, idx - 1));
+      persist();
+      renderPalette();
+    } else if (e.key === "ArrowDown" && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      moveInOrder(idx, Math.min(order.length - 1, idx + 1));
+      persist();
+      renderPalette();
+    }
+  });
 
   renderPalette();
   builder.hidden = false;
+
+  // Helpers
+  function moveInOrder(fromIndex, toIndex) {
+    if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return;
+    const id = order.splice(fromIndex, 1)[0];
+    order.splice(toIndex, 0, id);
+  }
+
+  function showDropIndicator(li, where) {
+    clearDropIndicators();
+    const bar = document.createElement("div");
+    bar.className = "drop-indicator " + (where === "top" ? "drop-top" : "drop-bottom");
+    li.appendChild(bar);
+  }
+  function clearDropIndicators() {
+    paletteEl.querySelectorAll(".drop-indicator").forEach((el) => el.remove());
+  }
+
+  function tasksCountRunnable() {
+    // Count tasks that have no missing tool dependency
+    const tasks = order.filter((id) => selection.has(id));
+    let count = 0;
+    for (const id of tasks) {
+      if (id === GPU_PARENT_ID) {
+        if (gpuSubs.furmark && isToolOk(["furmark", "furmark2"])) count++;
+        if (gpuSubs.heavyload && isToolOk(["heavyload"])) count++;
+        continue;
+      }
+      const key = toolKeyForTask(id);
+      if (!key || isToolOk(key)) count++;
+    }
+    return count;
+  }
+
+  function validateNext(runnableCount) {
+    nextBtn.disabled = runnableCount === 0 || selection.size === 0;
+  }
+
+  function isToolOk(keyOrKeys) {
+    if (!keyOrKeys) return true;
+    const keys = Array.isArray(keyOrKeys) ? keyOrKeys : [keyOrKeys];
+    // Check by toolStatuses
+    const okByStatus = keys.some((k) => {
+      const hit = toolStatuses.find((t) => t.key === k);
+      return !!(hit && hit.exists);
+    });
+    if (okByStatus) return true;
+    // Fallback: check saved programs list
+    const list = Array.isArray(PROGRAMS_CACHE) ? PROGRAMS_CACHE : [];
+    return keys.some((k) => {
+      const key = String(k).toLowerCase();
+      return list.some((p) => {
+        if (!p.exe_exists) return false;
+        const hay = `${p.name} ${p.description} ${p.exe_path}`.toLowerCase();
+        return hay.includes(key);
+      });
+    });
+  }
+
+  function renderAvailabilityBadge(id) {
+    if (id === "sfc_scan" || id === "dism_health_check") {
+      return '<span class="badge ok" title="Built-in Windows tool">Built-in</span>';
+    }
+    if (id === GPU_PARENT_ID) {
+      const okF = isToolOk(["furmark", "furmark2"]);
+      const okH = isToolOk(["heavyload"]);
+      const any = okF || okH;
+      const title = `FurMark: ${okF ? 'Available' : 'Missing'} | HeavyLoad: ${okH ? 'Available' : 'Missing'}`;
+      return `<span class="badge ${any ? 'ok' : 'missing'}" title="${title}">${any ? 'Available' : 'Missing'}</span>`;
+    }
+    const key = toolKeyForTask(id);
+    if (!key) return "";
+    const ok = isToolOk(key);
+    return `<span class="badge ${ok ? 'ok' : 'missing'}">${ok ? 'Available' : 'Missing'}</span>`;
+  }
+
+  function toolKeyForTask(id) {
+    switch (id) {
+      case "adwcleaner_clean":
+        return "adwcleaner";
+      case "bleachbit_clean":
+        return "bleachbit";
+      case "smartctl_report":
+        // either smartctl or gsmartcontrol works
+        return ["smartctl", "gsmartcontrol"];
+      case "furmark_stress_test":
+        return ["furmark", "furmark2"];
+      case "heavyload_stress_cpu":
+      case "heavyload_stress_memory":
+      case "heavyload_stress_gpu":
+        return ["heavyload"];
+      default:
+        return ""; // tasks without external executables
+    }
+  }
 }
