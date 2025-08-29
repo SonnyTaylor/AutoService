@@ -376,3 +376,193 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Service report (runner) */
+[data-page="service-report"] .run-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+[data-page="service-report"] .run-header .run-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 10px;
+}
+[data-page="service-report"] .runner-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 20px;
+}
+[data-page="service-report"] .runner-left,
+[data-page="service-report"] .runner-right {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+[data-page="service-report"] .task-status-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+[data-page="service-report"] .task-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+[data-page="service-report"] .task-status .left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+[data-page="service-report"] .task-status .idx {
+  font-size: 0.7rem;
+  opacity: 0.7;
+  width: 22px;
+}
+[data-page="service-report"] .task-status .name {
+  font-weight: 600;
+}
+[data-page="service-report"] .badge {
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #1d2738;
+  color: var(--muted);
+}
+[data-page="service-report"] .badge.ok {
+  color: #8bd17c;
+  border-color: #2d4a33;
+  background: #16221a;
+}
+[data-page="service-report"] .badge.fail {
+  color: #f29a9a;
+  border-color: #522a2a;
+  background: #221616;
+}
+[data-page="service-report"] .badge.skipped {
+  color: #e8b27c;
+  border-color: #4a3a2d;
+  background: #221a16;
+}
+[data-page="service-report"] .badge.running {
+  color: #9cbcff;
+  border-color: #2b416b;
+  background: #1a2332;
+}
+[data-page="service-report"] .badge.running .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4f8cff;
+  display: inline-block;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.3;
+  }
+}
+
+[data-page="service-report"] .log-wrap {
+  position: relative;
+}
+[data-page="service-report"] .log-view {
+  margin: 0;
+  background: #0e131b;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: ui-monospace, monospace;
+  font-size: 0.75rem;
+  max-height: 360px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+[data-page="service-report"] .log-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 8px;
+}
+[data-page="service-report"] .spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #2b416b;
+  border-top-color: #4f8cff;
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+[data-page="service-report"] .final-json .json-preview {
+  margin: 0;
+  background: #0e131b;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: ui-monospace, monospace;
+  font-size: 0.75rem;
+  max-height: 360px;
+  overflow: auto;
+}
+[data-page="service-report"] .final-json-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+[data-page="service-report"] .runner-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #1a2332;
+}
+[data-page="service-report"] .runner-summary.ok {
+  background: #16221a;
+  border-color: #2d4a33;
+}
+[data-page="service-report"] .runner-summary.fail {
+  background: #221616;
+  border-color: #522a2a;
+}
+[data-page="service-report"] .runner-summary #svc-summary-icon {
+  font-weight: 700;
+}
+
+@media (max-width: 980px) {
+  [data-page="service-report"] .runner-layout {
+    grid-template-columns: 1fr;
+  }
+}

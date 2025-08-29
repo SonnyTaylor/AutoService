@@ -1,0 +1,59 @@
+<section class="page" data-page="service-report">
+  <div class="run-header">
+    <div class="titles">
+      <h1 id="svc-report-title">Service Runner</h1>
+      <p class="muted" id="svc-report-desc">
+        Prepare to run your service queue.
+      </p>
+    </div>
+    <div class="run-actions">
+      <button id="svc-report-back" class="ghost">Back</button>
+      <button id="svc-report-run">Run Queue</button>
+    </div>
+  </div>
+
+  <div class="runner-layout" id="svc-runner" hidden>
+    <div class="runner-left">
+      <h2 class="section-title">Tasks</h2>
+      <ul
+        id="svc-task-status"
+        class="task-status-list"
+        aria-label="Task statuses"
+      ></ul>
+      <div class="runner-summary" id="svc-summary" hidden>
+        <span id="svc-summary-icon" aria-hidden="true">✔</span>
+        <div>
+          <div id="svc-summary-title">All tasks completed</div>
+          <div class="muted small" id="svc-summary-sub">
+            Review the final report below.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="runner-right">
+      <h2 class="section-title">Live Log</h2>
+      <div class="log-wrap">
+        <pre id="svc-log" class="log-view" aria-label="Live log output"></pre>
+        <div id="svc-log-overlay" class="log-overlay" hidden>
+          <div class="spinner" aria-hidden="true"></div>
+          <span>Running…</span>
+        </div>
+      </div>
+
+      <div class="final-json">
+        <div class="final-json-head">
+          <h2 class="section-title">Final JSON Report</h2>
+          <div class="json-actions">
+            <button id="svc-copy-final" class="ghost small">Copy JSON</button>
+          </div>
+        </div>
+        <pre
+          id="svc-final-json"
+          class="json-preview"
+          aria-label="Final JSON output"
+        ></pre>
+      </div>
+    </div>
+  </div>
+</section>
+<script type="module" src="./report.js"></script>
