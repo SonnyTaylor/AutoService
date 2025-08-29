@@ -10,7 +10,6 @@ mod paths {
 // Easy-to-change constants for where the generated Python executable is placed
 // and what it is named. Change these to control the target location or name
 // without digging through the build logic.
-const BIN_DIR_NAME: &str = "bin";
 const PYTHON_RUNNER_STEM: &str = "service_runner"; // PyInstaller --name
 const PYTHON_RUNNER_EXE_NAME: &str = "service_runner.exe"; // final exe name in bin dir
 const PYTHON_COMMAND: &str = "python"; // program used to invoke PyInstaller
@@ -28,12 +27,19 @@ fn main() {
         // don't fail the build; continue and try to create the bin dir below
     }
 
-    // Build path to data/resources/bin
-    let (_reports, _programs, _settings, resources) = paths::subdirs(&data_root);
-    let bin_dir = resources.join(BIN_DIR_NAME);
+    // Locate the repository root so the compiled Python runner can be placed in
+    // <repo root>/binaries instead of inside the data/resources tree. This keeps
+    // build artifacts at the repository top level and avoids modifying the data
+    // directory during a cargo build.
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let repo_root = manifest_dir.parent().unwrap_or(&manifest_dir).to_path_buf();
+
+    // Prefer repo-root /binaries for compiled Python runner to avoid writing
+    // build artefacts into the source tree used at runtime.
+    let bin_dir = repo_root.join("binaries");
     if let Err(e) = fs::create_dir_all(&bin_dir) {
         println!(
-            "cargo:warning=Failed to create bin directory {}: {}",
+            "cargo:warning=Failed to create binaries directory {}: {}",
             bin_dir.display(),
             e
         );
@@ -41,8 +47,6 @@ fn main() {
     }
 
     // Locate the Python source file in the repository: <repo root>/runner/service_runner.py
-    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let repo_root = manifest_dir.parent().unwrap_or(&manifest_dir).to_path_buf();
     let py_src = repo_root.join("runner").join("service_runner.py");
 
     if !py_src.exists() {
