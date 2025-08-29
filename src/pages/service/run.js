@@ -71,9 +71,12 @@ const ATOMIC_TASKS = {
     label: "Drive Health Report (smartctl)",
     group: "Diagnostics",
     async build() {
+      // Prefer an explicit smartctl entry if present (smartctl.exe). Fall back to GSmartControl.
+      const pSmart = await toolPath("smartctl");
+      const pGsc = await toolPath("gsmartcontrol");
       return {
         type: "smartctl_report",
-        executable_path: await toolPath("smartctl"),
+        executable_path: pSmart || pGsc,
         detail_level: "basic",
       };
     },
