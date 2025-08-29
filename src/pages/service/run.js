@@ -399,7 +399,7 @@ export async function initPage() {
     const li = document.createElement("li");
     li.className = "task-item";
     li.dataset.id = id;
-    li.draggable = false;
+    li.draggable = true;
 
     const selected = selection.has(id);
     const orderIdx = selected ? [...order].indexOf(id) + 1 : null;
@@ -445,6 +445,40 @@ export async function initPage() {
         selection.delete(id);
         order = order.filter((x) => x !== id);
       }
+      persist();
+      renderPalette();
+    });
+
+    // Drag & drop
+    li.addEventListener("dragstart", (e) => {
+      li.classList.add("dragging");
+      e.dataTransfer.setData("text/plain", id);
+      e.dataTransfer.effectAllowed = "move";
+    });
+    li.addEventListener("dragend", () => {
+      li.classList.remove("dragging");
+      clearDropIndicators();
+    });
+    li.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      const bounds = li.getBoundingClientRect();
+      const halfway = bounds.top + bounds.height / 2;
+      showDropIndicator(li, e.clientY < halfway ? "top" : "bottom");
+      e.dataTransfer.dropEffect = "move";
+    });
+    li.addEventListener("dragleave", () => clearDropIndicators());
+    li.addEventListener("drop", (e) => {
+      e.preventDefault();
+      clearDropIndicators();
+      const draggedId = e.dataTransfer.getData("text/plain");
+      if (!draggedId || draggedId === id) return;
+      const targetIndex = order.indexOf(id);
+      const draggedIndex = order.indexOf(draggedId);
+      const bounds = li.getBoundingClientRect();
+      const insertAfter = e.clientY >= bounds.top + bounds.height / 2;
+      const newIndex = insertAfter ? targetIndex + 1 : targetIndex;
+      moveInOrder(draggedIndex, newIndex);
+      persist();
       renderPalette();
     });
 

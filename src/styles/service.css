@@ -204,6 +204,10 @@
   border-radius: 10px;
   cursor: grab;
 }
+[data-page="service-run"] .task-row:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
 [data-page="service-run"] .task-row:hover {
   background: var(--panel-hover);
   border-color: #2e3b55;
@@ -248,6 +252,19 @@
   padding: 2px 6px;
   border-radius: 999px;
   font-weight: 600;
+}
+[data-page="service-run"] .drop-indicator {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 2px dashed #4f8cff;
+}
+[data-page="service-run"] .drop-top {
+  top: -4px;
+}
+[data-page="service-run"] .drop-bottom {
+  bottom: -4px;
 }
 [data-page="service-run"] .json-preview {
   margin: 0;
