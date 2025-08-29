@@ -33,12 +33,20 @@ fn greet(name: &str) -> String {
 fn get_data_dirs(state: tauri::State<AppState>) -> Result<serde_json::Value, String> {
     let data_root = state.data_dir.as_path();
     let (reports, programs, settings, resources) = crate::paths::subdirs(data_root);
+    // Also expose the executable directory and expected sidecar path for convenience
+    let exe_dir = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+        .unwrap_or_else(|| std::path::PathBuf::from("."));
+    let sidecar_runner = exe_dir.join("binaries").join("service_runner.exe");
     Ok(serde_json::json!({
         "data": data_root,
         "reports": reports,
         "programs": programs,
         "settings": settings,
         "resources": resources,
+        "exe_dir": exe_dir,
+        "sidecar_runner": sidecar_runner,
     }))
 }
 
