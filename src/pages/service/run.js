@@ -131,12 +131,14 @@ const ATOMIC_TASKS = {
     label: "Drive Health Report (smartctl)",
     group: "Diagnostics",
     async build() {
-      // Prefer an explicit smartctl entry if present (smartctl.exe). Fall back to GSmartControl.
-      const pSmart = await toolPath("smartctl");
-      const pGsc = await toolPath("gsmartcontrol");
+      // Prefer smartctl.exe; if a GSmartControl path is detected, rewrite to smartctl.exe in same directory
+      let pSmart = await toolPath(["smartctl", "gsmartcontrol"]);
+      if (pSmart && /gsmartcontrol\.exe$/i.test(pSmart)) {
+        pSmart = pSmart.replace(/[^\\\/]+$/g, "smartctl.exe");
+      }
       return {
         type: "smartctl_report",
-        executable_path: pSmart || pGsc,
+        executable_path: pSmart,
         detail_level: "basic",
       };
     },
@@ -146,7 +148,11 @@ const ATOMIC_TASKS = {
     group: "Stress",
     params: { minutes: 1 },
     async build(state) {
-      const p = await toolPath("furmark");
+      let p = await toolPath(["furmark", "furmark2"]);
+      // If GUI exe is detected, prefer CLI binary in same directory
+      if (p && /furmark_gui\.exe$/i.test(p)) {
+        p = p.replace(/[^\\\/]+$/g, "furmark.exe");
+      }
       return {
         type: "furmark_stress_test",
         executable_path: p,
@@ -163,7 +169,7 @@ const ATOMIC_TASKS = {
     group: "Stress",
     params: { minutes: 1 },
     async build(state) {
-      const p = await toolPath("heavyload");
+      const p = await toolPath(["heavyload"]);
       return {
         type: "heavyload_stress_test",
         executable_path: p,
@@ -180,7 +186,7 @@ const ATOMIC_TASKS = {
     group: "Stress",
     params: { minutes: 1 },
     async build(state) {
-      const p = await toolPath("heavyload");
+      const p = await toolPath(["heavyload"]);
       return {
         type: "heavyload_stress_test",
         executable_path: p,
@@ -197,7 +203,7 @@ const ATOMIC_TASKS = {
     group: "Stress",
     params: { minutes: 1 },
     async build(state) {
-      const p = await toolPath("heavyload");
+      const p = await toolPath(["heavyload"]);
       return {
         type: "heavyload_stress_test",
         executable_path: p,
