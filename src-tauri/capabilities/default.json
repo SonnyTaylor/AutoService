@@ -27,6 +27,9 @@
           "-Command",
           { "validator": ".*" }
         ]
+      },{
+        "name": "service_runner",
+        "cmd": "binaries/service_runner.exe"
       }]
     }
   ]

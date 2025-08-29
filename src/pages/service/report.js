@@ -70,7 +70,7 @@ export async function initPage() {
     showOverlay(true);
     try {
       const jsonArg = JSON.stringify({ tasks });
-      const result = await runRunner(jsonArg, onLine, onTaskEvent);
+      const result = await runRunner(jsonArg);
       // Pretty print final JSON
       try {
         const obj = typeof result === "string" ? JSON.parse(result) : result;
@@ -152,22 +152,11 @@ export async function initPage() {
     summaryEl.classList.toggle("fail", !ok);
   }
 
-  // Spawn the runner using PowerShell and capture stdout live.
-  async function runRunner(jsonArg, onStdLine, onTaskEvt) {
+  // Spawn the runner as a Tauri sidecar and capture stdout live.
+  async function runRunner(jsonArg) {
     const { shell } = window.__TAURI__ || {};
     const { Command } = shell || {};
     if (!Command) throw new Error("Shell plugin unavailable");
-
-    // Determine absolute path to sidecar runner in ./binaries/service_runner.exe
-    // At runtime current dir is set to data dir, but the app root contains /binaries.
-    // Resolve via core.invoke('get_data_dirs') to find app base path when needed.
-    let exePath = "binaries/service_runner.exe";
-    try {
-      const dirs = await core.invoke("get_data_dirs");
-      if (dirs?.sidecar_runner) {
-        exePath = String(dirs.sidecar_runner);
-      }
-    } catch {}
 
     // Prepare a temporary plan file in the data/reports folder to avoid command-line length limits
     let planFile = null;
@@ -187,18 +176,9 @@ export async function initPage() {
     // Prefer passing file path if created; otherwise pass raw JSON string
     const args = [planFile || jsonArg];
 
-    // Start process; use Command for streaming
-    // Also request the runner to write a log file alongside the plan for robust diagnostics
-    const runnerLog = planFile ? planFile.replace(/\.json$/, ".log.txt") : null;
-    const cmd = new Command("powershell.exe", [
-      "-NoProfile",
-      "-ExecutionPolicy",
-      "Bypass",
-      "-Command",
-      runnerLog
-        ? `& \"${exePath}\" ${escapePwshArg(args[0])} --log-file ${escapePwshArg(runnerLog)}`
-        : `& \"${exePath}\" ${escapePwshArg(args[0])}`,
-    ]);
+    // Start sidecar; request it writes a log file alongside the plan
+    const runnerLog = planFile ? planFile.replace(/\.json$/, ".log.txt") : `run_${Date.now()}.log.txt`;
+    const cmd = Command.sidecar("binaries/service_runner", [args[0], "--log-file", runnerLog]);
 
     // Track per-task phases by parsing known JSON lines or brackets
     let finalJson = "";
