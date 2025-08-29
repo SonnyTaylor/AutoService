@@ -2,18 +2,13 @@
 const { invoke } = window.__TAURI__.core;
 const { Command } = window.__TAURI__?.shell || {};
 
-// List of required tools with fuzzy match keys and optional detector
+// List of required tools (simplified)
 const REQUIRED = [
-  { key: 'ccleaner', name: 'CCleaner', match: ['ccleaner'], hint: 'CCleaner.exe', prefer: 'CCleaner/CCleaner64.exe' },
-  { key: 'bleachbit', name: 'BleachBit', match: ['bleachbit'], hint: 'bleachbit.exe' },
   { key: 'adwcleaner', name: 'AdwCleaner', match: ['adwcleaner'], hint: 'adwcleaner.exe' },
-  { key: 'clamav', name: 'ClamAV', match: ['clamav', 'clamscan'], hint: 'clamscan.exe' },
-  { key: 'kvrt', name: 'KVRT', match: ['kvrt'], hint: 'KVRT.exe' },
-  { key: 'defender', name: 'Windows Defender (MpCmdRun)', match: ['mpcmdrun', 'windows defender'], hint: 'Resolved automatically' , detector: detectDefender },
-  { key: 'furmark2', name: 'Furmark 2', match: ['furmark'], hint: 'FurMark.exe' },
-  { key: 'prime95', name: 'Prime95', match: ['prime95'], hint: 'prime95.exe' },
-  { key: 'sdi', name: 'Snappy Driver Installer', match: ['snappy', 'sdi'], hint: 'SDI*\SDI*.exe' },
-  { key: 'gsmartcontrol', name: 'GSmartControl', match: ['gsmartcontrol'], hint: 'gsmartcontrol.exe' },
+  { key: 'bleachbit', name: 'BleachBit', match: ['bleachbit'], hint: 'bleachbit.exe' },
+  { key: 'smartctl', name: 'smartctl', match: ['smartctl', 'smartmontools'], hint: 'smartctl.exe' },
+  { key: 'heavyload', name: 'HeavyLoad', match: ['heavyload'], hint: 'heavyload.exe' },
+  { key: 'furmark', name: 'FurMark', match: ['furmark'], hint: 'FurMark.exe' },
 ];
 
 function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
