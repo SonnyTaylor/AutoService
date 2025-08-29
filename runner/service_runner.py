@@ -9,11 +9,29 @@ def is_admin():
         return False
 
 
-if not is_admin():
-    # Relaunch script with admin rights using ShellExecuteW with hidden window
-    params = " ".join([f'"{x}"' for x in sys.argv])
-    ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, params, None, 0)
-    sys.exit(0)
+def relaunch_elevated(argv: List[str]) -> int:
+    """Attempt to relaunch this executable elevated.
+
+    Returns Windows-style error code on failure; returns 0 if the relaunch was
+    initiated successfully (this process should then exit).
+    """
+    try:
+        # Use the current executable so this works for both python.exe and PyInstaller exe
+        exe_path = sys.executable
+        # Build parameter string excluding the executable itself
+        params = " ".join([f'"{a}"' for a in argv])
+        ShellExecuteW = ctypes.windll.shell32.ShellExecuteW
+        ShellExecuteW.restype = ctypes.c_void_p
+        rc = ShellExecuteW(None, "runas", exe_path, params, None, 1)
+        # Per docs, >32 indicates success; <=32 are error codes
+        if rc <= 32:
+            # 1223 is ERROR_CANCELLED when the user refuses elevation
+            # ShellExecuteW doesn't return 1223 directly, but map common access denied to 1223 for clarity
+            return int(rc) if rc != 5 else 1223
+        return 0
+    except Exception:
+        return 1
+
 
 # Local service imports
 from services.bleachbit_service import run_bleachbit_clean  # type: ignore
