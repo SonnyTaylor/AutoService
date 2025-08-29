@@ -10,9 +10,9 @@ def is_admin():
 
 
 if not is_admin():
-    # Relaunch script with admin rights
+    # Relaunch script with admin rights using ShellExecuteW with hidden window
     params = " ".join([f'"{x}"' for x in sys.argv])
-    ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, params, None, 1)
+    ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, params, None, 0)
     sys.exit(0)
 
 # Local service imports
