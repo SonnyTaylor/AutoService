@@ -6,14 +6,26 @@
   flex-wrap: wrap;
   margin-bottom: 18px;
 }
-[data-page="service"] .service-header h1 { margin: 0 0 6px; }
-[data-page="service"] .service-header .actions { margin-left: auto; display:flex; gap:10px; }
-[data-page="service"] #svc-start { min-width:120px; font-weight:600; }
-[data-page="service"] #svc-start:disabled { opacity:.55; cursor:not-allowed; }
+[data-page="service"] .service-header h1 {
+  margin: 0 0 6px;
+}
+[data-page="service"] .service-header .actions {
+  margin-left: auto;
+  display: flex;
+  gap: 10px;
+}
+[data-page="service"] #svc-start {
+  min-width: 120px;
+  font-weight: 600;
+}
+[data-page="service"] #svc-start:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
 
 [data-page="service"] .preset-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit,minmax(260px,1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 18px;
   margin-top: 8px;
 }
@@ -27,29 +39,98 @@
   gap: 10px;
   cursor: pointer;
   position: relative;
-  transition: background-color .18s,border-color .18s, box-shadow .22s;
+  transition: background-color 0.18s, border-color 0.18s, box-shadow 0.22s;
 }
-[data-page="service"] .preset-card:hover { background: var(--panel-hover); border-color:#2e3b55; }
-[data-page="service"] .preset-card[aria-pressed="true"] { border-color:#2b416b; box-shadow:0 0 0 2px rgba(79,140,255,0.25); background:#21304a; }
-[data-page="service"] .preset-card:focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
-[data-page="service"] .preset-card .preset-head { display:flex; align-items:center; gap:10px; }
-[data-page="service"] .preset-card h2 { font-size:1.05rem; margin:0; }
-[data-page="service"] .preset-card .icon { font-size:22px; color:var(--primary); display:inline-flex; }
-[data-page="service"] .preset-card .desc { margin:0; color:var(--muted); line-height:1.35; }
-[data-page="service"] .preset-card ul.summary { list-style:none; margin:0; padding:0; display:grid; gap:4px; font-size:.8rem; color:var(--muted); }
-[data-page="service"] .preset-card ul.summary li { position:relative; padding-left:14px; }
-[data-page="service"] .preset-card ul.summary li::before { content:""; position:absolute; left:0; top:8px; width:6px; height:6px; background:#335d9b; border-radius:50%; }
+[data-page="service"] .preset-card:hover {
+  background: var(--panel-hover);
+  border-color: #2e3b55;
+}
+[data-page="service"] .preset-card[aria-pressed="true"] {
+  border-color: #2b416b;
+  box-shadow: 0 0 0 2px rgba(79, 140, 255, 0.25);
+  background: #21304a;
+}
+[data-page="service"] .preset-card:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+[data-page="service"] .preset-card .preset-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+[data-page="service"] .preset-card h2 {
+  font-size: 1.05rem;
+  margin: 0;
+}
+[data-page="service"] .preset-card .icon {
+  font-size: 22px;
+  color: var(--primary);
+  display: inline-flex;
+}
+[data-page="service"] .preset-card .desc {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.35;
+}
+[data-page="service"] .preset-card ul.summary {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+[data-page="service"] .preset-card ul.summary li {
+  position: relative;
+  padding-left: 14px;
+}
+[data-page="service"] .preset-card ul.summary li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 6px;
+  height: 6px;
+  background: #335d9b;
+  border-radius: 50%;
+}
 
-[data-page="service"] .foot-note { margin-top:28px; font-size:.75rem; opacity:.8; }
-[data-page="service"] .foot-note code { background:#1d2738; padding:2px 6px; border-radius:6px; border:1px solid var(--border); font-size:.75rem; }
+[data-page="service"] .foot-note {
+  margin-top: 28px;
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+[data-page="service"] .foot-note code {
+  background: #1d2738;
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  font-size: 0.75rem;
+}
 
 /* Placeholder future task configuration page (service-run) basic layout scaffold to keep style consistent later */
-[data-page="service-run"] .config-scaffold { display:grid; gap:20px; }
-[data-page="service-run"] .config-scaffold .group { background:var(--panel-2); border:1px solid var(--border); border-radius:12px; padding:16px; }
-[data-page="service-run"] .config-scaffold h2 { margin:0 0 10px; font-size:1rem; }
-
-@media (max-width:780px){
-  [data-page="service"] .preset-card { padding:16px 14px; }
-  [data-page="service"] .service-header { gap:14px; }
+[data-page="service-run"] .config-scaffold {
+  display: grid;
+  gap: 20px;
+}
+[data-page="service-run"] .config-scaffold .group {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+[data-page="service-run"] .config-scaffold h2 {
+  margin: 0 0 10px;
+  font-size: 1rem;
 }
 
+@media (max-width: 780px) {
+  [data-page="service"] .preset-card {
+    padding: 16px 14px;
+  }
+  [data-page="service"] .service-header {
+    gap: 14px;
+  }
+}

@@ -2,7 +2,10 @@
   <div class="service-header">
     <div class="left">
       <h1>Servicing</h1>
-      <p class="muted">Choose a preset workflow or build a custom sequence of maintenance tasks.</p>
+      <p class="muted">
+        Choose a preset workflow or build a custom sequence of maintenance
+        tasks.
+      </p>
     </div>
     <div class="actions">
       <button id="svc-start" disabled>Start</button>
@@ -10,12 +13,20 @@
   </div>
 
   <div class="preset-grid" role="list" aria-label="Service presets">
-    <button class="preset-card" data-preset="general" role="listitem" aria-pressed="false">
+    <button
+      class="preset-card"
+      data-preset="general"
+      role="listitem"
+      aria-pressed="false"
+    >
       <div class="preset-head">
         <span class="icon ph ph-wrench"></span>
         <h2>General Service</h2>
       </div>
-      <p class="desc">Quick tune-up: temp file cleanup, basic security scans stub, update checks, and system info snapshot.</p>
+      <p class="desc">
+        Quick tune-up: temp file cleanup, basic security scans stub, update
+        checks, and system info snapshot.
+      </p>
       <ul class="summary">
         <li>Disk cleanup</li>
         <li>Temp + cache purge</li>
@@ -23,12 +34,20 @@
       </ul>
     </button>
 
-    <button class="preset-card" data-preset="complete" role="listitem" aria-pressed="false">
+    <button
+      class="preset-card"
+      data-preset="complete"
+      role="listitem"
+      aria-pressed="false"
+    >
       <div class="preset-head">
         <span class="icon ph ph-toolbox"></span>
         <h2>Complete Service</h2>
       </div>
-      <p class="desc">Full maintenance batch: everything in General plus extended scans, optional deep cleaners, hardware stress & health checks.</p>
+      <p class="desc">
+        Full maintenance batch: everything in General plus extended scans,
+        optional deep cleaners, hardware stress & health checks.
+      </p>
       <ul class="summary">
         <li>All General tasks</li>
         <li>Deep scan set (stub)</li>
@@ -36,12 +55,20 @@
       </ul>
     </button>
 
-    <button class="preset-card" data-preset="custom" role="listitem" aria-pressed="false">
+    <button
+      class="preset-card"
+      data-preset="custom"
+      role="listitem"
+      aria-pressed="false"
+    >
       <div class="preset-head">
         <span class="icon ph ph-sliders-horizontal"></span>
         <h2>Custom Service</h2>
       </div>
-      <p class="desc">Manually pick and reorder tasks to suit a unique situation. (Configurator loads on next screen.)</p>
+      <p class="desc">
+        Manually pick and reorder tasks to suit a unique situation.
+        (Configurator loads on next screen.)
+      </p>
       <ul class="summary">
         <li>Build your own queue</li>
         <li>Reorder + toggle steps</li>
@@ -50,6 +77,9 @@
     </button>
   </div>
 
-  <p class="muted foot-note">Future: Presets become editable JSON definitions in <code>data/settings/service-presets.json</code>.</p>
+  <p class="muted foot-note">
+    Future: Presets become editable JSON definitions in
+    <code>data/settings/service-presets.json</code>.
+  </p>
 </section>
 <script type="module" src="./index.js"></script>
