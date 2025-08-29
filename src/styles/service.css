@@ -134,3 +134,130 @@
     gap: 14px;
   }
 }
+
+/* Run builder page */
+[data-page="service-run"] .run-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+[data-page="service-run"] .run-header h1 {
+  margin: 0 0 4px;
+  font-size: 1.15rem;
+}
+[data-page="service-run"] .run-header .run-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 10px;
+}
+[data-page="service-run"] .builder-layout {
+  display: grid;
+  grid-template-columns: 1fr minmax(300px, 360px);
+  gap: 20px;
+}
+[data-page="service-run"] .task-palette,
+[data-page="service-run"] .task-preview {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+[data-page="service-run"] .section-title {
+  margin: 0;
+  font-size: 1rem;
+}
+[data-page="service-run"] .small {
+  font-size: 0.75rem;
+}
+[data-page="service-run"] .task-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+[data-page="service-run"] .task-item {
+  position: relative;
+}
+[data-page="service-run"] .task-row {
+  display: grid;
+  grid-template-columns: 22px auto 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: grab;
+}
+[data-page="service-run"] .task-row:hover {
+  background: var(--panel-hover);
+  border-color: #2e3b55;
+}
+[data-page="service-run"] .task-item.dragging .task-row {
+  opacity: 0.6;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.06);
+}
+[data-page="service-run"] .task-row input {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+[data-page="service-run"] .task-row .grab {
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.55;
+  cursor: grab;
+}
+[data-page="service-run"] .task-row .main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+[data-page="service-run"] .task-row .name {
+  font-weight: 600;
+}
+[data-page="service-run"] .task-row .meta {
+  font-size: 0.65rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+[data-page="service-run"] .order-pill {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  background: #24314a;
+  border: 1px solid #2b416b;
+  color: var(--text);
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+[data-page="service-run"] .json-preview {
+  margin: 0;
+  background: #0e131b;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: ui-monospace, monospace;
+  font-size: 0.75rem;
+  max-height: 420px;
+  overflow: auto;
+}
+[data-page="service-run"] #svc-run-next:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+@media (max-width: 980px) {
+  [data-page="service-run"] .builder-layout {
+    grid-template-columns: 1fr;
+  }
+}
