@@ -15,6 +15,61 @@ const PYTHON_RUNNER_EXE_NAME: &str = "service_runner.exe"; // final exe name in 
 const PYTHON_COMMAND: &str = "python"; // program used to invoke PyInstaller
 
 fn main() {
+    // Ensure a platform-suffixed copy of the external binary exists
+    // before calling into `tauri_build::build()` — the bundler checks
+    // for files like `binaries/service_runner.exe-<target>.exe` while
+    // building and will fail early if they don't exist.
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let repo_root = manifest_dir.parent().unwrap_or(&manifest_dir).to_path_buf();
+    let bin_dir = repo_root.join("binaries");
+    let original_exe = bin_dir.join(PYTHON_RUNNER_EXE_NAME);
+
+    // Diagnostic info to help when the expected files are not found during CI
+    println!("cargo:warning=build.rs manifest_dir={}", manifest_dir.display());
+    println!("cargo:warning=build.rs repo_root={}", repo_root.display());
+    println!("cargo:warning=build.rs bin_dir={}", bin_dir.display());
+    println!("cargo:warning=build.rs expected_original_exe={}", original_exe.display());
+    println!("cargo:warning=build.rs original_exe_exists={}", original_exe.exists());
+    println!("cargo:warning=build.rs TARGET_env={:?}", env::var("TARGET"));
+
+    // Also ensure a copy exists inside the `src-tauri/binaries` folder
+    // because the tauri bundler resolves resource paths relative to the
+    // manifest directory (src-tauri) when validating `externalBin`.
+    let manifest_bin_dir = manifest_dir.join("binaries");
+    if let Ok(target_triple) = env::var("TARGET") {
+        let suffixed_name = format!("{}-{}.exe", PYTHON_RUNNER_EXE_NAME, target_triple);
+        let source_suffixed = bin_dir.join(&suffixed_name);
+        let dest_suffixed = manifest_bin_dir.join(&suffixed_name);
+        if source_suffixed.exists() {
+            if let Err(e) = fs::create_dir_all(&manifest_bin_dir) {
+                println!("cargo:warning=Failed to create manifest binaries dir {}: {}", manifest_bin_dir.display(), e);
+            }
+            match fs::copy(&source_suffixed, &dest_suffixed) {
+                Ok(_) => println!("cargo:warning=Copied {} -> {}", source_suffixed.display(), dest_suffixed.display()),
+                Err(e) => println!("cargo:warning=Failed to copy {} -> {}: {}", source_suffixed.display(), dest_suffixed.display(), e),
+            }
+        } else {
+            println!("cargo:warning=Source suffixed binary {} does not exist yet; it will be created later if PyInstaller runs", source_suffixed.display());
+        }
+    }
+    if original_exe.exists() {
+        if let Ok(target_triple) = env::var("TARGET") {
+            let suffixed_name = format!("{}-{}.exe", PYTHON_RUNNER_EXE_NAME, target_triple);
+            let suffixed_path = bin_dir.join(&suffixed_name);
+            if !suffixed_path.exists() {
+                if let Err(e) = fs::create_dir_all(&bin_dir) {
+                    println!("cargo:warning=Failed to create binaries dir {}: {}", bin_dir.display(), e);
+                }
+                match fs::copy(&original_exe, &suffixed_path) {
+                    Ok(_) => println!("cargo:warning=Created platform-specific binary copy {}", suffixed_path.display()),
+                    Err(e) => println!("cargo:warning=Failed to create platform-specific copy {}: {}", suffixed_path.display(), e),
+                }
+            }
+        } else {
+            println!("cargo:warning=TARGET env var not set; skipping creation of platform-specific binary copy");
+        }
+    }
+
     // Let Tauri's build steps run as usual.
     tauri_build::build();
 
@@ -149,6 +204,33 @@ fn main() {
         }
         Err(e) => {
             println!("cargo:warning=Failed to execute PyInstaller (is Python/pyinstaller installed?): {}", e);
+        }
+    }
+
+    // Create a platform-suffixed copy so Tauri's bundler can find the
+    // expected resource path. When an external binary is declared as
+    // `binaries/service_runner.exe` the bundler looks for a file named
+    // `service_runner.exe-<target-triple>.exe` (for example
+    // service_runner.exe-x86_64-pc-windows-msvc.exe). Ensure that copy
+    // exists by duplicating the created exe if present.
+    if target_exe.exists() {
+        match env::var("TARGET") {
+            Ok(target_triple) => {
+                let suffixed_name = format!("{}-{}.exe", PYTHON_RUNNER_EXE_NAME, target_triple);
+                let suffixed_path = bin_dir.join(&suffixed_name);
+                if let Err(e) = fs::copy(&target_exe, &suffixed_path) {
+                    println!(
+                        "cargo:warning=Failed to create platform-specific copy {}: {}",
+                        suffixed_path.display(),
+                        e
+                    );
+                } else {
+                    println!("cargo:warning=Created platform-specific binary copy {}", suffixed_path.display());
+                }
+            }
+            Err(_) => {
+                println!("cargo:warning=TARGET env var not set; skipping creation of platform-specific binary copy");
+            }
         }
     }
 }
