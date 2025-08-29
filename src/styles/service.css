@@ -323,10 +323,14 @@
   border: 1px solid var(--border);
 }
 [data-page="service-run"] .param-controls input {
-  width: 70px;
-  padding: 4px 6px;
-  font-size: 0.7rem;
+  width: 78px;
+  padding: 6px 8px;
+  font-size: 0.8rem;
   min-height: auto;
+  background: #0f1722;
+  border: 1px solid #2a3b55;
+  border-radius: 6px;
+  color: var(--text);
 }
 /* GPU parent */
 [data-page="service-run"] .task-row.gpu-parent {
@@ -354,9 +358,13 @@
   border-radius: 6px;
 }
 [data-page="service-run"] .gpu-sub input[type="number"] {
-  width: 78px;
-  padding: 4px 6px;
-  font-size: 0.65rem;
+  width: 86px;
+  padding: 6px 8px;
+  font-size: 0.75rem;
+  background: #0f1722;
+  border: 1px solid #2a3b55;
+  border-radius: 6px;
+  color: var(--text);
 }
 @media (max-width: 640px) {
   [data-page="service-run"] .param-controls input {
