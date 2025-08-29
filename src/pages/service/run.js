@@ -278,19 +278,56 @@ export async function initPage() {
   const state = {};
   const gpuSubs = { furmark: true, heavyload: false };
   const gpuParams = { furmarkMinutes: 1, heavyloadMinutes: 1 };
+  let toolStatuses = [];
+
+  // Persistence keys
+  const PERSIST_KEY = "service.run.builder.v1";
+
+  function persist() {
+    try {
+      const data = {
+        order,
+        selection: [...selection],
+        state,
+        gpuSubs,
+        gpuParams,
+      };
+      sessionStorage.setItem(PERSIST_KEY, JSON.stringify(data));
+    } catch {}
+  }
+
+  function restore() {
+    try {
+      const raw = sessionStorage.getItem(PERSIST_KEY);
+      if (!raw) return false;
+      const data = JSON.parse(raw);
+      if (!data || !Array.isArray(data.order)) return false;
+      order = data.order;
+      selection.clear();
+      (data.selection || []).forEach((id) => selection.add(id));
+      Object.assign(state, data.state || {});
+      Object.assign(gpuSubs, data.gpuSubs || {});
+      Object.assign(gpuParams, data.gpuParams || {});
+      return true;
+    } catch {
+      return false;
+    }
+  }
 
   // Initialize order & selection
-  const base = preset
-    ? PRESET_MAP[preset]
-    : PRESET_MAP[mode] || PRESET_MAP.custom;
-  base.forEach((id) => {
-    selection.add(id);
-    order.push(id);
-  });
+  if (!restore()) {
+    const base = preset
+      ? PRESET_MAP[preset]
+      : PRESET_MAP[mode] || PRESET_MAP.custom;
+    base.forEach((id) => {
+      selection.add(id);
+      order.push(id);
+    });
+  }
 
   // Copy initial params
   Object.entries(ATOMIC_TASKS).forEach(([id, def]) => {
-    if (def.params) state[id] = { params: { ...def.params } };
+    if (!state[id] && def.params) state[id] = { params: { ...def.params } };
   });
 
   // Set title/description
