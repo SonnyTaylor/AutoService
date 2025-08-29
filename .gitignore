@@ -52,3 +52,6 @@ __pycache__/
 # Keep an example env file tracked
 !.env.example
 
+# Ignore compiled Python runner and any other files placed in the top-level binaries folder
+binaries/
+
