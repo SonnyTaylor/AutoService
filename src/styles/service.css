@@ -167,6 +167,14 @@
   gap: 12px;
   align-content: start;
 }
+[data-page="service-run"] .palette-actions,
+[data-page="service-run"] .json-actions {
+  display: flex;
+  gap: 8px;
+}
+[data-page="service-run"] .small {
+  font-size: 0.75rem;
+}
 [data-page="service-run"] .section-title {
   margin: 0;
   font-size: 1rem;

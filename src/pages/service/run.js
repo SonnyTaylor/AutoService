@@ -260,6 +260,10 @@ export async function initPage() {
   const jsonEl = document.getElementById("svc-json");
   const nextBtn = document.getElementById("svc-run-next");
   const backBtn = document.getElementById("svc-run-back");
+  const btnSelectAll = document.getElementById("svc-select-all");
+  const btnDeselectAll = document.getElementById("svc-deselect-all");
+  const btnReset = document.getElementById("svc-reset");
+  const btnCopyJson = document.getElementById("svc-copy-json");
 
   backBtn?.addEventListener("click", () => {
     window.location.hash = "#/service";
