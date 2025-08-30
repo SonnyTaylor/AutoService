@@ -43,9 +43,9 @@ from services.sfc_service import run_sfc_scan  # type: ignore
 from services.dism_service import run_dism_health_check  # type: ignore
 from services.ai_startup_service import run_ai_startup_disable  # type: ignore
 
-# Configure basic logging to stderr for debugging purposes.
-# The final report will be printed to stdout.
-_DEFAULT_LOG_FMT = "%(asctime)s - %(levelname)s - %(message)s"
+# Configure logging to stderr for live streaming to the UI.
+# Use a cleaner format that's easier to parse.
+_DEFAULT_LOG_FMT = "[%(asctime)s] %(levelname)s: %(message)s"
 logging.basicConfig(level=logging.INFO, stream=sys.stderr, format=_DEFAULT_LOG_FMT)
 
 
@@ -153,18 +153,66 @@ def main():
         handler = TASK_HANDLERS.get(task_type)
 
         if handler:
-            logging.info("TASK START: %s (#%d)", task_type, idx + 1)
-            result = handler(task)
-            if result.get("status") == "failure":
+            logging.info("TASK_START:%d:%s", idx, task_type)
+            logging.info("Starting task %d/%d: %s", idx + 1, len(tasks), task_type)
+
+            try:
+                result = handler(task)
+                status = result.get("status", "unknown")
+
+                if status == "failure":
+                    overall_success = False
+                    logging.error(
+                        "TASK_FAIL:%d:%s - %s",
+                        idx,
+                        task_type,
+                        result.get("summary", {}).get("reason", "Unknown error"),
+                    )
+                elif status == "skipped":
+                    logging.warning(
+                        "TASK_SKIP:%d:%s - %s",
+                        idx,
+                        task_type,
+                        result.get("summary", {}).get("reason", "Skipped"),
+                    )
+                else:
+                    logging.info("TASK_OK:%d:%s", idx, task_type)
+
+                # Log additional details if available
+                summary = result.get("summary", {})
+                if summary and isinstance(summary, dict):
+                    if "output" in summary:
+                        logging.info(
+                            "Task %s completed with output: %s",
+                            task_type,
+                            summary["output"][:200] + "..."
+                            if len(str(summary["output"])) > 200
+                            else summary["output"],
+                        )
+                    if "duration_seconds" in summary:
+                        logging.info(
+                            "Task %s took %.2f seconds",
+                            task_type,
+                            summary["duration_seconds"],
+                        )
+
+                all_results.append(result)
+
+            except Exception as e:
                 overall_success = False
-                logging.info("TASK FAIL: %s", task_type)
-            elif result.get("status") == "skipped":
-                logging.info("TASK SKIP: %s", task_type)
-            else:
-                logging.info("TASK OK: %s", task_type)
-            all_results.append(result)
+                logging.error("TASK_FAIL:%d:%s - Exception: %s", idx, task_type, str(e))
+                all_results.append(
+                    {
+                        "task_type": task_type,
+                        "status": "failure",
+                        "summary": {"reason": f"Exception during execution: {str(e)}"},
+                    }
+                )
+
         else:
-            logging.warning(f"No handler found for task type '{task_type}'. Skipping.")
+            logging.warning(
+                "TASK_SKIP:%d:%s - No handler found for task type", idx, task_type
+            )
             all_results.append(
                 {
                     "task_type": task_type,

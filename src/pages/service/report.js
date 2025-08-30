@@ -66,6 +66,12 @@ export async function initPage() {
 
   container.hidden = false;
 
+  // Initialize task status tracking
+  let taskStatuses = {};
+  tasks.forEach((task, index) => {
+    taskStatuses[index] = "pending";
+  });
+
   runBtn?.addEventListener("click", async () => {
     if (!tasks.length) return;
     runBtn.disabled = true;
@@ -118,6 +124,7 @@ export async function initPage() {
   function updateTaskStatus(i, status) {
     if (!taskState[i]) return;
     taskState[i].status = status;
+    taskStatuses[i] = status; // Also update the tracking object
     renderTaskList();
   }
 
@@ -218,35 +225,106 @@ export async function initPage() {
 
     // Track per-task phases by parsing known JSON lines or brackets
     let finalJson = "";
-    let currentTaskIndex = 0;
 
     cmd.on("close", (data) => {
       // no-op; final JSON already collected from stdout buffer
     });
+
     const maybeProcessStatus = (s) => {
-      // Match lines with prefixes like '2025-.. - INFO - TASK START: ...'
-      if (/TASK\s+START:/i.test(s)) updateTaskStatus(currentTaskIndex, "running");
-      if (/TASK\s+OK:/i.test(s)) { updateTaskStatus(currentTaskIndex, "success"); currentTaskIndex++; }
-      if (/TASK\s+FAIL:/i.test(s)) { updateTaskStatus(currentTaskIndex, "failure"); currentTaskIndex++; }
-      if (/TASK\s+SKIP:/i.test(s)) { updateTaskStatus(currentTaskIndex, "skipped"); currentTaskIndex++; }
+      // Parse new format: TASK_START:0:task_type or TASK_OK:0:task_type
+      const startMatch = s.match(/TASK_START:(\d+):(.+)/i);
+      if (startMatch) {
+        const taskIndex = parseInt(startMatch[1]);
+        const taskType = startMatch[2];
+        updateTaskStatus(taskIndex, "running");
+        appendLog(`[INFO] Started: ${taskType}`);
+        return;
+      }
+
+      const okMatch = s.match(/TASK_OK:(\d+):(.+)/i);
+      if (okMatch) {
+        const taskIndex = parseInt(okMatch[1]);
+        const taskType = okMatch[2];
+        updateTaskStatus(taskIndex, "success");
+        appendLog(`[SUCCESS] Completed: ${taskType}`);
+        return;
+      }
+
+      const failMatch = s.match(/TASK_FAIL:(\d+):(.+?)(?:\s*-\s*(.+))?$/i);
+      if (failMatch) {
+        const taskIndex = parseInt(failMatch[1]);
+        const taskType = failMatch[2];
+        const reason = failMatch[3] || "Failed";
+        updateTaskStatus(taskIndex, "failure");
+        appendLog(`[ERROR] Failed: ${taskType} - ${reason}`);
+        return;
+      }
+
+      const skipMatch = s.match(/TASK_SKIP:(\d+):(.+?)(?:\s*-\s*(.+))?$/i);
+      if (skipMatch) {
+        const taskIndex = parseInt(skipMatch[1]);
+        const taskType = skipMatch[2];
+        const reason = skipMatch[3] || "Skipped";
+        updateTaskStatus(taskIndex, "skipped");
+        appendLog(`[WARNING] Skipped: ${taskType} - ${reason}`);
+        return;
+      }
+
+      // Also handle the old format for backward compatibility
+      if (/TASK\s+START:/i.test(s)) {
+        // Find the first pending task
+        const pendingTasks = Object.entries(taskStatuses).filter(([_, status]) => status === "pending");
+        if (pendingTasks.length > 0) {
+          const taskIndex = parseInt(pendingTasks[0][0]);
+          updateTaskStatus(taskIndex, "running");
+        }
+      }
+      if (/TASK\s+OK:/i.test(s)) {
+        // Find the first running task
+        const runningTasks = Object.entries(taskStatuses).filter(([_, status]) => status === "running");
+        if (runningTasks.length > 0) {
+          const taskIndex = parseInt(runningTasks[0][0]);
+          updateTaskStatus(taskIndex, "success");
+        }
+      }
+      if (/TASK\s+FAIL:/i.test(s)) {
+        // Find the first running task
+        const runningTasks = Object.entries(taskStatuses).filter(([_, status]) => status === "running");
+        if (runningTasks.length > 0) {
+          const taskIndex = parseInt(runningTasks[0][0]);
+          updateTaskStatus(taskIndex, "failure");
+        }
+      }
+      if (/TASK\s+SKIP:/i.test(s)) {
+        // Find the first running task
+        const runningTasks = Object.entries(taskStatuses).filter(([_, status]) => status === "running");
+        if (runningTasks.length > 0) {
+          const taskIndex = parseInt(runningTasks[0][0]);
+          updateTaskStatus(taskIndex, "skipped");
+        }
+      }
     };
 
     cmd.stdout.on("data", (line) => {
       const s = String(line).trimEnd();
-      const stamp = new Date().toLocaleTimeString();
       if (!s) return;
-      appendLog(`[${stamp}] ${s}`);
+
       // Try to capture final JSON block (stdout only)
       if (s.startsWith("{") || (finalJson && !s.startsWith("[ERROR"))) {
         finalJson += (finalJson ? "\n" : "") + s;
+      } else {
+        // Show other stdout messages as live logs
+        appendLog(`[STDOUT] ${s}`);
       }
       maybeProcessStatus(s);
     });
+
     cmd.stderr.on("data", (line) => {
       const s = String(line).trimEnd();
       if (!s) return;
-      const stamp = new Date().toLocaleTimeString();
-      appendLog(`[${stamp}] ${s}`);
+
+      // Process stderr for task status updates and show as live logs
+      appendLog(`[STDERR] ${s}`);
       maybeProcessStatus(s);
     });
 
