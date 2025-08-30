@@ -44,8 +44,8 @@ from services.dism_service import run_dism_health_check  # type: ignore
 from services.ai_startup_service import run_ai_startup_disable  # type: ignore
 
 # Configure logging to stderr for live streaming to the UI.
-# Use a cleaner format that's easier to parse.
-_DEFAULT_LOG_FMT = "[%(asctime)s] %(levelname)s: %(message)s"
+# Use a simple format that's easy to parse
+_DEFAULT_LOG_FMT = "%(message)s"
 logging.basicConfig(level=logging.INFO, stream=sys.stderr, format=_DEFAULT_LOG_FMT)
 
 
@@ -123,15 +123,18 @@ def main():
         sys.exit(0)
 
     raw_input = args.json_input
+    logging.info(f"Received input: {raw_input[:200]}...")
     input_data = None
     # Allow passing a filename instead of raw JSON
     if os.path.exists(raw_input) and os.path.isfile(raw_input):
+        logging.info(f"Reading from file: {raw_input}")
         try:
             with open(raw_input, "r", encoding="utf-8") as f:
                 input_data = json.load(f)
         except Exception as e:  # noqa: BLE001
             logging.error(f"Failed reading JSON file: {e}")
     if input_data is None:
+        logging.info("Parsing as raw JSON")
         try:
             input_data = json.loads(raw_input)
         except json.JSONDecodeError:
@@ -144,6 +147,9 @@ def main():
             print(json.dumps(final_report, indent=2))
             sys.exit(1)
     tasks = input_data.get("tasks", [])
+    logging.info(f"Parsed {len(tasks)} tasks")
+    for i, task in enumerate(tasks):
+        logging.info(f"Task {i}: {task.get('type', 'unknown')}")
 
     all_results = []
     overall_success = True

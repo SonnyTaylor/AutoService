@@ -82,6 +82,8 @@ export async function initPage() {
     showOverlay(true);
     try {
       const jsonArg = JSON.stringify({ tasks });
+      console.log("Sending tasks to Python runner:", tasks);
+      console.log("JSON argument:", jsonArg);
       const result = await runRunner(jsonArg);
       // Pretty print final JSON
       try {
@@ -122,9 +124,18 @@ export async function initPage() {
   }
 
   function updateTaskStatus(i, status) {
-    if (!taskState[i]) return;
+    console.log(`updateTaskStatus called with index ${i}, status ${status}`);
+    console.log(`taskState length: ${taskState.length}, taskState[${i}]:`, taskState[i]);
+
+    if (!taskState[i]) {
+      console.error(`No taskState entry for index ${i}`);
+      return;
+    }
+
     taskState[i].status = status;
     taskStatuses[i] = status; // Also update the tracking object
+
+    console.log(`Updated task ${i} to status ${status}`);
     renderTaskList();
   }
 
@@ -231,47 +242,55 @@ export async function initPage() {
     });
 
     const maybeProcessStatus = (s) => {
+      // Debug: Log what we're processing
+      console.log("Processing log line:", JSON.stringify(s));
+
       // Parse new format: TASK_START:0:task_type or TASK_OK:0:task_type
-      const startMatch = s.match(/TASK_START:(\d+):(.+)/i);
+      const startMatch = s.match(/^TASK_START:(\d+):(.+)$/);
       if (startMatch) {
         const taskIndex = parseInt(startMatch[1]);
         const taskType = startMatch[2];
+        console.log(`Found TASK_START for task ${taskIndex}: ${taskType}`);
         updateTaskStatus(taskIndex, "running");
         appendLog(`[INFO] Started: ${taskType}`);
         return;
       }
 
-      const okMatch = s.match(/TASK_OK:(\d+):(.+)/i);
+      const okMatch = s.match(/^TASK_OK:(\d+):(.+)$/);
       if (okMatch) {
         const taskIndex = parseInt(okMatch[1]);
         const taskType = okMatch[2];
+        console.log(`Found TASK_OK for task ${taskIndex}: ${taskType}`);
         updateTaskStatus(taskIndex, "success");
         appendLog(`[SUCCESS] Completed: ${taskType}`);
         return;
       }
 
-      const failMatch = s.match(/TASK_FAIL:(\d+):(.+?)(?:\s*-\s*(.+))?$/i);
+      const failMatch = s.match(/^TASK_FAIL:(\d+):(.+?)(?:\s*-\s*(.+))?$/);
       if (failMatch) {
         const taskIndex = parseInt(failMatch[1]);
         const taskType = failMatch[2];
         const reason = failMatch[3] || "Failed";
+        console.log(`Found TASK_FAIL for task ${taskIndex}: ${taskType} - ${reason}`);
         updateTaskStatus(taskIndex, "failure");
         appendLog(`[ERROR] Failed: ${taskType} - ${reason}`);
         return;
       }
 
-      const skipMatch = s.match(/TASK_SKIP:(\d+):(.+?)(?:\s*-\s*(.+))?$/i);
+      const skipMatch = s.match(/^TASK_SKIP:(\d+):(.+?)(?:\s*-\s*(.+))?$/);
       if (skipMatch) {
         const taskIndex = parseInt(skipMatch[1]);
         const taskType = skipMatch[2];
         const reason = skipMatch[3] || "Skipped";
+        console.log(`Found TASK_SKIP for task ${taskIndex}: ${taskType} - ${reason}`);
         updateTaskStatus(taskIndex, "skipped");
         appendLog(`[WARNING] Skipped: ${taskType} - ${reason}`);
         return;
       }
 
       // Also handle the old format for backward compatibility
-      if (/TASK\s+START:/i.test(s)) {
+      if (/^TASK\s+START:/i.test(s)) {
+        console.log("Found old format TASK START");
         // Find the first pending task
         const pendingTasks = Object.entries(taskStatuses).filter(([_, status]) => status === "pending");
         if (pendingTasks.length > 0) {
@@ -279,7 +298,8 @@ export async function initPage() {
           updateTaskStatus(taskIndex, "running");
         }
       }
-      if (/TASK\s+OK:/i.test(s)) {
+      if (/^TASK\s+OK:/i.test(s)) {
+        console.log("Found old format TASK OK");
         // Find the first running task
         const runningTasks = Object.entries(taskStatuses).filter(([_, status]) => status === "running");
         if (runningTasks.length > 0) {
@@ -287,7 +307,8 @@ export async function initPage() {
           updateTaskStatus(taskIndex, "success");
         }
       }
-      if (/TASK\s+FAIL:/i.test(s)) {
+      if (/^TASK\s+FAIL:/i.test(s)) {
+        console.log("Found old format TASK FAIL");
         // Find the first running task
         const runningTasks = Object.entries(taskStatuses).filter(([_, status]) => status === "running");
         if (runningTasks.length > 0) {
@@ -295,7 +316,8 @@ export async function initPage() {
           updateTaskStatus(taskIndex, "failure");
         }
       }
-      if (/TASK\s+SKIP:/i.test(s)) {
+      if (/^TASK\s+SKIP:/i.test(s)) {
+        console.log("Found old format TASK SKIP");
         // Find the first running task
         const runningTasks = Object.entries(taskStatuses).filter(([_, status]) => status === "running");
         if (runningTasks.length > 0) {
@@ -305,9 +327,29 @@ export async function initPage() {
       }
     };
 
+
+
+    // Set up event handlers
+    console.log("Setting up command event handlers...");
+
+    cmd.stderr.on("data", (line) => {
+      const s = String(line).trimEnd();
+      if (!s) return;
+
+      // Debug: Show raw stderr line
+      console.log("Raw stderr line received:", JSON.stringify(s));
+
+      // Process stderr for task status updates and show as live logs
+      appendLog(`[STDERR] ${s}`);
+      maybeProcessStatus(s);
+    });
+
     cmd.stdout.on("data", (line) => {
       const s = String(line).trimEnd();
       if (!s) return;
+
+      // Debug: Show raw stdout line
+      console.log("Raw stdout line received:", JSON.stringify(s));
 
       // Try to capture final JSON block (stdout only)
       if (s.startsWith("{") || (finalJson && !s.startsWith("[ERROR"))) {
@@ -315,18 +357,12 @@ export async function initPage() {
       } else {
         // Show other stdout messages as live logs
         appendLog(`[STDOUT] ${s}`);
+        // Also check stdout for task status markers
+        maybeProcessStatus(s);
       }
-      maybeProcessStatus(s);
     });
 
-    cmd.stderr.on("data", (line) => {
-      const s = String(line).trimEnd();
-      if (!s) return;
-
-      // Process stderr for task status updates and show as live logs
-      appendLog(`[STDERR] ${s}`);
-      maybeProcessStatus(s);
-    });
+    console.log("Event handlers set up, executing command...");
 
     const out = await cmd.execute();
     // Prefer collected final JSON, else use stdout
