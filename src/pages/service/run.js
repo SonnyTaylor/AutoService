@@ -370,7 +370,7 @@ export async function initPage() {
       paletteEl.appendChild(renderItem(id));
       appended.add(id);
     });
-    Object.keys(ATOMIC_TASKS)
+    listServiceIds()
       .concat(GPU_PARENT_ID)
       .forEach((id) => {
         if (["furmark_stress_test", "heavyload_stress_gpu"].includes(id)) return;
@@ -433,7 +433,7 @@ export async function initPage() {
   } catch { PROGRAMS_CACHE = []; }
 
   btnSelectAll?.addEventListener("click", () => {
-    const all = Object.keys(ATOMIC_TASKS).concat(GPU_PARENT_ID);
+    const all = listServiceIds().concat(GPU_PARENT_ID);
     all.forEach((id) => selection.add(id));
     // Ensure every selected item is represented in order once
     all.forEach((id) => { if (!order.includes(id)) order.push(id); });
@@ -441,7 +441,11 @@ export async function initPage() {
     renderPalette();
   });
   btnDeselectAll?.addEventListener("click", () => {
+    // Keep all tasks visible but set selection empty
     selection.clear();
+    // Ensure `order` still covers all tasks so re-selecting doesn't lose position
+    const all = listServiceIds().concat(GPU_PARENT_ID);
+    all.forEach((id) => { if (!order.includes(id)) order.push(id); });
     persist();
     renderPalette();
   });
