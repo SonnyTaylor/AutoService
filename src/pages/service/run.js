@@ -348,9 +348,9 @@ export async function initPage() {
     wrapper.className = "param-controls";
     Object.entries(params).forEach(([key, value]) => {
       if (key === "seconds") {
-        wrapper.innerHTML += `<label class="tiny-lab">Sec <input type="number" min="10" max="3600" step="10" data-param="seconds" value="${value}" /></label>`;
+        wrapper.innerHTML += `<label class="tiny-lab"><span class="lab">Duration</span> <input type="number" class="minutes-input" min="10" max="3600" step="10" data-param="seconds" value="${value}" aria-label="Duration in seconds" /> <span class="unit">sec</span></label>`;
       } else if (key === "minutes") {
-        wrapper.innerHTML += `<label class="tiny-lab">Min <input type="number" min="1" max="240" step="1" data-param="minutes" value="${value}" /></label>`;
+        wrapper.innerHTML += `<label class="tiny-lab"><span class="lab">Duration</span> <input type="number" class="minutes-input" min="1" max="240" step="1" data-param="minutes" value="${value}" aria-label="Duration in minutes" /> <span class="unit">min</span></label>`;
       }
     });
     wrapper.querySelectorAll("input").forEach((inp) => {
@@ -369,14 +369,14 @@ export async function initPage() {
     div.innerHTML = `
       <label><input type="checkbox" data-sub="furmark" ${
         gpuSubs.furmark ? "checked" : ""
-      }> FurMark <input type="number" class="dur" data-sub-dur="furmarkMinutes" value="${
+      }> FurMark <span class="sep">•</span> <span class="lab">Duration</span> <input type="number" class="dur" data-sub-dur="furmarkMinutes" value="${
       gpuParams.furmarkMinutes
-    }" min="1" max="240" step="1"/></label>
+    }" min="1" max="240" step="1" aria-label="FurMark duration in minutes"/> <span class="unit">min</span></label>
       <label><input type="checkbox" data-sub="heavyload" ${
         gpuSubs.heavyload ? "checked" : ""
-      }> HeavyLoad <input type="number" class="dur" data-sub-dur="heavyloadMinutes" value="${
+      }> HeavyLoad <span class="sep">•</span> <span class="lab">Duration</span> <input type="number" class="dur" data-sub-dur="heavyloadMinutes" value="${
       gpuParams.heavyloadMinutes
-    }" min="1" max="240" step="1"/></label>
+    }" min="1" max="240" step="1" aria-label="HeavyLoad duration in minutes"/> <span class="unit">min</span></label>
     `;
     div.querySelectorAll('input[type="checkbox"]').forEach((cb) =>
       cb.addEventListener("change", () => {
@@ -499,7 +499,8 @@ export async function initPage() {
       .forEach((id) => {
         if (["furmark_stress_test", "heavyload_stress_gpu"].includes(id)) return;
         if (appended.has(id)) return;
-        if (!selection.has(id)) paletteEl.appendChild(renderItem(id));
+        // Always render remaining tasks (selected or not) so nothing disappears
+        paletteEl.appendChild(renderItem(id));
       });
     validateNext(tasksCountRunnable());
     updateJson();
@@ -551,10 +552,10 @@ export async function initPage() {
   } catch { PROGRAMS_CACHE = []; }
 
   btnSelectAll?.addEventListener("click", () => {
-    Object.keys(ATOMIC_TASKS).concat(GPU_PARENT_ID).forEach((id) =>
-      selection.add(id)
-    );
-    if (!order.includes(GPU_PARENT_ID)) order.push(GPU_PARENT_ID);
+    const all = Object.keys(ATOMIC_TASKS).concat(GPU_PARENT_ID);
+    all.forEach((id) => selection.add(id));
+    // Ensure every selected item is represented in order once
+    all.forEach((id) => { if (!order.includes(id)) order.push(id); });
     persist();
     renderPalette();
   });
