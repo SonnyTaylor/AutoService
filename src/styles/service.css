@@ -1,3 +1,30 @@
+[data-page="service-run"] .param-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 12px;
+}
+[data-page="service-run"] .param-controls .lab {
+  opacity: 0.8;
+  font-size: 12px;
+}
+[data-page="service-run"] .param-controls .unit {
+  opacity: 0.7;
+  font-size: 12px;
+}
+[data-page="service-run"] .param-controls input[type="number"],
+[data-page="service-run"] .gpu-sub input[type="number"] {
+  width: 64px;
+}
+[data-page="service-run"] .gpu-sub {
+  display: grid;
+  gap: 6px;
+  margin-left: 28px;
+}
+[data-page="service-run"] .gpu-sub .sep {
+  opacity: 0.5;
+  margin: 0 6px;
+}
 /* Service Report: ensure overlay respects hidden attribute and polish badges */
 [data-page="service-report"] .log-overlay[hidden] {
   display: none !important;
