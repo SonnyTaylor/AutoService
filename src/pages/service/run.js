@@ -435,6 +435,8 @@ export async function initPage() {
     const tasks = await generateTasksArray();
     jsonEl.textContent = JSON.stringify({ tasks }, null, 2);
     persist();
+    // Re-validate Next button whenever JSON changes (e.g., GPU sub-options)
+    validateNext(tasksCountRunnable());
   }
 
   // Availability + controls
@@ -537,12 +539,21 @@ export async function initPage() {
     let count = 0;
     for (const id of tasks) {
       if (id === GPU_PARENT_ID) {
-        if (gpuSubs.furmark && isToolOk(["furmark", "furmark2"])) count++;
-        if (gpuSubs.heavyload && isToolOk(["heavyload"])) count++;
+        // GPU parent is only runnable if at least one sub-option is selected AND available
+        const furmarkRunnable = gpuSubs.furmark && isToolOk(["furmark", "furmark2"]);
+        const heavyloadRunnable = gpuSubs.heavyload && isToolOk(["heavyload"]);
+        if (furmarkRunnable || heavyloadRunnable) {
+          count++; // Count the GPU parent as one runnable task if it has valid sub-options
+        }
         continue;
       }
       const key = toolKeyForTask(id);
-      if (!key || isToolOk(key)) count++;
+      // Handle built-in Windows tools (empty toolKeys array)
+      if (Array.isArray(key) && key.length === 0) {
+        count++; // Built-in tools are always available
+      } else if (!key || isToolOk(key)) {
+        count++;
+      }
     }
     return count;
   }
