@@ -363,21 +363,27 @@ export async function initPage() {
 
   function renderPalette() {
     paletteEl.innerHTML = "";
-    const appended = new Set();
-    order.forEach((id) => {
-      if (!selection.has(id)) return;
-      if (["furmark_stress_test", "heavyload_stress_gpu"].includes(id)) return;
-      paletteEl.appendChild(renderItem(id));
-      appended.add(id);
-    });
-    listServiceIds()
-      .concat(GPU_PARENT_ID)
-      .forEach((id) => {
-        if (["furmark_stress_test", "heavyload_stress_gpu"].includes(id)) return;
-        if (appended.has(id)) return;
-        // Always render remaining tasks (selected or not) so nothing disappears
+    // Always render all tasks in consistent order:
+    // 1. Selected tasks in their execution order first
+    // 2. Then unselected tasks
+    const allTasks = listServiceIds().concat(GPU_PARENT_ID);
+    const selectedTasks = order.filter(id => selection.has(id) && allTasks.includes(id));
+    const unselectedTasks = allTasks.filter(id => !selection.has(id) && !selectedTasks.includes(id));
+
+    // Render selected tasks first (in execution order)
+    selectedTasks.forEach(id => {
+      if (!["furmark_stress_test", "heavyload_stress_gpu"].includes(id)) {
         paletteEl.appendChild(renderItem(id));
-      });
+      }
+    });
+
+    // Render unselected tasks after
+    unselectedTasks.forEach(id => {
+      if (!["furmark_stress_test", "heavyload_stress_gpu"].includes(id)) {
+        paletteEl.appendChild(renderItem(id));
+      }
+    });
+
     validateNext(tasksCountRunnable());
     updateJson();
   }
@@ -388,18 +394,26 @@ export async function initPage() {
     for (const id of order) {
       if (!selection.has(id)) continue;
       if (id === GPU_PARENT_ID) {
-        if (gpuSubs.furmark)
-          result.push(
-            await ATOMIC_TASKS.furmark_stress_test.build({
+        if (gpuSubs.furmark) {
+          const furmarkDef = getServiceById("furmark_stress_test");
+          if (furmarkDef) {
+            result.push(await furmarkDef.build({
               params: { minutes: gpuParams.furmarkMinutes },
-            })
-          );
-        if (gpuSubs.heavyload)
-          result.push(
-            await ATOMIC_TASKS.heavyload_stress_gpu.build({
+              resolveToolPath: toolPath,
+              getDataDirs,
+            }));
+          }
+        }
+        if (gpuSubs.heavyload) {
+          const heavyloadDef = getServiceById("heavyload_stress_gpu");
+          if (heavyloadDef) {
+            result.push(await heavyloadDef.build({
               params: { minutes: gpuParams.heavyloadMinutes },
-            })
-          );
+              resolveToolPath: toolPath,
+              getDataDirs,
+            }));
+          }
+        }
         continue;
       }
       const def = getServiceById(id);
@@ -463,8 +477,9 @@ export async function initPage() {
       selection.add(id);
       order.push(id);
     });
-    Object.entries(ATOMIC_TASKS).forEach(([id, def]) => {
-      if (def.params) state[id] = { params: { ...def.params } };
+    listServiceIds().forEach((id) => {
+      const def = getServiceById(id);
+      if (def && def.defaultParams) state[id] = { params: { ...def.defaultParams } };
     });
     renderPalette();
   });
