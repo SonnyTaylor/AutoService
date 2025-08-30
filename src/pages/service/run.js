@@ -12,6 +12,7 @@
  */
 
 import { getToolPath, getToolStatuses } from "../../utils/tools.js";
+import { SERVICES, listServiceIds, getServiceById, toolKeysForService } from "./services.js";
 
 // ---- Utility Helpers ------------------------------------------------------
 /** Capitalizes the first letter of a string */
@@ -86,136 +87,7 @@ function resolveProgramFullPath(exePath, dirs) {
 }
 
 // ---- Task Definitions -----------------------------------------------------
-const ATOMIC_TASKS = {
-  adwcleaner_clean: {
-    label: "Adware Clean (AdwCleaner)",
-    group: "Cleanup",
-    async build() {
-      return {
-        type: "adwcleaner_clean",
-        executable_path: await toolPath("adwcleaner"),
-        working_path: "..\\data\\logs",
-        clean_preinstalled: false,
-      };
-    },
-  },
-  bleachbit_clean: {
-    label: "Junk Cleanup (BleachBit)",
-    group: "Cleanup",
-    async build() {
-      return {
-        type: "bleachbit_clean",
-        executable_path: await toolPath("bleachbit"),
-        options: ["system.tmp", "system.recycle_bin", "system.prefetch"],
-      };
-    },
-  },
-  dism_health_check: {
-    label: "DISM Health Check",
-    group: "System Integrity",
-    async build() {
-      return {
-        type: "dism_health_check",
-        actions: ["checkhealth", "scanhealth", "restorehealth"],
-      };
-    },
-  },
-  sfc_scan: {
-    label: "SFC Scan",
-    group: "System Integrity",
-    async build() {
-      return { type: "sfc_scan" };
-    },
-  },
-  smartctl_report: {
-    label: "Drive Health Report (smartctl)",
-    group: "Diagnostics",
-    async build() {
-      // Prefer smartctl.exe; if a GSmartControl path is detected, rewrite to smartctl.exe in same directory
-      let pSmart = await toolPath(["smartctl", "gsmartcontrol"]);
-      if (pSmart && /gsmartcontrol\.exe$/i.test(pSmart)) {
-        pSmart = pSmart.replace(/[^\\\/]+$/g, "smartctl.exe");
-      }
-      return {
-        type: "smartctl_report",
-        executable_path: pSmart,
-        detail_level: "basic",
-      };
-    },
-  },
-  furmark_stress_test: {
-    label: "GPU Stress (FurMark)",
-    group: "Stress",
-    params: { minutes: 1 },
-    async build(state) {
-      let p = await toolPath(["furmark", "furmark2"]);
-      // If GUI exe is detected, prefer CLI binary in same directory
-      if (p && /furmark_gui\.exe$/i.test(p)) {
-        p = p.replace(/[^\\\/]+$/g, "furmark.exe");
-      }
-      return {
-        type: "furmark_stress_test",
-        executable_path: p,
-        duration_minutes: state.params.minutes || 1,
-        width: 1920,
-        height: 1080,
-        demo: "furmark-gl",
-        extra_args: ["--no-gui"],
-      };
-    },
-  },
-  heavyload_stress_cpu: {
-    label: "CPU Stress (HeavyLoad)",
-    group: "Stress",
-    params: { minutes: 1 },
-    async build(state) {
-      const p = await toolPath(["heavyload"]);
-      return {
-        type: "heavyload_stress_test",
-        executable_path: p,
-        duration_minutes: state.params.minutes || 1,
-        headless: false,
-        stress_cpu: true,
-        stress_memory: false,
-        stress_gpu: false,
-      };
-    },
-  },
-  heavyload_stress_memory: {
-    label: "RAM Stress (HeavyLoad)",
-    group: "Stress",
-    params: { minutes: 1 },
-    async build(state) {
-      const p = await toolPath(["heavyload"]);
-      return {
-        type: "heavyload_stress_test",
-        executable_path: p,
-        duration_minutes: state.params.minutes || 1,
-        headless: false,
-        stress_cpu: false,
-        stress_memory: true,
-        stress_gpu: false,
-      };
-    },
-  },
-  heavyload_stress_gpu: {
-    label: "GPU Stress (HeavyLoad)",
-    group: "Stress",
-    params: { minutes: 1 },
-    async build(state) {
-      const p = await toolPath(["heavyload"]);
-      return {
-        type: "heavyload_stress_test",
-        executable_path: p,
-        duration_minutes: state.params.minutes || 1,
-        headless: false,
-        stress_cpu: false,
-        stress_memory: false,
-        stress_gpu: true,
-      };
-    },
-  },
-};
+// The static definitions have been replaced by the registry in services.js
 
 // GPU parent pseudo-task
 const GPU_PARENT_ID = "gpu_stress_parent";
@@ -326,8 +198,11 @@ export async function initPage() {
   }
 
   // Copy initial params
-  Object.entries(ATOMIC_TASKS).forEach(([id, def]) => {
-    if (!state[id] && def.params) state[id] = { params: { ...def.params } };
+  // Initialize default params from registry
+  listServiceIds().forEach((id) => {
+    const def = getServiceById(id);
+    if (!def) return;
+    if (!state[id] && def.defaultParams) state[id] = { params: { ...def.defaultParams } };
   });
 
   // Set title/description
@@ -403,8 +278,9 @@ export async function initPage() {
 
     const selected = selection.has(id);
     const orderIdx = selected ? [...order].indexOf(id) + 1 : null;
-    const label = isGpuParent ? "GPU Stress" : ATOMIC_TASKS[id]?.label || id;
-    const group = isGpuParent ? "Stress" : ATOMIC_TASKS[id]?.group || "";
+    const svcDef = getServiceById(id);
+    const label = isGpuParent ? "GPU Stress" : svcDef?.label || id;
+    const group = isGpuParent ? "Stress" : svcDef?.group || "";
 
     li.innerHTML = `
       <div class="task-row">
@@ -429,7 +305,7 @@ export async function initPage() {
       row.appendChild(pill);
     }
 
-    if (!isGpuParent && selected && ATOMIC_TASKS[id]?.params) {
+    if (!isGpuParent && selected && getServiceById(id)?.defaultParams) {
       row.appendChild(renderParamControls(id, state[id].params));
     }
 
@@ -526,9 +402,14 @@ export async function initPage() {
           );
         continue;
       }
-      const def = ATOMIC_TASKS[id];
+      const def = getServiceById(id);
       if (!def) continue;
-      result.push(await def.build(state[id] || { params: {} }));
+      const built = await def.build({
+        params: (state[id] && state[id].params) || {},
+        resolveToolPath: toolPath,
+        getDataDirs,
+      });
+      result.push(built);
     }
     return result.filter(
       (t) => !("executable_path" in t) || !!t.executable_path
@@ -690,22 +571,6 @@ export async function initPage() {
   }
 
   function toolKeyForTask(id) {
-    switch (id) {
-      case "adwcleaner_clean":
-        return "adwcleaner";
-      case "bleachbit_clean":
-        return "bleachbit";
-      case "smartctl_report":
-        // either smartctl or gsmartcontrol works
-        return ["smartctl", "gsmartcontrol"];
-      case "furmark_stress_test":
-        return ["furmark", "furmark2"];
-      case "heavyload_stress_cpu":
-      case "heavyload_stress_memory":
-      case "heavyload_stress_gpu":
-        return ["heavyload"];
-      default:
-        return ""; // tasks without external executables
-    }
+    return toolKeysForService(id);
   }
 }

@@ -59,7 +59,7 @@ export async function initPage() {
   const taskState = tasks.map((t, i) => ({
     id: i,
     type: t.type,
-    label: friendlyTaskLabel(t.type),
+    label: (t && t.ui_label) || friendlyTaskLabel(t.type),
     status: "pending", // pending | running | success | failure | skipped
   }));
   renderTaskList();
@@ -130,16 +130,8 @@ export async function initPage() {
   }
 
   function friendlyTaskLabel(type) {
-    switch (type) {
-      case "adwcleaner_clean": return "Adware Clean (AdwCleaner)";
-      case "bleachbit_clean": return "Junk Cleanup (BleachBit)";
-      case "dism_health_check": return "DISM Health Check";
-      case "sfc_scan": return "SFC Scan";
-      case "smartctl_report": return "Drive Health Report (smartctl)";
-      case "furmark_stress_test": return "GPU Stress (FurMark)";
-      case "heavyload_stress_test": return "Stress (HeavyLoad)";
-      default: return type;
-    }
+    // Prefer a label embedded in task spec via ui_label when building the plan
+    return type;
   }
 
   function clearLog() { logEl.textContent = ""; }
