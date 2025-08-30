@@ -74,6 +74,34 @@ fn main() {
             println!("cargo:warning=Source suffixed binary {} does not exist yet; it will be created later if PyInstaller runs", source_suffixed.display());
         }
     }
+    // Also ensure the plain (unsuffixed) executable is present inside src-tauri/binaries so
+    // Command.sidecar("binaries/service_runner") / capability path resolution works during `tauri dev`.
+    if original_exe.exists() {
+        if let Err(e) = fs::create_dir_all(&manifest_bin_dir) {
+            println!(
+                "cargo:warning=Failed to create manifest binaries dir {}: {}",
+                manifest_bin_dir.display(),
+                e
+            );
+        } else {
+            let dest_plain = manifest_bin_dir.join(PYTHON_RUNNER_EXE_NAME);
+            if !dest_plain.exists() {
+                match fs::copy(&original_exe, &dest_plain) {
+                    Ok(_) => println!(
+                        "cargo:warning=Copied plain runner {} -> {}",
+                        original_exe.display(),
+                        dest_plain.display()
+                    ),
+                    Err(e) => println!(
+                        "cargo:warning=Failed to copy plain runner {} -> {}: {}",
+                        original_exe.display(),
+                        dest_plain.display(),
+                        e
+                    ),
+                }
+            }
+        }
+    }
     if original_exe.exists() {
         if let Ok(target_triple) = env::var("TARGET") {
             let suffixed_name = format!("{}-{}.exe", PYTHON_RUNNER_EXE_NAME, target_triple);
@@ -292,6 +320,36 @@ fn main() {
             }
             Err(_) => {
                 println!("cargo:warning=TARGET env var not set; skipping creation of platform-specific binary copy");
+            }
+        }
+    }
+
+    // DEV QUALITY-OF-LIFE: copy plain runner into target/{profile}/binaries so capability path
+    // "binaries/service_runner.exe" resolves relative to the running exe directory in `tauri dev`.
+    if let Ok(profile) = env::var("PROFILE") {
+        // Example: <repo>/src-tauri/target/debug/binaries/service_runner.exe
+        let dev_bin_dir = manifest_dir.join("target").join(&profile).join("binaries");
+        if target_exe.exists() {
+            if let Err(e) = fs::create_dir_all(&dev_bin_dir) {
+                println!(
+                    "cargo:warning=Failed to create dev runtime binaries dir {}: {}",
+                    dev_bin_dir.display(),
+                    e
+                );
+            } else {
+                let dest = dev_bin_dir.join(PYTHON_RUNNER_EXE_NAME);
+                if let Err(e) = fs::copy(&target_exe, &dest) {
+                    println!(
+                        "cargo:warning=Failed to copy runner into dev binaries dir {}: {}",
+                        dest.display(),
+                        e
+                    );
+                } else {
+                    println!(
+                        "cargo:warning=Copied runner into dev binaries dir {}",
+                        dest.display()
+                    );
+                }
             }
         }
     }

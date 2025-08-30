@@ -87,7 +87,10 @@ pub fn run() {
         ])
         .setup(|app| {
             // Optionally, set current directory to data dir for simpler relative paths
-            if let Some(state) = app
+            // Keep original working directory (exe dir) so relative external binaries like
+            // `binaries/service_runner.exe` resolve correctly. Still set WEBVIEW2 user data folder
+            // into the portable data directory for persistence.
+            if let Some(data_dir_str) = app
                 .state::<AppState>()
                 .inner()
                 .clone()
@@ -95,10 +98,7 @@ pub fn run() {
                 .as_ref()
                 .to_str()
             {
-                let _ = std::env::set_current_dir(state);
-                // Configure WebView2 user data folder to live inside portable data dir for persistence across PCs
-                // This ensures cookies/localStorage for technician links stay on the USB drive.
-                let webview_profile = std::path::Path::new(state).join("webview_profile");
+                let webview_profile = std::path::Path::new(data_dir_str).join("webview_profile");
                 if std::fs::create_dir_all(&webview_profile).is_ok() {
                     std::env::set_var("WEBVIEW2_USER_DATA_FOLDER", &webview_profile);
                 }

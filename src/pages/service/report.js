@@ -158,13 +158,16 @@ export async function initPage() {
     const { Command } = shell || {};
     if (!Command) throw new Error("Shell plugin unavailable");
 
-    // Prepare a temporary plan file in the data/reports folder to avoid command-line length limits
+    // Resolve directories and preferred runner path under data/resources/bin
     let planFile = null;
+    let runnerPath = null;
     try {
       const dirs = await core.invoke("get_data_dirs");
       const reportsDir = dirs?.reports || "./data/reports";
+      const resourcesDir = dirs?.resources || "./data/resources";
       const name = `run_plan_${Date.now()}.json`;
       planFile = `${reportsDir.replace(/[\\/]+$/, "")}/${name}`;
+      runnerPath = `${String(resourcesDir).replace(/[\\/]+$/, "")}/bin/service_runner.exe`;
     } catch {}
 
     if (planFile) {
@@ -173,12 +176,47 @@ export async function initPage() {
       } catch {}
     }
 
-    // Prefer passing file path if created; otherwise pass raw JSON string
+    // Always pass the plan file path to avoid quoting issues during elevation (JSON contains double quotes)
     const args = [planFile || jsonArg];
+    if (!planFile) {
+      appendLog(`[WARN] ${new Date().toLocaleTimeString()} Plan file could not be created; passing raw JSON may fail if UAC elevation occurs.`);
+    }
 
-    // Start sidecar; request it writes a log file alongside the plan
+    // Request it writes a log file alongside the plan.
     const runnerLog = planFile ? planFile.replace(/\.json$/, ".log.txt") : `run_${Date.now()}.log.txt`;
-    const cmd = Command.sidecar("binaries/service_runner", [args[0], "--log-file", runnerLog]);
+    let cmd;
+    let created = false;
+    // Primary: launch from data/resources/bin via PowerShell (capability already granted)
+    if (runnerPath) {
+      try {
+        const pwshScript = (() => {
+          const exe = escapePwshArg(runnerPath);
+          const a0 = escapePwshArg(args[0]);
+          const logArg = escapePwshArg(runnerLog);
+          return `$ErrorActionPreference='Stop'; & ${exe} ${a0} --log-file ${logArg}`;
+        })();
+        cmd = Command.create("powershell", [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-Command",
+          pwshScript,
+        ]);
+        created = true;
+      } catch (e1) {
+        appendLog(`[WARN] ${new Date().toLocaleTimeString()} Failed to create PowerShell runner: ${e1}`);
+      }
+    }
+    // Fallback: use capability-registered command name (binaries/service_runner.exe)
+    if (!created) {
+      try {
+        cmd = Command.create("service_runner", [args[0], "--log-file", runnerLog]);
+        created = true;
+      } catch (e2) {
+        appendLog(`[ERROR] ${new Date().toLocaleTimeString()} Failed to create runner command: ${e2}`);
+        throw e2;
+      }
+    }
 
     // Track per-task phases by parsing known JSON lines or brackets
     let finalJson = "";
@@ -226,10 +264,11 @@ export async function initPage() {
     const { shell } = window.__TAURI__ || {};
     const { Command } = shell || {};
     if (!Command) return;
-    const script = `$ErrorActionPreference='Stop'; $p=${escapePwshArg(path)}; $c=@'
-${contents}
-'@; New-Item -ItemType Directory -Path ([System.IO.Path]::GetDirectoryName($p)) -Force | Out-Null; Set-Content -Path $p -Value $c -Encoding UTF8`;
-    const cmd = new Command("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script]);
+  // Single-line script; embed content as single quoted string. Write UTF-8 without BOM to ensure Python json.load() is happy.
+  const escaped = contents.replace(/'/g, "''");
+  const script = `$ErrorActionPreference='Stop'; $p=${escapePwshArg(path)}; $c='${escaped}'; New-Item -ItemType Directory -Path ([System.IO.Path]::GetDirectoryName($p)) -Force | Out-Null; $enc = New-Object System.Text.UTF8Encoding($false); [System.IO.File]::WriteAllText($p, $c, $enc)`;
+  // Use capability-registered PowerShell command name 'powershell'.
+  const cmd = Command.create("powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script]);
     await cmd.execute();
   }
 }

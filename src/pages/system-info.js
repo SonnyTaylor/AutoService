@@ -511,7 +511,15 @@ function render(info) {
         // Optional: keep the Windows caption nicety on refresh too
         if (Command && navigator.userAgent.includes('Windows')) {
           try {
-            const cmd = await Command.create('exec-sh', ['-c', 'wmic os get Caption | more +1']).execute();
+            // Use the capability-registered PowerShell command (see capabilities/default.json)
+            // rather than the previously hard-coded 'exec-sh' (which wasn't registered).
+            const psArgs = [
+              '-NoProfile',
+              '-ExecutionPolicy','Bypass',
+              '-Command',
+              'wmic os get Caption | more +1'
+            ];
+            const cmd = await Command.create('powershell', psArgs).execute();
             const osCaption = (cmd?.stdout || '').trim();
             if (osCaption) data.os = osCaption;
           } catch {}
@@ -583,7 +591,13 @@ export async function initPage() {
     const info = await invoke('get_system_info');
     if (Command && navigator.userAgent.includes('Windows')) {
       try {
-        const cmd = await Command.create('exec-sh', ['-c', 'wmic os get Caption | more +1']).execute();
+        const psArgs = [
+          '-NoProfile',
+          '-ExecutionPolicy','Bypass',
+          '-Command',
+          'wmic os get Caption | more +1'
+        ];
+        const cmd = await Command.create('powershell', psArgs).execute();
         const osCaption = (cmd?.stdout || '').trim();
         if (osCaption) info.os = osCaption;
       } catch {}
@@ -610,7 +624,13 @@ export function prewarmSystemInfo({ force = false } = {}) {
       // Optional Windows caption enhancement (cheap, ignore errors)
       if (Command && navigator.userAgent.includes('Windows')) {
         try {
-          const cmd = await Command.create('exec-sh', ['-c', 'wmic os get Caption | more +1']).execute();
+          const psArgs = [
+            '-NoProfile',
+            '-ExecutionPolicy','Bypass',
+            '-Command',
+            'wmic os get Caption | more +1'
+          ];
+          const cmd = await Command.create('powershell', psArgs).execute();
           const osCaption = (cmd?.stdout || '').trim();
           if (osCaption) info.os = osCaption;
         } catch {}
