@@ -18,6 +18,12 @@ export async function initPage() {
   const summaryTitleEl = document.getElementById("svc-summary-title");
   const summaryIconEl = document.getElementById("svc-summary-icon");
 
+  // Ensure the log overlay is hidden on initial load
+  const forceHideOverlay = () => {
+    try { showOverlay(false); } catch {}
+  };
+  forceHideOverlay();
+
   backBtn?.addEventListener("click", () => {
     window.location.hash = "#/service-run";
   });
@@ -225,26 +231,31 @@ export async function initPage() {
     cmd.on("close", (data) => {
       // no-op; final JSON already collected from stdout buffer
     });
+    const maybeProcessStatus = (s) => {
+      // Match lines with prefixes like '2025-.. - INFO - TASK START: ...'
+      if (/TASK\s+START:/i.test(s)) updateTaskStatus(currentTaskIndex, "running");
+      if (/TASK\s+OK:/i.test(s)) { updateTaskStatus(currentTaskIndex, "success"); currentTaskIndex++; }
+      if (/TASK\s+FAIL:/i.test(s)) { updateTaskStatus(currentTaskIndex, "failure"); currentTaskIndex++; }
+      if (/TASK\s+SKIP:/i.test(s)) { updateTaskStatus(currentTaskIndex, "skipped"); currentTaskIndex++; }
+    };
+
     cmd.stdout.on("data", (line) => {
       const s = String(line).trimEnd();
       const stamp = new Date().toLocaleTimeString();
       if (!s) return;
       appendLog(`[${stamp}] ${s}`);
-      // Try to capture final JSON block (starts with { and likely pretty printed)
+      // Try to capture final JSON block (stdout only)
       if (s.startsWith("{") || (finalJson && !s.startsWith("[ERROR"))) {
         finalJson += (finalJson ? "\n" : "") + s;
       }
-      // Heuristic: update task states when runner logs contain status markers
-      if (/^TASK START:/i.test(s)) updateTaskStatus(currentTaskIndex, "running");
-      if (/^TASK OK:/i.test(s)) { updateTaskStatus(currentTaskIndex, "success"); currentTaskIndex++; }
-      if (/^TASK FAIL:/i.test(s)) { updateTaskStatus(currentTaskIndex, "failure"); currentTaskIndex++; }
-      if (/^TASK SKIP:/i.test(s)) { updateTaskStatus(currentTaskIndex, "skipped"); currentTaskIndex++; }
+      maybeProcessStatus(s);
     });
     cmd.stderr.on("data", (line) => {
       const s = String(line).trimEnd();
       if (!s) return;
       const stamp = new Date().toLocaleTimeString();
       appendLog(`[${stamp}] ${s}`);
+      maybeProcessStatus(s);
     });
 
     const out = await cmd.execute();

@@ -1,3 +1,66 @@
+/* Service Report: ensure overlay respects hidden attribute and polish badges */
+[data-page="service-report"] .log-overlay[hidden] {
+  display: none !important;
+}
+
+[data-page="service-report"] .log-overlay {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+[data-page="service-report"] .task-status-list {
+  display: grid;
+  gap: 8px;
+}
+
+[data-page="service-report"] .task-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--panel-2);
+}
+
+[data-page="service-report"] .task-status .left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+[data-page="service-report"] .task-status .idx {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+[data-page="service-report"] .badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1.6;
+  background: #3a4157;
+}
+[data-page="service-report"] .badge.ok {
+  background: #2f6a3b;
+}
+[data-page="service-report"] .badge.fail {
+  background: #7a2e2e;
+}
+[data-page="service-report"] .badge.skipped {
+  background: #5a5a5a;
+}
+[data-page="service-report"] .badge.running {
+  background: #2d4e7a;
+}
+[data-page="service-report"] .badge.running .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  background: #7fb1ff;
+  margin-right: 6px;
+}
 /* Service (Servicing) first screen */
 [data-page="service"] .service-header {
   display: flex;
