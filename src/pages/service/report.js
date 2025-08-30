@@ -80,6 +80,9 @@ export async function initPage() {
     finalJsonEl.textContent = "";
     clearLog();
     showOverlay(true);
+    // Fallback: mark the first pending task as running so the UI shows progress even if no markers are emitted
+    const firstPendingIdx = taskState.findIndex(t => t.status === "pending");
+    if (firstPendingIdx >= 0) updateTaskStatus(firstPendingIdx, "running");
     try {
       const jsonArg = JSON.stringify({ tasks });
       console.log("Sending tasks to Python runner:", tasks);
@@ -89,6 +92,8 @@ export async function initPage() {
       try {
         const obj = typeof result === "string" ? JSON.parse(result) : result;
         finalJsonEl.textContent = JSON.stringify(obj, null, 2);
+        // Apply final statuses as a fallback if live markers weren't detected
+        try { applyFinalStatusesFromReport(obj); } catch {}
         const ok = obj?.overall_status === "success";
         showSummary(ok);
       } catch {
@@ -147,6 +152,18 @@ export async function initPage() {
     return '<span class="badge">Pending</span>';
   }
 
+  function applyFinalStatusesFromReport(obj) {
+    const results = Array.isArray(obj?.results) ? obj.results : [];
+    // Map results 1:1 to our displayed task order (assumes runner ran in provided order)
+    results.forEach((res, idx) => {
+      const st = String(res?.status || "").toLowerCase();
+      if (st === "success" || st === "ok") updateTaskStatus(idx, "success");
+      else if (st === "failure" || st === "error" || st === "failed") updateTaskStatus(idx, "failure");
+      else if (st === "skipped") updateTaskStatus(idx, "skipped");
+      else updateTaskStatus(idx, "success");
+    });
+  }
+
   function friendlyTaskLabel(type) {
     // Prefer a label embedded in task spec via ui_label when building the plan
     return type;
@@ -202,6 +219,11 @@ export async function initPage() {
     const runnerLog = planFile ? planFile.replace(/\.json$/, ".log.txt") : `run_${Date.now()}.log.txt`;
     let cmd;
     let created = false;
+    // Start polling the runner log file for live updates (works even if the process elevates)
+    let stopPolling = () => {};
+    try {
+      stopPolling = startLogPolling(runnerLog);
+    } catch {}
     // Primary: launch from data/resources/bin via PowerShell (capability already granted)
     if (runnerPath) {
       try {
@@ -289,7 +311,7 @@ export async function initPage() {
       }
 
       // Also handle the old format for backward compatibility
-      if (/^TASK\s+START:/i.test(s)) {
+      if (/TASK\s+START:/i.test(s)) {
         console.log("Found old format TASK START");
         // Find the first pending task
         const pendingTasks = Object.entries(taskStatuses).filter(([_, status]) => status === "pending");
@@ -298,7 +320,7 @@ export async function initPage() {
           updateTaskStatus(taskIndex, "running");
         }
       }
-      if (/^TASK\s+OK:/i.test(s)) {
+      if (/TASK\s+OK:/i.test(s)) {
         console.log("Found old format TASK OK");
         // Find the first running task
         const runningTasks = Object.entries(taskStatuses).filter(([_, status]) => status === "running");
@@ -307,7 +329,7 @@ export async function initPage() {
           updateTaskStatus(taskIndex, "success");
         }
       }
-      if (/^TASK\s+FAIL:/i.test(s)) {
+      if (/TASK\s+FAIL:/i.test(s)) {
         console.log("Found old format TASK FAIL");
         // Find the first running task
         const runningTasks = Object.entries(taskStatuses).filter(([_, status]) => status === "running");
@@ -316,7 +338,7 @@ export async function initPage() {
           updateTaskStatus(taskIndex, "failure");
         }
       }
-      if (/^TASK\s+SKIP:/i.test(s)) {
+      if (/TASK\s+SKIP:/i.test(s)) {
         console.log("Found old format TASK SKIP");
         // Find the first running task
         const runningTasks = Object.entries(taskStatuses).filter(([_, status]) => status === "running");
@@ -365,6 +387,10 @@ export async function initPage() {
     console.log("Event handlers set up, executing command...");
 
     const out = await cmd.execute();
+
+    // Final poll to flush any remaining log content then stop
+    try { await pollLogOnce(runnerLog); } catch {}
+    try { stopPolling(); } catch {}
     // Prefer collected final JSON, else use stdout
     const stdoutStr = (finalJson || String(out.stdout || "")).trim();
     try { return JSON.parse(stdoutStr); } catch { return stdoutStr; }
@@ -387,6 +413,50 @@ export async function initPage() {
   // Use capability-registered PowerShell command name 'powershell'.
   const cmd = Command.create("powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script]);
     await cmd.execute();
+  }
+
+  // ----- Live log polling from file (works through UAC elevation) ---------
+  let _logPoll = { timer: null, lastTextLen: 0, busy: false, path: null };
+
+  function startLogPolling(path) {
+    _logPoll.path = path;
+    _logPoll.lastTextLen = 0;
+    if (_logPoll.timer) clearInterval(_logPoll.timer);
+    _logPoll.timer = setInterval(() => pollLogOnce(path).catch(() => {}), 700);
+    return function stop() { if (_logPoll.timer) { clearInterval(_logPoll.timer); _logPoll.timer = null; } };
+  }
+
+  async function pollLogOnce(path) {
+    if (_logPoll.busy) return; // avoid overlap
+    _logPoll.busy = true;
+    try {
+      const text = await readFileRaw(path);
+      if (typeof text !== "string") { _logPoll.busy = false; return; }
+      if (text.length <= _logPoll.lastTextLen) { _logPoll.busy = false; return; }
+      const added = text.slice(_logPoll.lastTextLen);
+      _logPoll.lastTextLen = text.length;
+      const lines = added.split(/\r?\n/).filter(Boolean);
+      for (const line of lines) {
+        appendLog(line);
+        maybeProcessStatus(line);
+      }
+    } finally {
+      _logPoll.busy = false;
+    }
+  }
+
+  async function readFileRaw(path) {
+    const { shell } = window.__TAURI__ || {};
+    const { Command } = shell || {};
+    if (!Command) return "";
+    const ps = Command.create("powershell", [
+      "-NoProfile",
+      "-ExecutionPolicy", "Bypass",
+      "-Command",
+      `$ErrorActionPreference='SilentlyContinue'; $p=${escapePwshArg(path)}; if (Test-Path -Path $p) { Get-Content -Path $p -Raw -ErrorAction SilentlyContinue }`
+    ]);
+    const out = await ps.execute();
+    return String(out.stdout || "");
   }
 }
 
