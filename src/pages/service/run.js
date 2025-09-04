@@ -12,7 +12,12 @@
  */
 
 import { getToolPath, getToolStatuses } from "../../utils/tools.js";
-import { SERVICES, listServiceIds, getServiceById, toolKeysForService } from "./services.js";
+import {
+  SERVICES,
+  listServiceIds,
+  getServiceById,
+  toolKeysForService,
+} from "./services.js";
 
 // ---- Utility Helpers ------------------------------------------------------
 /** Capitalizes the first letter of a string */
@@ -52,7 +57,7 @@ async function listPrograms() {
   try {
     const { core } = window.__TAURI__ || {};
     const inv = core?.invoke;
-    PROGRAMS_CACHE = inv ? await inv('list_programs') : [];
+    PROGRAMS_CACHE = inv ? await inv("list_programs") : [];
   } catch {
     PROGRAMS_CACHE = [];
   }
@@ -64,7 +69,7 @@ async function getDataDirs() {
   try {
     const { core } = window.__TAURI__ || {};
     const inv = core?.invoke;
-    DATA_DIRS_CACHE = inv ? await inv('get_data_dirs') : {};
+    DATA_DIRS_CACHE = inv ? await inv("get_data_dirs") : {};
   } catch {
     DATA_DIRS_CACHE = {};
   }
@@ -78,10 +83,12 @@ function resolveProgramFullPath(exePath, dirs) {
   const programsDir = dirs?.programs;
   if (dataRoot) {
     // Try dataRoot + exePath
-    return dataRoot.replace(/[\\/]+$/, '') + '/' + exePath.replace(/^\/+/, '');
+    return dataRoot.replace(/[\\/]+$/, "") + "/" + exePath.replace(/^\/+/, "");
   }
   if (programsDir) {
-    return programsDir.replace(/[\\/]+$/, '') + '/' + exePath.replace(/^\/+/, '');
+    return (
+      programsDir.replace(/[\\/]+$/, "") + "/" + exePath.replace(/^\/+/, "")
+    );
   }
   return exePath;
 }
@@ -202,7 +209,8 @@ export async function initPage() {
   listServiceIds().forEach((id) => {
     const def = getServiceById(id);
     if (!def) return;
-    if (!state[id] && def.defaultParams) state[id] = { params: { ...def.defaultParams } };
+    if (!state[id] && def.defaultParams)
+      state[id] = { params: { ...def.defaultParams } };
   });
 
   // Set title/description
@@ -367,18 +375,22 @@ export async function initPage() {
     // 1. Selected tasks in their execution order first
     // 2. Then unselected tasks
     const allTasks = listServiceIds().concat(GPU_PARENT_ID);
-    const selectedTasks = order.filter(id => selection.has(id) && allTasks.includes(id));
-    const unselectedTasks = allTasks.filter(id => !selection.has(id) && !selectedTasks.includes(id));
+    const selectedTasks = order.filter(
+      (id) => selection.has(id) && allTasks.includes(id)
+    );
+    const unselectedTasks = allTasks.filter(
+      (id) => !selection.has(id) && !selectedTasks.includes(id)
+    );
 
     // Render selected tasks first (in execution order)
-    selectedTasks.forEach(id => {
+    selectedTasks.forEach((id) => {
       if (!["furmark_stress_test", "heavyload_stress_gpu"].includes(id)) {
         paletteEl.appendChild(renderItem(id));
       }
     });
 
     // Render unselected tasks after
-    unselectedTasks.forEach(id => {
+    unselectedTasks.forEach((id) => {
       if (!["furmark_stress_test", "heavyload_stress_gpu"].includes(id)) {
         paletteEl.appendChild(renderItem(id));
       }
@@ -397,21 +409,25 @@ export async function initPage() {
         if (gpuSubs.furmark) {
           const furmarkDef = getServiceById("furmark_stress_test");
           if (furmarkDef) {
-            result.push(await furmarkDef.build({
-              params: { minutes: gpuParams.furmarkMinutes },
-              resolveToolPath: toolPath,
-              getDataDirs,
-            }));
+            result.push(
+              await furmarkDef.build({
+                params: { minutes: gpuParams.furmarkMinutes },
+                resolveToolPath: toolPath,
+                getDataDirs,
+              })
+            );
           }
         }
         if (gpuSubs.heavyload) {
           const heavyloadDef = getServiceById("heavyload_stress_gpu");
           if (heavyloadDef) {
-            result.push(await heavyloadDef.build({
-              params: { minutes: gpuParams.heavyloadMinutes },
-              resolveToolPath: toolPath,
-              getDataDirs,
-            }));
+            result.push(
+              await heavyloadDef.build({
+                params: { minutes: gpuParams.heavyloadMinutes },
+                resolveToolPath: toolPath,
+                getDataDirs,
+              })
+            );
           }
         }
         continue;
@@ -445,14 +461,18 @@ export async function initPage() {
   try {
     const { core } = window.__TAURI__ || {};
     const inv = core?.invoke;
-    PROGRAMS_CACHE = inv ? await inv('list_programs') : [];
-  } catch { PROGRAMS_CACHE = []; }
+    PROGRAMS_CACHE = inv ? await inv("list_programs") : [];
+  } catch {
+    PROGRAMS_CACHE = [];
+  }
 
   btnSelectAll?.addEventListener("click", () => {
     const all = listServiceIds().concat(GPU_PARENT_ID);
     all.forEach((id) => selection.add(id));
     // Ensure every selected item is represented in order once
-    all.forEach((id) => { if (!order.includes(id)) order.push(id); });
+    all.forEach((id) => {
+      if (!order.includes(id)) order.push(id);
+    });
     persist();
     renderPalette();
   });
@@ -461,7 +481,9 @@ export async function initPage() {
     selection.clear();
     // Ensure `order` still covers all tasks so re-selecting doesn't lose position
     const all = listServiceIds().concat(GPU_PARENT_ID);
-    all.forEach((id) => { if (!order.includes(id)) order.push(id); });
+    all.forEach((id) => {
+      if (!order.includes(id)) order.push(id);
+    });
     persist();
     renderPalette();
   });
@@ -481,7 +503,8 @@ export async function initPage() {
     });
     listServiceIds().forEach((id) => {
       const def = getServiceById(id);
-      if (def && def.defaultParams) state[id] = { params: { ...def.defaultParams } };
+      if (def && def.defaultParams)
+        state[id] = { params: { ...def.defaultParams } };
     });
     renderPalette();
   });
@@ -526,7 +549,8 @@ export async function initPage() {
   function showDropIndicator(li, where) {
     clearDropIndicators();
     const bar = document.createElement("div");
-    bar.className = "drop-indicator " + (where === "top" ? "drop-top" : "drop-bottom");
+    bar.className =
+      "drop-indicator " + (where === "top" ? "drop-top" : "drop-bottom");
     li.appendChild(bar);
   }
   function clearDropIndicators() {
@@ -540,7 +564,8 @@ export async function initPage() {
     for (const id of tasks) {
       if (id === GPU_PARENT_ID) {
         // GPU parent is only runnable if at least one sub-option is selected AND available
-        const furmarkRunnable = gpuSubs.furmark && isToolOk(["furmark", "furmark2"]);
+        const furmarkRunnable =
+          gpuSubs.furmark && isToolOk(["furmark", "furmark2"]);
         const heavyloadRunnable = gpuSubs.heavyload && isToolOk(["heavyload"]);
         if (furmarkRunnable || heavyloadRunnable) {
           count++; // Count the GPU parent as one runnable task if it has valid sub-options
@@ -591,13 +616,19 @@ export async function initPage() {
       const okF = isToolOk(["furmark", "furmark2"]);
       const okH = isToolOk(["heavyload"]);
       const any = okF || okH;
-      const title = `FurMark: ${okF ? 'Available' : 'Missing'} | HeavyLoad: ${okH ? 'Available' : 'Missing'}`;
-      return `<span class="badge ${any ? 'ok' : 'missing'}" title="${title}">${any ? 'Available' : 'Missing'}</span>`;
+      const title = `FurMark: ${okF ? "Available" : "Missing"} | HeavyLoad: ${
+        okH ? "Available" : "Missing"
+      }`;
+      return `<span class="badge ${any ? "ok" : "missing"}" title="${title}">${
+        any ? "Available" : "Missing"
+      }</span>`;
     }
     const key = toolKeyForTask(id);
     if (!key) return "";
     const ok = isToolOk(key);
-    return `<span class="badge ${ok ? 'ok' : 'missing'}">${ok ? 'Available' : 'Missing'}</span>`;
+    return `<span class="badge ${ok ? "ok" : "missing"}">${
+      ok ? "Available" : "Missing"
+    }</span>`;
   }
 
   function toolKeyForTask(id) {

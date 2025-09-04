@@ -20,7 +20,9 @@ export async function initPage() {
 
   // Ensure the log overlay is hidden on initial load
   const forceHideOverlay = () => {
-    try { showOverlay(false); } catch {}
+    try {
+      showOverlay(false);
+    } catch {}
   };
   forceHideOverlay();
 
@@ -52,7 +54,9 @@ export async function initPage() {
     runBtn.disabled = true;
   } else {
     runnerTitle.textContent = "Service Runner – Ready";
-    runnerDesc.textContent = `${tasks.length} task${tasks.length === 1 ? "" : "s"} queued.`;
+    runnerDesc.textContent = `${tasks.length} task${
+      tasks.length === 1 ? "" : "s"
+    } queued.`;
   }
 
   // Render initial task list
@@ -81,7 +85,7 @@ export async function initPage() {
     clearLog();
     showOverlay(true);
     // Fallback: mark the first pending task as running so the UI shows progress even if no markers are emitted
-    const firstPendingIdx = taskState.findIndex(t => t.status === "pending");
+    const firstPendingIdx = taskState.findIndex((t) => t.status === "pending");
     if (firstPendingIdx >= 0) updateTaskStatus(firstPendingIdx, "running");
     try {
       const jsonArg = JSON.stringify({ tasks });
@@ -93,7 +97,9 @@ export async function initPage() {
         const obj = typeof result === "string" ? JSON.parse(result) : result;
         finalJsonEl.textContent = JSON.stringify(obj, null, 2);
         // Apply final statuses as a fallback if live markers weren't detected
-        try { applyFinalStatusesFromReport(obj); } catch {}
+        try {
+          applyFinalStatusesFromReport(obj);
+        } catch {}
         const ok = obj?.overall_status === "success";
         showSummary(ok);
       } catch {
@@ -130,7 +136,10 @@ export async function initPage() {
 
   function updateTaskStatus(i, status) {
     console.log(`updateTaskStatus called with index ${i}, status ${status}`);
-    console.log(`taskState length: ${taskState.length}, taskState[${i}]:`, taskState[i]);
+    console.log(
+      `taskState length: ${taskState.length}, taskState[${i}]:`,
+      taskState[i]
+    );
 
     if (!taskState[i]) {
       console.error(`No taskState entry for index ${i}`);
@@ -145,7 +154,8 @@ export async function initPage() {
   }
 
   function statusBadge(s) {
-    if (s === "running") return '<span class="badge running"><span class="dot"></span> Running</span>';
+    if (s === "running")
+      return '<span class="badge running"><span class="dot"></span> Running</span>';
     if (s === "success") return '<span class="badge ok">Success</span>';
     if (s === "failure") return '<span class="badge fail">Failure</span>';
     if (s === "skipped") return '<span class="badge skipped">Skipped</span>';
@@ -158,7 +168,8 @@ export async function initPage() {
     results.forEach((res, idx) => {
       const st = String(res?.status || "").toLowerCase();
       if (st === "success" || st === "ok") updateTaskStatus(idx, "success");
-      else if (st === "failure" || st === "error" || st === "failed") updateTaskStatus(idx, "failure");
+      else if (st === "failure" || st === "error" || st === "failed")
+        updateTaskStatus(idx, "failure");
       else if (st === "skipped") updateTaskStatus(idx, "skipped");
       else updateTaskStatus(idx, "success");
     });
@@ -169,7 +180,9 @@ export async function initPage() {
     return type;
   }
 
-  function clearLog() { logEl.textContent = ""; }
+  function clearLog() {
+    logEl.textContent = "";
+  }
   function appendLog(line) {
     logEl.textContent += (logEl.textContent ? "\n" : "") + line;
     logEl.scrollTop = logEl.scrollHeight;
@@ -179,7 +192,9 @@ export async function initPage() {
   }
   function showSummary(ok) {
     summaryEl.hidden = false;
-    summaryTitleEl.textContent = ok ? "All tasks completed" : "Completed with errors";
+    summaryTitleEl.textContent = ok
+      ? "All tasks completed"
+      : "Completed with errors";
     summaryIconEl.textContent = ok ? "✔" : "!";
     summaryEl.classList.toggle("ok", !!ok);
     summaryEl.classList.toggle("fail", !ok);
@@ -200,7 +215,10 @@ export async function initPage() {
       const resourcesDir = dirs?.resources || "./data/resources";
       const name = `run_plan_${Date.now()}.json`;
       planFile = `${reportsDir.replace(/[\\/]+$/, "")}/${name}`;
-      runnerPath = `${String(resourcesDir).replace(/[\\/]+$/, "")}/bin/service_runner.exe`;
+      runnerPath = `${String(resourcesDir).replace(
+        /[\\/]+$/,
+        ""
+      )}/bin/service_runner.exe`;
     } catch {}
 
     if (planFile) {
@@ -212,11 +230,15 @@ export async function initPage() {
     // Always pass the plan file path to avoid quoting issues during elevation (JSON contains double quotes)
     const args = [planFile || jsonArg];
     if (!planFile) {
-      appendLog(`[WARN] ${new Date().toLocaleTimeString()} Plan file could not be created; passing raw JSON may fail if UAC elevation occurs.`);
+      appendLog(
+        `[WARN] ${new Date().toLocaleTimeString()} Plan file could not be created; passing raw JSON may fail if UAC elevation occurs.`
+      );
     }
 
     // Request it writes a log file alongside the plan.
-    const runnerLog = planFile ? planFile.replace(/\.json$/, ".log.txt") : `run_${Date.now()}.log.txt`;
+    const runnerLog = planFile
+      ? planFile.replace(/\.json$/, ".log.txt")
+      : `run_${Date.now()}.log.txt`;
     let cmd;
     let created = false;
     // Start polling the runner log file for live updates (works even if the process elevates)
@@ -242,16 +264,24 @@ export async function initPage() {
         ]);
         created = true;
       } catch (e1) {
-        appendLog(`[WARN] ${new Date().toLocaleTimeString()} Failed to create PowerShell runner: ${e1}`);
+        appendLog(
+          `[WARN] ${new Date().toLocaleTimeString()} Failed to create PowerShell runner: ${e1}`
+        );
       }
     }
     // Fallback: use capability-registered command name (binaries/service_runner.exe)
     if (!created) {
       try {
-        cmd = Command.create("service_runner", [args[0], "--log-file", runnerLog]);
+        cmd = Command.create("service_runner", [
+          args[0],
+          "--log-file",
+          runnerLog,
+        ]);
         created = true;
       } catch (e2) {
-        appendLog(`[ERROR] ${new Date().toLocaleTimeString()} Failed to create runner command: ${e2}`);
+        appendLog(
+          `[ERROR] ${new Date().toLocaleTimeString()} Failed to create runner command: ${e2}`
+        );
         throw e2;
       }
     }
@@ -293,7 +323,9 @@ export async function initPage() {
         const taskIndex = parseInt(failMatch[1]);
         const taskType = failMatch[2];
         const reason = failMatch[3] || "Failed";
-        console.log(`Found TASK_FAIL for task ${taskIndex}: ${taskType} - ${reason}`);
+        console.log(
+          `Found TASK_FAIL for task ${taskIndex}: ${taskType} - ${reason}`
+        );
         updateTaskStatus(taskIndex, "failure");
         appendLog(`[ERROR] Failed: ${taskType} - ${reason}`);
         return;
@@ -304,7 +336,9 @@ export async function initPage() {
         const taskIndex = parseInt(skipMatch[1]);
         const taskType = skipMatch[2];
         const reason = skipMatch[3] || "Skipped";
-        console.log(`Found TASK_SKIP for task ${taskIndex}: ${taskType} - ${reason}`);
+        console.log(
+          `Found TASK_SKIP for task ${taskIndex}: ${taskType} - ${reason}`
+        );
         updateTaskStatus(taskIndex, "skipped");
         appendLog(`[WARNING] Skipped: ${taskType} - ${reason}`);
         return;
@@ -314,7 +348,9 @@ export async function initPage() {
       if (/TASK\s+START:/i.test(s)) {
         console.log("Found old format TASK START");
         // Find the first pending task
-        const pendingTasks = Object.entries(taskStatuses).filter(([_, status]) => status === "pending");
+        const pendingTasks = Object.entries(taskStatuses).filter(
+          ([_, status]) => status === "pending"
+        );
         if (pendingTasks.length > 0) {
           const taskIndex = parseInt(pendingTasks[0][0]);
           updateTaskStatus(taskIndex, "running");
@@ -323,7 +359,9 @@ export async function initPage() {
       if (/TASK\s+OK:/i.test(s)) {
         console.log("Found old format TASK OK");
         // Find the first running task
-        const runningTasks = Object.entries(taskStatuses).filter(([_, status]) => status === "running");
+        const runningTasks = Object.entries(taskStatuses).filter(
+          ([_, status]) => status === "running"
+        );
         if (runningTasks.length > 0) {
           const taskIndex = parseInt(runningTasks[0][0]);
           updateTaskStatus(taskIndex, "success");
@@ -332,7 +370,9 @@ export async function initPage() {
       if (/TASK\s+FAIL:/i.test(s)) {
         console.log("Found old format TASK FAIL");
         // Find the first running task
-        const runningTasks = Object.entries(taskStatuses).filter(([_, status]) => status === "running");
+        const runningTasks = Object.entries(taskStatuses).filter(
+          ([_, status]) => status === "running"
+        );
         if (runningTasks.length > 0) {
           const taskIndex = parseInt(runningTasks[0][0]);
           updateTaskStatus(taskIndex, "failure");
@@ -341,15 +381,15 @@ export async function initPage() {
       if (/TASK\s+SKIP:/i.test(s)) {
         console.log("Found old format TASK SKIP");
         // Find the first running task
-        const runningTasks = Object.entries(taskStatuses).filter(([_, status]) => status === "running");
+        const runningTasks = Object.entries(taskStatuses).filter(
+          ([_, status]) => status === "running"
+        );
         if (runningTasks.length > 0) {
           const taskIndex = parseInt(runningTasks[0][0]);
           updateTaskStatus(taskIndex, "skipped");
         }
       }
     };
-
-
 
     // Set up event handlers
     console.log("Setting up command event handlers...");
@@ -389,11 +429,19 @@ export async function initPage() {
     const out = await cmd.execute();
 
     // Final poll to flush any remaining log content then stop
-    try { await pollLogOnce(runnerLog); } catch {}
-    try { stopPolling(); } catch {}
+    try {
+      await pollLogOnce(runnerLog);
+    } catch {}
+    try {
+      stopPolling();
+    } catch {}
     // Prefer collected final JSON, else use stdout
     const stdoutStr = (finalJson || String(out.stdout || "")).trim();
-    try { return JSON.parse(stdoutStr); } catch { return stdoutStr; }
+    try {
+      return JSON.parse(stdoutStr);
+    } catch {
+      return stdoutStr;
+    }
   }
 
   function escapePwshArg(s) {
@@ -407,11 +455,19 @@ export async function initPage() {
     const { shell } = window.__TAURI__ || {};
     const { Command } = shell || {};
     if (!Command) return;
-  // Single-line script; embed content as single quoted string. Write UTF-8 without BOM to ensure Python json.load() is happy.
-  const escaped = contents.replace(/'/g, "''");
-  const script = `$ErrorActionPreference='Stop'; $p=${escapePwshArg(path)}; $c='${escaped}'; New-Item -ItemType Directory -Path ([System.IO.Path]::GetDirectoryName($p)) -Force | Out-Null; $enc = New-Object System.Text.UTF8Encoding($false); [System.IO.File]::WriteAllText($p, $c, $enc)`;
-  // Use capability-registered PowerShell command name 'powershell'.
-  const cmd = Command.create("powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script]);
+    // Single-line script; embed content as single quoted string. Write UTF-8 without BOM to ensure Python json.load() is happy.
+    const escaped = contents.replace(/'/g, "''");
+    const script = `$ErrorActionPreference='Stop'; $p=${escapePwshArg(
+      path
+    )}; $c='${escaped}'; New-Item -ItemType Directory -Path ([System.IO.Path]::GetDirectoryName($p)) -Force | Out-Null; $enc = New-Object System.Text.UTF8Encoding($false); [System.IO.File]::WriteAllText($p, $c, $enc)`;
+    // Use capability-registered PowerShell command name 'powershell'.
+    const cmd = Command.create("powershell", [
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-Command",
+      script,
+    ]);
     await cmd.execute();
   }
 
@@ -423,7 +479,12 @@ export async function initPage() {
     _logPoll.lastTextLen = 0;
     if (_logPoll.timer) clearInterval(_logPoll.timer);
     _logPoll.timer = setInterval(() => pollLogOnce(path).catch(() => {}), 700);
-    return function stop() { if (_logPoll.timer) { clearInterval(_logPoll.timer); _logPoll.timer = null; } };
+    return function stop() {
+      if (_logPoll.timer) {
+        clearInterval(_logPoll.timer);
+        _logPoll.timer = null;
+      }
+    };
   }
 
   async function pollLogOnce(path) {
@@ -431,8 +492,14 @@ export async function initPage() {
     _logPoll.busy = true;
     try {
       const text = await readFileRaw(path);
-      if (typeof text !== "string") { _logPoll.busy = false; return; }
-      if (text.length <= _logPoll.lastTextLen) { _logPoll.busy = false; return; }
+      if (typeof text !== "string") {
+        _logPoll.busy = false;
+        return;
+      }
+      if (text.length <= _logPoll.lastTextLen) {
+        _logPoll.busy = false;
+        return;
+      }
       const added = text.slice(_logPoll.lastTextLen);
       _logPoll.lastTextLen = text.length;
       const lines = added.split(/\r?\n/).filter(Boolean);
@@ -451,13 +518,14 @@ export async function initPage() {
     if (!Command) return "";
     const ps = Command.create("powershell", [
       "-NoProfile",
-      "-ExecutionPolicy", "Bypass",
+      "-ExecutionPolicy",
+      "Bypass",
       "-Command",
-      `$ErrorActionPreference='SilentlyContinue'; $p=${escapePwshArg(path)}; if (Test-Path -Path $p) { Get-Content -Path $p -Raw -ErrorAction SilentlyContinue }`
+      `$ErrorActionPreference='SilentlyContinue'; $p=${escapePwshArg(
+        path
+      )}; if (Test-Path -Path $p) { Get-Content -Path $p -Raw -ErrorAction SilentlyContinue }`,
     ]);
     const out = await ps.execute();
     return String(out.stdout || "");
   }
 }
-
-

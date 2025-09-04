@@ -1,25 +1,90 @@
 <section class="page" data-page="component-test">
   <h1>Component Test</h1>
-  <p class="muted">Camera, microphone, speakers, keyboard, mouse/trackpad, network, and display tests.</p>
+  <p class="muted">
+    Camera, microphone, speakers, keyboard, mouse/trackpad, network, and display
+    tests.
+  </p>
 
   <nav class="subtabs" role="tablist" aria-label="Component sections">
-    <button role="tab" id="tab-camera" data-tab="camera" aria-selected="true" tabindex="0">Camera</button>
-  <button role="tab" id="tab-audio" data-tab="audio" aria-selected="false" tabindex="-1">Audio</button>
-    <button role="tab" id="tab-keyboard" data-tab="keyboard" aria-selected="false" tabindex="-1">Keyboard</button>
-    <button role="tab" id="tab-mouse" data-tab="mouse" aria-selected="false" tabindex="-1">Mouse</button>
-    <button role="tab" id="tab-network" data-tab="network" aria-selected="false" tabindex="-1">Network</button>
-    <button role="tab" id="tab-display" data-tab="display" aria-selected="false" tabindex="-1">Display</button>
+    <button
+      role="tab"
+      id="tab-camera"
+      data-tab="camera"
+      aria-selected="true"
+      tabindex="0"
+    >
+      Camera
+    </button>
+    <button
+      role="tab"
+      id="tab-audio"
+      data-tab="audio"
+      aria-selected="false"
+      tabindex="-1"
+    >
+      Audio
+    </button>
+    <button
+      role="tab"
+      id="tab-keyboard"
+      data-tab="keyboard"
+      aria-selected="false"
+      tabindex="-1"
+    >
+      Keyboard
+    </button>
+    <button
+      role="tab"
+      id="tab-mouse"
+      data-tab="mouse"
+      aria-selected="false"
+      tabindex="-1"
+    >
+      Mouse
+    </button>
+    <button
+      role="tab"
+      id="tab-network"
+      data-tab="network"
+      aria-selected="false"
+      tabindex="-1"
+    >
+      Network
+    </button>
+    <button
+      role="tab"
+      id="tab-display"
+      data-tab="display"
+      aria-selected="false"
+      tabindex="-1"
+    >
+      Display
+    </button>
   </nav>
 
   <!-- Camera Test -->
-  <section class="card subtab-panel" id="panel-camera" role="tabpanel" aria-labelledby="tab-camera">
+  <section
+    class="card subtab-panel"
+    id="panel-camera"
+    role="tabpanel"
+    aria-labelledby="tab-camera"
+  >
     <h2 id="camera-title">Camera</h2>
     <div class="row">
       <label for="camera-select">Camera:</label>
-      <select id="camera-select" class="device-select" aria-label="Select camera"></select>
+      <select
+        id="camera-select"
+        class="device-select"
+        aria-label="Select camera"
+      ></select>
       <button id="camera-start">Start</button>
       <button id="camera-stop" disabled>Stop</button>
-      <span id="camera-status" class="muted" role="status" aria-live="polite"></span>
+      <span
+        id="camera-status"
+        class="muted"
+        role="status"
+        aria-live="polite"
+      ></span>
     </div>
     <div class="media-row">
       <video id="camera-video" playsinline autoplay muted></video>
@@ -27,21 +92,37 @@
   </section>
 
   <!-- Audio Test -->
-  <section class="card subtab-panel audio-panel" id="panel-audio" role="tabpanel" aria-labelledby="tab-audio" hidden>
+  <section
+    class="card subtab-panel audio-panel"
+    id="panel-audio"
+    role="tabpanel"
+    aria-labelledby="tab-audio"
+    hidden
+  >
     <h2 id="audio-title">Audio</h2>
 
     <div class="audio-grid">
       <!-- Microphone card -->
       <div class="audio-card mic">
         <header class="audio-card-header">
-          <div class="title"><span class="icon" aria-hidden="true">🎤</span> Microphone</div>
-          <div class="status"><span id="mic-status" class="badge">Idle</span></div>
+          <div class="title">
+            <span class="icon" aria-hidden="true">🎤</span> Microphone
+          </div>
+          <div class="status">
+            <span id="mic-status" class="badge">Idle</span>
+          </div>
         </header>
 
         <div class="row wrap device-row">
           <label for="mic-select" class="device-label">Input</label>
-          <select id="mic-select" class="device-select" aria-label="Select microphone"></select>
-          <label class="toggle muted"><input type="checkbox" id="mic-monitor"> Monitor</label>
+          <select
+            id="mic-select"
+            class="device-select"
+            aria-label="Select microphone"
+          ></select>
+          <label class="toggle muted"
+            ><input type="checkbox" id="mic-monitor" /> Monitor</label
+          >
           <div class="btn-group">
             <button id="mic-start">Start</button>
             <button id="mic-stop" disabled>Stop</button>
@@ -49,74 +130,166 @@
         </div>
 
         <div class="stat-grid kpis">
-          <div class="stat"><div class="label">Level (RMS)</div><div class="value" id="mic-kpi-level">— dB</div></div>
-          <div class="stat"><div class="label">Peak</div><div class="value" id="mic-kpi-peak">— dB</div></div>
-          <div class="stat"><div class="label">Clipping</div><div class="value" id="mic-kpi-clip">0</div></div>
+          <div class="stat">
+            <div class="label">Level (RMS)</div>
+            <div class="value" id="mic-kpi-level">— dB</div>
+          </div>
+          <div class="stat">
+            <div class="label">Peak</div>
+            <div class="value" id="mic-kpi-peak">— dB</div>
+          </div>
+          <div class="stat">
+            <div class="label">Clipping</div>
+            <div class="value" id="mic-kpi-clip">0</div>
+          </div>
         </div>
 
         <div class="vu-wrap" aria-label="Microphone level meter">
           <div class="vu" role="meter" aria-valuemin="0" aria-valuemax="100">
-            <div id="mic-meter" class="vu-fill" style="width:0%"></div>
+            <div id="mic-meter" class="vu-fill" style="width: 0%"></div>
             <div class="vu-peak" aria-hidden="true"></div>
           </div>
         </div>
 
-        
-
-        <p class="audio-note muted">Tip: If device names show as generic, start the mic once to grant permission and reveal labels.</p>
+        <p class="audio-note muted">
+          Tip: If device names show as generic, start the mic once to grant
+          permission and reveal labels.
+        </p>
       </div>
 
       <!-- Speakers card -->
       <div class="audio-card spk">
         <header class="audio-card-header">
-          <div class="title"><span class="icon" aria-hidden="true">🔊</span> Speakers</div>
-          <div class="status"><span id="spk-status" class="badge">Idle</span></div>
+          <div class="title">
+            <span class="icon" aria-hidden="true">🔊</span> Speakers
+          </div>
+          <div class="status">
+            <span id="spk-status" class="badge">Idle</span>
+          </div>
         </header>
 
         <div class="row wrap device-row">
           <label for="spk-select" class="device-label">Output</label>
-          <select id="spk-select" class="device-select" aria-label="Select speakers"></select>
+          <select
+            id="spk-select"
+            class="device-select"
+            aria-label="Select speakers"
+          ></select>
           <div class="btn-group grow">
-            <button id="spk-left" title="Play tone on left channel">Left</button>
-            <button id="spk-right" title="Play tone on right channel">Right</button>
-            <button id="spk-both" title="Play tone on both channels">Both</button>
-            <button id="spk-sweep" class="ghost" title="Sweep from low to high frequency">Stereo sweep</button>
-            <button id="spk-stop" class="ghost" title="Stop playback">Stop</button>
+            <button id="spk-left" title="Play tone on left channel">
+              Left
+            </button>
+            <button id="spk-right" title="Play tone on right channel">
+              Right
+            </button>
+            <button id="spk-both" title="Play tone on both channels">
+              Both
+            </button>
+            <button
+              id="spk-sweep"
+              class="ghost"
+              title="Sweep from low to high frequency"
+            >
+              Stereo sweep
+            </button>
+            <button id="spk-stop" class="ghost" title="Stop playback">
+              Stop
+            </button>
           </div>
         </div>
 
         <div class="row wrap vol-row">
           <label for="spk-volume">Volume</label>
-          <input id="spk-volume" type="range" min="0" max="1" step="0.01" value="0.5" />
+          <input
+            id="spk-volume"
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value="0.5"
+          />
         </div>
 
         <div class="stereo-vu" aria-hidden="true">
-          <div class="stereo-row"><span class="ch">L</span><div class="vu"><div class="vu-fill" style="width:0%"></div></div></div>
-          <div class="stereo-row"><span class="ch">R</span><div class="vu"><div class="vu-fill" style="width:0%"></div></div></div>
+          <div class="stereo-row">
+            <span class="ch">L</span>
+            <div class="vu"><div class="vu-fill" style="width: 0%"></div></div>
+          </div>
+          <div class="stereo-row">
+            <span class="ch">R</span>
+            <div class="vu"><div class="vu-fill" style="width: 0%"></div></div>
+          </div>
         </div>
 
-        <p id="spk-note" class="muted audio-note">Selecting an output device depends on browser support for setSinkId.</p>
+        <p id="spk-note" class="muted audio-note">
+          Selecting an output device depends on browser support for setSinkId.
+        </p>
       </div>
     </div>
   </section>
 
   <!-- Keyboard Test -->
-  <section class="card subtab-panel" id="panel-keyboard" role="tabpanel" aria-labelledby="tab-keyboard" hidden>
+  <section
+    class="card subtab-panel"
+    id="panel-keyboard"
+    role="tabpanel"
+    aria-labelledby="tab-keyboard"
+    hidden
+  >
     <h2 id="keyboard-title">Keyboard</h2>
     <div class="row" aria-label="Keyboard tester mode">
       <span class="muted">Mode</span>
-      <label><input type="radio" name="kb-mode" id="kb-mode-internal" value="internal" checked /> Internal</label>
-      <label><input type="radio" name="kb-mode" id="kb-mode-external" value="external" /> External</label>
-      <a id="kb-open" class="ghost" href="https://mostafa-abbasi.github.io/KeyboardTester/" target="_blank" rel="noopener" style="margin-left:auto; display:none">Open in browser</a>
+      <label
+        ><input
+          type="radio"
+          name="kb-mode"
+          id="kb-mode-internal"
+          value="internal"
+          checked
+        />
+        Internal</label
+      >
+      <label
+        ><input
+          type="radio"
+          name="kb-mode"
+          id="kb-mode-external"
+          value="external"
+        />
+        External</label
+      >
+      <a
+        id="kb-open"
+        class="ghost"
+        href="https://mostafa-abbasi.github.io/KeyboardTester/"
+        target="_blank"
+        rel="noopener"
+        style="margin-left: auto; display: none"
+        >Open in browser</a
+      >
     </div>
     <div id="keyboard-internal">
-      <p class="muted">Press keys to verify detection. Modifiers and key codes are shown below.</p>
+      <p class="muted">
+        Press keys to verify detection. Modifiers and key codes are shown below.
+      </p>
 
       <div class="stat-grid kbd-kpis">
-        <div class="stat"><div class="label">Last key</div><div class="value" id="kb-last-key">—</div></div>
-        <div class="stat"><div class="label">Code</div><div class="value" id="kb-last-code">—</div></div>
-        <div class="stat"><div class="label">Location</div><div class="value" id="kb-last-loc">—</div></div>
-        <div class="stat"><div class="label">Repeat</div><div class="value" id="kb-last-repeat">No</div></div>
+        <div class="stat">
+          <div class="label">Last key</div>
+          <div class="value" id="kb-last-key">—</div>
+        </div>
+        <div class="stat">
+          <div class="label">Code</div>
+          <div class="value" id="kb-last-code">—</div>
+        </div>
+        <div class="stat">
+          <div class="label">Location</div>
+          <div class="value" id="kb-last-loc">—</div>
+        </div>
+        <div class="stat">
+          <div class="label">Repeat</div>
+          <div class="value" id="kb-last-repeat">No</div>
+        </div>
       </div>
 
       <div class="kbd-mods" role="group" aria-label="Modifier keys">
@@ -126,10 +299,17 @@
         <span id="mod-meta" class="mod-key" title="Meta/Win/Command">Meta</span>
       </div>
 
-      <div id="keyboard-pressed" class="kbd-keys" aria-label="Currently pressed keys"></div>
+      <div
+        id="keyboard-pressed"
+        class="kbd-keys"
+        aria-label="Currently pressed keys"
+      ></div>
       <div class="row">
         <button id="keyboard-clear">Clear</button>
-        <label><input type="checkbox" id="keyboard-capture" checked /> Capture keystrokes</label>
+        <label
+          ><input type="checkbox" id="keyboard-capture" checked /> Capture
+          keystrokes</label
+        >
       </div>
     </div>
     <div id="keyboard-external" hidden>
@@ -140,47 +320,91 @@
         loading="lazy"
         src="https://mostafa-abbasi.github.io/KeyboardTester/"
       ></iframe>
-      <p class="muted" style="margin-top:8px">If the preview is blocked by security settings, use "Open in browser".</p>
+      <p class="muted" style="margin-top: 8px">
+        If the preview is blocked by security settings, use "Open in browser".
+      </p>
     </div>
   </section>
 
   <!-- Mouse / Trackpad Test -->
-  <section class="card subtab-panel" id="panel-mouse" role="tabpanel" aria-labelledby="tab-mouse" hidden>
+  <section
+    class="card subtab-panel"
+    id="panel-mouse"
+    role="tabpanel"
+    aria-labelledby="tab-mouse"
+    hidden
+  >
     <h2 id="mouse-title">Mouse / Trackpad</h2>
     <div class="mouse-kpis stat-grid">
-      <div class="stat"><div class="label">Position</div><div class="value" id="mouse-pos">0, 0</div></div>
-      <div class="stat"><div class="label">Buttons</div><div class="value"><span id="mouse-buttons">none</span>
-        <span class="mouse-buttons-visual" aria-hidden="true">
-          <span id="btn-left" class="mouse-btn" title="Left">L</span>
-          <span id="btn-middle" class="mouse-btn" title="Middle">M</span>
-          <span id="btn-right" class="mouse-btn" title="Right">R</span>
-        </span>
-      </div></div>
-      <div class="stat"><div class="label">Wheel</div><div class="value"><span id="mouse-wheel">0</span>
-        <div class="progress" style="margin-top:6px"><div id="mouse-wheel-bar" class="bar" style="width:50%"></div></div>
-      </div></div>
-      <div class="stat"><div class="label">Speed</div><div class="value" id="mouse-speed">0 px/s</div></div>
+      <div class="stat">
+        <div class="label">Position</div>
+        <div class="value" id="mouse-pos">0, 0</div>
+      </div>
+      <div class="stat">
+        <div class="label">Buttons</div>
+        <div class="value">
+          <span id="mouse-buttons">none</span>
+          <span class="mouse-buttons-visual" aria-hidden="true">
+            <span id="btn-left" class="mouse-btn" title="Left">L</span>
+            <span id="btn-middle" class="mouse-btn" title="Middle">M</span>
+            <span id="btn-right" class="mouse-btn" title="Right">R</span>
+          </span>
+        </div>
+      </div>
+      <div class="stat">
+        <div class="label">Wheel</div>
+        <div class="value">
+          <span id="mouse-wheel">0</span>
+          <div class="progress" style="margin-top: 6px">
+            <div id="mouse-wheel-bar" class="bar" style="width: 50%"></div>
+          </div>
+        </div>
+      </div>
+      <div class="stat">
+        <div class="label">Speed</div>
+        <div class="value" id="mouse-speed">0 px/s</div>
+      </div>
     </div>
-    <div id="mouse-area" class="mouse-area" tabindex="0" aria-label="Mouse test area">
+    <div
+      id="mouse-area"
+      class="mouse-area"
+      tabindex="0"
+      aria-label="Mouse test area"
+    >
       <div class="mouse-area-hint">Click, move, and scroll here</div>
       <div id="cursor-dot" class="cursor-dot" hidden></div>
       <div id="coord-tag" class="coord-tag">0, 0</div>
     </div>
     <div class="row">
       <button id="dblclick-test">Double-click test</button>
-      <span class="muted">Last double-click: <span id="dblclick-time">n/a</span> ms</span>
+      <span class="muted"
+        >Last double-click: <span id="dblclick-time">n/a</span> ms</span
+      >
       <span id="dblclick-badge" class="badge" aria-hidden="true">n/a</span>
-      <button id="mouse-reset" class="ghost" style="margin-left:auto">Reset</button>
+      <button id="mouse-reset" class="ghost" style="margin-left: auto">
+        Reset
+      </button>
     </div>
   </section>
 
   <!-- Network Test -->
-  <section class="card subtab-panel" id="panel-network" role="tabpanel" aria-labelledby="tab-network" hidden>
+  <section
+    class="card subtab-panel"
+    id="panel-network"
+    role="tabpanel"
+    aria-labelledby="tab-network"
+    hidden
+  >
     <h2 id="network-title">Network</h2>
     <div class="row">
       <button id="network-quick">Run quick test</button>
       <button id="network-extended" class="ghost">Run extended test</button>
-      <span id="network-status" class="muted" role="status" aria-live="polite"></span>
+      <span
+        id="network-status"
+        class="muted"
+        role="status"
+        aria-live="polite"
+      ></span>
     </div>
     <div class="row">
       <span>Overall:</span>
@@ -188,10 +412,22 @@
       <span id="network-summary" class="muted"></span>
     </div>
     <div class="net-kpis stat-grid">
-      <div class="stat"><div class="label">Median latency</div><div class="value" id="net-kpi-med">—</div></div>
-      <div class="stat"><div class="label">Avg latency</div><div class="value" id="net-kpi-avg">—</div></div>
-      <div class="stat"><div class="label">Packet loss</div><div class="value" id="net-kpi-loss">—</div></div>
-      <div class="stat"><div class="label">Throughput</div><div class="value" id="net-kpi-dl">—</div></div>
+      <div class="stat">
+        <div class="label">Median latency</div>
+        <div class="value" id="net-kpi-med">—</div>
+      </div>
+      <div class="stat">
+        <div class="label">Avg latency</div>
+        <div class="value" id="net-kpi-avg">—</div>
+      </div>
+      <div class="stat">
+        <div class="label">Packet loss</div>
+        <div class="value" id="net-kpi-loss">—</div>
+      </div>
+      <div class="stat">
+        <div class="label">Throughput</div>
+        <div class="value" id="net-kpi-dl">—</div>
+      </div>
     </div>
     <div class="grid grid-2">
       <div>
@@ -206,7 +442,13 @@
   </section>
 
   <!-- Display Test -->
-  <section class="card subtab-panel" id="panel-display" role="tabpanel" aria-labelledby="tab-display" hidden>
+  <section
+    class="card subtab-panel"
+    id="panel-display"
+    role="tabpanel"
+    aria-labelledby="tab-display"
+    hidden
+  >
     <h2 id="display-title">Display</h2>
     <div class="row wrap">
       <button class="disp-color" data-color="#000000">Black</button>
@@ -219,6 +461,10 @@
       <button id="disp-cycle">Cycle colors</button>
       <button id="disp-fullscreen">Toggle Fullscreen</button>
     </div>
-    <div id="display-area" class="display-area" aria-label="Display test area"></div>
+    <div
+      id="display-area"
+      class="display-area"
+      aria-label="Display test area"
+    ></div>
   </section>
 </section>

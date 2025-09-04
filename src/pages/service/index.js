@@ -1,16 +1,21 @@
 export async function initPage() {
-  const cards = Array.from(document.querySelectorAll('.preset-card'));
-  const startBtn = document.getElementById('svc-start');
+  const cards = Array.from(document.querySelectorAll(".preset-card"));
+  const startBtn = document.getElementById("svc-start");
   let selected = null;
 
   function update() {
-    cards.forEach(c => c.setAttribute('aria-pressed', c.dataset.preset === selected ? 'true' : 'false'));
-    if (selected) startBtn.removeAttribute('disabled');
-    else startBtn.setAttribute('disabled', '');
+    cards.forEach((c) =>
+      c.setAttribute(
+        "aria-pressed",
+        c.dataset.preset === selected ? "true" : "false"
+      )
+    );
+    if (selected) startBtn.removeAttribute("disabled");
+    else startBtn.setAttribute("disabled", "");
   }
 
-  cards.forEach(card => {
-    card.addEventListener('click', () => {
+  cards.forEach((card) => {
+    card.addEventListener("click", () => {
       if (selected === card.dataset.preset) {
         selected = null; // toggle off
       } else {
@@ -18,14 +23,20 @@ export async function initPage() {
       }
       update();
     });
-    card.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); card.click(); }
+    card.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        card.click();
+      }
     });
   });
 
-  startBtn?.addEventListener('click', () => {
+  startBtn?.addEventListener("click", () => {
     if (!selected) return;
-    const route = selected === 'custom' ? 'service-run?mode=custom' : `service-run?preset=${selected}`;
+    const route =
+      selected === "custom"
+        ? "service-run?mode=custom"
+        : `service-run?preset=${selected}`;
     window.location.hash = `#/${route}`;
   });
 
@@ -33,7 +44,10 @@ export async function initPage() {
 }
 
 // (Later) helper to fetch preset definitions from settings JSON
-export async function loadPresetDefinitions(){
-  try { return await window.__TAURI__.core.invoke('load_service_presets'); } catch { return {}; }
+export async function loadPresetDefinitions() {
+  try {
+    return await window.__TAURI__.core.invoke("load_service_presets");
+  } catch {
+    return {};
+  }
 }
-

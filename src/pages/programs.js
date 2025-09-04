@@ -9,47 +9,70 @@ let state = {
   editing: null, // program object being edited or null
 };
 
-function $(sel, root = document) { return root.querySelector(sel); }
-function $all(sel, root = document) { return Array.from(root.querySelectorAll(sel)); }
+function $(sel, root = document) {
+  return root.querySelector(sel);
+}
+function $all(sel, root = document) {
+  return Array.from(root.querySelectorAll(sel));
+}
 
 function renderList() {
   const list = document.querySelector(".programs-list");
   if (!list) return;
   const items = state.filtered;
   if (!items.length) {
-    list.innerHTML = '<div class="muted">No programs yet. Click "Add" to create one.</div>';
+    list.innerHTML =
+      '<div class="muted">No programs yet. Click "Add" to create one.</div>';
     return;
-    }
-  list.innerHTML = items.map(p => `
+  }
+  list.innerHTML = items
+    .map(
+      (p) => `
     <div class="program-row" data-id="${p.id}">
       <div class="program-logo-wrap">
-        <img class="program-logo" src="${p.logo_data_url || "./assets/tauri.svg"}" alt="${escapeHtml(p.name)} logo"/>
-        <span class="exe-status ${p.exe_exists ? "ok" : "missing"}" title="${p.exe_exists ? "Executable found" : "Executable missing"}">${p.exe_exists ? "✓" : "✕"}</span>
+        <img class="program-logo" src="${
+          p.logo_data_url || "./assets/tauri.svg"
+        }" alt="${escapeHtml(p.name)} logo"/>
+        <span class="exe-status ${p.exe_exists ? "ok" : "missing"}" title="${
+        p.exe_exists ? "Executable found" : "Executable missing"
+      }">${p.exe_exists ? "✓" : "✕"}</span>
       </div>
       <div class="program-main">
-        <div class="program-title" title="${escapeHtml(p.name)}${p.version ? ` — ${escapeHtml(p.version)}` : ''}">
+        <div class="program-title" title="${escapeHtml(p.name)}${
+        p.version ? ` — ${escapeHtml(p.version)}` : ""
+      }">
           <span class="name">${escapeHtml(p.name)}</span>
           <span class="ver">${escapeHtml(p.version || "")}</span>
-          <span class="muted usage" title="Times launched">(${p.launch_count || 0})</span>
+          <span class="muted usage" title="Times launched">(${
+            p.launch_count || 0
+          })</span>
         </div>
-        <div class="program-desc" title="${escapeHtml(p.description || "")}">${escapeHtml(p.description || "")}</div>
-        <div class="program-path muted" title="${escapeHtml(p.exe_path)}">${escapeHtml(p.exe_path)}</div>
+        <div class="program-desc" title="${escapeHtml(
+          p.description || ""
+        )}">${escapeHtml(p.description || "")}</div>
+        <div class="program-path muted" title="${escapeHtml(
+          p.exe_path
+        )}">${escapeHtml(p.exe_path)}</div>
       </div>
       <div class="program-actions">
-        <button data-action="launch" ${p.exe_exists ? "" : "disabled"}>Launch</button>
+        <button data-action="launch" ${
+          p.exe_exists ? "" : "disabled"
+        }>Launch</button>
         <button data-action="edit" class="secondary">Edit</button>
         <button data-action="remove" class="ghost">Remove</button>
       </div>
     </div>
-  `).join("");
+  `
+    )
+    .join("");
 
   // Wire actions
-  $all(".program-row").forEach(row => {
+  $all(".program-row").forEach((row) => {
     row.addEventListener("click", async (e) => {
       const btn = e.target.closest("button");
       if (!btn) return;
       const id = row.getAttribute("data-id");
-      const prog = state.all.find(p => p.id === id);
+      const prog = state.all.find((p) => p.id === id);
       if (!prog) return;
       const action = btn.getAttribute("data-action");
       if (action === "launch") {
@@ -58,7 +81,9 @@ function renderList() {
           await invoke("launch_program", { program: prog });
           // Refresh list to update launch counters
           await loadPrograms();
-        } finally { btn.disabled = false; }
+        } finally {
+          btn.disabled = false;
+        }
       } else if (action === "edit") {
         openEditor(prog);
       } else if (action === "remove") {
@@ -72,7 +97,13 @@ function renderList() {
 }
 
 function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+  return String(s).replace(
+    /[&<>"']/g,
+    (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[
+        c
+      ])
+  );
 }
 
 async function loadPrograms() {
@@ -82,20 +113,38 @@ async function loadPrograms() {
 
 function applyFilter() {
   const q = state.query.trim().toLowerCase();
-  const base = q ? state.all.filter(p => `${p.name} ${p.description} ${p.version}`.toLowerCase().includes(q)) : [...state.all];
+  const base = q
+    ? state.all.filter((p) =>
+        `${p.name} ${p.description} ${p.version}`.toLowerCase().includes(q)
+      )
+    : [...state.all];
   // Sort
   const sort = state.sort;
   base.sort((a, b) => {
     switch (sort) {
       case "name-desc":
-        return (b.name || "").localeCompare(a.name || "", undefined, { sensitivity: "base" });
+        return (b.name || "").localeCompare(a.name || "", undefined, {
+          sensitivity: "base",
+        });
       case "used-desc":
-        return (b.launch_count || 0) - (a.launch_count || 0) || (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" });
+        return (
+          (b.launch_count || 0) - (a.launch_count || 0) ||
+          (a.name || "").localeCompare(b.name || "", undefined, {
+            sensitivity: "base",
+          })
+        );
       case "used-asc":
-        return (a.launch_count || 0) - (b.launch_count || 0) || (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" });
+        return (
+          (a.launch_count || 0) - (b.launch_count || 0) ||
+          (a.name || "").localeCompare(b.name || "", undefined, {
+            sensitivity: "base",
+          })
+        );
       case "name-asc":
       default:
-        return (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" });
+        return (a.name || "").localeCompare(b.name || "", undefined, {
+          sensitivity: "base",
+        });
     }
   });
   state.filtered = base;
@@ -106,20 +155,28 @@ function wireToolbar() {
   const search = document.querySelector("#program-search");
   const sortSel = document.querySelector("#program-sort");
   const addBtn = document.querySelector("#program-add-btn");
-  search?.addEventListener("input", () => { state.query = search.value; applyFilter(); });
-  sortSel?.addEventListener("change", () => { state.sort = sortSel.value; applyFilter(); });
+  search?.addEventListener("input", () => {
+    state.query = search.value;
+    applyFilter();
+  });
+  sortSel?.addEventListener("change", () => {
+    state.sort = sortSel.value;
+    applyFilter();
+  });
   addBtn?.addEventListener("click", () => openEditor());
 }
 
 function openEditor(prog) {
-  state.editing = prog ? { ...prog } : {
-    id: crypto.randomUUID(),
-    name: "",
-    version: "",
-    description: "",
-    exe_path: "",
-    logo_data_url: "",
-  };
+  state.editing = prog
+    ? { ...prog }
+    : {
+        id: crypto.randomUUID(),
+        name: "",
+        version: "",
+        description: "",
+        exe_path: "",
+        logo_data_url: "",
+      };
   const dlg = document.querySelector("#program-editor");
   const form = document.querySelector("#program-form");
   form.reset();
@@ -147,7 +204,14 @@ function wireEditor() {
       const dirs = await invoke("get_data_dirs");
       if (dirs?.programs) defaultPath = dirs.programs;
     } catch {}
-    const selected = open ? await open({ multiple: false, title: "Select program executable", defaultPath, filters: [{ name: "Executables", extensions: ["exe"] }] }) : null;
+    const selected = open
+      ? await open({
+          multiple: false,
+          title: "Select program executable",
+          defaultPath,
+          filters: [{ name: "Executables", extensions: ["exe"] }],
+        })
+      : null;
     if (selected) {
       document.querySelector("#p-exe").value = selected;
       state.editing.exe_path = selected;
@@ -160,7 +224,9 @@ function wireEditor() {
         nameInput.value = inferred;
       }
       try {
-        const suggested = await invoke("suggest_logo_from_exe", { exe_path: selected });
+        const suggested = await invoke("suggest_logo_from_exe", {
+          exe_path: selected,
+        });
         if (suggested) {
           state.editing.logo_data_url = suggested;
           document.querySelector("#p-logo-preview").src = suggested;
@@ -171,13 +237,25 @@ function wireEditor() {
 
   logoBtn.addEventListener("click", async () => {
     const open = window.__TAURI__?.dialog?.open;
-    const selected = open ? await open({ multiple: false, title: "Select logo image", filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "ico"] }] }) : null;
+    const selected = open
+      ? await open({
+          multiple: false,
+          title: "Select logo image",
+          filters: [
+            { name: "Images", extensions: ["png", "jpg", "jpeg", "ico"] },
+          ],
+        })
+      : null;
     if (selected) {
       try {
-        const dataUrl = await invoke("read_image_as_data_url", { path: selected });
+        const dataUrl = await invoke("read_image_as_data_url", {
+          path: selected,
+        });
         state.editing.logo_data_url = dataUrl;
         document.querySelector("#p-logo-preview").src = dataUrl;
-      } catch (e) { console.error(e); }
+      } catch (e) {
+        console.error(e);
+      }
     }
   });
 
@@ -197,7 +275,9 @@ function wireEditor() {
     // If no logo yet, try to extract from the EXE before saving
     if (!state.editing.logo_data_url) {
       try {
-        const suggested = await invoke("suggest_logo_from_exe", { exe_path: state.editing.exe_path });
+        const suggested = await invoke("suggest_logo_from_exe", {
+          exe_path: state.editing.exe_path,
+        });
         if (suggested) {
           state.editing.logo_data_url = suggested;
         }
@@ -210,8 +290,10 @@ function wireEditor() {
       await loadPrograms();
     } catch (e) {
       console.error(e);
-      alert(typeof e === "string" ? e : (e?.message || "Failed to save program"));
-    } finally { save.disabled = false; }
+      alert(typeof e === "string" ? e : e?.message || "Failed to save program");
+    } finally {
+      save.disabled = false;
+    }
   });
 }
 
@@ -227,8 +309,13 @@ async function confirmRemove(name) {
   const tauriConfirm = window.__TAURI__?.dialog?.confirm;
   if (tauriConfirm) {
     try {
-      return await tauriConfirm(`Remove ${name}?`, { title: "Confirm", type: "warning" });
-    } catch { /* fall through */ }
+      return await tauriConfirm(`Remove ${name}?`, {
+        title: "Confirm",
+        type: "warning",
+      });
+    } catch {
+      /* fall through */
+    }
   }
   return window.confirm(`Remove ${name}?`);
 }

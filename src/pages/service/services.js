@@ -38,155 +38,156 @@
 
 export const SERVICES = {
   adwcleaner_clean: {
-    id: 'adwcleaner_clean',
-    label: 'Adware Clean (AdwCleaner)',
-    group: 'Cleanup',
-    toolKeys: ['adwcleaner'],
+    id: "adwcleaner_clean",
+    label: "Adware Clean (AdwCleaner)",
+    group: "Cleanup",
+    toolKeys: ["adwcleaner"],
     async build({ resolveToolPath }) {
       return {
-        type: 'adwcleaner_clean',
-        executable_path: await resolveToolPath('adwcleaner'),
-        working_path: '..\\data\\logs',
+        type: "adwcleaner_clean",
+        executable_path: await resolveToolPath("adwcleaner"),
+        working_path: "..\\data\\logs",
         clean_preinstalled: false,
-        ui_label: 'Adware Clean (AdwCleaner)'
+        ui_label: "Adware Clean (AdwCleaner)",
       };
-    }
+    },
   },
   bleachbit_clean: {
-    id: 'bleachbit_clean',
-    label: 'Junk Cleanup (BleachBit)',
-    group: 'Cleanup',
-    toolKeys: ['bleachbit'],
+    id: "bleachbit_clean",
+    label: "Junk Cleanup (BleachBit)",
+    group: "Cleanup",
+    toolKeys: ["bleachbit"],
     async build({ resolveToolPath }) {
       return {
-        type: 'bleachbit_clean',
-        executable_path: await resolveToolPath('bleachbit'),
-        options: ['system.tmp', 'system.recycle_bin', 'system.prefetch'],
-        ui_label: 'Junk Cleanup (BleachBit)'
+        type: "bleachbit_clean",
+        executable_path: await resolveToolPath("bleachbit"),
+        options: ["system.tmp", "system.recycle_bin", "system.prefetch"],
+        ui_label: "Junk Cleanup (BleachBit)",
       };
-    }
+    },
   },
   dism_health_check: {
-    id: 'dism_health_check',
-    label: 'DISM Health Check',
-    group: 'System Integrity',
+    id: "dism_health_check",
+    label: "DISM Health Check",
+    group: "System Integrity",
     toolKeys: [],
     async build() {
       return {
-        type: 'dism_health_check',
-        actions: ['checkhealth', 'scanhealth', 'restorehealth'],
-        ui_label: 'DISM Health Check'
+        type: "dism_health_check",
+        actions: ["checkhealth", "scanhealth", "restorehealth"],
+        ui_label: "DISM Health Check",
       };
-    }
+    },
   },
   sfc_scan: {
-    id: 'sfc_scan',
-    label: 'SFC Scan',
-    group: 'System Integrity',
+    id: "sfc_scan",
+    label: "SFC Scan",
+    group: "System Integrity",
     toolKeys: [],
     async build() {
-      return { type: 'sfc_scan', ui_label: 'SFC Scan' };
-    }
+      return { type: "sfc_scan", ui_label: "SFC Scan" };
+    },
   },
   smartctl_report: {
-    id: 'smartctl_report',
-    label: 'Drive Health Report (smartctl)',
-    group: 'Diagnostics',
-    toolKeys: ['smartctl', 'gsmartcontrol'],
+    id: "smartctl_report",
+    label: "Drive Health Report (smartctl)",
+    group: "Diagnostics",
+    toolKeys: ["smartctl", "gsmartcontrol"],
     async build({ resolveToolPath }) {
-      let pSmart = await resolveToolPath(['smartctl', 'gsmartcontrol']);
+      let pSmart = await resolveToolPath(["smartctl", "gsmartcontrol"]);
       if (pSmart && /gsmartcontrol\.exe$/i.test(pSmart)) {
-        pSmart = pSmart.replace(/[^\\\/]+$/g, 'smartctl.exe');
+        pSmart = pSmart.replace(/[^\\\/]+$/g, "smartctl.exe");
       }
       return {
-        type: 'smartctl_report',
+        type: "smartctl_report",
         executable_path: pSmart,
-        detail_level: 'basic',
-        ui_label: 'Drive Health Report (smartctl)'
+        detail_level: "basic",
+        ui_label: "Drive Health Report (smartctl)",
       };
-    }
+    },
   },
   furmark_stress_test: {
-    id: 'furmark_stress_test',
-    label: 'GPU Stress (FurMark)',
-    group: 'Stress',
+    id: "furmark_stress_test",
+    label: "GPU Stress (FurMark)",
+    group: "Stress",
     defaultParams: { minutes: 1 },
-    toolKeys: ['furmark', 'furmark2'],
+    toolKeys: ["furmark", "furmark2"],
     async build({ params, resolveToolPath }) {
-      let p = await resolveToolPath(['furmark', 'furmark2']);
-      if (p && /furmark_gui\.exe$/i.test(p)) p = p.replace(/[^\\\/]+$/g, 'furmark.exe');
+      let p = await resolveToolPath(["furmark", "furmark2"]);
+      if (p && /furmark_gui\.exe$/i.test(p))
+        p = p.replace(/[^\\\/]+$/g, "furmark.exe");
       return {
-        type: 'furmark_stress_test',
+        type: "furmark_stress_test",
         executable_path: p,
         duration_minutes: params?.minutes || 1,
         width: 1920,
         height: 1080,
-        demo: 'furmark-gl',
-        extra_args: ['--no-gui'],
-        ui_label: 'GPU Stress (FurMark)'
+        demo: "furmark-gl",
+        extra_args: ["--no-gui"],
+        ui_label: "GPU Stress (FurMark)",
       };
-    }
+    },
   },
   heavyload_stress_cpu: {
-    id: 'heavyload_stress_cpu',
-    label: 'CPU Stress (HeavyLoad)',
-    group: 'Stress',
+    id: "heavyload_stress_cpu",
+    label: "CPU Stress (HeavyLoad)",
+    group: "Stress",
     defaultParams: { minutes: 1 },
-    toolKeys: ['heavyload'],
+    toolKeys: ["heavyload"],
     async build({ params, resolveToolPath }) {
-      const p = await resolveToolPath(['heavyload']);
+      const p = await resolveToolPath(["heavyload"]);
       return {
-        type: 'heavyload_stress_test',
+        type: "heavyload_stress_test",
         executable_path: p,
         duration_minutes: params?.minutes || 1,
         headless: false,
         stress_cpu: true,
         stress_memory: false,
         stress_gpu: false,
-        ui_label: 'CPU Stress (HeavyLoad)'
+        ui_label: "CPU Stress (HeavyLoad)",
       };
-    }
+    },
   },
   heavyload_stress_memory: {
-    id: 'heavyload_stress_memory',
-    label: 'RAM Stress (HeavyLoad)',
-    group: 'Stress',
+    id: "heavyload_stress_memory",
+    label: "RAM Stress (HeavyLoad)",
+    group: "Stress",
     defaultParams: { minutes: 1 },
-    toolKeys: ['heavyload'],
+    toolKeys: ["heavyload"],
     async build({ params, resolveToolPath }) {
-      const p = await resolveToolPath(['heavyload']);
+      const p = await resolveToolPath(["heavyload"]);
       return {
-        type: 'heavyload_stress_test',
+        type: "heavyload_stress_test",
         executable_path: p,
         duration_minutes: params?.minutes || 1,
         headless: false,
         stress_cpu: false,
         stress_memory: true,
         stress_gpu: false,
-        ui_label: 'RAM Stress (HeavyLoad)'
+        ui_label: "RAM Stress (HeavyLoad)",
       };
-    }
+    },
   },
   heavyload_stress_gpu: {
-    id: 'heavyload_stress_gpu',
-    label: 'GPU Stress (HeavyLoad)',
-    group: 'Stress',
+    id: "heavyload_stress_gpu",
+    label: "GPU Stress (HeavyLoad)",
+    group: "Stress",
     defaultParams: { minutes: 1 },
-    toolKeys: ['heavyload'],
+    toolKeys: ["heavyload"],
     async build({ params, resolveToolPath }) {
-      const p = await resolveToolPath(['heavyload']);
+      const p = await resolveToolPath(["heavyload"]);
       return {
-        type: 'heavyload_stress_test',
+        type: "heavyload_stress_test",
         executable_path: p,
         duration_minutes: params?.minutes || 1,
         headless: false,
         stress_cpu: false,
         stress_memory: false,
         stress_gpu: true,
-        ui_label: 'GPU Stress (HeavyLoad)'
+        ui_label: "GPU Stress (HeavyLoad)",
       };
-    }
-  }
+    },
+  },
 };
 
 export function listServiceIds() {
@@ -201,4 +202,3 @@ export function toolKeysForService(id) {
   const s = getServiceById(id);
   return (s && s.toolKeys) || [];
 }
-
