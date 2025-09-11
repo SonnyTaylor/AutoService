@@ -1,5 +1,10 @@
 /**
  * Render functions for different system information sections
+ *
+ * This module contains functions to render HTML for various system information
+ * components like OS, CPU, RAM, GPU, storage, network, and battery details.
+ * Each function takes system info data and returns formatted HTML strings
+ * with tables, progress bars, and badges for a user-friendly display.
  */
 
 import {
@@ -9,6 +14,38 @@ import {
   escapeHtml,
 } from "./formatters.js";
 import { makeCollapsible } from "./ui.js";
+
+/**
+ * Parses TPM summary JSON and returns formatted status string.
+ * @param {string} raw - Raw TPM summary string
+ * @returns {string} Formatted TPM status or empty string
+ */
+function parseTpmSummary(raw) {
+  try {
+    const v = JSON.parse(raw);
+    if (!v || typeof v !== "object") return "";
+
+    const parts = [];
+    if (v.TpmPresent === true) parts.push("Present");
+    else if (v.TpmPresent === false) parts.push("Not Present");
+
+    if (v.TpmReady === true) parts.push("Ready");
+    else if (v.TpmReady === false) parts.push("Not Ready");
+
+    if (typeof v.SpecVersion === "string" && v.SpecVersion.trim()) {
+      parts.push(`Spec ${v.SpecVersion}`);
+    }
+
+    if (typeof v.ManagedAuthLevel === "string" && v.ManagedAuthLevel.trim()) {
+      parts.push(v.ManagedAuthLevel);
+    }
+
+    return parts.length ? parts.join(" • ") : "";
+  } catch (error) {
+    console.warn("Failed to parse TPM summary:", error);
+    return "";
+  }
+}
 
 /**
  * Renders the OS information section HTML.
@@ -36,45 +73,23 @@ export function renderOS(info, ex) {
     );
   }
 
-  // TPM information with JSON parsing
+  // TPM information
   if (ex?.tpm_summary) {
-    let added = false;
-    const raw = String(ex.tpm_summary || "").trim();
-    try {
-      const v = JSON.parse(raw);
-      if (v && typeof v === "object") {
-        const parts = [];
-        if (v.TpmPresent === true) parts.push("Present");
-        else if (v.TpmPresent === false) parts.push("Not Present");
-        if (v.TpmReady === true) parts.push("Ready");
-        else if (v.TpmReady === false) parts.push("Not Ready");
-        if (typeof v.SpecVersion === "string" && v.SpecVersion.trim()) {
-          parts.push(`Spec ${v.SpecVersion}`);
-        }
-        if (
-          typeof v.ManagedAuthLevel === "string" &&
-          v.ManagedAuthLevel.trim()
-        ) {
-          parts.push(v.ManagedAuthLevel);
-        }
-        if (parts.length) {
-          osExtraRows.push(
-            `<tr><th>TPM</th><td>${escapeHtml(parts.join(" • "))}</td></tr>`
-          );
-          added = true;
-        }
-      }
-    } catch (error) {
-      console.warn("Failed to parse TPM summary:", error);
-    }
-    if (!added) {
-      // Hide meaningless all-null objects, otherwise show trimmed text
-      const compact = raw.replace(/\s+/g, "");
+    const tpmStatus = parseTpmSummary(String(ex.tpm_summary || "").trim());
+    if (tpmStatus) {
+      osExtraRows.push(
+        `<tr><th>TPM</th><td>${escapeHtml(tpmStatus)}</td></tr>`
+      );
+    } else {
+      // Fallback for non-JSON or all-null objects
+      const compact = String(ex.tpm_summary).replace(/\s+/g, "");
       const allNull =
         compact ===
         '{"TpmPresent":null,"TpmReady":null,"ManagedAuthLevel":null,"OwnerAuth":null,"SpecVersion":null}';
-      if (raw && !allNull) {
-        osExtraRows.push(`<tr><th>TPM</th><td>${escapeHtml(raw)}</td></tr>`);
+      if (String(ex.tpm_summary) && !allNull) {
+        osExtraRows.push(
+          `<tr><th>TPM</th><td>${escapeHtml(String(ex.tpm_summary))}</td></tr>`
+        );
       }
     }
   }
@@ -339,38 +354,35 @@ export function renderCPU(info) {
 }
 
 /**
- * Renders the RAM information section HTML.
- * @param {Object} info - System info object
- * @param {Object} ex - Extra Windows-specific data
- * @returns {string} HTML string for RAM section
+ * Creates HTML table rows for RAM modules (DIMMs).
+ * @param {Array} ramModules - Array of RAM module objects
+ * @returns {string} HTML string for DIMM table or empty string
  */
-export function renderRAM(info, ex) {
-  const usedMem = info.memory.used;
-  const totalMem = info.memory.total || 1;
-  const memPct = Math.min(100, Math.round((usedMem / totalMem) * 100));
+function createDimmTable(ramModules) {
+  if (!Array.isArray(ramModules) || !ramModules.length) return "";
 
-  let dimmHtml = "";
-  if (ex && Array.isArray(ex.ram_modules) && ex.ram_modules.length) {
-    const mapFF = (n) => {
-      const m = { 8: "DIMM", 12: "SODIMM" };
-      return n in m ? m[n] : n != null ? String(n) : "-";
-    };
-    const dimmRows = ex.ram_modules
-      .map((module) => {
-        const cap = Number(module?.Capacity || 0);
-        const speed = module?.Speed != null ? `${module.Speed} MHz` : "-";
-        const volt =
-          module?.ConfiguredVoltage != null
-            ? `${Number(module.ConfiguredVoltage) / 1000} V`
-            : "-";
-        const dtype =
-          module?.MemoryType != null ? String(module.MemoryType) : "-";
-        const ff = mapFF(Number(module?.FormFactor));
-        const width =
-          module?.DataWidth != null || module?.TotalWidth != null
-            ? `${module?.DataWidth ?? "-"}/${module?.TotalWidth ?? "-"}`
-            : "-";
-        return `<tr>
+  const mapFF = (n) => {
+    const m = { 8: "DIMM", 12: "SODIMM" };
+    return n in m ? m[n] : n != null ? String(n) : "-";
+  };
+
+  const dimmRows = ramModules
+    .map((module) => {
+      const cap = Number(module?.Capacity || 0);
+      const speed = module?.Speed != null ? `${module.Speed} MHz` : "-";
+      const volt =
+        module?.ConfiguredVoltage != null
+          ? `${(Number(module.ConfiguredVoltage) / 1000).toFixed(2)} V`
+          : "-";
+      const dtype =
+        module?.MemoryType != null ? String(module.MemoryType) : "-";
+      const ff = mapFF(Number(module?.FormFactor));
+      const width =
+        module?.DataWidth != null || module?.TotalWidth != null
+          ? `${module?.DataWidth ?? "-"}/${module?.TotalWidth ?? "-"}`
+          : "-";
+
+      return `<tr>
         <td>${escapeHtml(module?.BankLabel || "-")}</td>
         <td>${escapeHtml(module?.DeviceLocator || "-")}</td>
         <td>${formatBytes(cap)}</td>
@@ -383,21 +395,35 @@ export function renderRAM(info, ex) {
         <td>${volt}</td>
         <td>${width}</td>
       </tr>`;
-      })
-      .join("");
-    dimmHtml = `
-      <div class="table-block">
-        <div class="table-wrap">
-          <table class="table data-table">
-            <thead><tr>
-              <th>Bank</th><th>Locator</th><th>Capacity</th><th>Speed</th><th>Manufacturer</th><th>Part #</th><th>Serial</th><th>Type</th><th>Form</th><th>Voltage</th><th>Width D/T</th>
-            </tr></thead>
-            <tbody>${dimmRows}</tbody>
-          </table>
-        </div>
+    })
+    .join("");
+
+  return `
+    <div class="table-block">
+      <div class="table-wrap">
+        <table class="table data-table">
+          <thead><tr>
+            <th>Bank</th><th>Locator</th><th>Capacity</th><th>Speed</th><th>Manufacturer</th><th>Part #</th><th>Serial</th><th>Type</th><th>Form</th><th>Voltage</th><th>Width D/T</th>
+          </tr></thead>
+          <tbody>${dimmRows}</tbody>
+        </table>
       </div>
-    `;
-  }
+    </div>
+  `;
+}
+
+/**
+ * Renders the RAM information section HTML.
+ * @param {Object} info - System info object
+ * @param {Object} ex - Extra Windows-specific data
+ * @returns {string} HTML string for RAM section
+ */
+export function renderRAM(info, ex) {
+  const usedMem = info.memory.used;
+  const totalMem = info.memory.total || 1;
+  const memPct = Math.min(100, Math.round((usedMem / totalMem) * 100));
+
+  const dimmHtml = createDimmTable(ex?.ram_modules);
 
   const ramHtml = `
     <div class="table-block">
@@ -422,22 +448,21 @@ export function renderRAM(info, ex) {
 }
 
 /**
- * Renders the GPU information section HTML.
- * @param {Object} info - System info object
- * @param {Object} ex - Extra Windows-specific data
- * @returns {string} HTML string for GPU section
+ * Creates GPU information table from standard GPU data.
+ * @param {Array} gpus - Array of GPU objects
+ * @returns {string} HTML table string
  */
-export function renderGPU(info, ex) {
-  let gpuHtml = "";
-  if (info.gpus && info.gpus.length) {
-    const rows = info.gpus
-      .map((gpu) => {
-        const vendor = (gpu.vendor ?? null) !== null ? String(gpu.vendor) : "";
-        const device = (gpu.device ?? null) !== null ? String(gpu.device) : "";
-        const dtype = gpu.device_type || "";
-        const driver = [gpu.driver, gpu.driver_info].filter(Boolean).join(" ");
-        const backend = gpu.backend || "";
-        return `<tr>
+function createGpuTable(gpus) {
+  if (!gpus || !gpus.length) return "";
+
+  const rows = gpus
+    .map((gpu) => {
+      const vendor = (gpu.vendor ?? null) !== null ? String(gpu.vendor) : "";
+      const device = (gpu.device ?? null) !== null ? String(gpu.device) : "";
+      const dtype = gpu.device_type || "";
+      const driver = [gpu.driver, gpu.driver_info].filter(Boolean).join(" ");
+      const backend = gpu.backend || "";
+      return `<tr>
         <td>${escapeHtml(gpu.name)}</td>
         <td>${escapeHtml(vendor || "-")}</td>
         <td>${escapeHtml(device || "-")}</td>
@@ -445,40 +470,71 @@ export function renderGPU(info, ex) {
         <td>${escapeHtml(driver || "-")}</td>
         <td>${escapeHtml(backend || "-")}</td>
       </tr>`;
-      })
-      .join("");
-    gpuHtml = `
-      <div class="table-block">
-        <div class="table-wrap">
-          <table class="table data-table">
-            <thead><tr><th>Name</th><th>Vendor</th><th>Device</th><th>Type</th><th>Driver</th><th>Backend</th></tr></thead>
-            <tbody>${rows}</tbody>
-          </table>
-        </div>
+    })
+    .join("");
+
+  return `
+    <div class="table-block">
+      <div class="table-wrap">
+        <table class="table data-table">
+          <thead><tr><th>Name</th><th>Vendor</th><th>Device</th><th>Type</th><th>Driver</th><th>Backend</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
       </div>
-    `;
-  } else if (ex && Array.isArray(ex.video_ctrl_ex) && ex.video_ctrl_ex.length) {
-    const vRows = ex.video_ctrl_ex
-      .map(
-        (v) => `<tr>
+    </div>
+  `;
+}
+
+/**
+ * Creates GPU information table from Windows video controller data.
+ * @param {Array} videoCtrlEx - Array of video controller objects
+ * @returns {string} HTML table string
+ */
+function createVideoControllerTable(videoCtrlEx) {
+  if (!Array.isArray(videoCtrlEx) || !videoCtrlEx.length) return "";
+
+  const vRows = videoCtrlEx
+    .map(
+      (v) => `<tr>
       <td>${escapeHtml(v?.Name || "-")}</td>
       <td>${v?.AdapterRAM ? formatBytes(Number(v.AdapterRAM)) : "-"}</td>
       <td>${escapeHtml(v?.DriverVersion || "-")}</td>
       <td>${escapeHtml(v?.VideoModeDescription || "-")}</td>
     </tr>`
-      )
-      .join("");
-    gpuHtml = `
-      <div class="table-block">
-        <div class="table-wrap">
-          <table class="table data-table">
-            <thead><tr><th>Name</th><th>VRAM</th><th>Driver</th><th>Mode</th></tr></thead>
-            <tbody>${vRows}</tbody>
-          </table>
-        </div>
+    )
+    .join("");
+
+  return `
+    <div class="table-block">
+      <div class="table-wrap">
+        <table class="table data-table">
+          <thead><tr><th>Name</th><th>VRAM</th><th>Driver</th><th>Mode</th></tr></thead>
+          <tbody>${vRows}</tbody>
+        </table>
       </div>
-    `;
-  } else {
+    </div>
+  `;
+}
+
+/**
+ * Renders the GPU information section HTML.
+ * @param {Object} info - System info object
+ * @param {Object} ex - Extra Windows-specific data
+ * @returns {string} HTML string for GPU section
+ */
+export function renderGPU(info, ex) {
+  let gpuHtml = "";
+
+  // Try standard GPU info first
+  if (info.gpus && info.gpus.length) {
+    gpuHtml = createGpuTable(info.gpus);
+  }
+  // Fallback to Windows video controller data
+  else if (ex && Array.isArray(ex.video_ctrl_ex) && ex.video_ctrl_ex.length) {
+    gpuHtml = createVideoControllerTable(ex.video_ctrl_ex);
+  }
+  // No GPU info available
+  else {
     gpuHtml = `
       <div class="table-block">
         <div class="table-wrap">
@@ -487,17 +543,17 @@ export function renderGPU(info, ex) {
       </div>
     `;
   }
+
   return gpuHtml;
 }
 
 /**
- * Renders the storage information section HTML.
- * @param {Object} info - System info object
- * @param {Object} ex - Extra Windows-specific data
- * @returns {string} HTML string for storage section
+ * Creates storage disk information table.
+ * @param {Array} disks - Array of disk objects
+ * @returns {string} HTML table string
  */
-export function renderStorage(info, ex) {
-  let storageHtml = `
+function createDiskTable(disks) {
+  return `
     <div class="table-block">
       <div class="table-wrap">
         <table class="table data-table">
@@ -507,7 +563,7 @@ export function renderStorage(info, ex) {
             </tr>
           </thead>
           <tbody>
-            ${info.disks
+            ${disks
               .map((disk) => {
                 const used = Math.max(
                   0,
@@ -546,31 +602,51 @@ export function renderStorage(info, ex) {
       </div>
     </div>
   `;
-  if (ex && Array.isArray(ex.disk_drives) && ex.disk_drives.length) {
-    const ddRows = ex.disk_drives
-      .map(
-        (drive) => `<tr>
+}
+
+/**
+ * Creates disk drive information table from Windows data.
+ * @param {Array} diskDrives - Array of disk drive objects
+ * @returns {string} HTML table string or empty string
+ */
+function createDiskDriveTable(diskDrives) {
+  if (!Array.isArray(diskDrives) || !diskDrives.length) return "";
+
+  const ddRows = diskDrives
+    .map(
+      (drive) => `<tr>
       <td>${escapeHtml(drive?.Model || "-")}</td>
       <td>${escapeHtml(drive?.InterfaceType || "-")}</td>
       <td>${escapeHtml(drive?.MediaType || "-")}</td>
       <td>${drive?.Size ? formatBytes(Number(drive.Size)) : "-"}</td>
     </tr>`
-      )
-      .join("");
-    storageHtml += `
-      <div class="table-block">
-        <div class="table-wrap">
-          <table class="table data-table">
-            <thead>
-              <tr><th>Model</th><th>Interface</th><th>Media Type</th><th>Size</th></tr>
-            </thead>
-            <tbody>${ddRows}</tbody>
-          </table>
-        </div>
+    )
+    .join("");
+
+  return `
+    <div class="table-block">
+      <div class="table-wrap">
+        <table class="table data-table">
+          <thead>
+            <tr><th>Model</th><th>Interface</th><th>Media Type</th><th>Size</th></tr>
+          </thead>
+          <tbody>${ddRows}</tbody>
+        </table>
       </div>
-    `;
-  }
-  return storageHtml;
+    </div>
+  `;
+}
+
+/**
+ * Renders the storage information section HTML.
+ * @param {Object} info - System info object
+ * @param {Object} ex - Extra Windows-specific data
+ * @returns {string} HTML string for storage section
+ */
+export function renderStorage(info, ex) {
+  const storageHtml = createDiskTable(info.disks);
+  const diskDriveHtml = createDiskDriveTable(ex?.disk_drives);
+  return storageHtml + diskDriveHtml;
 }
 
 /**
@@ -621,6 +697,19 @@ export function renderNetwork(info) {
 }
 
 /**
+ * Calculates battery health status and label.
+ * @param {number|null} healthPct - Battery health percentage
+ * @returns {Object} Object with class and label
+ */
+function getBatteryHealth(healthPct) {
+  if (healthPct == null) return { class: "", label: "" };
+
+  if (healthPct >= 80) return { class: "ok", label: "Good" };
+  if (healthPct >= 60) return { class: "", label: "Fair" };
+  return { class: "warn", label: "Poor" };
+}
+
+/**
  * Renders the battery information section HTML.
  * @param {Object} info - System info object
  * @returns {string} HTML string for battery section
@@ -632,57 +721,37 @@ export function renderBattery(info) {
     ? [info.battery]
     : [];
 
-  let battHtml = "";
   if (!batteries.length) {
-    battHtml = `
+    return `
       <div class="table-block">
         <div class="table-wrap">
           <div class="empty-state">No batteries detected</div>
         </div>
       </div>
     `;
-  } else {
-    battHtml = batteries
-      .map((battery, index) => {
-        const pct = battery.percentage ?? 0;
-        const stateBadgeClass = pct >= 50 ? "ok" : pct >= 20 ? "" : "warn";
-        const idBits = [battery.vendor, battery.model]
-          .filter(Boolean)
-          .join(" ");
-        const details = [
-          battery.cycle_count != null ? `${battery.cycle_count} cycles` : null,
-          battery.voltage_v != null
-            ? `${battery.voltage_v.toFixed(2)} V`
-            : null,
-          battery.energy_full_wh != null
-            ? `Full ${battery.energy_full_wh.toFixed(1)} Wh`
-            : null,
-          battery.energy_full_design_wh != null
-            ? `Design ${battery.energy_full_design_wh.toFixed(1)} Wh`
-            : null,
-        ]
-          .filter(Boolean)
-          .join(" • ");
+  }
 
-        const healthPct = battery.state_of_health_pct;
-        const healthClass =
-          healthPct == null
-            ? ""
-            : healthPct >= 80
-            ? "ok"
-            : healthPct >= 60
-            ? ""
-            : "warn";
-        const healthLabel =
-          healthPct == null
-            ? ""
-            : healthPct >= 80
-            ? "Good"
-            : healthPct >= 60
-            ? "Fair"
-            : "Poor";
+  return batteries
+    .map((battery, index) => {
+      const pct = battery.percentage ?? 0;
+      const stateBadgeClass = pct >= 50 ? "ok" : pct >= 20 ? "" : "warn";
+      const idBits = [battery.vendor, battery.model].filter(Boolean).join(" ");
+      const details = [
+        battery.cycle_count != null ? `${battery.cycle_count} cycles` : null,
+        battery.voltage_v != null ? `${battery.voltage_v.toFixed(2)} V` : null,
+        battery.energy_full_wh != null
+          ? `Full ${battery.energy_full_wh.toFixed(1)} Wh`
+          : null,
+        battery.energy_full_design_wh != null
+          ? `Design ${battery.energy_full_design_wh.toFixed(1)} Wh`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" • ");
 
-        return `
+      const health = getBatteryHealth(battery.state_of_health_pct);
+
+      return `
       <div class="table-block">
         <div class="table-wrap">
           <table class="table kv-table">
@@ -691,8 +760,8 @@ export function renderBattery(info) {
                 batteries.length > 1 ? `(Battery ${index + 1})` : ""
               }</th>
                 <td><span class="badge ${stateBadgeClass}">${pct.toFixed(
-          0
-        )}%</span>
+        0
+      )}%</span>
                   <span class="muted" style="margin-left:8px;">${escapeHtml(
                     battery.state || "-"
                   )}</span></td></tr>
@@ -716,12 +785,14 @@ export function renderBattery(info) {
                   : ""
               }
               ${
-                healthPct != null
-                  ? `<tr><th>Health</th><td><span class="badge ${healthClass}">${Number(
-                      healthPct
-                    ).toFixed(0)}%</span>${
-                      healthLabel
-                        ? ` <span class="muted" style="margin-left:8px;">${healthLabel}</span>`
+                battery.state_of_health_pct != null
+                  ? `<tr><th>Health</th><td><span class="badge ${
+                      health.class
+                    }">${Number(battery.state_of_health_pct).toFixed(
+                      0
+                    )}%</span>${
+                      health.label
+                        ? ` <span class="muted" style="margin-left:8px;">${health.label}</span>`
                         : ""
                     }</td></tr>`
                   : ""
@@ -750,8 +821,6 @@ export function renderBattery(info) {
         </div>
       </div>
     `;
-      })
-      .join("");
-  }
-  return battHtml;
+    })
+    .join("");
 }

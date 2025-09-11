@@ -12,7 +12,6 @@
  * - Real-time refresh functionality
  * - Windows-specific enhancements (OS caption, TPM, etc.)
  * - Responsive progress bars and badges for usage metrics
- * - Amazing spaghetti code 👽
  */
 
 // Tauri API imports
@@ -48,6 +47,36 @@ import {
 } from "./renderers.js";
 
 /**
+ * Enhances system info with Windows-specific data like OS caption.
+ * @param {Object} info - System info object
+ * @returns {Promise<Object>} Enhanced system info
+ */
+async function enhanceWindowsInfo(info) {
+  if (!Command || !navigator.userAgent.includes("Windows")) {
+    return info;
+  }
+
+  try {
+    const psArgs = [
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-Command",
+      "wmic os get Caption | more +1",
+    ];
+    const cmd = await Command.create("powershell", psArgs).execute();
+    const osCaption = (cmd?.stdout || "").trim();
+    if (osCaption) {
+      info.os = osCaption;
+    }
+  } catch (error) {
+    console.warn("Failed to get Windows OS caption:", error);
+  }
+
+  return info;
+}
+
+/**
  * Main render function that builds the entire system info UI.
  * @param {Object} info - System info object from Tauri backend
  */
@@ -73,52 +102,30 @@ function render(info) {
     </div>
   `;
 
+  // Define sections to render with their render functions
+  const sections = [
+    { title: "OS Info", renderFunc: () => renderOS(info, ex) },
+    { title: "System", renderFunc: () => renderSystem(info), condition: true },
+    {
+      title: "Motherboard",
+      renderFunc: () => renderMotherboard(info, ex),
+      condition: true,
+    },
+    { title: "CPU", renderFunc: () => renderCPU(info) },
+    { title: "RAM", renderFunc: () => renderRAM(info, ex) },
+    { title: "GPU", renderFunc: () => renderGPU(info, ex) },
+    { title: "Storage", renderFunc: () => renderStorage(info, ex) },
+    { title: "Network", renderFunc: () => renderNetwork(info) },
+    { title: "Battery", renderFunc: () => renderBattery(info) },
+  ];
+
   // Render each section
-  section.insertAdjacentHTML(
-    "beforeend",
-    makeCollapsible("OS Info", renderOS(info, ex))
-  );
-
-  const systemHtml = renderSystem(info);
-  if (systemHtml) {
-    section.insertAdjacentHTML(
-      "beforeend",
-      makeCollapsible("System", systemHtml)
-    );
-  }
-
-  const motherboardHtml = renderMotherboard(info, ex);
-  if (motherboardHtml) {
-    section.insertAdjacentHTML(
-      "beforeend",
-      makeCollapsible("Motherboard", motherboardHtml)
-    );
-  }
-
-  section.insertAdjacentHTML(
-    "beforeend",
-    makeCollapsible("CPU", renderCPU(info))
-  );
-  section.insertAdjacentHTML(
-    "beforeend",
-    makeCollapsible("RAM", renderRAM(info, ex))
-  );
-  section.insertAdjacentHTML(
-    "beforeend",
-    makeCollapsible("GPU", renderGPU(info, ex))
-  );
-  section.insertAdjacentHTML(
-    "beforeend",
-    makeCollapsible("Storage", renderStorage(info, ex))
-  );
-  section.insertAdjacentHTML(
-    "beforeend",
-    makeCollapsible("Network", renderNetwork(info))
-  );
-  section.insertAdjacentHTML(
-    "beforeend",
-    makeCollapsible("Battery", renderBattery(info))
-  );
+  sections.forEach(({ title, renderFunc, condition = true }) => {
+    const html = renderFunc();
+    if (condition && html) {
+      section.insertAdjacentHTML("beforeend", makeCollapsible(title, html));
+    }
+  });
 
   // Bind refresh button
   const btn = $("#sysinfo-refresh-btn");
@@ -128,24 +135,8 @@ function render(info) {
       btn.innerHTML =
         '<span class="spinner sm" aria-hidden="true"></span><span style="margin-left:8px;">Refreshing…</span>';
       try {
-        const data = await invoke("get_system_info");
-        // Windows OS caption enhancement
-        if (Command && navigator.userAgent.includes("Windows")) {
-          try {
-            const psArgs = [
-              "-NoProfile",
-              "-ExecutionPolicy",
-              "Bypass",
-              "-Command",
-              "wmic os get Caption | more +1",
-            ];
-            const cmd = await Command.create("powershell", psArgs).execute();
-            const osCaption = (cmd?.stdout || "").trim();
-            if (osCaption) data.os = osCaption;
-          } catch (error) {
-            console.warn("Failed to get Windows OS caption:", error);
-          }
-        }
+        let data = await invoke("get_system_info");
+        data = await enhanceWindowsInfo(data);
         const now = Date.now();
         saveCache(data, now);
         render(data);
@@ -155,11 +146,9 @@ function render(info) {
     });
   }
 
-  // Initialize collapsibles
+  // Initialize UI components
   initCollapsibles(section);
   setLastRefreshedLabel(section, getCacheTimestamp());
-
-  // Toggle all functionality
   setupToggleAll(section);
 }
 
@@ -172,6 +161,7 @@ export async function initPage() {
   const container = $('[data-page="system-info"]');
   if (!container) return;
 
+  // Show loading skeleton
   const skel = document.createElement("div");
   skel.className = "loading center";
   skel.innerHTML = `
@@ -191,31 +181,15 @@ export async function initPage() {
       return;
     }
 
-    // Fetch fresh data
-    const info = await invoke("get_system_info");
-
-    // Windows OS caption enhancement
-    if (Command && navigator.userAgent.includes("Windows")) {
-      try {
-        const psArgs = [
-          "-NoProfile",
-          "-ExecutionPolicy",
-          "Bypass",
-          "-Command",
-          "wmic os get Caption | more +1",
-        ];
-        const cmd = await Command.create("powershell", psArgs).execute();
-        const osCaption = (cmd?.stdout || "").trim();
-        if (osCaption) info.os = osCaption;
-      } catch (error) {
-        console.warn("Failed to get Windows OS caption:", error);
-      }
-    }
+    // Fetch fresh data and enhance for Windows
+    let info = await invoke("get_system_info");
+    info = await enhanceWindowsInfo(info);
 
     const now = Date.now();
     saveCache(info, now);
     render(info);
   } catch (error) {
+    // Show error state
     container.innerHTML = `
       <section class="page">
         <h1>System Info</h1>
@@ -242,26 +216,8 @@ export function prewarmSystemInfo({ force = false } = {}) {
   // Start background fetch
   const promise = (async () => {
     try {
-      const info = await invoke("get_system_info");
-
-      // Windows OS caption enhancement
-      if (Command && navigator.userAgent.includes("Windows")) {
-        try {
-          const psArgs = [
-            "-NoProfile",
-            "-ExecutionPolicy",
-            "Bypass",
-            "-Command",
-            "wmic os get Caption | more +1",
-          ];
-          const cmd = await Command.create("powershell", psArgs).execute();
-          const osCaption = (cmd?.stdout || "").trim();
-          if (osCaption) info.os = osCaption;
-        } catch (error) {
-          console.warn("Failed to get Windows OS caption:", error);
-        }
-      }
-
+      let info = await invoke("get_system_info");
+      info = await enhanceWindowsInfo(info);
       saveCache(info, Date.now());
       return info;
     } catch (error) {
