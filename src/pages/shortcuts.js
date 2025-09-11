@@ -1,7 +1,19 @@
-// Controller for Shortcuts page: renders categories and wires up search + invoke
+/**
+ * Initializes the Shortcuts page by setting up the UI, event listeners, and rendering shortcuts.
+ * This function handles the display of categorized Windows system tools and utilities,
+ * provides search functionality, and manages the invocation of shortcuts via Tauri backend.
+ *
+ * @async
+ * @returns {Promise<void>} Resolves when the page initialization is complete.
+ */
 export async function initPage() {
   const { invoke } = window.__TAURI__.core;
 
+  /**
+   * Array of shortcut categories, each containing a title and a list of items.
+   * Each item has an id (used for backend invocation), label (display text), and icon (Phosphor icon name).
+   * @type {Array<{title: string, items: Array<{id: string, label: string, icon: string}>}>}
+   */
   const CATEGORIES = [
     {
       title: "Control Panel & Settings",
@@ -188,72 +200,143 @@ export async function initPage() {
     },
   ];
 
-  const container = document.getElementById("shortcut-list");
-  const search = document.getElementById("shortcut-search");
-  const clearBtn = document.getElementById("clear-search");
+  // DOM elements for the shortcuts list, search input, and clear button
+  const shortcutsContainer = document.getElementById("shortcut-list");
+  const searchInput = document.getElementById("shortcut-search");
+  const clearSearchButton = document.getElementById("clear-search");
 
-  function render(list) {
-    container.innerHTML = "";
-    for (const cat of list) {
-      const section = document.createElement("section");
-      section.className = "category";
-      section.innerHTML = `
-        <div class="category-header"><h2>${cat.title}</h2></div>
-        <div class="shortcut-grid"></div>
-      `;
-      const grid = section.querySelector(".shortcut-grid");
-      for (const item of cat.items) {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "shortcut-btn";
-        btn.title = item.label;
-        // Allow wrapping on larger buttons
-        btn.style.whiteSpace = "normal";
-        btn.style.wordBreak = "break-word";
-        const iconEl = document.createElement("i");
-        // Convert PascalCase icon name to kebab-case for phosphor web classes
-        const kebab = (item.icon || "Gear")
-          .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
-          .toLowerCase();
-        iconEl.className = `ph ph-${kebab} ph-icon`;
-        const spanText = document.createElement("span");
-        spanText.textContent = item.label;
-        btn.appendChild(iconEl);
-        btn.appendChild(spanText);
-        btn.addEventListener("click", async () => {
-          btn.disabled = true;
-          try {
-            await invoke("launch_shortcut", { id: item.id });
-          } catch (e) {
-            console.error(e);
-            alert(`Failed to launch: ${item.label}`);
-          } finally {
-            btn.disabled = false;
-          }
-        });
-        grid.appendChild(btn);
+  /**
+   * Renders the list of categories and their shortcuts into the DOM.
+   * Clears the container and rebuilds the UI based on the provided categories.
+   *
+   * @param {Array} categoriesList - The list of categories to render.
+   */
+  function renderShortcuts(categoriesList) {
+    shortcutsContainer.innerHTML = ""; // Clear existing content
+
+    categoriesList.forEach((category) => {
+      const categorySection = createCategorySection(category);
+      shortcutsContainer.appendChild(categorySection);
+    });
+  }
+
+  /**
+   * Creates a DOM section element for a category, including its header and grid of shortcuts.
+   *
+   * @param {Object} category - The category object with title and items.
+   * @param {string} category.title - The title of the category.
+   * @param {Array} category.items - The list of shortcut items.
+   * @returns {HTMLElement} The created section element.
+   */
+  function createCategorySection(category) {
+    const section = document.createElement("section");
+    section.className = "category";
+    section.innerHTML = `
+      <div class="category-header"><h2>${category.title}</h2></div>
+      <div class="shortcut-grid"></div>
+    `;
+
+    const grid = section.querySelector(".shortcut-grid");
+    category.items.forEach((item) => {
+      const button = createShortcutButton(item);
+      grid.appendChild(button);
+    });
+
+    return section;
+  }
+
+  /**
+   * Creates a button element for a shortcut item, including icon, label, and click handler.
+   *
+   * @param {Object} item - The shortcut item with id, label, and icon.
+   * @param {string} item.id - The unique identifier for the shortcut.
+   * @param {string} item.label - The display label for the shortcut.
+   * @param {string} item.icon - The Phosphor icon name.
+   * @returns {HTMLElement} The created button element.
+   */
+  function createShortcutButton(item) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "shortcut-btn";
+    button.title = item.label;
+    // Allow text wrapping for better layout on smaller screens
+    button.style.whiteSpace = "normal";
+    button.style.wordBreak = "break-word";
+
+    // Create and append the icon element
+    const iconElement = document.createElement("i");
+    const iconClass = convertIconNameToKebabCase(item.icon || "Gear");
+    iconElement.className = `ph ph-${iconClass} ph-icon`;
+    button.appendChild(iconElement);
+
+    // Create and append the text span
+    const textSpan = document.createElement("span");
+    textSpan.textContent = item.label;
+    button.appendChild(textSpan);
+
+    // Add click event listener to invoke the shortcut via Tauri backend
+    button.addEventListener("click", async () => {
+      button.disabled = true; // Disable button during invocation
+      try {
+        await invoke("launch_shortcut", { id: item.id });
+      } catch (error) {
+        console.error("Error launching shortcut:", error);
+        alert(`Failed to launch: ${item.label}`);
+      } finally {
+        button.disabled = false; // Re-enable button
       }
-      container.appendChild(section);
-    }
+    });
+
+    return button;
   }
 
-  function filterCategories(q) {
-    if (!q) return CATEGORIES;
-    const s = q.toLowerCase();
-    return CATEGORIES.map((cat) => ({
-      title: cat.title,
-      items: cat.items.filter((it) => it.label.toLowerCase().includes(s)),
-    })).filter((cat) => cat.items.length > 0);
+  /**
+   * Converts a PascalCase icon name to kebab-case for CSS class usage.
+   *
+   * @param {string} iconName - The icon name in PascalCase.
+   * @returns {string} The icon name in kebab-case.
+   */
+  function convertIconNameToKebabCase(iconName) {
+    return iconName.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
   }
 
-  render(CATEGORIES);
-  search?.addEventListener("input", () =>
-    render(filterCategories(search.value))
-  );
-  clearBtn?.addEventListener("click", () => {
-    if (!search) return;
-    search.value = "";
-    render(CATEGORIES);
-    search.focus();
-  });
+  /**
+   * Filters the categories based on a search query.
+   * Returns categories that have items matching the query (case-insensitive).
+   *
+   * @param {string} query - The search query string.
+   * @returns {Array} The filtered list of categories.
+   */
+  function filterCategoriesByQuery(query) {
+    if (!query) return CATEGORIES;
+
+    const lowerQuery = query.toLowerCase();
+    return CATEGORIES.map((category) => ({
+      title: category.title,
+      items: category.items.filter((item) =>
+        item.label.toLowerCase().includes(lowerQuery)
+      ),
+    })).filter((category) => category.items.length > 0);
+  }
+
+  // Initial render of all categories
+  renderShortcuts(CATEGORIES);
+
+  // Set up search input event listener for dynamic filtering
+  if (searchInput) {
+    searchInput.addEventListener("input", () => {
+      const filteredCategories = filterCategoriesByQuery(searchInput.value);
+      renderShortcuts(filteredCategories);
+    });
+  }
+
+  // Set up clear search button event listener
+  if (clearSearchButton) {
+    clearSearchButton.addEventListener("click", () => {
+      if (!searchInput) return;
+      searchInput.value = "";
+      renderShortcuts(CATEGORIES);
+      searchInput.focus();
+    });
+  }
 }
