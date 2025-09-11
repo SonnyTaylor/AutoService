@@ -15,10 +15,12 @@ const baseRoutes = [
   "settings",
 ];
 
-function allRoutes() { return [...baseRoutes, ...dynamicTechRoutes]; }
+function allRoutes() {
+  return [...baseRoutes, ...dynamicTechRoutes];
+}
 
 function normalizeHash() {
-  const hash = window.location.hash || "#\/service";
+  const hash = window.location.hash || "#/service";
   // ensure format #/route[?query]
   if (!hash.startsWith("#/")) return "#/service";
   const route = hash.slice(2);
@@ -34,40 +36,49 @@ async function loadPage(route) {
   try {
     // map logical routes to foldered page files
     const pathMap = {
-      service: 'service/index',
-      'service-run': 'service/run',
-      'service-report': 'service/report',
+      service: "service/index",
+      "service-run": "service/run",
+      "service-report": "service/report",
+    };
+    // map logical routes to HTML files (different from scripts for some cases)
+    const htmlMap = {
+      "system-info": "system-info/system-info",
+    };
+    // map logical routes to script files (different from HTML for some cases)
+    const scriptMap = {
+      "system-info": "system-info/index",
     };
     if (nameIsDynamicTech(route)) {
       // dynamic technician pages are now shown in a persistent iframe container
       try {
         const mod = await import(`./pages/technician-link.js?ts=${Date.now()}`);
-        if (typeof mod.showTechnicianLink === 'function') {
-          await mod.showTechnicianLink(route.replace(/^tech-/, ''));
+        if (typeof mod.showTechnicianLink === "function") {
+          await mod.showTechnicianLink(route.replace(/^tech-/, ""));
           content.setAttribute("aria-busy", "false");
           return;
         }
       } catch {}
     }
-    const pagePath = pathMap[route] || route;
+    const pagePath = htmlMap[route] || pathMap[route] || route;
     const res = await fetch(`pages/${pagePath}.html`, { cache: "no-cache" });
     const html = await res.text();
     // Reset scroll before content change
     window.scrollTo(0, 0);
     content.innerHTML = html;
-    
+
     // Focus the main landmark for a11y but prevent auto-scrolling
     content.focus({ preventScroll: true });
 
     // Ensure any persistent technician webviews are hidden when loading a normal page
     try {
-      const modHide = await import('./pages/technician-link.js');
-      if (typeof modHide.hideTechnicianLinks === 'function') modHide.hideTechnicianLinks();
+      const modHide = await import("./pages/technician-link.js");
+      if (typeof modHide.hideTechnicianLinks === "function")
+        modHide.hideTechnicianLinks();
     } catch {}
 
     // Try to load optional page controller: /pages/<route>.js
     try {
-      const scriptPath = pathMap[route] || route;
+      const scriptPath = scriptMap[route] || pathMap[route] || route;
       const mod = await import(`./pages/${scriptPath}.js?ts=${Date.now()}`);
       if (typeof mod.initPage === "function") {
         await mod.initPage();
@@ -103,32 +114,39 @@ function onRouteChange() {
   loadPage(name);
 }
 
-function nameIsDynamicTech(name){ return name.startsWith('tech-'); }
+function nameIsDynamicTech(name) {
+  return name.startsWith("tech-");
+}
 
-async function refreshTechnicianTabs(){
+async function refreshTechnicianTabs() {
   // Load settings and rebuild dynamic tabs area
   let settings = {};
-  try { settings = await window.__TAURI__.core.invoke('load_app_settings'); } catch {}
+  try {
+    settings = await window.__TAURI__.core.invoke("load_app_settings");
+  } catch {}
   const links = settings?.technician_links || [];
-  dynamicTechRoutes = links.map(l => `tech-${l.id}`);
-  const nav = document.querySelector('.tab-bar');
+  dynamicTechRoutes = links.map((l) => `tech-${l.id}`);
+  const nav = document.querySelector(".tab-bar");
   if (!nav) return;
   // Remove old dynamic items
-  nav.querySelectorAll('.tab.tech-link').forEach(el => el.remove());
-  nav.querySelectorAll('.tab-divider-tech').forEach(el => el.remove());
-  if (!links.length) { return; }
+  nav.querySelectorAll(".tab.tech-link").forEach((el) => el.remove());
+  nav.querySelectorAll(".tab-divider-tech").forEach((el) => el.remove());
+  if (!links.length) {
+    return;
+  }
   // Insert divider then links
-  const insertPoint = nav.querySelector('.tab-dynamic-insert-point');
-  const divider = document.createElement('span');
-  divider.className = 'tab-divider-tech';
-  divider.style.cssText = 'display:inline-block;width:1px;height:24px;background:var(--border-color,#444);margin:0 4px;align-self:center;';
+  const insertPoint = nav.querySelector(".tab-dynamic-insert-point");
+  const divider = document.createElement("span");
+  divider.className = "tab-divider-tech";
+  divider.style.cssText =
+    "display:inline-block;width:1px;height:24px;background:var(--border-color,#444);margin:0 4px;align-self:center;";
   insertPoint?.before(divider);
-  links.forEach(link => {
-    const a = document.createElement('a');
-    a.className = 'tab tech-link';
+  links.forEach((link) => {
+    const a = document.createElement("a");
+    a.className = "tab tech-link";
     a.textContent = link.title || link.url;
     a.href = `#/tech-${link.id}`;
-    a.setAttribute('data-route', `tech-${link.id}`);
+    a.setAttribute("data-route", `tech-${link.id}`);
     insertPoint?.before(a);
   });
 }
@@ -139,8 +157,8 @@ window.addEventListener("DOMContentLoaded", () => {
   // Background prewarm of system info so navigating there is instant.
   (async () => {
     try {
-      const mod = await import('./pages/system-info.js');
-      if (typeof mod.prewarmSystemInfo === 'function') {
+      const mod = await import("./pages/system-info/index.js");
+      if (typeof mod.prewarmSystemInfo === "function") {
         mod.prewarmSystemInfo();
       }
     } catch {}
@@ -149,11 +167,17 @@ window.addEventListener("DOMContentLoaded", () => {
   const { getCurrentWindow } = window.__TAURI__.window || {};
   if (getCurrentWindow) {
     const appWindow = getCurrentWindow();
-    document.getElementById('titlebar-minimize')?.addEventListener('click', () => appWindow.minimize());
-    document.getElementById('titlebar-maximize')?.addEventListener('click', () => appWindow.toggleMaximize());
-    document.getElementById('titlebar-close')?.addEventListener('click', () => appWindow.close());
+    document
+      .getElementById("titlebar-minimize")
+      ?.addEventListener("click", () => appWindow.minimize());
+    document
+      .getElementById("titlebar-maximize")
+      ?.addEventListener("click", () => appWindow.toggleMaximize());
+    document
+      .getElementById("titlebar-close")
+      ?.addEventListener("click", () => appWindow.close());
   }
   refreshTechnicianTabs();
   // Listen for custom event to refresh tabs when settings change
-  window.addEventListener('technician-links-updated', refreshTechnicianTabs);
+  window.addEventListener("technician-links-updated", refreshTechnicianTabs);
 });

@@ -1,193 +1,14 @@
 /**
- * System Information Page Module
- *
- * This module handles fetching, caching, and displaying comprehensive system
- * hardware and software information in a user-friendly web interface.
- * It provides collapsible sections for different system components with
- * real-time data visualization and refresh capabilities.
- *
- * Features:
- * - Session-based caching to avoid repeated system queries
- * - Collapsible sections for organized information display
- * - Real-time refresh functionality
- * - Windows-specific enhancements (OS caption, TPM, etc.)
- * - Responsive progress bars and badges for usage metrics
- * - Amazing spaghetti code 👽
+ * Render functions for different system information sections
  */
 
-// Tauri API imports
-const { invoke } = window.__TAURI__.core;
-const { Command } = window.__TAURI__?.shell || {};
-
-// DOM utility function
-/**
- * Simple DOM query selector with optional root element.
- * @param {string} selector - CSS selector
- * @param {Element} root - Root element to search in (defaults to document)
- * @returns {Element|null} Found element or null
- */
-function $(selector, root = document) {
-  return root.querySelector(selector);
-}
-
-// Cache management constants and variables
-const CACHE_KEY = "sysinfo.cache.v1";
-const CACHE_TS_KEY = "sysinfo.cache.ts.v1";
-let sysinfoCache = null; // Cached system info object
-let sysinfoCacheTs = null; // Timestamp of cache (milliseconds)
-let prewarmPromise = null; // Background fetch promise
-
-/**
- * Loads cached system info from sessionStorage.
- */
-function loadCache() {
-  try {
-    const raw = sessionStorage.getItem(CACHE_KEY);
-    const ts = Number(sessionStorage.getItem(CACHE_TS_KEY) || "");
-    if (raw) {
-      sysinfoCache = JSON.parse(raw);
-      sysinfoCacheTs = Number.isFinite(ts) ? ts : null;
-    }
-  } catch (error) {
-    console.warn("Failed to load system info cache:", error);
-  }
-}
-
-/**
- * Saves system info to cache and sessionStorage.
- * @param {Object} info - System info object to cache
- * @param {number} ts - Timestamp in milliseconds
- */
-function saveCache(info, ts) {
-  sysinfoCache = info;
-  sysinfoCacheTs = ts;
-  try {
-    sessionStorage.setItem(CACHE_KEY, JSON.stringify(info));
-    sessionStorage.setItem(CACHE_TS_KEY, String(ts));
-  } catch (error) {
-    console.warn("Failed to save system info cache:", error);
-  }
-}
-
-/**
- * Formats a timestamp to short time string (HH:MM).
- * @param {number} ms - Timestamp in milliseconds
- * @returns {string} Formatted time string or empty string
- */
-function formatTimeShort(ms) {
-  if (!ms) return "";
-  try {
-    const date = new Date(ms);
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  } catch (error) {
-    console.warn("Failed to format timestamp:", error);
-    return "";
-  }
-}
-
-/**
- * Updates the "last refreshed" label in the UI.
- * @param {Element} container - Container element to search for the label
- * @param {number} ms - Timestamp in milliseconds
- */
-function setLastRefreshedLabel(container, ms) {
-  const el = container.querySelector("#sysinfo-last-refreshed");
-  if (!el) return;
-  if (!ms) {
-    el.textContent = "";
-    return;
-  }
-  el.textContent = `Updated ${formatTimeShort(ms)}`;
-}
-
-/**
- * Creates HTML for a collapsible section.
- * @param {string} title - Section title
- * @param {string} contentHtml - HTML content for the section body
- * @returns {string} Complete HTML string for the collapsible section
- */
-function makeCollapsible(title, contentHtml) {
-  const id = `c${Math.random().toString(36).slice(2, 8)}`;
-  return `
-    <div class="collapsible" data-id="${id}">
-      <div class="collapsible-header" role="button" tabindex="0" aria-expanded="true">
-        <span class="chevron" aria-hidden="true" style="display:inline-block; width:1.2em;">▾</span>
-        <span class="title">${escapeHtml(title)}</span>
-      </div>
-      <div class="collapsible-body">
-        ${contentHtml}
-      </div>
-    </div>
-  `;
-}
-
-/**
- * Initializes collapsible functionality for all headers in a container.
- * @param {Element} container - Container element containing collapsible sections
- */
-function initCollapsibles(container) {
-  const headers = container.querySelectorAll(".collapsible-header");
-  headers.forEach((header) => {
-    const onToggle = () => {
-      const body = header.nextElementSibling;
-      const chevron = header.querySelector(".chevron");
-      const expanded = header.getAttribute("aria-expanded") === "true";
-      header.setAttribute("aria-expanded", expanded ? "false" : "true");
-      if (body) body.style.display = expanded ? "none" : "";
-      if (chevron) chevron.textContent = expanded ? "▸" : "▾";
-    };
-    header.addEventListener("click", onToggle);
-    header.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        onToggle();
-      }
-    });
-  });
-}
-
-/**
- * Formats bytes into human-readable units (B, KB, MB, etc.).
- * @param {number} bytes - Number of bytes
- * @returns {string} Formatted string or "-" if invalid
- */
-function formatBytes(bytes) {
-  if (!Number.isFinite(bytes)) return "-";
-  const units = ["B", "KB", "MB", "GB", "TB", "PB"];
-  let i = 0;
-  let value = bytes;
-  while (value >= 1024 && i < units.length - 1) {
-    value /= 1024;
-    i++;
-  }
-  return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[i]}`;
-}
-
-/**
- * Formats a ratio as a percentage.
- * @param {number} n - Numerator
- * @param {number} total - Denominator
- * @returns {string} Percentage string or "-" if invalid
- */
-function formatPct(n, total) {
-  if (!total) return "-";
-  return `${Math.round((n / total) * 100)}%`;
-}
-
-/**
- * Formats duration in seconds to human-readable string.
- * @param {number} seconds - Duration in seconds
- * @returns {string} Formatted duration string or "-" if null
- */
-function formatDuration(seconds) {
-  if (seconds == null) return "-";
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = Math.floor(seconds % 60);
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  if (minutes > 0) return `${minutes}m ${secs}s`;
-  return `${secs}s`;
-}
+import {
+  formatBytes,
+  formatPct,
+  formatDuration,
+  escapeHtml,
+} from "./formatters.js";
+import { makeCollapsible } from "./ui.js";
 
 /**
  * Renders the OS information section HTML.
@@ -195,7 +16,7 @@ function formatDuration(seconds) {
  * @param {Object} ex - Extra Windows-specific data
  * @returns {string} HTML string for OS section
  */
-function renderOS(info, ex) {
+export function renderOS(info, ex) {
   const osExtraRows = [];
 
   // Domain information (Windows-specific)
@@ -299,7 +120,7 @@ function renderOS(info, ex) {
  * @param {Object} info - System info object
  * @returns {string} HTML string for system section or empty string if no data
  */
-function renderSystem(info) {
+export function renderSystem(info) {
   if (!info.product) return "";
 
   const sysHtml = `
@@ -370,7 +191,7 @@ function renderSystem(info) {
  * @param {Object} ex - Extra Windows-specific data
  * @returns {string} HTML string for motherboard section or empty string if no data
  */
-function renderMotherboard(info, ex) {
+export function renderMotherboard(info, ex) {
   if (!info.motherboard) return "";
 
   const biosRows = [];
@@ -442,7 +263,7 @@ function renderMotherboard(info, ex) {
  * @param {Object} info - System info object
  * @returns {string} HTML string for CPU section
  */
-function renderCPU(info) {
+export function renderCPU(info) {
   const cores = info.cpu.cores || [];
   const avgCpu = cores.length
     ? Math.max(
@@ -523,7 +344,7 @@ function renderCPU(info) {
  * @param {Object} ex - Extra Windows-specific data
  * @returns {string} HTML string for RAM section
  */
-function renderRAM(info, ex) {
+export function renderRAM(info, ex) {
   const usedMem = info.memory.used;
   const totalMem = info.memory.total || 1;
   const memPct = Math.min(100, Math.round((usedMem / totalMem) * 100));
@@ -606,7 +427,7 @@ function renderRAM(info, ex) {
  * @param {Object} ex - Extra Windows-specific data
  * @returns {string} HTML string for GPU section
  */
-function renderGPU(info, ex) {
+export function renderGPU(info, ex) {
   let gpuHtml = "";
   if (info.gpus && info.gpus.length) {
     const rows = info.gpus
@@ -675,7 +496,7 @@ function renderGPU(info, ex) {
  * @param {Object} ex - Extra Windows-specific data
  * @returns {string} HTML string for storage section
  */
-function renderStorage(info, ex) {
+export function renderStorage(info, ex) {
   let storageHtml = `
     <div class="table-block">
       <div class="table-wrap">
@@ -757,7 +578,7 @@ function renderStorage(info, ex) {
  * @param {Object} info - System info object
  * @returns {string} HTML string for network section
  */
-function renderNetwork(info) {
+export function renderNetwork(info) {
   const netHtml = `
     <div class="table-block">
       <div class="table-wrap">
@@ -804,7 +625,7 @@ function renderNetwork(info) {
  * @param {Object} info - System info object
  * @returns {string} HTML string for battery section
  */
-function renderBattery(info) {
+export function renderBattery(info) {
   const batteries = Array.isArray(info.batteries)
     ? info.batteries
     : info.battery
@@ -933,289 +754,4 @@ function renderBattery(info) {
       .join("");
   }
   return battHtml;
-}
-
-/**
- * Main render function that builds the entire system info UI.
- * @param {Object} info - System info object from Tauri backend
- */
-function render(info) {
-  const root = document.querySelector('[data-page="system-info"]');
-  if (!root) return;
-
-  const ex = info.extra || null;
-
-  // Find or create the main section
-  const section = document.querySelector(
-    'section.page[data-page="system-info"]'
-  );
-  section.innerHTML = `
-    <div style="display:flex; align-items:center; gap:10px; justify-content: space-between; flex-wrap: wrap;">
-      <div>
-        <h1 style="margin-bottom:4px;">System Info</h1>
-        <p class="muted" style="margin:0;">Hardware, software, and drivers at a glance.</p>
-      </div>
-      <div style="display:flex; gap:8px; flex-wrap: wrap;">
-        <button id="sysinfo-toggle-all-btn" class="ghost">Collapse all</button>
-        <button id="sysinfo-refresh-btn" class="ghost">Refresh</button>
-        <span id="sysinfo-last-refreshed" class="muted" style="font-size:.85rem; align-self:center;"></span>
-      </div>
-    </div>
-  `;
-
-  // Render each section
-  section.insertAdjacentHTML(
-    "beforeend",
-    makeCollapsible("OS Info", renderOS(info, ex))
-  );
-
-  const systemHtml = renderSystem(info);
-  if (systemHtml) {
-    section.insertAdjacentHTML(
-      "beforeend",
-      makeCollapsible("System", systemHtml)
-    );
-  }
-
-  const motherboardHtml = renderMotherboard(info, ex);
-  if (motherboardHtml) {
-    section.insertAdjacentHTML(
-      "beforeend",
-      makeCollapsible("Motherboard", motherboardHtml)
-    );
-  }
-
-  section.insertAdjacentHTML(
-    "beforeend",
-    makeCollapsible("CPU", renderCPU(info))
-  );
-  section.insertAdjacentHTML(
-    "beforeend",
-    makeCollapsible("RAM", renderRAM(info, ex))
-  );
-  section.insertAdjacentHTML(
-    "beforeend",
-    makeCollapsible("GPU", renderGPU(info, ex))
-  );
-  section.insertAdjacentHTML(
-    "beforeend",
-    makeCollapsible("Storage", renderStorage(info, ex))
-  );
-  section.insertAdjacentHTML(
-    "beforeend",
-    makeCollapsible("Network", renderNetwork(info))
-  );
-  section.insertAdjacentHTML(
-    "beforeend",
-    makeCollapsible("Battery", renderBattery(info))
-  );
-
-  // Bind refresh button
-  const btn = document.getElementById("sysinfo-refresh-btn");
-  if (btn) {
-    btn.addEventListener("click", async () => {
-      btn.disabled = true;
-      btn.innerHTML =
-        '<span class="spinner sm" aria-hidden="true"></span><span style="margin-left:8px;">Refreshing…</span>';
-      try {
-        const data = await invoke("get_system_info");
-        // Windows OS caption enhancement
-        if (Command && navigator.userAgent.includes("Windows")) {
-          try {
-            const psArgs = [
-              "-NoProfile",
-              "-ExecutionPolicy",
-              "Bypass",
-              "-Command",
-              "wmic os get Caption | more +1",
-            ];
-            const cmd = await Command.create("powershell", psArgs).execute();
-            const osCaption = (cmd?.stdout || "").trim();
-            if (osCaption) data.os = osCaption;
-          } catch (error) {
-            console.warn("Failed to get Windows OS caption:", error);
-          }
-        }
-        const now = Date.now();
-        saveCache(data, now);
-        render(data);
-      } catch (error) {
-        console.error("Failed to refresh system info:", error);
-      }
-    });
-  }
-
-  // Initialize collapsibles
-  initCollapsibles(section);
-  setLastRefreshedLabel(section, sysinfoCacheTs);
-
-  // Toggle all functionality
-  const toggleAllBtn = document.getElementById("sysinfo-toggle-all-btn");
-  const headers = Array.from(section.querySelectorAll(".collapsible-header"));
-
-  const updateToggleAllLabel = () => {
-    const allExpanded =
-      headers.length &&
-      headers.every((h) => h.getAttribute("aria-expanded") === "true");
-    if (toggleAllBtn)
-      toggleAllBtn.textContent = allExpanded ? "Collapse all" : "Expand all";
-  };
-
-  updateToggleAllLabel();
-
-  if (toggleAllBtn) {
-    toggleAllBtn.addEventListener("click", () => {
-      const allExpanded =
-        headers.length &&
-        headers.every((h) => h.getAttribute("aria-expanded") === "true");
-      const target = !allExpanded;
-      headers.forEach((header) => {
-        header.setAttribute("aria-expanded", target ? "true" : "false");
-        const body = header.nextElementSibling;
-        const chevron = header.querySelector(".chevron");
-        if (body) body.style.display = target ? "" : "none";
-        if (chevron) chevron.textContent = target ? "▾" : "▸";
-      });
-      updateToggleAllLabel();
-    });
-
-    // Keep toggle label in sync when individual sections are toggled
-    section.addEventListener("click", (e) => {
-      if (e.target.closest(".collapsible-header"))
-        setTimeout(updateToggleAllLabel, 0);
-    });
-    section.addEventListener("keydown", (e) => {
-      if (
-        (e.key === "Enter" || e.key === " ") &&
-        e.target.closest(".collapsible-header")
-      ) {
-        setTimeout(updateToggleAllLabel, 0);
-      }
-    });
-  }
-}
-
-/**
- * Escapes HTML special characters to prevent XSS.
- * @param {string} str - String to escape
- * @returns {string} Escaped string
- */
-function escapeHtml(str) {
-  return String(str ?? "").replace(
-    /[&<>"']/g,
-    (char) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[
-        char
-      ])
-  );
-}
-
-/**
- * Initializes the system info page.
- * Loads cached data or fetches fresh data and renders the UI.
- * @returns {Promise<void>}
- */
-export async function initPage() {
-  const container = document.querySelector('[data-page="system-info"]');
-  if (!container) return;
-
-  const skel = document.createElement("div");
-  skel.className = "loading center";
-  skel.innerHTML = `
-    <div class="spinner" aria-hidden="true"></div>
-    <div>
-      <div class="loading-title">Loading system information…</div>
-      <div class="muted">Collecting hardware and OS details</div>
-    </div>
-  `;
-  container.appendChild(skel);
-
-  try {
-    // Load from cache if available
-    if (sysinfoCache == null) loadCache();
-    if (sysinfoCache) {
-      render(sysinfoCache);
-      return;
-    }
-
-    // Fetch fresh data
-    const info = await invoke("get_system_info");
-
-    // Windows OS caption enhancement
-    if (Command && navigator.userAgent.includes("Windows")) {
-      try {
-        const psArgs = [
-          "-NoProfile",
-          "-ExecutionPolicy",
-          "Bypass",
-          "-Command",
-          "wmic os get Caption | more +1",
-        ];
-        const cmd = await Command.create("powershell", psArgs).execute();
-        const osCaption = (cmd?.stdout || "").trim();
-        if (osCaption) info.os = osCaption;
-      } catch (error) {
-        console.warn("Failed to get Windows OS caption:", error);
-      }
-    }
-
-    const now = Date.now();
-    saveCache(info, now);
-    render(info);
-  } catch (error) {
-    container.innerHTML = `
-      <section class="page">
-        <h1>System Info</h1>
-        <p class="muted">Failed to read system information.</p>
-      </section>
-    `;
-    console.error("Failed to initialize system info page:", error);
-  }
-}
-
-/**
- * Prewarms system info by fetching data in the background.
- * Useful for instant loading on first navigation.
- * @param {Object} options - Options object
- * @param {boolean} options.force - Force refresh even if cached
- * @returns {Promise<Object>} Promise resolving to system info object
- */
-export function prewarmSystemInfo({ force = false } = {}) {
-  // Return cached data if available and not forcing
-  if (!force && sysinfoCache) return Promise.resolve(sysinfoCache);
-
-  if (prewarmPromise) return prewarmPromise;
-
-  // Start background fetch
-  prewarmPromise = (async () => {
-    try {
-      const info = await invoke("get_system_info");
-
-      // Windows OS caption enhancement
-      if (Command && navigator.userAgent.includes("Windows")) {
-        try {
-          const psArgs = [
-            "-NoProfile",
-            "-ExecutionPolicy",
-            "Bypass",
-            "-Command",
-            "wmic os get Caption | more +1",
-          ];
-          const cmd = await Command.create("powershell", psArgs).execute();
-          const osCaption = (cmd?.stdout || "").trim();
-          if (osCaption) info.os = osCaption;
-        } catch (error) {
-          console.warn("Failed to get Windows OS caption:", error);
-        }
-      }
-
-      saveCache(info, Date.now());
-      return info;
-    } catch (error) {
-      prewarmPromise = null; // Reset on failure for retry
-      throw error;
-    }
-  })();
-
-  return prewarmPromise;
 }
