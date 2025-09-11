@@ -43,10 +43,12 @@ async function loadPage(route) {
     // map logical routes to HTML files (different from scripts for some cases)
     const htmlMap = {
       "system-info": "system-info/system-info",
+      shortcuts: "shortcuts/shortcuts",
     };
     // map logical routes to script files (different from HTML for some cases)
     const scriptMap = {
       "system-info": "system-info/index",
+      shortcuts: "shortcuts/index",
     };
     if (nameIsDynamicTech(route)) {
       // dynamic technician pages are now shown in a persistent iframe container
