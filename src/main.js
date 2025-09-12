@@ -44,12 +44,14 @@ async function loadPage(route) {
     const htmlMap = {
       "system-info": "system-info/system-info",
       shortcuts: "shortcuts/shortcuts",
+      scripts: "scripts/scripts",
       settings: "settings/settings",
     };
     // map logical routes to script files (different from HTML for some cases)
     const scriptMap = {
       "system-info": "system-info/index",
       shortcuts: "shortcuts/index",
+      scripts: "scripts/index",
       settings: "settings/index",
     };
     if (nameIsDynamicTech(route)) {
