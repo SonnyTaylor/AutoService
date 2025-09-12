@@ -1,46 +1,115 @@
-// Programs page controller
+// Programs page controller for listing, filtering, launching, and editing programs.
+// This module is designed to be readable first: simple data flow, clear helpers, and
+// JSDoc throughout to explain the intent of each function.
+
+/* global window, document, crypto */
+
+// Tauri RPC helper
 const { invoke } = window.__TAURI__.core;
 
+// UI constants
+const LIST_SELECTOR = ".programs-list";
+const DEFAULT_LOGO = "./assets/tauri.svg";
+
+/**
+ * @typedef {Object} Program
+ * @property {string} id - Stable unique id.
+ * @property {string} name - Display name.
+ * @property {string} [version] - Optional version string.
+ * @property {string} [description] - Optional description.
+ * @property {string} exe_path - Full path to the program executable.
+ * @property {boolean} [exe_exists] - Whether exe_path currently exists.
+ * @property {number} [launch_count] - Times launched via this app.
+ * @property {string} [logo_data_url] - Image data URL for the program logo.
+ */
+
+/**
+ * @typedef {Object} State
+ * @property {Program[]} all - Source list from backend.
+ * @property {Program[]} filtered - Derived after search/sort.
+ * @property {string} query - Current search text.
+ * @property {"name-asc"|"name-desc"|"used-asc"|"used-desc"} sort - Sort key.
+ * @property {Program|null} editing - Program currently in the editor, or null.
+ */
+
+/** @type {State} */
 let state = {
   all: [],
   filtered: [],
   query: "",
-  sort: "name-asc", // default sort
-  editing: null, // program object being edited or null
+  sort: "name-asc",
+  editing: null,
 };
 
+/**
+ * Tiny DOM helpers to keep the code terse and readable.
+ * @template {Element} T
+ * @param {string} sel
+ * @param {ParentNode} [root=document]
+ * @returns {T|null}
+ */
 function $(sel, root = document) {
-  return root.querySelector(sel);
+  return /** @type {T|null} */ (root.querySelector(sel));
 }
+
+/**
+ * Query all matching elements.
+ * @template {Element} T
+ * @param {string} sel
+ * @param {ParentNode} [root=document]
+ * @returns {T[]}
+ */
 function $all(sel, root = document) {
   return Array.from(root.querySelectorAll(sel));
 }
 
-function renderList() {
-  const list = document.querySelector(".programs-list");
-  if (!list) return;
-  const items = state.filtered;
-  if (!items.length) {
-    list.innerHTML =
-      '<div class="muted">No programs yet. Click "Add" to create one.</div>';
-    return;
-  }
-  list.innerHTML = items
-    .map(
-      (p) => `
+/**
+ * Escape a string for safe placement in HTML attributes/text.
+ * @param {unknown} s
+ * @returns {string}
+ */
+function escapeHtml(s) {
+  return String(s).replace(
+    /[&<>"']/g,
+    (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[
+        c
+      ])
+  );
+}
+
+/**
+ * Infer a program name from an executable path.
+ * Example: C:\\Apps\\FooBar.exe -> FooBar
+ * @param {string} path
+ * @returns {string}
+ */
+function inferNameFromPath(path) {
+  const base = path.split(/[\\\/]/).pop() || "";
+  return base.replace(/\.exe$/i, "");
+}
+
+/**
+ * Render a single program row as HTML.
+ * Keeping this in a dedicated function helps keep renderList small.
+ * @param {Program} p
+ * @returns {string}
+ */
+function renderProgramRow(p) {
+  return `
     <div class="program-row" data-id="${p.id}">
       <div class="program-logo-wrap">
         <img class="program-logo" src="${
-          p.logo_data_url || "./assets/tauri.svg"
+          p.logo_data_url || DEFAULT_LOGO
         }" alt="${escapeHtml(p.name)} logo"/>
         <span class="exe-status ${p.exe_exists ? "ok" : "missing"}" title="${
-        p.exe_exists ? "Executable found" : "Executable missing"
-      }">${p.exe_exists ? "✓" : "✕"}</span>
+    p.exe_exists ? "Executable found" : "Executable missing"
+  }">${p.exe_exists ? "✓" : "✕"}</span>
       </div>
       <div class="program-main">
         <div class="program-title" title="${escapeHtml(p.name)}${
-        p.version ? ` — ${escapeHtml(p.version)}` : ""
-      }">
+    p.version ? ` — ${escapeHtml(p.version)}` : ""
+  }">
           <span class="name">${escapeHtml(p.name)}</span>
           <span class="ver">${escapeHtml(p.version || "")}</span>
           <span class="muted usage" title="Times launched">(${
@@ -61,56 +130,36 @@ function renderList() {
         <button data-action="edit" class="secondary">Edit</button>
         <button data-action="remove" class="ghost">Remove</button>
       </div>
-    </div>
-  `
-    )
-    .join("");
-
-  // Wire actions
-  $all(".program-row").forEach((row) => {
-    row.addEventListener("click", async (e) => {
-      const btn = e.target.closest("button");
-      if (!btn) return;
-      const id = row.getAttribute("data-id");
-      const prog = state.all.find((p) => p.id === id);
-      if (!prog) return;
-      const action = btn.getAttribute("data-action");
-      if (action === "launch") {
-        btn.disabled = true;
-        try {
-          await invoke("launch_program", { program: prog });
-          // Refresh list to update launch counters
-          await loadPrograms();
-        } finally {
-          btn.disabled = false;
-        }
-      } else if (action === "edit") {
-        openEditor(prog);
-      } else if (action === "remove") {
-        const ok = await confirmRemove(prog.name);
-        if (!ok) return;
-        await invoke("remove_program", { id: prog.id });
-        await loadPrograms();
-      }
-    });
-  });
+    </div>`;
 }
 
-function escapeHtml(s) {
-  return String(s).replace(
-    /[&<>"']/g,
-    (c) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[
-        c
-      ])
-  );
+/**
+ * Render the current filtered list into the DOM.
+ * Uses simple string concat for performance and clarity.
+ */
+function renderList() {
+  const list = /** @type {HTMLElement|null} */ ($(LIST_SELECTOR));
+  if (!list) return;
+  const items = state.filtered;
+  if (!items.length) {
+    list.innerHTML =
+      '<div class="muted">No programs yet. Click "Add" to create one.</div>';
+    return;
+  }
+  list.innerHTML = items.map(renderProgramRow).join("");
 }
 
+/**
+ * Fetch the full program list from the backend and then apply filtering/sorting.
+ */
 async function loadPrograms() {
   state.all = await invoke("list_programs");
   applyFilter();
 }
 
+/**
+ * Apply search query and sort order to derive state.filtered, then re-render.
+ */
 function applyFilter() {
   const q = state.query.trim().toLowerCase();
   const base = q
@@ -118,7 +167,8 @@ function applyFilter() {
         `${p.name} ${p.description} ${p.version}`.toLowerCase().includes(q)
       )
     : [...state.all];
-  // Sort
+
+  // Sort derived list
   const sort = state.sort;
   base.sort((a, b) => {
     switch (sort) {
@@ -147,14 +197,19 @@ function applyFilter() {
         });
     }
   });
+
   state.filtered = base;
   renderList();
 }
 
+/**
+ * Wire up the toolbar: search, sort, add buttons.
+ */
 function wireToolbar() {
-  const search = document.querySelector("#program-search");
-  const sortSel = document.querySelector("#program-sort");
-  const addBtn = document.querySelector("#program-add-btn");
+  const search = /** @type {HTMLInputElement|null} */ ($("#program-search"));
+  const sortSel = /** @type {HTMLSelectElement|null} */ ($("#program-sort"));
+  const addBtn = /** @type {HTMLButtonElement|null} */ ($("#program-add-btn"));
+
   search?.addEventListener("input", () => {
     state.query = search.value;
     applyFilter();
@@ -166,6 +221,58 @@ function wireToolbar() {
   addBtn?.addEventListener("click", () => openEditor());
 }
 
+/**
+ * Attach a single event listener on the list container for row actions.
+ * This avoids re-binding listeners on every render.
+ */
+function wireListActions() {
+  const list = /** @type {HTMLElement|null} */ ($(LIST_SELECTOR));
+  if (!list || list.dataset.bound === "true") return; // idempotent binding
+
+  list.addEventListener("click", async (e) => {
+    const btn = /** @type {HTMLElement|null} */ (
+      e.target instanceof HTMLElement
+        ? e.target.closest("button[data-action]")
+        : null
+    );
+    if (!btn) return;
+    const row = /** @type {HTMLElement|null} */ (btn.closest(".program-row"));
+    const id = row?.getAttribute("data-id");
+    if (!id) return;
+    const prog = state.all.find((p) => p.id === id);
+    if (!prog) return;
+
+    const action = btn.getAttribute("data-action");
+    if (action === "launch") {
+      /** @type {HTMLButtonElement} */ (btn).disabled = true;
+      try {
+        await invoke("launch_program", { program: prog });
+        // Refresh to update launch counters
+        await loadPrograms();
+      } finally {
+        /** @type {HTMLButtonElement} */ (btn).disabled = false;
+      }
+      return;
+    }
+    if (action === "edit") {
+      openEditor(prog);
+      return;
+    }
+    if (action === "remove") {
+      const ok = await confirmRemove(prog.name);
+      if (!ok) return;
+      await invoke("remove_program", { id: prog.id });
+      await loadPrograms();
+    }
+  });
+
+  list.dataset.bound = "true";
+}
+
+/**
+ * Open the program editor with either a copy of the existing program or a fresh template.
+ * @param {Program} [prog]
+ */
 function openEditor(prog) {
   state.editing = prog
     ? { ...prog }
@@ -177,25 +284,53 @@ function openEditor(prog) {
         exe_path: "",
         logo_data_url: "",
       };
-  const dlg = document.querySelector("#program-editor");
-  const form = document.querySelector("#program-form");
+
+  const dlg = /** @type {HTMLDialogElement|null} */ ($("#program-editor"));
+  const form = /** @type {HTMLFormElement|null} */ ($("#program-form"));
+  if (!dlg || !form) return;
+
   form.reset();
-  document.querySelector("#p-name").value = state.editing.name;
-  document.querySelector("#p-version").value = state.editing.version;
-  document.querySelector("#p-desc").value = state.editing.description;
-  document.querySelector("#p-exe").value = state.editing.exe_path;
-  const preview = document.querySelector("#p-logo-preview");
-  preview.src = state.editing.logo_data_url || "./assets/tauri.svg";
+  /** @type {HTMLInputElement} */ ($("#p-name")).value = state.editing.name;
+  /** @type {HTMLInputElement} */ ($("#p-version")).value =
+    state.editing.version || "";
+  /** @type {HTMLTextAreaElement} */ ($("#p-desc")).value =
+    state.editing.description || "";
+  /** @type {HTMLInputElement} */ ($("#p-exe")).value =
+    state.editing.exe_path || "";
+  const preview = /** @type {HTMLImageElement} */ ($("#p-logo-preview"));
+  preview.src = state.editing.logo_data_url || DEFAULT_LOGO;
   dlg.showModal();
 }
 
+/**
+ * Attempt to extract a logo from an executable and update the preview/state.
+ * @param {string} exePath
+ */
+async function tryExtractLogo(exePath) {
+  try {
+    const suggested = await invoke("suggest_logo_from_exe", {
+      exe_path: exePath,
+    });
+    if (suggested) {
+      state.editing.logo_data_url = suggested;
+      const img = /** @type {HTMLImageElement} */ ($("#p-logo-preview"));
+      if (img) img.src = suggested;
+    }
+  } catch {
+    // Non-fatal if logo extraction fails
+  }
+}
+
+/**
+ * Wire up the editor dialog controls.
+ */
 function wireEditor() {
-  const dlg = document.querySelector("#program-editor");
-  const form = document.querySelector("#program-form");
-  const exeBtn = document.querySelector("#p-pick-exe");
-  const logoBtn = document.querySelector("#p-pick-logo");
-  const cancel = document.querySelector("#p-cancel");
-  const save = document.querySelector("#p-save");
+  const dlg = /** @type {HTMLDialogElement|null} */ ($("#program-editor"));
+  const exeBtn = /** @type {HTMLButtonElement|null} */ ($("#p-pick-exe"));
+  const logoBtn = /** @type {HTMLButtonElement|null} */ ($("#p-pick-logo"));
+  const cancel = /** @type {HTMLButtonElement|null} */ ($("#p-cancel"));
+  const save = /** @type {HTMLButtonElement|null} */ ($("#p-save"));
+  if (!exeBtn || !logoBtn || !cancel || !save || !dlg) return;
 
   exeBtn.addEventListener("click", async () => {
     const open = window.__TAURI__?.dialog?.open;
@@ -203,7 +338,9 @@ function wireEditor() {
     try {
       const dirs = await invoke("get_data_dirs");
       if (dirs?.programs) defaultPath = dirs.programs;
-    } catch {}
+    } catch {
+      // ignore
+    }
     const selected = open
       ? await open({
           multiple: false,
@@ -213,25 +350,16 @@ function wireEditor() {
         })
       : null;
     if (selected) {
-      document.querySelector("#p-exe").value = selected;
+      /** @type {HTMLInputElement} */ ($("#p-exe")).value = selected;
       state.editing.exe_path = selected;
       // If Name is empty, set it to the EXE filename (without extension)
-      const nameInput = document.querySelector("#p-name");
+      const nameInput = /** @type {HTMLInputElement} */ ($("#p-name"));
       if (nameInput && !nameInput.value.trim()) {
-        const base = selected.split(/[\\\/]/).pop() || "";
-        const inferred = base.replace(/\.exe$/i, "");
+        const inferred = inferNameFromPath(selected);
         state.editing.name = inferred;
         nameInput.value = inferred;
       }
-      try {
-        const suggested = await invoke("suggest_logo_from_exe", {
-          exe_path: selected,
-        });
-        if (suggested) {
-          state.editing.logo_data_url = suggested;
-          document.querySelector("#p-logo-preview").src = suggested;
-        }
-      } catch {}
+      await tryExtractLogo(selected);
     }
   });
 
@@ -252,7 +380,8 @@ function wireEditor() {
           path: selected,
         });
         state.editing.logo_data_url = dataUrl;
-        document.querySelector("#p-logo-preview").src = dataUrl;
+        const img = /** @type {HTMLImageElement} */ ($("#p-logo-preview"));
+        if (img) img.src = dataUrl;
       } catch (e) {
         console.error(e);
       }
@@ -262,27 +391,30 @@ function wireEditor() {
   cancel.addEventListener("click", () => dlg.close());
 
   save.addEventListener("click", async () => {
-    // Collect values
-    state.editing.name = document.querySelector("#p-name").value.trim();
-    state.editing.version = document.querySelector("#p-version").value.trim();
-    state.editing.description = document.querySelector("#p-desc").value.trim();
-    state.editing.exe_path = document.querySelector("#p-exe").value.trim();
+    // Collect values from form
+    state.editing.name = /** @type {HTMLInputElement} */ (
+      $("#p-name")
+    ).value.trim();
+    state.editing.version = /** @type {HTMLInputElement} */ (
+      $("#p-version")
+    ).value.trim();
+    state.editing.description = /** @type {HTMLTextAreaElement} */ (
+      $("#p-desc")
+    ).value.trim();
+    state.editing.exe_path = /** @type {HTMLInputElement} */ (
+      $("#p-exe")
+    ).value.trim();
 
     if (!state.editing.name || !state.editing.exe_path) {
       alert("Name and executable are required");
       return;
     }
+
     // If no logo yet, try to extract from the EXE before saving
     if (!state.editing.logo_data_url) {
-      try {
-        const suggested = await invoke("suggest_logo_from_exe", {
-          exe_path: state.editing.exe_path,
-        });
-        if (suggested) {
-          state.editing.logo_data_url = suggested;
-        }
-      } catch {}
+      await tryExtractLogo(state.editing.exe_path);
     }
+
     save.disabled = true;
     try {
       await invoke("save_program", { program: state.editing });
@@ -297,14 +429,10 @@ function wireEditor() {
   });
 }
 
-// no longer needed; backend performs data URL encoding
-
-export async function initPage() {
-  wireToolbar();
-  wireEditor();
-  await loadPrograms();
-}
-
+/**
+ * Ask the user to confirm removal. Uses Tauri dialog if available, otherwise falls back to window.confirm.
+ * @param {string} name
+ */
 async function confirmRemove(name) {
   const tauriConfirm = window.__TAURI__?.dialog?.confirm;
   if (tauriConfirm) {
@@ -314,8 +442,18 @@ async function confirmRemove(name) {
         type: "warning",
       });
     } catch {
-      /* fall through */
+      // fall through to browser confirm
     }
   }
   return window.confirm(`Remove ${name}?`);
+}
+
+/**
+ * Entrypoint called when navigating to the Programs page.
+ */
+export async function initPage() {
+  wireToolbar();
+  wireListActions();
+  wireEditor();
+  await loadPrograms();
 }
