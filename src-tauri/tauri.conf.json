@@ -4,13 +4,16 @@
   "version": "0.1.0",
   "identifier": "com.sonny-taylor.autoservice",
   "build": {
-    "frontendDist": "../src"
+    "beforeDevCommand": "pnpm dev",
+    "beforeBuildCommand": "pnpm build",
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "../dist"
   },
   "app": {
     "withGlobalTauri": true,
     "windows": [
       {
-  "title": "AutoService",
+        "title": "AutoService",
         "width": 985,
         "height": 600,
         "decorations": false

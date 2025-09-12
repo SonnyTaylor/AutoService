@@ -60,7 +60,7 @@ async function loadPage(route) {
       // dynamic technician pages are now shown in a persistent iframe container
       try {
         const mod = await import(
-          `./pages/technician-link-display.js?ts=${Date.now()}`
+          `/pages/technician-link-display.js?ts=${Date.now()}`
         );
         if (typeof mod.showTechnicianLink === "function") {
           await mod.showTechnicianLink(route.replace(/^tech-/, ""));
@@ -70,7 +70,7 @@ async function loadPage(route) {
       } catch {}
     }
     const pagePath = htmlMap[route] || pathMap[route] || route;
-    const res = await fetch(`pages/${pagePath}.html`, { cache: "no-cache" });
+    const res = await fetch(`/pages/${pagePath}.html`, { cache: "no-cache" });
     const html = await res.text();
     // Reset scroll before content change
     window.scrollTo(0, 0);
@@ -81,7 +81,7 @@ async function loadPage(route) {
 
     // Ensure any persistent technician webviews are hidden when loading a normal page
     try {
-      const modHide = await import("./pages/technician-link-display.js");
+      const modHide = await import("/pages/technician-link-display.js");
       if (typeof modHide.hideTechnicianLinks === "function")
         modHide.hideTechnicianLinks();
     } catch {}
@@ -89,7 +89,7 @@ async function loadPage(route) {
     // Try to load optional page controller: /pages/<route>.js
     try {
       const scriptPath = scriptMap[route] || pathMap[route] || route;
-      const mod = await import(`./pages/${scriptPath}.js?ts=${Date.now()}`);
+      const mod = await import(`/pages/${scriptPath}.js?ts=${Date.now()}`);
       if (typeof mod.initPage === "function") {
         await mod.initPage();
       }
