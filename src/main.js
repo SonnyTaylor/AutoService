@@ -15,6 +15,10 @@ const baseRoutes = [
   "settings",
 ];
 
+// Pre-register all potential page controllers so Vite can analyze them
+// Keys are module paths relative to this file (starting with './')
+const controllers = import.meta.glob("./pages/**/*.js");
+
 function allRoutes() {
   return [...baseRoutes, ...dynamicTechRoutes];
 }
@@ -59,13 +63,16 @@ async function loadPage(route) {
     if (nameIsDynamicTech(route)) {
       // dynamic technician pages are now shown in a persistent iframe container
       try {
-        const mod = await import(
-          `/pages/technician-link-display.js?ts=${Date.now()}`
-        );
-        if (typeof mod.showTechnicianLink === "function") {
-          await mod.showTechnicianLink(route.replace(/^tech-/, ""));
-          content.setAttribute("aria-busy", "false");
-          return;
+        const importer = controllers["./pages/technician-link-display.js"];
+        if (importer) {
+          const mod = await importer();
+          if (typeof mod.showTechnicianLink === "function") {
+            await mod.showTechnicianLink(route.replace(/^tech-/, ""));
+            content.setAttribute("aria-busy", "false");
+            return;
+          }
+        } else {
+          console.warn("Technician link display module not found");
         }
       } catch {}
     }
@@ -81,21 +88,30 @@ async function loadPage(route) {
 
     // Ensure any persistent technician webviews are hidden when loading a normal page
     try {
-      const modHide = await import("/pages/technician-link-display.js");
-      if (typeof modHide.hideTechnicianLinks === "function")
-        modHide.hideTechnicianLinks();
+      const importerHide = controllers["./pages/technician-link-display.js"];
+      if (importerHide) {
+        const modHide = await importerHide();
+        if (typeof modHide.hideTechnicianLinks === "function")
+          modHide.hideTechnicianLinks();
+      }
     } catch {}
 
     // Try to load optional page controller: /pages/<route>.js
     try {
       const scriptPath = scriptMap[route] || pathMap[route] || route;
-      const mod = await import(`/pages/${scriptPath}.js?ts=${Date.now()}`);
-      if (typeof mod.initPage === "function") {
-        await mod.initPage();
+      const key = `./pages/${scriptPath}.js`;
+      const importer = controllers[key];
+      if (!importer) {
+        console.log("No page controller registered for", key);
+      } else {
+        const mod = await importer();
+        if (typeof mod.initPage === "function") {
+          await mod.initPage();
+        }
       }
     } catch (e) {
       // No controller or failed to load; ignore silently
-      // console.debug("No page controller for", route, e);
+      console.log("Failed to load page controller for", route, e);
     }
   } catch (e) {
     content.innerHTML = `<div class="page"><h1>Error</h1><p class="muted">Failed to load page: ${route}</p></div>`;
@@ -132,7 +148,9 @@ async function refreshTechnicianTabs() {
   // Load settings and rebuild dynamic tabs area
   let settings = {};
   try {
-    settings = await window.__TAURI__.core.invoke("load_app_settings");
+    if (window.__TAURI__) {
+      settings = await window.__TAURI__.core.invoke("load_app_settings");
+    }
   } catch {}
   const links = settings?.technician_links || [];
   dynamicTechRoutes = links.map((l) => `tech-${l.id}`);
@@ -167,14 +185,16 @@ window.addEventListener("DOMContentLoaded", () => {
   // Background prewarm of system info so navigating there is instant.
   (async () => {
     try {
-      const mod = await import("./pages/system-info/index.js");
+      const importer = controllers["./pages/system-info/index.js"];
+      const mod = importer ? await importer() : null;
       if (typeof mod.prewarmSystemInfo === "function") {
         mod.prewarmSystemInfo();
       }
     } catch {}
   })();
   // Wire custom titlebar controls
-  const { getCurrentWindow } = window.__TAURI__.window || {};
+  const { getCurrentWindow } =
+    (window.__TAURI__ && window.__TAURI__.window) || {};
   if (getCurrentWindow) {
     const appWindow = getCurrentWindow();
     document

@@ -15,8 +15,18 @@
  */
 
 // Tauri API imports
-const { invoke } = window.__TAURI__.core;
-const { Command } = window.__TAURI__?.shell || {};
+let invoke;
+let Command;
+if (window.__TAURI__) {
+  invoke = window.__TAURI__.core.invoke;
+  Command = window.__TAURI__?.shell?.Command || null;
+} else {
+  invoke = async () => {
+    console.warn("Tauri not available, using mock data");
+    return {}; // mock empty data
+  };
+  Command = null;
+}
 
 // Import our modules
 import {

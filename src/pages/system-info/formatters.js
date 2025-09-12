@@ -1,3 +1,7 @@
+import prettyBytes from "pretty-bytes";
+import humanizeDuration from "humanize-duration";
+import escapeHtmlLib from "escape-html";
+
 /**
  * Formatting utilities for system information display
  */
@@ -25,14 +29,7 @@ export function formatTimeShort(ms) {
  */
 export function formatBytes(bytes) {
   if (!Number.isFinite(bytes)) return "-";
-  const units = ["B", "KB", "MB", "GB", "TB", "PB"];
-  let i = 0;
-  let value = bytes;
-  while (value >= 1024 && i < units.length - 1) {
-    value /= 1024;
-    i++;
-  }
-  return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[i]}`;
+  return prettyBytes(bytes);
 }
 
 /**
@@ -53,12 +50,10 @@ export function formatPct(n, total) {
  */
 export function formatDuration(seconds) {
   if (seconds == null) return "-";
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = Math.floor(seconds % 60);
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  if (minutes > 0) return `${minutes}m ${secs}s`;
-  return `${secs}s`;
+  return humanizeDuration(seconds * 1000, {
+    units: ["h", "m", "s"],
+    round: true,
+  });
 }
 
 /**
@@ -67,11 +62,5 @@ export function formatDuration(seconds) {
  * @returns {string} Escaped string
  */
 export function escapeHtml(str) {
-  return String(str ?? "").replace(
-    /[&<>"']/g,
-    (char) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[
-        char
-      ])
-  );
+  return escapeHtmlLib(str ?? "");
 }
