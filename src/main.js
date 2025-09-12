@@ -44,16 +44,20 @@ async function loadPage(route) {
     const htmlMap = {
       "system-info": "system-info/system-info",
       shortcuts: "shortcuts/shortcuts",
+      settings: "settings/settings",
     };
     // map logical routes to script files (different from HTML for some cases)
     const scriptMap = {
       "system-info": "system-info/index",
       shortcuts: "shortcuts/index",
+      settings: "settings/index",
     };
     if (nameIsDynamicTech(route)) {
       // dynamic technician pages are now shown in a persistent iframe container
       try {
-        const mod = await import(`./pages/technician-link.js?ts=${Date.now()}`);
+        const mod = await import(
+          `./pages/technician-link-display.js?ts=${Date.now()}`
+        );
         if (typeof mod.showTechnicianLink === "function") {
           await mod.showTechnicianLink(route.replace(/^tech-/, ""));
           content.setAttribute("aria-busy", "false");
@@ -73,7 +77,7 @@ async function loadPage(route) {
 
     // Ensure any persistent technician webviews are hidden when loading a normal page
     try {
-      const modHide = await import("./pages/technician-link.js");
+      const modHide = await import("./pages/technician-link-display.js");
       if (typeof modHide.hideTechnicianLinks === "function")
         modHide.hideTechnicianLinks();
     } catch {}
