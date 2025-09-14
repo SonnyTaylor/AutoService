@@ -44,6 +44,7 @@ async function loadPage(route) {
       "service-run": "service/run",
       "service-report": "service/report",
       programs: "programs/index",
+      reports: "reports/index",
     };
     // map logical routes to HTML files (different from scripts for some cases)
     const htmlMap = {
