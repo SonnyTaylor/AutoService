@@ -64,7 +64,7 @@ async function loadPage(route) {
     if (nameIsDynamicTech(route)) {
       // dynamic technician pages are now shown in a persistent iframe container
       try {
-        const importer = controllers["./pages/technician-link-display.js"];
+        const importer = controllers["./pages/technician-link-display/index.js"];
         if (importer) {
           const mod = await importer();
           if (typeof mod.showTechnicianLink === "function") {
@@ -89,7 +89,7 @@ async function loadPage(route) {
 
     // Ensure any persistent technician webviews are hidden when loading a normal page
     try {
-      const importerHide = controllers["./pages/technician-link-display.js"];
+      const importerHide = controllers["./pages/technician-link-display/index.js"];
       if (importerHide) {
         const modHide = await importerHide();
         if (typeof modHide.hideTechnicianLinks === "function")
