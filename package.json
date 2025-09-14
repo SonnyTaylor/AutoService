@@ -21,6 +21,7 @@
     "humanize-duration": "^3.33.0",
     "pretty-bytes": "^7.0.1",
     "store2": "^2.14.4",
+    "tone": "^15.1.22",
     "zod": "^4.1.8"
   }
 }
