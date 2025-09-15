@@ -1,8 +1,19 @@
+"""Automation runner for AutoService.
+
+Coordinates execution of individual maintenance/diagnostic tasks (e.g., BleachBit,
+SFC, DISM) and streams progress to stderr for the UI while emitting a final JSON
+report to stdout. Windows elevation is requested automatically when needed.
+"""
+
 import sys, os, ctypes, json, subprocess, argparse, logging, time
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Callable
 
 
 def is_admin():
+    """Return True if the current process is running with administrator rights.
+
+    On non-Windows platforms, returns False if the check fails.
+    """
     try:
         return ctypes.windll.shell32.IsUserAnAdmin()
     except:
@@ -44,18 +55,23 @@ from services.dism_service import run_dism_health_check  # type: ignore
 from services.ai_startup_service import run_ai_startup_disable  # type: ignore
 
 # Configure logging to stderr for live streaming to the UI.
-# Use a simple format that's easy to parse
+# Use a simple format that's easy to parse.
 _DEFAULT_LOG_FMT = "%(message)s"
 logging.basicConfig(level=logging.INFO, stream=sys.stderr, format=_DEFAULT_LOG_FMT)
 
+# Truncation threshold for log snippets to keep logs readable in the UI.
+MAX_LOG_SNIPPET: int = 200
 
-"""BleachBit functionality refactored into services.bleachbit_service."""
+# Type aliases for better readability.
+Task = Dict[str, Any]
+TaskResult = Dict[str, Any]
+TaskHandler = Callable[[Task], TaskResult]
 
 
 # --- Modular Task Dispatcher ---
 # To add a new tool (e.g., 'kvrt_scan'), add a new function like 'run_kvrt_scan'
 # and then add it to this dictionary.
-TASK_HANDLERS = {
+TASK_HANDLERS: Dict[str, TaskHandler] = {
     "bleachbit_clean": run_bleachbit_clean,
     "adwcleaner_clean": run_adwcleaner_clean,
     "furmark_stress_test": run_furmark_test,
@@ -70,11 +86,12 @@ TASK_HANDLERS = {
 
 
 def main():
-    """
-    Main entry point for the automation script.
+    """Entrypoint: parse input, execute tasks, emit final JSON report.
 
-    Parses a JSON input string from the command line, executes the defined tasks,
-    and prints a final JSON report to standard output.
+    Behavior:
+    - Accepts either a raw JSON string or a path to a JSON file describing tasks
+    - Optionally writes a live log to a file and/or writes the final report to a file
+    - On Windows, auto-prompts for elevation if not already running as admin
     """
     parser = argparse.ArgumentParser(description="AutoService Automation Runner")
     parser.add_argument(
@@ -110,7 +127,7 @@ def main():
         except Exception as e:  # noqa: BLE001
             logging.error("Failed to initialize log file '%s': %s", args.log_file, e)
 
-    # Elevation (Windows only)
+    # Elevation (Windows only): avoid confusing failures for tools that need admin rights.
     if os.name == "nt" and not is_admin():
         logging.info("Attempting to elevate privileges via UAC prompt…")
         # Preserve arguments; include script/module path in argv for Python launched interpreter
@@ -123,7 +140,7 @@ def main():
         sys.exit(0)
 
     raw_input = args.json_input
-    logging.info(f"Received input: {raw_input[:200]}...")
+    logging.info(f"Received input: {raw_input[:MAX_LOG_SNIPPET]}...")
     input_data = None
     # Allow passing a filename instead of raw JSON
     if os.path.exists(raw_input) and os.path.isfile(raw_input):
@@ -146,6 +163,7 @@ def main():
             }
             print(json.dumps(final_report, indent=2))
             sys.exit(1)
+    # Extract tasks list; default to empty list if key missing.
     tasks = input_data.get("tasks", [])
     logging.info(f"Parsed {len(tasks)} tasks")
     for i, task in enumerate(tasks):
@@ -188,12 +206,13 @@ def main():
                 summary = result.get("summary", {})
                 if summary and isinstance(summary, dict):
                     if "output" in summary:
+                        out_text = str(summary["output"])  # ensure sliceable string
                         logging.info(
                             "Task %s completed with output: %s",
                             task_type,
-                            summary["output"][:200] + "..."
-                            if len(str(summary["output"])) > 200
-                            else summary["output"],
+                            out_text[:MAX_LOG_SNIPPET] + "..."
+                            if len(out_text) > MAX_LOG_SNIPPET
+                            else out_text,
                         )
                     if "duration_seconds" in summary:
                         logging.info(
