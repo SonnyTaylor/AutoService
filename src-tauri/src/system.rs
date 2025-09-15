@@ -1,3 +1,9 @@
+//! System information collection for the desktop app.
+//!
+//! Gathers cross-platform system stats using `sysinfo` (CPU, memory, disks,
+//! networks, sensors, users) and augments on Windows with additional details
+//! collected via PowerShell/WMI. GPU information is sourced from `wgpu` when
+//! available. Results are aggregated into the `SystemInfo` model for the UI.
 use sysinfo::{Components, Cpu, Disks, Networks, System, Users};
 
 use crate::models::{
@@ -6,10 +12,17 @@ use crate::models::{
 };
 
 #[tauri::command]
+/// Collect a comprehensive snapshot of the current system.
+///
+/// Cross‑platform via `sysinfo` with optional Windows‑specific enrichment (BIOS, TPM,
+/// hotfixes, etc.) collected concurrently. CPU usage sampling includes a short delay to
+/// provide meaningful utilization values.
 pub async fn get_system_info(app: tauri::AppHandle) -> Result<SystemInfo, String> {
     let mut sys = System::new_all();
     sys.refresh_all();
 
+    // CPU usage requires two samples. Take an initial refresh, wait the minimum interval,
+    // then refresh usage to compute deltas.
     sys.refresh_cpu_all();
     std::thread::sleep(sysinfo::MINIMUM_CPU_UPDATE_INTERVAL);
     sys.refresh_cpu_usage();
@@ -21,6 +34,7 @@ pub async fn get_system_info(app: tauri::AppHandle) -> Result<SystemInfo, String
     let vendor_id = cpus.first().map(|c| c.vendor_id().to_string());
     let frequency_mhz = cpus.first().map(|c| c.frequency() as u64).unwrap_or(0);
     let num_logical = cpus.len();
+    // Physical cores may be unknown on some platforms; `sysinfo` returns Option.
     let num_physical = System::physical_core_count();
     let cores: Vec<CpuCoreInfo> = cpus
         .iter()
@@ -39,6 +53,7 @@ pub async fn get_system_info(app: tauri::AppHandle) -> Result<SystemInfo, String
         cores,
     };
 
+    // Memory statistics are reported in bytes by `sysinfo`.
     let total = sys.total_memory();
     let available = sys.available_memory();
     let used = sys.used_memory();
@@ -54,6 +69,7 @@ pub async fn get_system_info(app: tauri::AppHandle) -> Result<SystemInfo, String
         swap_used,
     };
 
+    // ----- Disks -----
     let disks_list = Disks::new_with_refreshed_list();
     let disks: Vec<DiskInfo> = disks_list
         .iter()
@@ -71,6 +87,7 @@ pub async fn get_system_info(app: tauri::AppHandle) -> Result<SystemInfo, String
         })
         .collect();
 
+    // ----- Networks -----
     let networks_list = Networks::new_with_refreshed_list();
     let networks: Vec<NetworkInfo> = networks_list
         .iter()
@@ -88,16 +105,20 @@ pub async fn get_system_info(app: tauri::AppHandle) -> Result<SystemInfo, String
         })
         .collect();
 
+    // ----- Sensors (temperatures) -----
     let components = Components::new_with_refreshed_list();
     let sensors: Vec<SensorInfo> = components
         .iter()
         .map(|c| SensorInfo {
             label: c.label().to_string(),
+            // Some sensors may not report a value; default to 0.0°C.
             temperature_c: c.temperature().unwrap_or(0.0),
         })
         .collect();
 
+    // ----- GPUs (via wgpu) -----
     let gpus: Vec<GpuInfo> = {
+        // Keep `mut` available when compiling with `wgpu` enabled.
         #[allow(unused_mut)]
         let mut all: Vec<GpuInfo> = Vec::new();
         #[cfg(not(target_arch = "wasm32"))]
@@ -118,6 +139,7 @@ pub async fn get_system_info(app: tauri::AppHandle) -> Result<SystemInfo, String
             }
         }
 
+        // If any hardware GPU is present, filter out CPU adapters.
         let has_hw = all.iter().any(|g| g.device_type.as_deref() != Some("Cpu"));
         let filtered: Vec<GpuInfo> = if has_hw {
             all.into_iter()
@@ -129,6 +151,7 @@ pub async fn get_system_info(app: tauri::AppHandle) -> Result<SystemInfo, String
 
         use std::collections::HashMap;
 
+        // Rank backends roughly by capability/preference.
         fn backend_rank(s: Option<&str>) -> u8 {
             match s.unwrap_or("") {
                 "Dx12" => 5,
@@ -144,12 +167,14 @@ pub async fn get_system_info(app: tauri::AppHandle) -> Result<SystemInfo, String
         for g in filtered.into_iter() {
             let vendor = g.vendor.unwrap_or(0);
             let device = g.device.unwrap_or(0);
+            // Prefer a key grouping by vendor:device; fall back to vendor:name when device id is 0.
             let key = if device != 0 {
                 format!("{}:{}", vendor, device)
             } else {
                 format!("{}:{}", vendor, g.name.to_lowercase())
             };
 
+            // Candidate score balances backend preference, having a real device id, and driver string length.
             let cand_score = (
                 backend_rank(g.backend.as_deref()),
                 (g.device.unwrap_or(0) != 0) as u8,
@@ -170,6 +195,7 @@ pub async fn get_system_info(app: tauri::AppHandle) -> Result<SystemInfo, String
             }
         }
 
+        // If we have at least one real vendor+device, drop entries from that vendor with missing device ids.
         let vendor_with_real: std::collections::HashSet<u32> = best
             .values()
             .filter_map(|g| {
@@ -195,6 +221,7 @@ pub async fn get_system_info(app: tauri::AppHandle) -> Result<SystemInfo, String
             })
             .collect();
 
+        // Sort stable for deterministic display: by vendor, then device id, then name.
         out.sort_by(|a, b| {
             let av = a.vendor.unwrap_or(0).cmp(&b.vendor.unwrap_or(0));
             if av != std::cmp::Ordering::Equal {
@@ -209,14 +236,18 @@ pub async fn get_system_info(app: tauri::AppHandle) -> Result<SystemInfo, String
         out
     };
 
+    // ----- Users -----
     let users_list = Users::new_with_refreshed_list();
     let users: Vec<String> = users_list.iter().map(|u| u.name().to_string()).collect();
 
+    // ----- Batteries -----
+    // Battery support varies by platform/drivers; return an empty list on failure.
     let batteries = match get_batteries_info() {
         Ok(list) => list,
         Err(_) => Vec::new(),
     };
 
+    // ----- Motherboard and Product identifiers -----
     let motherboard = sysinfo::Motherboard::new().map(|m| MotherboardInfo {
         vendor: m.vendor_name(),
         name: m.name(),
@@ -235,7 +266,7 @@ pub async fn get_system_info(app: tauri::AppHandle) -> Result<SystemInfo, String
     });
 
     let la = System::load_average();
-    // Kick off (possibly slow) Windows-specific collection concurrently while we finish base stats
+    // Kick off (possibly slow) Windows-specific collection concurrently while we finish base stats.
     #[cfg(target_os = "windows")]
     let extra_fut = collect_windows_extra_async(&app);
     #[cfg(not(target_os = "windows"))]
@@ -243,6 +274,7 @@ pub async fn get_system_info(app: tauri::AppHandle) -> Result<SystemInfo, String
 
     let extra: Option<ExtraInfo> = extra_fut.await;
 
+    // ----- Final aggregation -----
     let info = SystemInfo {
         os: sysinfo::System::long_os_version(),
         hostname: System::host_name(),
@@ -272,6 +304,8 @@ pub async fn get_system_info(app: tauri::AppHandle) -> Result<SystemInfo, String
     Ok(info)
 }
 
+// Collect battery information, falling back to an empty list on any error to
+// avoid failing the entire system info request.
 fn get_batteries_info() -> Result<Vec<BatteryInfo>, String> {
     let manager = match battery::Manager::new() {
         Ok(m) => m,
@@ -284,6 +318,7 @@ fn get_batteries_info() -> Result<Vec<BatteryInfo>, String> {
     let mut out = Vec::new();
     for item in list {
         if let Ok(batt) = item {
+            // Convert key fields, normalizing units where helpful.
             let percentage = batt.state_of_charge().value as f32 * 100.0;
             let state = format!("{:?}", batt.state());
             let technology = Some(format!("{:?}", batt.technology()));
@@ -323,11 +358,12 @@ fn get_batteries_info() -> Result<Vec<BatteryInfo>, String> {
 }
 
 #[cfg(target_os = "windows")]
+// Collect extra Windows details via PowerShell/WMI in parallel.
 async fn collect_windows_extra_async(app: &tauri::AppHandle) -> Option<ExtraInfo> {
     use tauri_plugin_shell::ShellExt;
     let shell = app.shell();
 
-    // Async helper
+    // Async helper to run a PowerShell command and capture stdout as a trimmed String.
     async fn run_pwsh<R: tauri::Runtime>(
         shell: &tauri_plugin_shell::Shell<R>,
         script: &str,
@@ -345,7 +381,7 @@ async fn collect_windows_extra_async(app: &tauri::AppHandle) -> Option<ExtraInfo
         }
     }
 
-    // Launch all commands concurrently
+    // Launch all commands concurrently to reduce total latency.
     let (
         secure_boot_raw,
         tpm_summary,
@@ -378,7 +414,7 @@ async fn collect_windows_extra_async(app: &tauri::AppHandle) -> Option<ExtraInfo
         run_pwsh(&shell, "Get-CimInstance Win32_ComputerSystem | ConvertTo-Json -Compress"),
     );
 
-    // Post-processing
+    // Post-processing and normalization
     let secure_boot = secure_boot_raw
         .and_then(|s| s.lines().last().map(|l| l.trim().to_string()))
         .filter(|s| !s.is_empty());
@@ -420,7 +456,7 @@ async fn collect_windows_extra_async(app: &tauri::AppHandle) -> Option<ExtraInfo
         .and_then(|s| s.lines().last().map(|l| l.trim().to_string()))
         .filter(|s| !s.is_empty());
 
-    // JSON arrays normalization helper
+    // JSON arrays normalization helper: if a single object is returned, wrap it as a one-element array.
     let parse_json_array = |s: Option<String>| -> Vec<serde_json::Value> {
         if let Some(txt) = s {
             match serde_json::from_str::<serde_json::Value>(&txt) {
@@ -462,6 +498,7 @@ async fn collect_windows_extra_async(app: &tauri::AppHandle) -> Option<ExtraInfo
 }
 
 #[cfg(not(target_os = "windows"))]
+// Non-Windows platforms do not provide Windows-specific extra info.
 async fn collect_windows_extra_async(_app: &tauri::AppHandle) -> Option<ExtraInfo> {
     None
 }
