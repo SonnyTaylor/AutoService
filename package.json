@@ -16,6 +16,7 @@
     "vite": "^7.1.5"
   },
   "dependencies": {
+    "@phosphor-icons/web": "^2.1.2",
     "@tauri-apps/plugin-shell": "~2.3.0",
     "escape-html": "^1.0.3",
     "humanize-duration": "^3.33.0",

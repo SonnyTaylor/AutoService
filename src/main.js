@@ -1,4 +1,5 @@
 // Router and page loader for AutoService frontend
+import "@phosphor-icons/web/regular";
 //
 // Responsibilities:
 // - Maintain a minimal hash-based router: #/<route>[?query]
