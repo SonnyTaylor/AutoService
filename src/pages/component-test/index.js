@@ -12,13 +12,13 @@
  * @module component-test
  */
 
-import { initTabs } from './tabs.js';
-import { initCamera, cleanupCamera, listDevices } from './camera.js';
-import { initAudio, cleanupAudio } from './audio.js';
-import { initKeyboard, cleanupKeyboard } from './keyboard.js';
-import { initMouse, cleanupMouse } from './mouse.js';
-import { initNetwork, cleanupNetwork } from './network.js';
-import { initDisplay, cleanupDisplay } from './display.js';
+import { initTabs } from "./tabs.js";
+import { initCamera, cleanupCamera, listDevices } from "./camera.js";
+import { initAudio, cleanupAudio } from "./audio.js";
+import { initKeyboard, cleanupKeyboard } from "./keyboard.js";
+import { initMouse, cleanupMouse } from "./mouse.js";
+import { initNetwork, cleanupNetwork } from "./network.js";
+import { initDisplay, cleanupDisplay } from "./display.js";
 
 /**
  * Initialize the component test page
@@ -28,7 +28,7 @@ import { initDisplay, cleanupDisplay } from './display.js';
  * @returns {Promise<void>}
  */
 export async function initPage() {
-  console.log('Initializing Component Test page...');
+  console.log("Initializing Component Test page...");
 
   try {
     // Initialize tab system first
@@ -48,10 +48,9 @@ export async function initPage() {
     // Set up page-level cleanup
     setupPageCleanup();
 
-    console.log('Component Test page initialized successfully');
-
+    console.log("Component Test page initialized successfully");
   } catch (error) {
-    console.error('Failed to initialize Component Test page:', error);
+    console.error("Failed to initialize Component Test page:", error);
   }
 }
 
@@ -64,7 +63,7 @@ function setupPageCleanup() {
    * Clean up all test resources
    */
   const cleanup = () => {
-    console.log('Cleaning up Component Test resources...');
+    console.log("Cleaning up Component Test resources...");
 
     // Clean up each module
     cleanupCamera();
@@ -75,22 +74,22 @@ function setupPageCleanup() {
     cleanupDisplay();
 
     // Remove event listeners
-    window.removeEventListener('beforeunload', cleanup);
+    window.removeEventListener("beforeunload", cleanup);
   };
 
   // Clean up on page unload
-  window.addEventListener('beforeunload', cleanup, { once: true });
+  window.addEventListener("beforeunload", cleanup, { once: true });
 
   // Clean up on route change away from this page
   const onRouteChange = () => {
-    const route = (location.hash || '').slice(2);
-    if (route !== 'component-test') {
+    const route = (location.hash || "").slice(2);
+    if (route !== "component-test") {
       cleanup();
-      window.removeEventListener('hashchange', onRouteChange);
+      window.removeEventListener("hashchange", onRouteChange);
     }
   };
 
-  window.addEventListener('hashchange', onRouteChange);
+  window.addEventListener("hashchange", onRouteChange);
 }
 
 /**
