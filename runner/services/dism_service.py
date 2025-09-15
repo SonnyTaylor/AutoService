@@ -24,7 +24,10 @@ def parse_dism_output(output: str) -> Dict[str, Any]:
         low = l.lower()
         if "component store is repairable" in low:
             health_state = "repairable"
-        elif "component store corruption repaired" in low or "corruption was repaired" in low:
+        elif (
+            "component store corruption repaired" in low
+            or "corruption was repaired" in low
+        ):
             health_state = "repaired"
             repair_attempted = True
             repair_success = True
@@ -78,7 +81,9 @@ def run_dism_health_check(task: Dict[str, Any]) -> Dict[str, Any]:
             "dism",
             "/Online",
             "/Cleanup-Image",
-            f"/{action.capitalize()}" if action.lower() == "checkhealth" else f"/{action}",
+            f"/{action.capitalize()}"
+            if action.lower() == "checkhealth"
+            else f"/{action}",
         ]
         # DISM uses /CheckHealth, /ScanHealth, /RestoreHealth casing.
         cmd[-1] = {
@@ -111,7 +116,9 @@ def run_dism_health_check(task: Dict[str, Any]) -> Dict[str, Any]:
             }
 
         parsed = parse_dism_output(proc.stdout)
-        step_success = proc.returncode == 0 and (parsed.get("repair_success") is not False)
+        step_success = proc.returncode == 0 and (
+            parsed.get("repair_success") is not False
+        )
         if not step_success:
             overall_success = False
         aggregate["steps"].append(

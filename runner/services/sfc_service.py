@@ -50,7 +50,7 @@ def parse_sfc_output(output: str) -> Dict[str, Any]:
         "integrity_violations": integrity_violations,
         "repairs_attempted": repairs_attempted,
         "repairs_successful": repairs_successful,
-    "message": "\n".join(message_lines[-15:]),  # last few lines (most relevant)
+        "message": "\n".join(message_lines[-15:]),  # last few lines (most relevant)
     }
 
 
