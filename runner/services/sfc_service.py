@@ -1,6 +1,12 @@
+"""System File Checker (SFC) scan service.
+
+Runs `sfc /scannow` and parses output into a concise, structured summary.
+Handles UTF-16LE/UTF-8 stdout decoding quirks present on Windows.
+"""
+
 import subprocess
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +56,7 @@ def parse_sfc_output(output: str) -> Dict[str, Any]:
         "integrity_violations": integrity_violations,
         "repairs_attempted": repairs_attempted,
         "repairs_successful": repairs_successful,
-    "message": "\n".join(message_lines[-15:]),  # last few lines (most relevant)
+        "message": "\n".join(message_lines[-15:]),  # last few lines (most relevant)
     }
 
 

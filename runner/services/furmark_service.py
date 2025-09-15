@@ -1,3 +1,9 @@
+"""FurMark GPU stress test service.
+
+Builds the command line for a timed FurMark demo, executes it, and parses
+console output into structured metrics (FPS, frames, duration, temps, etc.).
+"""
+
 import subprocess
 import logging
 import re

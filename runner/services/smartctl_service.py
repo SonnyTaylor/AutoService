@@ -32,7 +32,7 @@ from __future__ import annotations
 import subprocess
 import json
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 

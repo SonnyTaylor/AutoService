@@ -1,8 +1,15 @@
+"""AI-assisted Windows startup item optimizer.
+
+Enumerates startup entries from common registry keys and Startup folders, then
+consults an OpenAI-compatible model to suggest safe disables. Optionally applies
+changes (deleting registry values or moving shortcut files) based on suggestions.
+"""
+
 import os
 import json
 import re
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional, Tuple
 
 # Load environment variables from .env file
 try:
@@ -16,6 +23,11 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+# Prefer requests for HTTP if available; fall back to urllib otherwise.
+try:  # lightweight optional dependency
+    import requests  # type: ignore
+except Exception:  # noqa: BLE001
+    requests = None  # type: ignore
 try:
     import winreg  # type: ignore
 except ImportError:  # Non-Windows systems will not support this service
@@ -160,13 +172,11 @@ Rules: keep the list minimal. Only include items you are >= medium confidence ar
 def call_chat_model(
     api_key: str, model: str, items: List[Dict[str, Any]]
 ) -> Dict[str, Any]:
-    """Call the OpenAI-compatible chat completion endpoint using only stdlib.
+    """Call the OpenAI-compatible chat completion endpoint.
 
+    Uses `requests` if available for readability; falls back to stdlib `urllib`.
     Returns dict with keys: success, data|error.
     """
-    import urllib.request
-    import urllib.error
-
     url = "https://api.openai.com/v1/chat/completions"
     payload = {
         "model": model,
@@ -177,51 +187,59 @@ def call_chat_model(
         "temperature": 0,
         "response_format": {"type": "json_object"},
     }
-    data = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(
-        url,
-        data=data,
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        },
-        method="POST",
-    )
+
     try:
-        with urllib.request.urlopen(req, timeout=60) as resp:  # type: ignore
-            body = resp.read().decode("utf-8", "replace")
-    except urllib.error.HTTPError as e:  # type: ignore
-        return {
-            "success": False,
-            "error": f"HTTP {e.code}: {e.read().decode('utf-8', 'replace')}",
-        }
+        if requests is not None:
+            resp = requests.post(  # type: ignore
+                url,
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+                timeout=60,
+            )
+            if not resp.ok:
+                return {
+                    "success": False,
+                    "error": f"HTTP {resp.status_code}: {resp.text[:2000]}",
+                }
+            outer = resp.json()
+        else:
+            import urllib.request
+            import urllib.error
+
+            data = json.dumps(payload).encode("utf-8")
+            req = urllib.request.Request(
+                url,
+                data=data,
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=60) as resp:  # type: ignore
+                body = resp.read().decode("utf-8", "replace")
+            outer = json.loads(body)
     except Exception as e:  # noqa: BLE001
         return {"success": False, "error": f"Request failed: {e}"}
 
-    # Parse JSON response
+    # Parse assistant content (should already be JSON due to response_format)
     try:
-        outer = json.loads(body)
         content = outer["choices"][0]["message"]["content"]
-    except Exception as e:  # noqa: BLE001
-        return {
-            "success": False,
-            "error": f"Malformed API reply: {e} | body={body[:2000]}",
-        }
-
-    # Extract JSON object from content (in case of extra text)
-    json_text = content.strip()
-    if not json_text.startswith("{"):
-        m = re.search(r"(\{.*\})", json_text, re.DOTALL)
-        if m:
-            json_text = m.group(1)
-    try:
+        json_text = content.strip()
+        if not json_text.startswith("{"):
+            m = re.search(r"(\{.*\})", json_text, re.DOTALL)
+            if m:
+                json_text = m.group(1)
         parsed = json.loads(json_text)
-        if "to_disable" not in parsed or not isinstance(parsed["to_disable"], list):
+        if "to_disable" not in parsed or not isinstance(parsed.get("to_disable"), list):
             parsed.setdefault("to_disable", [])
     except Exception as e:  # noqa: BLE001
         return {
             "success": False,
-            "error": f"Could not parse model JSON: {e} | content={content[:1000]}",
+            "error": f"Malformed API reply: {e} | body={str(outer)[:2000]}",
         }
 
     return {"success": True, "data": parsed}

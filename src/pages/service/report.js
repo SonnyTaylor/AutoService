@@ -1,6 +1,11 @@
 import { getToolStatuses } from "../../utils/tools.js";
 
-// Minimal runner controller: spawns service_runner.exe via PowerShell, streams output, shows final JSON
+/**
+ * Service Runner report controller.
+ *
+ * Spawns the Python sidecar (service_runner.exe) via PowerShell, streams live
+ * logs into the UI, tracks per-task status markers, and renders the final JSON.
+ */
 export async function initPage() {
   const { core } = window.__TAURI__ || {};
   const { invoke } = core || {};

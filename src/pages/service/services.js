@@ -36,6 +36,27 @@
  * }
  */
 
+/**
+ * @typedef {Object} ServiceBuildArgs
+ * @property {Object<string, any>=} params - UI parameters for this service.
+ * @property {(keyOrKeys: string|string[]) => Promise<string|null>} resolveToolPath - Resolve tool executable path(s).
+ * @property {() => Promise<Record<string, string>>} getDataDirs - Resolve data directories (reports, programs, etc.).
+ */
+
+/**
+ * @typedef {Object} ServiceDef
+ * @property {string} id
+ * @property {string} label
+ * @property {string} group
+ * @property {Object<string, any>=} defaultParams
+ * @property {string[]=} toolKeys
+ * @property {(args: ServiceBuildArgs) => Promise<Record<string, any>>} build
+ */
+
+/**
+ * Central catalog of services available to the run builder.
+ * @type {Record<string, ServiceDef>}
+ */
 export const SERVICES = {
   adwcleaner_clean: {
     id: "adwcleaner_clean",
@@ -190,14 +211,25 @@ export const SERVICES = {
   },
 };
 
+/**
+ * @returns {string[]} All service IDs in display order.
+ */
 export function listServiceIds() {
   return Object.keys(SERVICES);
 }
 
+/**
+ * @param {string} id
+ * @returns {ServiceDef|null}
+ */
 export function getServiceById(id) {
   return SERVICES[id] || null;
 }
 
+/**
+ * @param {string} id
+ * @returns {string[]} Tool keys this service depends on (may be empty).
+ */
 export function toolKeysForService(id) {
   const s = getServiceById(id);
   return (s && s.toolKeys) || [];

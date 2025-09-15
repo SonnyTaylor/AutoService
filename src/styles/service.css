@@ -1,3 +1,4 @@
+/* Service pages: presets, run builder, and runner/report styling */
 [data-page="service-run"] .param-controls {
   display: inline-flex;
   align-items: center;
@@ -80,14 +81,7 @@
 [data-page="service-report"] .badge.running {
   background: #2d4e7a;
 }
-[data-page="service-report"] .badge.running .dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  display: inline-block;
-  background: #7fb1ff;
-  margin-right: 6px;
-}
+/* .badge.running .dot is defined later with animation; remove duplicate */
 /* Service (Servicing) first screen */
 [data-page="service"] .service-header {
   display: flex;
@@ -268,9 +262,6 @@
 [data-page="service-run"] .section-title {
   margin: 0;
   font-size: 1rem;
-}
-[data-page="service-run"] .small {
-  font-size: 0.75rem;
 }
 [data-page="service-run"] .task-list {
   list-style: none;

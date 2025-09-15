@@ -1,4 +1,4 @@
-/* Core design tokens (centralized). Adding a few new ones for repeated literals. */
+/* Core layout, palette, and reusable primitives for the entire app. */
 :root {
   /* Layout chrome sizes */
   --titlebar-height: 34px;
