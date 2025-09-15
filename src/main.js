@@ -1,7 +1,19 @@
-// Minimal hash router that loads pages from /pages/*.html into #content
+// Router and page loader for AutoService frontend
+//
+// Responsibilities:
+// - Maintain a minimal hash-based router: #/<route>[?query]
+// - Load HTML from /pages/** into #content and optionally initialize controllers
+// - Manage dynamic technician tabs derived from app settings
+// - Keep focus/scroll behavior accessible and predictable
 
-// Base static routes; technician custom links will be appended at runtime
+// -----------------------------
+// Route registry
+// -----------------------------
+
+/** Dynamic technician routes constructed from settings at runtime. */
 let dynamicTechRoutes = [];
+
+/** Base static routes available in the app. */
 const baseRoutes = [
   "service",
   "service-run",
@@ -19,10 +31,43 @@ const baseRoutes = [
 // Keys are module paths relative to this file (starting with './')
 const controllers = import.meta.glob("./pages/**/*.js");
 
+/** Map logical routes to HTML file paths (without extension). */
+const htmlMap = {
+  "system-info": "system-info/system-info",
+  shortcuts: "shortcuts/shortcuts",
+  scripts: "scripts/scripts",
+  settings: "settings/settings",
+};
+
+/** Map logical routes to script controller module paths (without extension). */
+const scriptMap = {
+  "system-info": "system-info/index",
+  shortcuts: "shortcuts/index",
+  scripts: "scripts/index",
+  settings: "settings/index",
+  programs: "programs/index",
+};
+
+/** Map logical routes to foldered page files (fallback when not in htmlMap). */
+const pathMap = {
+  service: "service/index",
+  "service-run": "service/run",
+  "service-report": "service/report",
+  programs: "programs/index",
+  reports: "reports/index",
+  "component-test": "component-test/index",
+};
+
+/** Return all known routes including dynamic technician routes. */
 function allRoutes() {
   return [...baseRoutes, ...dynamicTechRoutes];
 }
 
+/**
+ * Normalize the current window hash to the format #/<route>[?query].
+ * Falls back to #/service for invalid or unknown routes.
+ * @returns {string} normalized hash
+ */
 function normalizeHash() {
   const hash = window.location.hash || "#/service";
   // ensure format #/route[?query]
@@ -33,37 +78,27 @@ function normalizeHash() {
   return `#/${name}${query ? `?${query}` : ""}`;
 }
 
+/**
+ * Determine if a route is a dynamic technician route.
+ * @param {string} name logical route name (no leading #/)
+ * @returns {boolean}
+ */
+function nameIsDynamicTech(name) {
+  return name.startsWith("tech-");
+}
+
+/**
+ * Load a page's HTML into #content and initialize its controller (if any).
+ * Handles dynamic technician link display specially by delegating to a dedicated module.
+ * @param {string} route logical route name (e.g., "service" or "system-info")
+ */
 async function loadPage(route) {
   const content = document.getElementById("content");
   if (!content) return;
   content.setAttribute("aria-busy", "true");
   try {
-    // map logical routes to foldered page files
-    const pathMap = {
-      service: "service/index",
-      "service-run": "service/run",
-      "service-report": "service/report",
-      programs: "programs/index",
-      reports: "reports/index",
-      "component-test": "component-test/index",
-    };
-    // map logical routes to HTML files (different from scripts for some cases)
-    const htmlMap = {
-      "system-info": "system-info/system-info",
-      shortcuts: "shortcuts/shortcuts",
-      scripts: "scripts/scripts",
-      settings: "settings/settings",
-    };
-    // map logical routes to script files (different from HTML for some cases)
-    const scriptMap = {
-      "system-info": "system-info/index",
-      shortcuts: "shortcuts/index",
-      scripts: "scripts/index",
-      settings: "settings/index",
-      programs: "programs/index",
-    };
+    // Dynamic technician pages are shown in a persistent iframe container
     if (nameIsDynamicTech(route)) {
-      // dynamic technician pages are now shown in a persistent iframe container
       try {
         const importer = controllers["./pages/technician-link-display/index.js"];
         if (importer) {
@@ -78,10 +113,13 @@ async function loadPage(route) {
         }
       } catch {}
     }
+
+    // Choose HTML path; some routes use a different HTML file than the script
     const pagePath = htmlMap[route] || pathMap[route] || route;
     const res = await fetch(`/pages/${pagePath}.html`, { cache: "no-cache" });
     const html = await res.text();
-    // Reset scroll before content change
+
+    // Reset scroll before content change, then inject HTML
     window.scrollTo(0, 0);
     content.innerHTML = html;
 
@@ -93,8 +131,7 @@ async function loadPage(route) {
       const importerHide = controllers["./pages/technician-link-display/index.js"];
       if (importerHide) {
         const modHide = await importerHide();
-        if (typeof modHide.hideTechnicianLinks === "function")
-          modHide.hideTechnicianLinks();
+        if (typeof modHide.hideTechnicianLinks === "function") modHide.hideTechnicianLinks();
       }
     } catch {}
 
@@ -122,6 +159,10 @@ async function loadPage(route) {
   }
 }
 
+/**
+ * Set the active tab button in the header based on the route.
+ * @param {string} route logical route name
+ */
 function setActiveTab(route) {
   document.querySelectorAll(".tab-bar .tab").forEach((el) => {
     const r = el.getAttribute("data-route");
@@ -130,6 +171,9 @@ function setActiveTab(route) {
   });
 }
 
+/**
+ * Update UI when the hash changes: normalize hash, compute route, set tab, and load page.
+ */
 function onRouteChange() {
   const hash = normalizeHash();
   if (window.location.hash !== hash) {
@@ -142,10 +186,10 @@ function onRouteChange() {
   loadPage(name);
 }
 
-function nameIsDynamicTech(name) {
-  return name.startsWith("tech-");
-}
-
+/**
+ * Load app settings, rebuild dynamic technician tabs, and inject them into the header.
+ * Emits no errors to the user; silently no-ops if settings are unavailable.
+ */
 async function refreshTechnicianTabs() {
   // Load settings and rebuild dynamic tabs area
   let settings = {};
@@ -180,6 +224,10 @@ async function refreshTechnicianTabs() {
     insertPoint?.before(a);
   });
 }
+
+// -----------------------------
+// Wire up events
+// -----------------------------
 
 window.addEventListener("hashchange", onRouteChange);
 window.addEventListener("DOMContentLoaded", () => {
