@@ -328,7 +328,10 @@ async fn collect_windows_extra_async(app: &tauri::AppHandle) -> Option<ExtraInfo
     let shell = app.shell();
 
     // Async helper
-    async fn run_pwsh<R: tauri::Runtime>(shell: &tauri_plugin_shell::Shell<R>, script: &str) -> Option<String> {
+    async fn run_pwsh<R: tauri::Runtime>(
+        shell: &tauri_plugin_shell::Shell<R>,
+        script: &str,
+    ) -> Option<String> {
         let fut = shell
             .command("powershell.exe")
             .args(["-NoProfile", "-NonInteractive", "-Command", script])
@@ -384,9 +387,18 @@ async fn collect_windows_extra_async(app: &tauri::AppHandle) -> Option<ExtraInfo
     let (bios_vendor, bios_version, bios_release_date) = bios_json
         .and_then(|j| serde_json::from_str::<serde_json::Value>(j.as_str()).ok())
         .map(|v| {
-            let vendor = v.get("Manufacturer").and_then(|x| x.as_str()).map(|s| s.to_string());
-            let ver = v.get("SMBIOSBIOSVersion").and_then(|x| x.as_str()).map(|s| s.to_string());
-            let date = v.get("ReleaseDate").and_then(|x| x.as_str()).map(|s| s.to_string());
+            let vendor = v
+                .get("Manufacturer")
+                .and_then(|x| x.as_str())
+                .map(|s| s.to_string());
+            let ver = v
+                .get("SMBIOSBIOSVersion")
+                .and_then(|x| x.as_str())
+                .map(|s| s.to_string());
+            let date = v
+                .get("ReleaseDate")
+                .and_then(|x| x.as_str())
+                .map(|s| s.to_string());
             (vendor, ver, date)
         })
         .unwrap_or((None, None, None));
@@ -450,4 +462,6 @@ async fn collect_windows_extra_async(app: &tauri::AppHandle) -> Option<ExtraInfo
 }
 
 #[cfg(not(target_os = "windows"))]
-async fn collect_windows_extra_async(_app: &tauri::AppHandle) -> Option<ExtraInfo> { None }
+async fn collect_windows_extra_async(_app: &tauri::AppHandle) -> Option<ExtraInfo> {
+    None
+}
