@@ -1,3 +1,10 @@
+"""AdwCleaner service: run a cleanup and parse the resulting log file.
+
+Executes AdwCleaner in no-reboot mode and extracts structured results from the
+latest log (counts and per-category lists). Requires paths to executable and
+working directory where logs are produced.
+"""
+
 import subprocess
 import logging
 import os

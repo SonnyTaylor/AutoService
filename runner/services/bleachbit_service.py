@@ -1,3 +1,9 @@
+"""BleachBit cleaning service.
+
+Runs BleachBit with selected cleaners and parses console output into
+structured metrics (space reclaimed, files deleted, etc.).
+"""
+
 import subprocess
 import re
 import logging

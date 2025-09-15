@@ -1,8 +1,19 @@
+"""DISM health check/repair service.
+
+Provides helpers to run common DISM image health actions and parse their
+console output into a structured summary usable by the UI and reports.
+"""
+
 import subprocess
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Callable, Optional, TypedDict
 
 logger = logging.getLogger(__name__)
+
+
+# Light type aliases to document intent.
+Task = Dict[str, Any]
+TaskResult = Dict[str, Any]
 
 
 def parse_dism_output(output: str) -> Dict[str, Any]:
@@ -22,9 +33,7 @@ def parse_dism_output(output: str) -> Dict[str, Any]:
 
     for l in lines:
         low = l.lower()
-        if "component store is repairable" in low:
-            health_state = "repairable"
-        elif (
+        if (
             "component store corruption repaired" in low
             or "corruption was repaired" in low
         ):
@@ -58,7 +67,7 @@ def parse_dism_output(output: str) -> Dict[str, Any]:
     }
 
 
-def run_dism_health_check(task: Dict[str, Any]) -> Dict[str, Any]:
+def run_dism_health_check(task: Task) -> TaskResult:
     """Run DISM health check and optional restore.
 
     Task schema:
@@ -77,6 +86,7 @@ def run_dism_health_check(task: Dict[str, Any]) -> Dict[str, Any]:
     last_parsed: Dict[str, Any] | None = None
 
     for action in run_sequence:
+        # DISM prefers specific casing on switches; normalize here.
         cmd = [
             "dism",
             "/Online",

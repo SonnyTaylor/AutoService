@@ -38,7 +38,7 @@ from __future__ import annotations
 
 import subprocess
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple
 
 logger = logging.getLogger(__name__)
 
