@@ -162,6 +162,7 @@ export async function initPage() {
   // Persistence keys
   const PERSIST_KEY = "service.run.builder.v1";
 
+  /** Save current builder state into sessionStorage. */
   function persist() {
     try {
       const data = {
@@ -175,6 +176,7 @@ export async function initPage() {
     } catch {}
   }
 
+  /** Restore builder state from sessionStorage; returns true when successful. */
   function restore() {
     try {
       const raw = sessionStorage.getItem(PERSIST_KEY);
@@ -226,6 +228,7 @@ export async function initPage() {
   }
 
   // ---- Rendering Helpers --------------------------------------------------
+  /** Render per-task parameter controls for a given service id. */
   function renderParamControls(id, params) {
     const wrapper = document.createElement("div");
     wrapper.className = "param-controls";
@@ -246,6 +249,7 @@ export async function initPage() {
     return wrapper;
   }
 
+  /** Render GPU Stress sub-options (FurMark / HeavyLoad) and duration inputs. */
   function renderGpuSubOptions() {
     const div = document.createElement("div");
     div.className = "gpu-sub";
@@ -277,6 +281,7 @@ export async function initPage() {
     return div;
   }
 
+  /** Render one list item for a task id (selected/unselected). */
   function renderItem(id) {
     const isGpuParent = id === GPU_PARENT_ID;
     const li = document.createElement("li");
@@ -369,6 +374,7 @@ export async function initPage() {
     return li;
   }
 
+  /** Render the full palette in consistent order (selected first). */
   function renderPalette() {
     paletteEl.innerHTML = "";
     // Always render all tasks in consistent order:
@@ -401,6 +407,7 @@ export async function initPage() {
   }
 
   // ---- JSON Generation ----------------------------------------------------
+  /** Build the ordered tasks array expected by the Python runner. */
   async function generateTasksArray() {
     const result = [];
     for (const id of order) {
@@ -446,6 +453,7 @@ export async function initPage() {
     );
   }
 
+  /** Regenerate JSON preview and re-validate Next button. */
   async function updateJson() {
     jsonEl.textContent = "Generating...";
     const tasks = await generateTasksArray();
@@ -557,6 +565,7 @@ export async function initPage() {
     paletteEl.querySelectorAll(".drop-indicator").forEach((el) => el.remove());
   }
 
+  /** Count tasks that are runnable given current availability and selections. */
   function tasksCountRunnable() {
     // Count tasks that have no missing tool dependency
     const tasks = order.filter((id) => selection.has(id));
