@@ -1,3 +1,9 @@
+/**
+ * Service presets landing page controller.
+ *
+ * Lets users pick a preset (or Custom) and navigates into the run builder.
+ * Keyboard accessible: Enter/Space to toggle a card.
+ */
 export async function initPage() {
   const cards = Array.from(document.querySelectorAll(".preset-card"));
   const startBtn = document.getElementById("svc-start");
