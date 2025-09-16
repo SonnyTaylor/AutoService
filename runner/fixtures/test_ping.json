@@ -1,0 +1,9 @@
+{
+  "tasks": [
+    {
+      "type": "ping_test",
+      "host": "google.com",
+      "count": 4
+    }
+  ]
+}
