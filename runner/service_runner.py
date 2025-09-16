@@ -53,6 +53,7 @@ from services.smartctl_service import run_smartctl_report  # type: ignore
 from services.sfc_service import run_sfc_scan  # type: ignore
 from services.dism_service import run_dism_health_check  # type: ignore
 from services.ai_startup_service import run_ai_startup_disable  # type: ignore
+from services.ping_service import run_ping_test  # type: ignore
 
 # Configure logging to stderr for live streaming to the UI.
 # Use a simple format that's easy to parse.
@@ -80,6 +81,7 @@ TASK_HANDLERS: Dict[str, TaskHandler] = {
     "sfc_scan": run_sfc_scan,
     "dism_health_check": run_dism_health_check,
     "ai_startup_disable": run_ai_startup_disable,
+    "ping_test": run_ping_test,
     # "kvrt_scan": run_kvrt_scan, # Example for the future
     # "windows_defender_scan": run_windows_defender_scan, # Example for the future
 }
