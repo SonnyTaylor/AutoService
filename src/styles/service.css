@@ -308,6 +308,17 @@
   opacity: 0.55;
   cursor: grab;
 }
+
+/* SortableJS drag helpers */
+[data-page="service-run"] .task-item.drag-active .task-row {
+  opacity: 0.75;
+}
+[data-page="service-run"] .drag-ghost {
+  opacity: 0.6 !important;
+}
+[data-page="service-run"] .task-row:active {
+  cursor: grabbing;
+}
 [data-page="service-run"] .task-row .main {
   display: flex;
   flex-direction: column;

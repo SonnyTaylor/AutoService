@@ -12,6 +12,7 @@
  */
 
 import { getToolPath, getToolStatuses } from "../../utils/tools.js";
+import Sortable from "sortablejs";
 import {
   SERVICES,
   listServiceIds,
@@ -287,7 +288,7 @@ export async function initPage() {
     const li = document.createElement("li");
     li.className = "task-item";
     li.dataset.id = id;
-    li.draggable = true;
+    // Dragging handled by SortableJS
 
     const selected = selection.has(id);
     const orderIdx = selected ? [...order].indexOf(id) + 1 : null;
@@ -338,72 +339,74 @@ export async function initPage() {
       renderPalette();
     });
 
-    // Drag & drop
-    li.addEventListener("dragstart", (e) => {
-      li.classList.add("dragging");
-      e.dataTransfer.setData("text/plain", id);
-      e.dataTransfer.effectAllowed = "move";
-    });
-    li.addEventListener("dragend", () => {
-      li.classList.remove("dragging");
-      clearDropIndicators();
-    });
-    li.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      const bounds = li.getBoundingClientRect();
-      const halfway = bounds.top + bounds.height / 2;
-      showDropIndicator(li, e.clientY < halfway ? "top" : "bottom");
-      e.dataTransfer.dropEffect = "move";
-    });
-    li.addEventListener("dragleave", () => clearDropIndicators());
-    li.addEventListener("drop", (e) => {
-      e.preventDefault();
-      clearDropIndicators();
-      const draggedId = e.dataTransfer.getData("text/plain");
-      if (!draggedId || draggedId === id) return;
-      const targetIndex = order.indexOf(id);
-      const draggedIndex = order.indexOf(draggedId);
-      const bounds = li.getBoundingClientRect();
-      const insertAfter = e.clientY >= bounds.top + bounds.height / 2;
-      const newIndex = insertAfter ? targetIndex + 1 : targetIndex;
-      moveInOrder(draggedIndex, newIndex);
-      persist();
-      renderPalette();
-    });
+    // No per-item native DnD; SortableJS will handle list-level drag events
 
     return li;
   }
 
-  /** Render the full palette in consistent order (selected first). */
+  /** Render the full palette in the current unified order. */
   function renderPalette() {
     paletteEl.innerHTML = "";
-    // Always render all tasks in consistent order:
-    // 1. Selected tasks in their execution order first
-    // 2. Then unselected tasks
+    // Recreate Sortable each render to ensure it binds to fresh DOM
+    if (paletteEl.__sortable) {
+      try {
+        paletteEl.__sortable.destroy();
+      } catch {}
+      paletteEl.__sortable = null;
+    }
     const allTasks = listServiceIds().concat(GPU_PARENT_ID);
-    const selectedTasks = order.filter(
-      (id) => selection.has(id) && allTasks.includes(id)
-    );
-    const unselectedTasks = allTasks.filter(
-      (id) => !selection.has(id) && !selectedTasks.includes(id)
-    );
-
-    // Render selected tasks first (in execution order)
-    selectedTasks.forEach((id) => {
-      if (!["furmark_stress_test", "heavyload_stress_gpu"].includes(id)) {
-        paletteEl.appendChild(renderItem(id));
+    const displayOrder = [];
+    const seen = new Set();
+    // Start with current order
+    for (const id of order) {
+      if (!allTasks.includes(id)) continue;
+      if (["furmark_stress_test", "heavyload_stress_gpu"].includes(id))
+        continue;
+      if (!seen.has(id)) {
+        seen.add(id);
+        displayOrder.push(id);
       }
-    });
-
-    // Render unselected tasks after
-    unselectedTasks.forEach((id) => {
-      if (!["furmark_stress_test", "heavyload_stress_gpu"].includes(id)) {
-        paletteEl.appendChild(renderItem(id));
+    }
+    // Append any tasks not yet in order (so they appear and can be re-ordered later)
+    for (const id of allTasks) {
+      if (["furmark_stress_test", "heavyload_stress_gpu"].includes(id))
+        continue;
+      if (!seen.has(id)) {
+        seen.add(id);
+        displayOrder.push(id);
       }
+    }
+    // Render in unified order
+    displayOrder.forEach((id) => {
+      paletteEl.appendChild(renderItem(id));
     });
 
     validateNext(tasksCountRunnable());
     updateJson();
+
+    // Initialize/refresh SortableJS for drag-to-reorder on the whole list
+    // Only allow dragging selected items (those that currently show an order-pill)
+    paletteEl.__sortable = Sortable.create(paletteEl, {
+      animation: 150,
+      draggable: ".task-item",
+      handle: ".grab, .name",
+      ghostClass: "drag-ghost",
+      dragClass: "drag-active",
+      forceFallback: true,
+      fallbackOnBody: true,
+      fallbackTolerance: 5,
+      filter: "input, button",
+      preventOnFilter: true,
+      onEnd: () => {
+        const allIds = listServiceIds().concat(GPU_PARENT_ID);
+        const domOrder = Array.from(paletteEl.querySelectorAll(".task-item"))
+          .map((li) => li.dataset.id)
+          .filter((id) => id && allIds.includes(id));
+        if (domOrder.length) order = domOrder;
+        persist();
+        renderPalette();
+      },
+    });
   }
 
   // ---- JSON Generation ----------------------------------------------------
@@ -554,16 +557,7 @@ export async function initPage() {
     order.splice(toIndex, 0, id);
   }
 
-  function showDropIndicator(li, where) {
-    clearDropIndicators();
-    const bar = document.createElement("div");
-    bar.className =
-      "drop-indicator " + (where === "top" ? "drop-top" : "drop-bottom");
-    li.appendChild(bar);
-  }
-  function clearDropIndicators() {
-    paletteEl.querySelectorAll(".drop-indicator").forEach((el) => el.remove());
-  }
+  // Native drop indicators removed in favor of SortableJS visuals
 
   /** Count tasks that are runnable given current availability and selections. */
   function tasksCountRunnable() {
