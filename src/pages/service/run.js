@@ -1,6 +1,11 @@
 /**
  * Service Run Builder (run.js)
  * --------------------------------------------------------------
+ * @file
+ * UI logic for building an ordered queue of diagnostic/maintenance tasks.
+ * Produces a JSON spec the Python runner understands, with light validation
+ * against available tools. This module is browser-side (Tauri webview).
+ *
  * Responsibilities:
  *  - Present list of available maintenance/stress tasks.
  *  - Allow selecting & ordering tasks (keyboard + mouse drag reordering).
@@ -9,6 +14,12 @@
  *  - Generate JSON spec (similar to test_all.json) stored in sessionStorage for next page.
  *  - Resolve tool executable paths via tools.js (no hard-coded versioned paths).
  *  - Internal documentation for future contributors.
+ *
+ * Notes for contributors:
+ *  - Do not hard-code versioned paths to executables. Use `resolveToolPath` provided
+ *    to service builders, which in turn uses `getToolStatuses()`/saved programs.
+ *  - Keep this file free of business logic for executing tasks; only build the spec.
+ *  - If you add a new service, register it in services.js and it will show here.
  */
 
 import { getToolPath, getToolStatuses } from "../../utils/tools.js";
@@ -20,6 +31,51 @@ import {
   toolKeysForService,
 } from "./services.js";
 
+/**
+ * @typedef {Object} ToolStatus
+ * @property {string} key - Logical tool key (e.g., "bleachbit", "furmark").
+ * @property {boolean} exists - Whether the tool was found on disk.
+ * @property {string=} path - Resolved executable path if available.
+ */
+
+/**
+ * @typedef {Object} ProgramEntry
+ * @property {string} name - Display/program name.
+ * @property {string=} description - Optional description.
+ * @property {string} exe_path - Relative or absolute path to the executable.
+ * @property {boolean} exe_exists - Whether the exe is present.
+ */
+
+/**
+ * @typedef {Object} DataDirs
+ * @property {string=} data - Root of the data directory (usually `data/`).
+ * @property {string=} programs - Convenience pointer to `data/programs/`.
+ */
+
+/**
+ * @typedef {Object} ServiceBuildContext
+ * @property {Object} params - Parameter bag for the service (e.g., { minutes: 5 }).
+ * @property {(keyOrKeys: string|string[]) => Promise<string|null>} resolveToolPath - Resolver for tool paths.
+ * @property {() => Promise<DataDirs>} getDataDirs - Returns data directories for building absolute paths.
+ */
+
+/**
+ * @typedef {Object} ServiceDefinition
+ * @property {string} id - Unique service id.
+ * @property {string} label - Human-readable name.
+ * @property {string=} group - Grouping label (e.g., "Cleanup", "Stress").
+ * @property {Object=} defaultParams - Default params for the service UI controls.
+ * @property {(ctx: ServiceBuildContext) => Promise<Object>} build - Produces a Python-runner task spec.
+ */
+
+/**
+ * @typedef {Object} BuiltTask
+ * @description Shape consumed by the Python runner. Minimally, tasks are opaque
+ * objects here. A few tasks may contain an `executable_path` which, if empty,
+ * indicates the step is not runnable and should be filtered out.
+ * @property {string=} executable_path
+ */
+
 // ---- Utility Helpers ------------------------------------------------------
 /** Capitalizes the first letter of a string */
 const capitalize = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : "");
@@ -27,7 +83,17 @@ const capitalize = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : "");
 let TOOL_CACHE = null;
 let PROGRAMS_CACHE = null;
 let DATA_DIRS_CACHE = null;
-/** Fetches tool path by key (or keys) with caching and fallback to saved programs */
+/**
+ * Resolve a tool's absolute executable path using multiple strategies:
+ * 1) Preferred: tool status cache (`getToolStatuses`) by logical key.
+ * 2) Fallback: scan persisted programs list (from the Rust side) by fuzzy match.
+ * 3) If a relative exe_path is returned, make it absolute using data dirs.
+ *
+ * This is intentionally tolerant: if none of the keys resolve, returns null.
+ *
+ * @param {string|string[]} keyOrKeys - One or more logical tool keys to try.
+ * @returns {Promise<string|null>} Absolute path or null if not found.
+ */
 async function toolPath(keyOrKeys) {
   if (!TOOL_CACHE) TOOL_CACHE = await getToolStatuses();
   const keys = Array.isArray(keyOrKeys) ? keyOrKeys : [keyOrKeys];
@@ -53,6 +119,11 @@ async function toolPath(keyOrKeys) {
   return null;
 }
 
+/**
+ * Retrieve and memoize the list of known programs from the backend.
+ *
+ * @returns {Promise<ProgramEntry[]>}
+ */
 async function listPrograms() {
   if (PROGRAMS_CACHE) return PROGRAMS_CACHE;
   try {
@@ -65,6 +136,11 @@ async function listPrograms() {
   return PROGRAMS_CACHE;
 }
 
+/**
+ * Retrieve and memoize known data directories used for resolving relative paths.
+ *
+ * @returns {Promise<DataDirs>}
+ */
 async function getDataDirs() {
   if (DATA_DIRS_CACHE) return DATA_DIRS_CACHE;
   try {
@@ -77,6 +153,14 @@ async function getDataDirs() {
   return DATA_DIRS_CACHE;
 }
 
+/**
+ * Convert a relative program exe path into an absolute one using known data dirs.
+ * If the path is already absolute (drive letter or UNC), return it as-is.
+ *
+ * @param {string} exePath - Relative or absolute path to an executable.
+ * @param {DataDirs} dirs - Data directories.
+ * @returns {string|null} Absolute path or null when input is invalid.
+ */
 function resolveProgramFullPath(exePath, dirs) {
   if (!exePath) return null;
   if (/^[a-zA-Z]:\\|^\\\\/.test(exePath)) return exePath; // absolute or UNC
@@ -97,7 +181,7 @@ function resolveProgramFullPath(exePath, dirs) {
 // ---- Task Definitions -----------------------------------------------------
 // The static definitions have been replaced by the registry in services.js
 
-// GPU parent pseudo-task
+// GPU parent pseudo-task (virtual grouping item for FurMark/HeavyLoad)
 const GPU_PARENT_ID = "gpu_stress_parent";
 
 const PRESET_MAP = {
@@ -128,6 +212,14 @@ const PRESET_MAP = {
 };
 
 // ---- Page Initialization --------------------------------------------------
+/**
+ * Initialize the Service Run Builder page.
+ * - Restores persisted builder state when available.
+ * - Applies preset or mode defaults on first load.
+ * - Wires up event handlers, SortableJS, and JSON preview.
+ *
+ * Side effects: Mutates DOM, sessionStorage.
+ */
 export async function initPage() {
   const params = new URLSearchParams(location.hash.split("?")[1] || "");
   const preset = params.get("preset");
@@ -153,10 +245,16 @@ export async function initPage() {
     window.location.hash = "#/service-report";
   });
 
+  // The persistent UI model for the builder
+  /** @type {string[]} Order in which task ids appear in the list (selected or not). */
   let order = [];
+  /** @type {Set<string>} Currently selected task ids (including GPU parent). */
   const selection = new Set();
+  /** @type {Record<string, {params: Record<string, any>}>} Per-task params by id. */
   const state = {};
+  /** GPU sub-task toggles under the virtual GPU parent. */
   const gpuSubs = { furmark: true, heavyload: false };
+  /** Durations (minutes) for GPU sub-tasks. */
   const gpuParams = { furmarkMinutes: 1, heavyloadMinutes: 1 };
   let toolStatuses = [];
 
@@ -177,7 +275,11 @@ export async function initPage() {
     } catch {}
   }
 
-  /** Restore builder state from sessionStorage; returns true when successful. */
+  /**
+   * Restore builder state from sessionStorage.
+   *
+   * @returns {boolean} true if a valid state was restored.
+   */
   function restore() {
     try {
       const raw = sessionStorage.getItem(PERSIST_KEY);
@@ -229,7 +331,14 @@ export async function initPage() {
   }
 
   // ---- Rendering Helpers --------------------------------------------------
-  /** Render per-task parameter controls for a given service id. */
+  /**
+   * Render per-task parameter controls for a given service id.
+   * Currently supports "seconds" and "minutes" fields.
+   *
+   * @param {string} id - Service id.
+   * @param {Record<string, number>} params - Current parameter values.
+   * @returns {HTMLDivElement}
+   */
   function renderParamControls(id, params) {
     const wrapper = document.createElement("div");
     wrapper.className = "param-controls";
@@ -250,7 +359,11 @@ export async function initPage() {
     return wrapper;
   }
 
-  /** Render GPU Stress sub-options (FurMark / HeavyLoad) and duration inputs. */
+  /**
+   * Render GPU Stress sub-options (FurMark / HeavyLoad) with duration inputs.
+   *
+   * @returns {HTMLDivElement}
+   */
   function renderGpuSubOptions() {
     const div = document.createElement("div");
     div.className = "gpu-sub";
@@ -282,7 +395,16 @@ export async function initPage() {
     return div;
   }
 
-  /** Render one list item for a task id (selected/unselected). */
+  /**
+   * Render a single task row item.
+   *
+   * - Non-GPU tasks render optional param controls when selected.
+   * - GPU parent renders its sub-options when selected.
+   * - Drag handle and selection checkbox are included; SortableJS manages DnD.
+   *
+   * @param {string} id - Service id or the GPU parent id.
+   * @returns {HTMLLIElement}
+   */
   function renderItem(id) {
     const isGpuParent = id === GPU_PARENT_ID;
     const li = document.createElement("li");
@@ -349,7 +471,14 @@ export async function initPage() {
     return li;
   }
 
-  /** Render the full palette in the current unified order. */
+  /**
+   * Render the full palette in the current unified order.
+   *
+   * Implementation notes:
+   * - We re-create SortableJS instance after each render to bind to fresh DOM.
+   * - `order` includes unselected items so reselection preserves position.
+   * - GPU sub-services are hidden from the list; only the parent is shown.
+   */
   function renderPalette() {
     paletteEl.innerHTML = "";
     // Recreate Sortable each render to ensure it binds to fresh DOM
@@ -421,7 +550,14 @@ export async function initPage() {
   }
 
   // ---- JSON Generation ----------------------------------------------------
-  /** Build the ordered tasks array expected by the Python runner. */
+  /**
+   * Build the ordered tasks array expected by the Python runner.
+   *
+   * - GPU parent expands into one or more concrete tasks depending on toggles.
+   * - Tasks with an empty `executable_path` are filtered out as non-runnable.
+   *
+   * @returns {Promise<BuiltTask[]>}
+   */
   async function generateTasksArray() {
     const result = [];
     for (const id of order) {
@@ -467,7 +603,10 @@ export async function initPage() {
     );
   }
 
-  /** Regenerate JSON preview and re-validate Next button. */
+  /**
+   * Regenerate JSON preview and re-validate Next button.
+   * Debouncing is intentionally omitted for simplicity as updates are user-driven.
+   */
   async function updateJson() {
     jsonEl.textContent = "Generating...";
     const tasks = await generateTasksArray();
@@ -558,6 +697,12 @@ export async function initPage() {
   builder.hidden = false;
 
   // Helpers
+  /**
+   * Move an item within the `order` array (bounds-checked, no-op if unchanged).
+   *
+   * @param {number} fromIndex
+   * @param {number} toIndex
+   */
   function moveInOrder(fromIndex, toIndex) {
     if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return;
     const id = order.splice(fromIndex, 1)[0];
@@ -566,7 +711,13 @@ export async function initPage() {
 
   // Native drop indicators removed in favor of SortableJS visuals
 
-  /** Count tasks that are runnable given current availability and selections. */
+  /**
+   * Count tasks that are runnable given current availability and selections.
+   * - Built-in tools (SFC/DISM) are always considered available.
+   * - GPU parent counts as one when at least one available sub-task is enabled.
+   *
+   * @returns {number}
+   */
   function tasksCountRunnable() {
     // Count tasks that have no missing tool dependency
     const tasks = order.filter((id) => selection.has(id));
@@ -593,10 +744,21 @@ export async function initPage() {
     return count;
   }
 
+  /**
+   * Enable/disable the Next button based on runnable count and selection.
+   * @param {number} runnableCount
+   */
   function validateNext(runnableCount) {
     nextBtn.disabled = runnableCount === 0 || selection.size === 0;
   }
 
+  /**
+   * Determine whether at least one of the given logical tool keys is available.
+   * Checks both `toolStatuses` and the saved programs list as a fallback.
+   *
+   * @param {string|string[]} keyOrKeys
+   * @returns {boolean}
+   */
   function isToolOk(keyOrKeys) {
     if (!keyOrKeys) return true;
     const keys = Array.isArray(keyOrKeys) ? keyOrKeys : [keyOrKeys];
@@ -618,6 +780,12 @@ export async function initPage() {
     });
   }
 
+  /**
+   * Render the availability badge text for a given task id.
+   *
+   * @param {string} id
+   * @returns {string} HTML string for the badge.
+   */
   function renderAvailabilityBadge(id) {
     if (id === "sfc_scan" || id === "dism_health_check") {
       return '<span class="badge ok" title="Built-in Windows tool">Built-in</span>';
@@ -641,6 +809,11 @@ export async function initPage() {
     }</span>`;
   }
 
+  /**
+   * Map a service id to its logical tool key(s) used for availability checks.
+   * @param {string} id
+   * @returns {string|string[]|null}
+   */
   function toolKeyForTask(id) {
     return toolKeysForService(id);
   }
