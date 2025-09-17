@@ -333,7 +333,7 @@ export async function initPage() {
         if (!order.includes(id)) order.push(id);
       } else {
         selection.delete(id);
-        order = order.filter((x) => x !== id);
+        // Don't remove from order so original position is preserved on reselect
       }
       persist();
       renderPalette();
@@ -389,12 +389,16 @@ export async function initPage() {
     paletteEl.__sortable = Sortable.create(paletteEl, {
       animation: 150,
       draggable: ".task-item",
-      handle: ".grab, .name",
+      handle: ".grab",
       ghostClass: "drag-ghost",
       dragClass: "drag-active",
       forceFallback: true,
       fallbackOnBody: true,
       fallbackTolerance: 5,
+      setData: (dt) => {
+        // Avoid browser showing dragged text contents
+        try { dt.setData("text", ""); } catch {}
+      },
       filter: "input, button",
       preventOnFilter: true,
       onEnd: () => {
@@ -490,11 +494,7 @@ export async function initPage() {
   btnDeselectAll?.addEventListener("click", () => {
     // Keep all tasks visible but set selection empty
     selection.clear();
-    // Ensure `order` still covers all tasks so re-selecting doesn't lose position
-    const all = listServiceIds().concat(GPU_PARENT_ID);
-    all.forEach((id) => {
-      if (!order.includes(id)) order.push(id);
-    });
+    // Keep current order as-is to preserve future reselection positions
     persist();
     renderPalette();
   });
