@@ -131,8 +131,22 @@ async function performNetworkTest(isExtended) {
   // Perform connectivity tests
   const testResults = await performConnectivityTests();
 
-  // Perform WebSocket test
-  await performWebSocketTest();
+  // Perform DNS test and include in aggregates
+  const dns = await performDNSTest();
+  testResults.timings.push(dns.t);
+  if (dns.ok) testResults.successTimes.push(dns.t);
+  if (dns.ok) testResults.successCount++;
+
+  // Perform WebSocket test and include in aggregates
+  const ws = await performWebSocketTest();
+  // Compute total checks dynamically (3 HTTP + DNS + WS if supported)
+  const baseHttpCount = networkState.testUrls.length;
+  testResults.totalChecks = baseHttpCount + 1 /* DNS */ + (ws.supported ? 1 : 0);
+  if (ws.t > 0) testResults.timings.push(ws.t);
+  if (ws.ok) {
+    testResults.successTimes.push(ws.t);
+    testResults.successCount++;
+  }
 
   // Calculate and display results
   displayTestResults(testResults, isExtended);
@@ -197,9 +211,6 @@ async function performConnectivityTests() {
     }
   }
 
-  // DNS test
-  await performDNSTest(timings, successTimes, successCount);
-
   return { timings, successTimes, successCount };
 }
 
@@ -209,7 +220,7 @@ async function performConnectivityTests() {
  * @param {Array} successTimes - Successful timing results
  * @param {number} successCount - Count of successful tests
  */
-async function performDNSTest(timings, successTimes, successCount) {
+async function performDNSTest() {
   const dnsUrl = 'https://i.imgur.com/favicon.ico';
   const li = document.createElement('li');
   li.textContent = `DNS check ${dnsUrl} …`;
@@ -219,18 +230,14 @@ async function performDNSTest(timings, successTimes, successCount) {
   try {
     await fetch(dnsUrl, { cache: 'no-store', mode: 'no-cors' });
     const t = Math.round(performance.now() - t0);
-    timings.push(t);
-    successTimes.push(t);
-    successCount++;
-
     li.textContent = `DNS ${dnsUrl} → OK (${t} ms)`;
     li.classList.add('pass');
+    return { ok: true, t };
   } catch (error) {
     const t = Math.round(performance.now() - t0);
-    timings.push(t);
-
     li.textContent = `DNS ${dnsUrl} → FAIL (${t} ms): ${error.message}`;
     li.classList.add('fail');
+    return { ok: false, t };
   }
 }
 
@@ -244,7 +251,7 @@ async function performWebSocketTest() {
     li.textContent = 'WebSocket echo …';
     networkState.netResults.appendChild(li);
 
-    let done = false;
+    let settled = false;
 
     try {
       const ws = new WebSocket('wss://ws.postman-echo.com/raw');
@@ -258,31 +265,31 @@ async function performWebSocketTest() {
         const t = Math.round(performance.now() - t0);
         li.textContent = `WebSocket → OK (${t} ms)`;
         li.classList.add('pass');
-        done = true;
+        settled = true;
         ws.close();
-        resolve();
+        resolve({ ok: true, t, supported: true });
       };
 
       ws.onerror = () => {
         const t = Math.round(performance.now() - t0);
         li.textContent = `WebSocket → FAIL (${t} ms)`;
         li.classList.add('fail');
-        if (!done) {
-          done = true;
-          resolve();
+        if (!settled) {
+          settled = true;
+          resolve({ ok: false, t, supported: true });
         }
       };
     } catch (error) {
       li.textContent = `WebSocket → Not supported: ${error.message}`;
       li.classList.add('note');
-      resolve();
+      resolve({ ok: false, t: 0, supported: false });
     }
 
     // Timeout after 4 seconds
     setTimeout(() => {
-      if (!done) {
+      if (!settled) {
         li.textContent = 'WebSocket → TIMEOUT';
-        resolve();
+        resolve({ ok: false, t: 4000, supported: true });
       }
     }, 4000);
   });
@@ -295,7 +302,7 @@ async function performWebSocketTest() {
  */
 function displayTestResults(results, isExtended) {
   const { successTimes, successCount } = results;
-  const total = networkState.testUrls.length + 2; // + DNS + WebSocket
+  const total = results.totalChecks ?? (networkState.testUrls.length + 2); // + DNS + WebSocket
 
   // Calculate statistics
   const avg = successTimes.length
