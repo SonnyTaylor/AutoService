@@ -53,7 +53,7 @@ export let state = {
   all: [],
   filtered: [],
   query: "",
-  sort: "name-asc",
+  sort: "used-desc",
   editing: null,
 };
 
