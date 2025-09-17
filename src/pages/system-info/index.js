@@ -112,28 +112,58 @@ function render(info) {
     </div>
   `;
 
-  // Define sections to render with their render functions
+  // Define sections to render with their render functions and icons
   const sections = [
-    { title: "OS Info", renderFunc: () => renderOS(info, ex) },
-    { title: "System", renderFunc: () => renderSystem(info), condition: true },
+    {
+      title: "OS Info",
+      icon: "ph-monitor",
+      renderFunc: () => renderOS(info, ex),
+    },
+    {
+      title: "System",
+      icon: "ph-info",
+      renderFunc: () => renderSystem(info),
+      condition: true,
+    },
     {
       title: "Motherboard",
+      icon: "ph-circuitry",
       renderFunc: () => renderMotherboard(info, ex),
       condition: true,
     },
-    { title: "CPU", renderFunc: () => renderCPU(info) },
-    { title: "RAM", renderFunc: () => renderRAM(info, ex) },
-    { title: "GPU", renderFunc: () => renderGPU(info, ex) },
-    { title: "Storage", renderFunc: () => renderStorage(info, ex) },
-    { title: "Network", renderFunc: () => renderNetwork(info) },
-    { title: "Battery", renderFunc: () => renderBattery(info) },
+    { title: "CPU", icon: "ph-cpu", renderFunc: () => renderCPU(info) },
+    { title: "RAM", icon: "ph-memory", renderFunc: () => renderRAM(info, ex) },
+    {
+      title: "GPU",
+      icon: "ph-graphics-card",
+      renderFunc: () => renderGPU(info, ex),
+    },
+    {
+      title: "Storage",
+      icon: "ph-hard-drives",
+      renderFunc: () => renderStorage(info, ex),
+    },
+    {
+      title: "Network",
+      icon: "ph-network",
+      renderFunc: () => renderNetwork(info),
+    },
+    {
+      title: "Battery",
+      icon: "ph-battery-charging",
+      renderFunc: () => renderBattery(info),
+    },
   ];
 
   // Render each section
-  sections.forEach(({ title, renderFunc, condition = true }) => {
+  sections.forEach(({ title, icon, renderFunc, condition = true }) => {
     const html = renderFunc();
     if (condition && html) {
-      section.insertAdjacentHTML("beforeend", makeCollapsible(title, html));
+      const titleWithIcon = `<i class="ph ${icon}" style="font-size: 1.2em; margin-right: 8px; vertical-align: middle;"></i>${title}`;
+      section.insertAdjacentHTML(
+        "beforeend",
+        makeCollapsible(titleWithIcon, html)
+      );
     }
   });
 
