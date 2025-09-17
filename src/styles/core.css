@@ -310,7 +310,6 @@ button:hover {
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 16px;
-  padding-top: 0px;
 }
 .card-title {
   font-weight: 600;
