@@ -291,7 +291,12 @@ export async function initPage() {
     // Dragging handled by SortableJS
 
     const selected = selection.has(id);
-    const orderIdx = selected ? [...order].indexOf(id) + 1 : null;
+    let orderIdx = null;
+    if (selected) {
+      const selectedOrder = order.filter((x) => selection.has(x));
+      const idx = selectedOrder.indexOf(id);
+      orderIdx = idx >= 0 ? idx + 1 : null;
+    }
     const svcDef = getServiceById(id);
     const label = isGpuParent ? "GPU Stress" : svcDef?.label || id;
     const group = isGpuParent ? "Stress" : svcDef?.group || "";
@@ -389,7 +394,7 @@ export async function initPage() {
     paletteEl.__sortable = Sortable.create(paletteEl, {
       animation: 150,
       draggable: ".task-item",
-      handle: ".grab",
+      handle: ".task-row",
       ghostClass: "drag-ghost",
       dragClass: "drag-active",
       forceFallback: true,
@@ -397,7 +402,9 @@ export async function initPage() {
       fallbackTolerance: 5,
       setData: (dt) => {
         // Avoid browser showing dragged text contents
-        try { dt.setData("text", ""); } catch {}
+        try {
+          dt.setData("text", "");
+        } catch {}
       },
       filter: "input, button",
       preventOnFilter: true,
