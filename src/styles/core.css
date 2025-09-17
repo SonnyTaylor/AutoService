@@ -33,7 +33,10 @@ body {
 }
 
 body {
-  margin: 0;
+  /* margin: 0; */
+  /* This is probably a really shit fix but idc */
+  margin-top: 18px;
+
   background: var(--bg);
   color: var(--text);
   /* Space for titlebar + header to avoid content jumping */
