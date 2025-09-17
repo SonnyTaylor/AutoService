@@ -48,6 +48,27 @@
   border-radius: 6px;
 }
 
+[data-page="component-test"] .camera-placeholder {
+  width: min(100%, 1100px);
+  max-height: clamp(260px, 50vh, 800px);
+  aspect-ratio: 16 / 9;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--panel-2);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 1.2em;
+  text-align: center;
+}
+
+[data-page="component-test"] .camera-placeholder .icon {
+  font-size: 2em;
+  margin-bottom: 8px;
+}
+
 [data-page="component-test"] .kbd-readout {
   min-height: 24px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
