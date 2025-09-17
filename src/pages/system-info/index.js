@@ -46,6 +46,7 @@ import {
 } from "./ui.js";
 import {
   renderOS,
+    renderUsers,
   renderSystem,
   renderMotherboard,
   renderCPU,
@@ -54,6 +55,9 @@ import {
   renderStorage,
   renderNetwork,
   renderBattery,
+    renderSensors,
+    renderUpdates,
+    renderAdapters,
 } from "./renderers.js";
 
 /**
@@ -120,6 +124,12 @@ function render(info) {
       renderFunc: () => renderOS(info, ex),
     },
     {
+      title: "Users",
+      icon: "ph-users",
+      renderFunc: () => renderUsers(info),
+      condition: Array.isArray(info.users) && info.users.length > 0,
+    },
+    {
       title: "System",
       icon: "ph-info",
       renderFunc: () => renderSystem(info),
@@ -138,6 +148,13 @@ function render(info) {
       icon: "ph-graphics-card",
       renderFunc: () => renderGPU(info, ex),
     },
+    // Sensors near CPU/GPU for temps context
+    {
+      title: "Sensors",
+      icon: "ph-thermometer",
+      renderFunc: () => renderSensors(info),
+      condition: Array.isArray(info.sensors) && info.sensors.length > 0,
+    },
     {
       title: "Storage",
       icon: "ph-hard-drives",
@@ -149,9 +166,21 @@ function render(info) {
       renderFunc: () => renderNetwork(info),
     },
     {
+      title: "Adapters",
+      icon: "ph-plug",
+      renderFunc: () => renderAdapters(ex),
+      condition: Array.isArray(ex?.nic_enabled) && ex.nic_enabled.length > 0,
+    },
+    {
       title: "Battery",
       icon: "ph-battery-charging",
       renderFunc: () => renderBattery(info),
+    },
+    {
+      title: "Updates",
+      icon: "ph-arrow-circle-up",
+      renderFunc: () => renderUpdates(ex),
+      condition: Array.isArray(ex?.hotfixes) && ex.hotfixes.length > 0,
     },
   ];
 

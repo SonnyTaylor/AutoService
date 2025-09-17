@@ -56,12 +56,30 @@ function parseTpmSummary(raw) {
 export function renderOS(info, ex) {
   const osExtraRows = [];
 
+  // Add boot time if available
+  if (info.boot_time_seconds != null) {
+    try {
+      const dt = new Date(info.boot_time_seconds * 1000);
+      const bootStr = dt.toLocaleString();
+      osExtraRows.push(
+        `<tr><th>Booted</th><td>${escapeHtml(bootStr)}</td></tr>`
+      );
+    } catch {}
+  }
+
+    // (Moved to dedicated Users section)
+
   // Add domain information if available
   if (ex && Array.isArray(ex.computer_system) && ex.computer_system.length) {
     const cs = ex.computer_system[0] || {};
     if (cs?.Domain) {
       osExtraRows.push(
         `<tr><th>Domain</th><td>${escapeHtml(cs.Domain)}</td></tr>`
+      );
+    }
+    if (cs?.SystemType) {
+      osExtraRows.push(
+        `<tr><th>System Type</th><td>${escapeHtml(cs.SystemType)}</td></tr>`
       );
     }
   }
@@ -263,6 +281,7 @@ export function renderCPU(info) {
   const cores = info.cpu.cores || [];
   let avgCpu = null;
   let perCoreGrid = "";
+  const loadAvg = info.load_avg || null;
 
   // Calculate average CPU usage if cores data is available
   if (cores.length > 0) {
@@ -317,6 +336,16 @@ export function renderCPU(info) {
     );
   }
 
+  // Load averages if available
+  if (loadAvg && (loadAvg.one || loadAvg.five || loadAvg.fifteen)) {
+    const one = Number(loadAvg.one ?? 0).toFixed(2);
+    const five = Number(loadAvg.five ?? 0).toFixed(2);
+    const fifteen = Number(loadAvg.fifteen ?? 0).toFixed(2);
+    rows.push(
+      `<tr><th>Load Average</th><td><span class="badge">${one}</span> <span class="badge">${five}</span> <span class="badge">${fifteen}</span></td></tr>`
+    );
+  }
+
   if (perCoreGrid) {
     rows.push(`<tr><th>Per-core usage</th><td>${perCoreGrid}</td></tr>`);
   }
@@ -328,6 +357,65 @@ export function renderCPU(info) {
           <tbody>
             ${rows.join("")}
           </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Renders a sensors/temperatures section if sensors are present.
+ * @param {Object} info - System info object
+ * @returns {string} HTML string for sensors section or empty string
+ */
+export function renderSensors(info) {
+  const sensors = Array.isArray(info.sensors) ? info.sensors : [];
+  if (!sensors.length) return "";
+
+  const classify = (t) => {
+    if (t == null) return "";
+    if (t < 50) return "cool";
+    if (t < 70) return "warm";
+    return "hot";
+  };
+
+  const cards = sensors
+    .map((s) => {
+      const label = escapeHtml(s.label || s.name || "Sensor");
+      const temp = Number(s.temperature_c ?? s.temp_c ?? NaN);
+      const val = Number.isFinite(temp) ? `${temp.toFixed(1)} °C` : "-";
+      const cls = classify(temp);
+      return `<div class="sensor">
+        <div class="label">${label}</div>
+        <div class="temp ${cls}">${val}</div>
+      </div>`;
+    })
+    .join("");
+
+  return `
+    <div class="sensor-grid">${cards}</div>
+  `;
+}
+
+/**
+ * Renders Windows Updates/Hotfixes list if available.
+ * @param {Object} ex - Extra Windows-specific data
+ * @returns {string} HTML string for updates section or empty string
+ */
+export function renderUpdates(ex) {
+  const hotfixes = Array.isArray(ex?.hotfixes) ? ex.hotfixes : [];
+  if (!hotfixes.length) return "";
+
+  const rows = hotfixes
+    .map((line) => `<tr><td><code>${escapeHtml(String(line))}</code></td></tr>`) 
+    .join("");
+
+  return `
+    <div class="table-block">
+      <div class="table-wrap">
+        <table class="table data-table">
+          <thead><tr><th>Hotfix</th></tr></thead>
+          <tbody>${rows}</tbody>
         </table>
       </div>
     </div>
@@ -721,6 +809,46 @@ function getBatteryHealth(healthPct) {
 }
 
 /**
+ * Renders enabled network adapters (Windows WMI) if available.
+ * @param {Object} ex - Extra Windows-specific data
+ * @returns {string} HTML string for adapters section or empty string
+ */
+export function renderAdapters(ex) {
+  const list = Array.isArray(ex?.nic_enabled) ? ex.nic_enabled : [];
+  if (!list.length) return "";
+
+  const rows = list
+    .map((nic) => {
+      const name = escapeHtml(nic?.Name || nic?.NetConnectionID || "-");
+      const mac = escapeHtml(nic?.MACAddress || "-");
+      const type = escapeHtml(nic?.AdapterType || "-");
+      const speed = nic?.Speed != null ? `${Number(nic.Speed) / 1e6} Mbps` : "-";
+      const manu = escapeHtml(nic?.Manufacturer || "-");
+      return `<tr>
+        <td>${name}</td>
+        <td>${mac}</td>
+        <td>${type}</td>
+        <td>${speed}</td>
+        <td>${manu}</td>
+      </tr>`;
+    })
+    .join("");
+
+  return `
+    <div class="table-block">
+      <div class="table-wrap">
+        <table class="table data-table">
+          <thead>
+            <tr><th>Name</th><th>MAC</th><th>Type</th><th>Speed</th><th>Manufacturer</th></tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+/**
  * Renders the battery information section HTML.
  * @param {Object} info - System info object
  * @returns {string} HTML string for battery section
@@ -851,4 +979,61 @@ export function renderBattery(info) {
     `;
     })
     .join("");
+}
+
+/**
+ * Renders a filtered list of relevant users in a compact table.
+ * - Deduplicates names (case-insensitive)
+ * - Filters out obvious system/service and machine accounts
+ * @param {Object} info - System info object
+ * @returns {string} HTML string for users section or empty string
+ */
+export function renderUsers(info) {
+  const raw = Array.isArray(info.users) ? info.users : [];
+  if (!raw.length) return "";
+
+  // Normalize and deduplicate
+  const seen = new Set();
+  const normalized = [];
+  for (const u of raw) {
+    const name = String(u || "").trim();
+    if (!name) continue;
+    const key = name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    normalized.push(name);
+  }
+
+  // Filter out noisy/builtin accounts while preserving useful ones
+  const skipPatterns = [
+    /^defaultaccount$/i,
+    /^guest$/i,
+    /^wdagutilityaccount$/i,
+    /^dwm-\d+$/i, // Desktop Window Manager sessions
+    /\$$/, // machine account (ends with $)
+    /^umfd-\d+$/i,
+    /^local service$/i,
+    /^network service$/i,
+    /^system$/i,
+  ];
+  const isNoisy = (name) => skipPatterns.some((re) => re.test(name));
+
+  const keep = normalized.filter((n) => !isNoisy(n));
+  if (!keep.length) return "";
+
+  const rows = keep
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }))
+    .map((n) => `<tr><td>${escapeHtml(n)}</td></tr>`) 
+    .join("");
+
+  return `
+    <div class="table-block">
+      <div class="table-wrap">
+        <table class="table data-table">
+          <thead><tr><th>Users (Logged In)</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
 }
