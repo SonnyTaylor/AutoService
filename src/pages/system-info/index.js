@@ -46,7 +46,7 @@ import {
 } from "./ui.js";
 import {
   renderOS,
-    renderUsers,
+  renderUsers,
   renderSystem,
   renderMotherboard,
   renderCPU,
@@ -55,9 +55,9 @@ import {
   renderStorage,
   renderNetwork,
   renderBattery,
-    renderSensors,
-    renderUpdates,
-    renderAdapters,
+  renderSensors,
+  renderUpdates,
+  renderAdapters,
 } from "./renderers.js";
 
 /**

@@ -67,7 +67,7 @@ export function renderOS(info, ex) {
     } catch {}
   }
 
-    // (Moved to dedicated Users section)
+  // (Moved to dedicated Users section)
 
   // Add domain information if available
   if (ex && Array.isArray(ex.computer_system) && ex.computer_system.length) {
@@ -407,7 +407,7 @@ export function renderUpdates(ex) {
   if (!hotfixes.length) return "";
 
   const rows = hotfixes
-    .map((line) => `<tr><td><code>${escapeHtml(String(line))}</code></td></tr>`) 
+    .map((line) => `<tr><td><code>${escapeHtml(String(line))}</code></td></tr>`)
     .join("");
 
   return `
@@ -822,7 +822,8 @@ export function renderAdapters(ex) {
       const name = escapeHtml(nic?.Name || nic?.NetConnectionID || "-");
       const mac = escapeHtml(nic?.MACAddress || "-");
       const type = escapeHtml(nic?.AdapterType || "-");
-      const speed = nic?.Speed != null ? `${Number(nic.Speed) / 1e6} Mbps` : "-";
+      const speed =
+        nic?.Speed != null ? `${Number(nic.Speed) / 1e6} Mbps` : "-";
       const manu = escapeHtml(nic?.Manufacturer || "-");
       return `<tr>
         <td>${name}</td>
@@ -1023,7 +1024,7 @@ export function renderUsers(info) {
 
   const rows = keep
     .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }))
-    .map((n) => `<tr><td>${escapeHtml(n)}</td></tr>`) 
+    .map((n) => `<tr><td>${escapeHtml(n)}</td></tr>`)
     .join("");
 
   return `
