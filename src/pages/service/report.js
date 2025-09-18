@@ -94,22 +94,20 @@ export async function initPage() {
     if (firstPendingIdx >= 0) updateTaskStatus(firstPendingIdx, "running");
     try {
       const jsonArg = JSON.stringify({ tasks });
-      console.log("Sending tasks to Python runner:", tasks);
-      console.log("JSON argument:", jsonArg);
-      const result = await runRunner(jsonArg);
-      // Pretty print final JSON
-      try {
-        const obj = typeof result === "string" ? JSON.parse(result) : result;
-        finalJsonEl.textContent = JSON.stringify(obj, null, 2);
-        // Apply final statuses as a fallback if live markers weren't detected
+      // Try native streaming command first
+      if (invoke) {
         try {
-          applyFinalStatusesFromReport(obj);
-        } catch {}
-        const ok = obj?.overall_status === "success";
-        showSummary(ok);
-      } catch {
-        finalJsonEl.textContent = String(result || "");
-        showSummary(false);
+          wireNativeEvents(); // ensure listeners are ready before spawning (avoid missing very fast early lines)
+          const planPath = await invoke("start_service_run", { planJson: jsonArg });
+          appendLog(`[INFO] Started native runner plan: ${planPath}`);
+        } catch (err) {
+          appendLog(`[WARN] Native runner failed, falling back to shell: ${err}`);
+          const result = await runRunner(jsonArg); // fallback
+          handleFinalResult(result);
+        }
+      } else {
+        const result = await runRunner(jsonArg);
+        handleFinalResult(result);
       }
     } catch (e) {
       appendLog(`[ERROR] ${new Date().toLocaleTimeString()} ${String(e)}`);
@@ -120,6 +118,51 @@ export async function initPage() {
       runBtn.disabled = false;
     }
   });
+
+  let _nativeEventsWired = false;
+  function wireNativeEvents() {
+    if (_nativeEventsWired) return; // avoid duplicate listeners across reruns
+    if (!window.__TAURI__?.event?.listen) return;
+    const { listen } = window.__TAURI__.event;
+    _nativeEventsWired = true;
+    listen("service_runner_line", (evt) => {
+      try {
+        const payload = evt?.payload || {};
+        const line = payload.line || "";
+        if (!line) return;
+        appendLog(`[SR] ${line}`);
+        try { maybeProcessStatus(line); } catch (e) { console.warn("maybeProcessStatus error", e); }
+      } catch (e) {
+        console.warn("service_runner_line listener failed", e);
+      }
+    });
+    listen("service_runner_done", (evt) => {
+      const payload = evt?.payload || {};
+      const finalReport = payload.final_report || payload.finalReport || {};
+      try {
+        finalJsonEl.textContent = JSON.stringify(finalReport, null, 2);
+        applyFinalStatusesFromReport(finalReport);
+        const ok = finalReport?.overall_status === "success";
+        showSummary(ok);
+      } catch (e) {
+        finalJsonEl.textContent = String(e);
+        showSummary(false);
+      }
+    });
+  }
+
+  function handleFinalResult(result) {
+    try {
+      const obj = typeof result === "string" ? JSON.parse(result) : result;
+      finalJsonEl.textContent = JSON.stringify(obj, null, 2);
+      applyFinalStatusesFromReport(obj);
+      const ok = obj?.overall_status === "success";
+      showSummary(ok);
+    } catch {
+      finalJsonEl.textContent = String(result || "");
+      showSummary(false);
+    }
+  }
 
   function renderTaskList() {
     taskListEl.innerHTML = "";
@@ -212,6 +255,44 @@ export async function initPage() {
   }
 
   // Spawn the runner as a Tauri sidecar and capture stdout live.
+  // --- Shared status line parser (now hoisted so native events can reuse) ---
+  const maybeProcessStatus = (s) => {
+    const startMatch = s.match(/^TASK_START:(\d+):(.+)$/);
+    if (startMatch) {
+      const taskIndex = parseInt(startMatch[1]);
+      const taskType = startMatch[2];
+      updateTaskStatus(taskIndex, "running");
+      appendLog(`[INFO] Started: ${taskType}`);
+      return;
+    }
+    const okMatch = s.match(/^TASK_OK:(\d+):(.+)$/);
+    if (okMatch) {
+      const taskIndex = parseInt(okMatch[1]);
+      const taskType = okMatch[2];
+      updateTaskStatus(taskIndex, "success");
+      appendLog(`[SUCCESS] Completed: ${taskType}`);
+      return;
+    }
+    const failMatch = s.match(/^TASK_FAIL:(\d+):(.+?)(?:\s*-\s*(.+))?$/);
+    if (failMatch) {
+      const taskIndex = parseInt(failMatch[1]);
+      const taskType = failMatch[2];
+      const reason = failMatch[3] || "Failed";
+      updateTaskStatus(taskIndex, "failure");
+      appendLog(`[ERROR] Failed: ${taskType} - ${reason}`);
+      return;
+    }
+    const skipMatch = s.match(/^TASK_SKIP:(\d+):(.+?)(?:\s*-\s*(.+))?$/);
+    if (skipMatch) {
+      const taskIndex = parseInt(skipMatch[1]);
+      const taskType = skipMatch[2];
+      const reason = skipMatch[3] || "Skipped";
+      updateTaskStatus(taskIndex, "skipped");
+      appendLog(`[WARNING] Skipped: ${taskType} - ${reason}`);
+      return;
+    }
+  };
+
   async function runRunner(jsonArg) {
     const { shell } = window.__TAURI__ || {};
     const { Command } = shell || {};
@@ -304,103 +385,6 @@ export async function initPage() {
       // no-op; final JSON already collected from stdout buffer
     });
 
-    const maybeProcessStatus = (s) => {
-      // Debug: Log what we're processing
-      console.log("Processing log line:", JSON.stringify(s));
-
-      // Parse new format: TASK_START:0:task_type or TASK_OK:0:task_type
-      const startMatch = s.match(/^TASK_START:(\d+):(.+)$/);
-      if (startMatch) {
-        const taskIndex = parseInt(startMatch[1]);
-        const taskType = startMatch[2];
-        console.log(`Found TASK_START for task ${taskIndex}: ${taskType}`);
-        updateTaskStatus(taskIndex, "running");
-        appendLog(`[INFO] Started: ${taskType}`);
-        return;
-      }
-
-      const okMatch = s.match(/^TASK_OK:(\d+):(.+)$/);
-      if (okMatch) {
-        const taskIndex = parseInt(okMatch[1]);
-        const taskType = okMatch[2];
-        console.log(`Found TASK_OK for task ${taskIndex}: ${taskType}`);
-        updateTaskStatus(taskIndex, "success");
-        appendLog(`[SUCCESS] Completed: ${taskType}`);
-        return;
-      }
-
-      const failMatch = s.match(/^TASK_FAIL:(\d+):(.+?)(?:\s*-\s*(.+))?$/);
-      if (failMatch) {
-        const taskIndex = parseInt(failMatch[1]);
-        const taskType = failMatch[2];
-        const reason = failMatch[3] || "Failed";
-        console.log(
-          `Found TASK_FAIL for task ${taskIndex}: ${taskType} - ${reason}`
-        );
-        updateTaskStatus(taskIndex, "failure");
-        appendLog(`[ERROR] Failed: ${taskType} - ${reason}`);
-        return;
-      }
-
-      const skipMatch = s.match(/^TASK_SKIP:(\d+):(.+?)(?:\s*-\s*(.+))?$/);
-      if (skipMatch) {
-        const taskIndex = parseInt(skipMatch[1]);
-        const taskType = skipMatch[2];
-        const reason = skipMatch[3] || "Skipped";
-        console.log(
-          `Found TASK_SKIP for task ${taskIndex}: ${taskType} - ${reason}`
-        );
-        updateTaskStatus(taskIndex, "skipped");
-        appendLog(`[WARNING] Skipped: ${taskType} - ${reason}`);
-        return;
-      }
-
-      // Also handle the old format for backward compatibility
-      if (/TASK\s+START:/i.test(s)) {
-        console.log("Found old format TASK START");
-        // Find the first pending task
-        const pendingTasks = Object.entries(taskStatuses).filter(
-          ([_, status]) => status === "pending"
-        );
-        if (pendingTasks.length > 0) {
-          const taskIndex = parseInt(pendingTasks[0][0]);
-          updateTaskStatus(taskIndex, "running");
-        }
-      }
-      if (/TASK\s+OK:/i.test(s)) {
-        console.log("Found old format TASK OK");
-        // Find the first running task
-        const runningTasks = Object.entries(taskStatuses).filter(
-          ([_, status]) => status === "running"
-        );
-        if (runningTasks.length > 0) {
-          const taskIndex = parseInt(runningTasks[0][0]);
-          updateTaskStatus(taskIndex, "success");
-        }
-      }
-      if (/TASK\s+FAIL:/i.test(s)) {
-        console.log("Found old format TASK FAIL");
-        // Find the first running task
-        const runningTasks = Object.entries(taskStatuses).filter(
-          ([_, status]) => status === "running"
-        );
-        if (runningTasks.length > 0) {
-          const taskIndex = parseInt(runningTasks[0][0]);
-          updateTaskStatus(taskIndex, "failure");
-        }
-      }
-      if (/TASK\s+SKIP:/i.test(s)) {
-        console.log("Found old format TASK SKIP");
-        // Find the first running task
-        const runningTasks = Object.entries(taskStatuses).filter(
-          ([_, status]) => status === "running"
-        );
-        if (runningTasks.length > 0) {
-          const taskIndex = parseInt(runningTasks[0][0]);
-          updateTaskStatus(taskIndex, "skipped");
-        }
-      }
-    };
 
     // Set up event handlers
     console.log("Setting up command event handlers...");

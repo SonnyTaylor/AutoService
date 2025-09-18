@@ -16,6 +16,21 @@ const PYTHON_COMMAND: &str = "python"; // program used to invoke PyInstaller
 
 fn main() {
     println!("cargo:warning=build.rs STARTING EXECUTION");
+    // Ensure cargo rebuilds when the runner or its services change
+    println!("cargo:rerun-if-changed=../runner/service_runner.py");
+    // Watch all service modules (shallow) – if this becomes too broad we can refine
+    if let Ok(read_dir) = std::fs::read_dir("../runner/services") {
+        for entry in read_dir.flatten() {
+            if let Ok(ft) = entry.file_type() {
+                if ft.is_file() {
+                    println!(
+                        "cargo:rerun-if-changed=../runner/services/{}",
+                        entry.file_name().to_string_lossy()
+                    );
+                }
+            }
+        }
+    }
 
     // Resolve manifest and repository roots for diagnostics
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -70,11 +85,15 @@ fn main() {
         // don't fail the build; continue and try to create the bin dir below
     }
 
-    // We now build the Python runner directly into the app's data/resources/bin folder
-    // so the runtime can spawn it without sidecar registration.
+    // We now build the Python runner directly into the resolved data/resources/bin folder
+    // so the runtime can spawn it without sidecar registration. In dev, the resolved path
+    // may differ from the repository root data folder (e.g. if AUTOSERVICE_DATA_DIR is set
+    // or executable path heuristics change). To guarantee the developer sees the binary in
+    // the repo `data/resources/bin`, we also mirror/copy the built exe there when different.
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let repo_root = manifest_dir.parent().unwrap_or(&manifest_dir).to_path_buf();
     let bin_dir = data_root.join("resources").join("bin");
+    let repo_data_bin = repo_root.join("data").join("resources").join("bin");
     if let Err(e) = fs::create_dir_all(&bin_dir) {
         println!(
             "cargo:warning=Failed to create binaries directory {}: {}",
@@ -82,6 +101,15 @@ fn main() {
             e
         );
         return; // nothing more we can do
+    }
+    if bin_dir != repo_data_bin {
+        if let Err(e) = fs::create_dir_all(&repo_data_bin) {
+            println!(
+                "cargo:warning=Failed to create repo data bin {}: {}",
+                repo_data_bin.display(),
+                e
+            );
+        }
     }
 
     // Locate the Python source file in the repository: <repo root>/runner/service_runner.py
@@ -136,12 +164,15 @@ fn main() {
     // Target executable path in the bin folder. We'll remove it first so the
     // new build effectively overwrites the previous one.
     let target_exe = bin_dir.join(PYTHON_RUNNER_EXE_NAME);
+    let mirror_exe = repo_data_bin.join(PYTHON_RUNNER_EXE_NAME);
 
     println!("cargo:warning=Target executable: {}", target_exe.display());
     println!(
         "cargo:warning=Target executable exists: {}",
         target_exe.exists()
     );
+    println!("cargo:warning=Mirror exe path: {}", mirror_exe.display());
+    println!("cargo:warning=Mirror exe exists: {}", mirror_exe.exists());
 
     // Check modification times to see if we need to rebuild
     let needs_rebuild = if target_exe.exists() {
@@ -172,6 +203,16 @@ fn main() {
 
     if !needs_rebuild {
         println!("cargo:warning=Executable is up to date, skipping PyInstaller build");
+        // Still ensure mirror copy exists / updated
+        if target_exe.exists() {
+            if mirror_exe != target_exe {
+                if let Err(e) = fs::copy(&target_exe, &mirror_exe) {
+                    println!("cargo:warning=Failed to refresh mirror exe copy: {}", e);
+                } else {
+                    println!("cargo:warning=Mirror exe refreshed (skip build path)");
+                }
+            }
+        }
         return;
     }
 
@@ -286,6 +327,19 @@ fn main() {
                     target_exe.display(),
                     target_exe.metadata().map(|m| m.len()).unwrap_or(0)
                 );
+                if mirror_exe != target_exe {
+                    match fs::copy(&target_exe, &mirror_exe) {
+                        Ok(_) => println!(
+                            "cargo:warning=Copied exe to mirror location: {}",
+                            mirror_exe.display()
+                        ),
+                        Err(e) => println!(
+                            "cargo:warning=Failed to copy exe to mirror location {}: {}",
+                            mirror_exe.display(),
+                            e
+                        ),
+                    }
+                }
             } else {
                 println!(
                     "cargo:warning=PyInstaller reported success but {} was not found",
