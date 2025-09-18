@@ -98,10 +98,14 @@ export async function initPage() {
       if (invoke) {
         try {
           wireNativeEvents(); // ensure listeners are ready before spawning (avoid missing very fast early lines)
-          const planPath = await invoke("start_service_run", { planJson: jsonArg });
+          const planPath = await invoke("start_service_run", {
+            planJson: jsonArg,
+          });
           appendLog(`[INFO] Started native runner plan: ${planPath}`);
         } catch (err) {
-          appendLog(`[WARN] Native runner failed, falling back to shell: ${err}`);
+          appendLog(
+            `[WARN] Native runner failed, falling back to shell: ${err}`
+          );
           const result = await runRunner(jsonArg); // fallback
           handleFinalResult(result);
         }
@@ -131,7 +135,11 @@ export async function initPage() {
         const line = payload.line || "";
         if (!line) return;
         appendLog(`[SR] ${line}`);
-        try { maybeProcessStatus(line); } catch (e) { console.warn("maybeProcessStatus error", e); }
+        try {
+          maybeProcessStatus(line);
+        } catch (e) {
+          console.warn("maybeProcessStatus error", e);
+        }
       } catch (e) {
         console.warn("service_runner_line listener failed", e);
       }
@@ -291,7 +299,40 @@ export async function initPage() {
       appendLog(`[WARNING] Skipped: ${taskType} - ${reason}`);
       return;
     }
+
+    // Incremental JSON progress lines from runner
+    if (s.startsWith("PROGRESS_JSON:")) {
+      const jsonPart = s.slice("PROGRESS_JSON:".length).trim();
+      try {
+        const obj = JSON.parse(jsonPart);
+        renderProgressJson(obj);
+      } catch (e) {
+        // Ignore parse failures silently
+      }
+      return;
+    }
+    if (s.startsWith("PROGRESS_JSON_FINAL:")) {
+      const jsonPart = s.slice("PROGRESS_JSON_FINAL:".length).trim();
+      try {
+        const obj = JSON.parse(jsonPart);
+        renderProgressJson(obj, true);
+      } catch (e) {}
+      return;
+    }
   };
+
+  function renderProgressJson(obj, isFinal = false) {
+    if (!obj || typeof obj !== "object") return;
+    // Only update preview; summary still triggered by final report or final marker
+    try {
+      const pretty = JSON.stringify(obj, null, 2);
+      finalJsonEl.textContent = pretty;
+      if (isFinal) {
+        const ok = obj?.overall_status === "success";
+        showSummary(ok);
+      }
+    } catch {}
+  }
 
   async function runRunner(jsonArg) {
     const { shell } = window.__TAURI__ || {};
@@ -384,7 +425,6 @@ export async function initPage() {
     cmd.on("close", (data) => {
       // no-op; final JSON already collected from stdout buffer
     });
-
 
     // Set up event handlers
     console.log("Setting up command event handlers...");

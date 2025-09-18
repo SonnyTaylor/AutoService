@@ -291,33 +291,75 @@ def main():
                         flush_logs()
 
                 all_results.append(result)
+                # Emit incremental progress JSON line for UI consumption
+                try:
+                    progress_obj = {
+                        "type": "progress",
+                        "completed": len(all_results),
+                        "total": len(tasks),
+                        "last_result": result,
+                        "results": all_results,
+                        "overall_status": "success"
+                        if overall_success
+                        else "completed_with_errors",
+                    }
+                    logging.info("PROGRESS_JSON:%s", json.dumps(progress_obj))
+                    flush_logs()
+                except Exception:
+                    pass
 
             except Exception as e:
                 overall_success = False
                 logging.error("TASK_FAIL:%d:%s - Exception: %s", idx, task_type, str(e))
                 flush_logs()
-                all_results.append(
-                    {
-                        "task_type": task_type,
-                        "status": "failure",
-                        "summary": {"reason": f"Exception during execution: {str(e)}"},
+                failure_result = {
+                    "task_type": task_type,
+                    "status": "failure",
+                    "summary": {"reason": f"Exception during execution: {str(e)}"},
+                }
+                all_results.append(failure_result)
+                try:
+                    progress_obj = {
+                        "type": "progress",
+                        "completed": len(all_results),
+                        "total": len(tasks),
+                        "last_result": failure_result,
+                        "results": all_results,
+                        "overall_status": "success"
+                        if overall_success
+                        else "completed_with_errors",
                     }
-                )
+                    logging.info("PROGRESS_JSON:%s", json.dumps(progress_obj))
+                    flush_logs()
+                except Exception:
+                    pass
 
         else:
             logging.warning(
                 "TASK_SKIP:%d:%s - No handler found for task type", idx, task_type
             )
             flush_logs()
-            all_results.append(
-                {
-                    "task_type": task_type,
-                    "status": "skipped",
-                    "summary": {
-                        "reason": f"No handler implemented for this task type."
-                    },
+            skipped_result = {
+                "task_type": task_type,
+                "status": "skipped",
+                "summary": {"reason": f"No handler implemented for this task type."},
+            }
+            all_results.append(skipped_result)
+            try:
+                progress_obj = {
+                    "type": "progress",
+                    "completed": len(all_results),
+                    "total": len(tasks),
+                    "last_result": skipped_result,
+                    "results": all_results,
+                    "overall_status": "success"
+                    if overall_success
+                    else "completed_with_errors",
                 }
-            )
+                logging.info("PROGRESS_JSON:%s", json.dumps(progress_obj))
+                flush_logs()
+            except Exception:
+                pass
 
     final_report = {
         "overall_status": "success" if overall_success else "completed_with_errors",
@@ -327,6 +369,18 @@ def main():
     # Print the final JSON report to stdout for the parent process (AutoService) to capture.
     report_json = json.dumps(final_report, indent=2)
     print(report_json)
+    # Also emit final progress snapshot as PROGRESS_JSON_FINAL for UI
+    try:
+        final_progress = {
+            "type": "final",
+            "completed": len(all_results),
+            "total": len(tasks),
+            "results": all_results,
+            "overall_status": final_report["overall_status"],
+        }
+        logging.info("PROGRESS_JSON_FINAL:%s", json.dumps(final_progress))
+    except Exception:
+        pass
     flush_logs()
 
     # Write the final report to disk only if the user supplied --output-file.
