@@ -124,6 +124,34 @@ export async function initPage() {
   });
 
   let _nativeEventsWired = false;
+  // Flag: whether to show raw (full) progress JSON lines in log. Default false for conciseness.
+  const SHOW_RAW_PROGRESS_JSON = false;
+
+  function summarizeProgressLine(line) {
+    // Accept raw line starting with PROGRESS_JSON or PROGRESS_JSON_FINAL
+    if (!line.startsWith("PROGRESS_JSON:")) {
+      if (!line.startsWith("PROGRESS_JSON_FINAL:")) return null;
+    }
+    if (SHOW_RAW_PROGRESS_JSON) return `[RAW] ${line.substring(0, 120)}${line.length>120?'…':''}`; // truncated raw if enabled
+    try {
+      const isFinal = line.startsWith("PROGRESS_JSON_FINAL:");
+      const jsonPart = line.slice(isFinal?"PROGRESS_JSON_FINAL:".length:"PROGRESS_JSON:".length).trim();
+      const obj = JSON.parse(jsonPart);
+      const completed = obj.completed ?? (obj.results ? obj.results.length : 0);
+      const total = obj.total ?? '?';
+      const overall = obj.overall_status || obj.status || 'unknown';
+      const last = obj.last_result || (obj.results && obj.results[obj.results.length-1]) || {};
+      const lastType = last.task_type || last.task || last.type || 'n/a';
+      const lastStatus = last.status || 'unknown';
+      if (isFinal) {
+        return `[PROGRESS] Final ${completed}/${total} overall=${overall}`;
+      }
+      return `[PROGRESS] ${completed}/${total} overall=${overall} last=${lastType}(${lastStatus})`;
+    } catch {
+      return '[PROGRESS] update';
+    }
+  }
+
   function wireNativeEvents() {
     if (_nativeEventsWired) return; // avoid duplicate listeners across reruns
     if (!window.__TAURI__?.event?.listen) return;
@@ -134,7 +162,13 @@ export async function initPage() {
         const payload = evt?.payload || {};
         const line = payload.line || "";
         if (!line) return;
-        appendLog(`[SR] ${line}`);
+        // Replace verbose progress JSON lines with concise summary
+        if (line.startsWith("PROGRESS_JSON:" ) || line.startsWith("PROGRESS_JSON_FINAL:")) {
+          const summary = summarizeProgressLine(line);
+          if (summary) appendLog(summary);
+        } else {
+          appendLog(`[SR] ${line}`);
+        }
         try {
           maybeProcessStatus(line);
         } catch (e) {
@@ -437,7 +471,12 @@ export async function initPage() {
       console.log("Raw stderr line received:", JSON.stringify(s));
 
       // Process stderr for task status updates and show as live logs
-      appendLog(`[STDERR] ${s}`);
+      if (s.startsWith("PROGRESS_JSON:" ) || s.startsWith("PROGRESS_JSON_FINAL:")) {
+        const summary = summarizeProgressLine(s);
+        if (summary) appendLog(summary);
+      } else {
+        appendLog(`[STDERR] ${s}`);
+      }
       maybeProcessStatus(s);
     });
 
@@ -453,7 +492,12 @@ export async function initPage() {
         finalJson += (finalJson ? "\n" : "") + s;
       } else {
         // Show other stdout messages as live logs
-        appendLog(`[STDOUT] ${s}`);
+        if (s.startsWith("PROGRESS_JSON:" ) || s.startsWith("PROGRESS_JSON_FINAL:")) {
+          const summary = summarizeProgressLine(s);
+          if (summary) appendLog(summary);
+        } else {
+          appendLog(`[STDOUT] ${s}`);
+        }
         // Also check stdout for task status markers
         maybeProcessStatus(s);
       }
