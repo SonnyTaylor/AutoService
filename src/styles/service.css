@@ -562,13 +562,16 @@
   color: #9cbcff;
   border-color: #2b416b;
   background: #1a2332;
+  display: inline-flex; /* ensure dot and text sit horizontally */
+  align-items: center;
+  gap: 6px;
 }
 [data-page="service-report"] .badge.running .dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: #4f8cff;
-  display: inline-block;
+  display: block; /* avoid baseline misalignment */
   animation: pulse 1s infinite;
 }
 
