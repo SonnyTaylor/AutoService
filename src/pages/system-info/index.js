@@ -106,7 +106,7 @@ function render(info) {
     <div style="display:flex; align-items:center; gap:10px; justify-content: space-between; flex-wrap: wrap;">
       <div>
         <h1 style="margin-bottom:4px;">System Info</h1>
-        <p class="muted" style="margin:0;">Hardware, software, and drivers at a glance.</p>
+        <p class="muted" style="margin:0;">All your hardware and system info at a glance.</p>
       </div>
       <div style="display:flex; gap:8px; flex-wrap: wrap;">
         <button id="sysinfo-toggle-all-btn" class="ghost">Collapse all</button>
