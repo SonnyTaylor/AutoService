@@ -588,7 +588,9 @@
 }
 
 [data-page="service-report"] .log-wrap {
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 [data-page="service-report"] .log-view {
   margin: 0;
@@ -603,14 +605,20 @@
   white-space: pre-wrap;
 }
 [data-page="service-report"] .log-overlay {
-  position: absolute;
-  inset: 0;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
-  background: rgba(0, 0, 0, 0.25);
+  gap: 8px;
+  font-size: 0.7rem;
+  background: #1a2332;
+  border: 1px solid var(--border);
   border-radius: 8px;
+  padding: 6px 10px;
+  color: var(--muted);
+  box-shadow: 0 0 0 1px #1a2332, 0 0 0 3px rgba(79, 140, 255, 0.06);
+}
+[data-page="service-report"] .log-overlay .status-text {
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 [data-page="service-report"] .spinner {
   width: 16px;

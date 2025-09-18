@@ -189,10 +189,16 @@ export async function initPage() {
     logEl.textContent = "";
   }
   function appendLog(line) {
+    const first = !logEl.textContent;
     logEl.textContent += (logEl.textContent ? "\n" : "") + line;
     logEl.scrollTop = logEl.scrollHeight;
+    // Auto-hide overlay after first real log line
+    if (first) {
+      showOverlay(false);
+    }
   }
   function showOverlay(show) {
+    // If showing, ensure it's visible; otherwise hide.
     logOverlay.hidden = !show;
   }
   function showSummary(ok) {
