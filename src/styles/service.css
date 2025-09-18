@@ -504,6 +504,7 @@
   display: grid;
   gap: 12px;
   align-content: start;
+  min-width: 0; /* allow long code/log blocks to scroll instead of forcing grid expansion */
 }
 [data-page="service-report"] .task-status-list {
   list-style: none;
@@ -591,6 +592,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0; /* prevent expansion from long content */
 }
 [data-page="service-report"] .log-view {
   margin: 0;
@@ -603,6 +605,10 @@
   max-height: 360px;
   overflow: auto;
   white-space: pre-wrap;
+  max-width: 100%;
+  box-sizing: border-box;
+  width: 100%; /* force to parent width */
+  overflow-x: auto; /* horizontal scroll for long lines */
 }
 [data-page="service-report"] .log-view:empty::before {
   content: "Log output will appear here once the run starts.";
@@ -654,6 +660,11 @@
   font-size: 0.75rem;
   max-height: 360px;
   overflow: auto;
+  white-space: pre; /* keep long lines on one line */
+  max-width: 100%; /* constrain to container */
+  box-sizing: border-box;
+  width: 100%; /* force to parent width */
+  overflow-x: auto; /* horizontal scroll for long lines */
 }
 [data-page="service-report"] .final-json .json-preview:empty::before {
   content: "Final report JSON will appear here after the run completes.";
@@ -665,6 +676,11 @@
 }
 [data-page="service-report"] .final-json .json-preview:empty {
   background: #0b1016;
+}
+[data-page="service-report"] .final-json {
+  display: grid;
+  gap: 12px;
+  min-width: 0; /* prevent expansion from long content */
 }
 [data-page="service-report"] .final-json-head {
   display: flex;
