@@ -79,12 +79,15 @@
   padding: 10px 12px;
   border-bottom: 1px solid var(--border);
   vertical-align: top;
+  transition: background 120ms ease; /* smooth row hover */
 }
 .table tr:last-child th,
 .table tr:last-child td {
   border-bottom: none;
 }
-.table tr:hover td {
+/* Highlight entire row (including left stub th cells) on hover */
+.table tbody tr:hover td,
+.table tbody tr:hover th {
   background: var(--panel-hover);
 }
 
