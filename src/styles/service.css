@@ -604,6 +604,16 @@
   overflow: auto;
   white-space: pre-wrap;
 }
+[data-page="service-report"] .log-view:empty::before {
+  content: "Log output will appear here once the run starts.";
+  display: block;
+  opacity: 0.5;
+  font-style: italic;
+  pointer-events: none;
+}
+[data-page="service-report"] .log-view:empty {
+  background: #0b1016;
+}
 [data-page="service-report"] .log-overlay {
   display: flex;
   align-items: center;
@@ -644,6 +654,17 @@
   font-size: 0.75rem;
   max-height: 360px;
   overflow: auto;
+}
+[data-page="service-report"] .final-json .json-preview:empty::before {
+  content: "Final report JSON will appear here after the run completes.";
+  display: block;
+  opacity: 0.5;
+  font-style: italic;
+  pointer-events: none;
+  white-space: normal;
+}
+[data-page="service-report"] .final-json .json-preview:empty {
+  background: #0b1016;
 }
 [data-page="service-report"] .final-json-head {
   display: flex;
