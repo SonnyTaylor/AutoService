@@ -162,12 +162,12 @@ function render(info) {
     },
     {
       title: "Network",
-      icon: "ph-network",
+      icon: "ph-cell-signal-full",
       renderFunc: () => renderNetwork(info),
     },
     {
       title: "Adapters",
-      icon: "ph-plug",
+      icon: "ph-network",
       renderFunc: () => renderAdapters(ex),
       condition: Array.isArray(ex?.nic_enabled) && ex.nic_enabled.length > 0,
     },
@@ -178,7 +178,7 @@ function render(info) {
     },
     {
       title: "Updates",
-      icon: "ph-arrow-circle-up",
+      icon: "ph-arrows-clockwise",
       renderFunc: () => renderUpdates(ex),
       condition: Array.isArray(ex?.hotfixes) && ex.hotfixes.length > 0,
     },
