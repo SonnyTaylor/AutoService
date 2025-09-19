@@ -16,7 +16,7 @@ mod shortcuts;
 mod state;
 mod system;
 
-use tauri::{Manager, Emitter};
+use tauri::{Emitter, Manager};
 
 // Import command functions to bring them into scope for the handler
 use crate::icons::{read_image_as_data_url, suggest_logo_from_exe};
@@ -100,9 +100,32 @@ fn start_service_run(
 ) -> Result<String, String> {
     // Resolve runner path
     let data_root = state.data_dir.as_path();
-    let runner_path: PathBuf = data_root.join("resources").join("bin").join("service_runner.exe");
-    if !runner_path.exists() {
-        return Err(format!("service_runner.exe not found at {}", runner_path.display()));
+    let runner_exe: PathBuf = data_root
+        .join("resources")
+        .join("bin")
+        .join("service_runner.exe");
+
+    // Dev fallback: if the compiled runner is missing, try to run the Python script directly.
+    // This makes `pnpm tauri dev` usable without PyInstaller.
+    let mut use_python_fallback = false;
+    let mut python_script_path: Option<PathBuf> = None;
+    if !runner_exe.exists() {
+        // Try to infer repo root from data_root (repo_root/data)
+        if let Some(repo_root) = data_root.parent() {
+            let script = repo_root.join("runner").join("service_runner.py");
+            if script.exists() {
+                use_python_fallback = true;
+                python_script_path = Some(script);
+            }
+        }
+
+        if !use_python_fallback {
+            return Err(format!(
+                "service_runner.exe not found at {} and Python fallback script was not located. \
+                 Expected script path: <repo>/runner/service_runner.py",
+                runner_exe.display()
+            ));
+        }
     }
 
     // Write plan file into reports directory
@@ -122,21 +145,47 @@ fn start_service_run(
     let plan_file_for_return = plan_file.clone();
 
     let app_handle = app.clone();
-    let runner_path_clone = runner_path.clone();
+    let runner_exe_clone = runner_exe.clone();
+    let python_script_clone = python_script_path.clone();
     std::thread::spawn(move || {
-        let mut child = match StdCommand::new(&runner_path_clone)
-            .arg(&plan_file)
-            .arg("--log-file")
-            .arg(&log_file)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-        {
+        // Choose command: exe or python fallback
+        let spawn_result = if let Some(script) = python_script_clone.as_ref() {
+            // Prefer PY or PYTHON from PATH; use "python" here
+            StdCommand::new("python")
+                .arg(script)
+                .arg(&plan_file)
+                .arg("--log-file")
+                .arg(&log_file)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()
+        } else {
+            StdCommand::new(&runner_exe_clone)
+                .arg(&plan_file)
+                .arg("--log-file")
+                .arg(&log_file)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()
+        };
+
+        let mut child = match spawn_result {
             Ok(c) => c,
             Err(e) => {
+                let which = if python_script_clone.is_some() {
+                    format!(
+                        "Failed to spawn Python runner (python {}): {e}",
+                        python_script_clone.unwrap().display()
+                    )
+                } else {
+                    format!(
+                        "Failed to spawn runner EXE ({}): {e}",
+                        runner_exe_clone.display()
+                    )
+                };
                 let _ = app_handle.emit(
                     "service_runner_line",
-                    serde_json::json!({"stream":"stderr","line": format!("Failed to spawn runner: {e}")})
+                    serde_json::json!({"stream":"stderr","line": which}),
                 );
                 return;
             }
@@ -152,7 +201,7 @@ fn start_service_run(
                         Ok(l) => {
                             let _ = app_stderr.emit(
                                 "service_runner_line",
-                                serde_json::json!({"stream":"stderr","line": l})
+                                serde_json::json!({"stream":"stderr","line": l}),
                             );
                         }
                         Err(_) => break,
@@ -182,7 +231,7 @@ fn start_service_run(
                 "final_report": final_report,
                 "plan_file": plan_file,
                 "log_file": log_file
-            })
+            }),
         );
     });
 

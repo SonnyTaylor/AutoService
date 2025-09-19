@@ -174,25 +174,68 @@ fn main() {
     println!("cargo:warning=Mirror exe path: {}", mirror_exe.display());
     println!("cargo:warning=Mirror exe exists: {}", mirror_exe.exists());
 
-    // Check modification times to see if we need to rebuild
+    // Helper: get latest modification time among a list of files
+    fn latest_mtime(paths: &[PathBuf]) -> std::time::SystemTime {
+        let mut latest = std::time::SystemTime::UNIX_EPOCH;
+        for p in paths {
+            if let Ok(meta) = fs::metadata(p) {
+                if let Ok(m) = meta.modified() {
+                    if m > latest {
+                        latest = m;
+                    }
+                }
+            }
+        }
+        latest
+    }
+
+    // Collect Python sources to consider for rebuild: runner/service_runner.py, runner/requirements.txt, and all files under runner/services (recursive)
+    let mut py_sources: Vec<PathBuf> = vec![py_src.clone()];
+    let requirements = repo_root.join("runner").join("requirements.txt");
+    if requirements.exists() {
+        py_sources.push(requirements);
+    }
+    let services_dir = repo_root.join("runner").join("services");
+    if services_dir.exists() {
+        let mut stack = vec![services_dir.clone()];
+        while let Some(dir) = stack.pop() {
+            if let Ok(read_dir) = fs::read_dir(&dir) {
+                for entry in read_dir.flatten() {
+                    let path = entry.path();
+                    if let Ok(ft) = entry.file_type() {
+                        if ft.is_dir() {
+                            stack.push(path);
+                        } else if ft.is_file() {
+                            py_sources.push(path);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Determine if rebuild is needed by comparing latest source mtime vs exe mtime
     let needs_rebuild = if target_exe.exists() {
-        match (fs::metadata(&py_src), fs::metadata(&target_exe)) {
-            (Ok(src_meta), Ok(exe_meta)) => {
-                let src_modified = src_meta
-                    .modified()
-                    .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+        match fs::metadata(&target_exe) {
+            Ok(exe_meta) => {
                 let exe_modified = exe_meta
                     .modified()
                     .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
-                let needs_rebuild = src_modified > exe_modified;
+                let src_latest = latest_mtime(&py_sources);
+                let needs = src_latest > exe_modified;
                 println!(
-                    "cargo:warning=Source modified: {:?}, Exe modified: {:?}, Needs rebuild: {}",
-                    src_modified, exe_modified, needs_rebuild
+                    "cargo:warning=Latest Python source mtime: {:?}, Exe mtime: {:?}, Needs rebuild: {}",
+                    src_latest, exe_modified, needs
                 );
-                needs_rebuild
+                // In debug builds, also rebuild if an env var forces it
+                let force_rebuild = env::var("AUTOSERVICE_FORCE_RUNNER_REBUILD").is_ok();
+                if force_rebuild {
+                    println!("cargo:warning=AUTOSERVICE_FORCE_RUNNER_REBUILD is set: will rebuild");
+                }
+                needs || force_rebuild
             }
-            _ => {
-                println!("cargo:warning=Could not check file modification times, will rebuild");
+            Err(_) => {
+                println!("cargo:warning=Could not stat target exe, will rebuild");
                 true
             }
         }
