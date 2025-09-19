@@ -490,6 +490,13 @@
   display: flex;
   gap: 10px;
 }
+[data-page="service-report"] .run-header .run-actions button:disabled,
+[data-page="service-report"] #svc-report-run:disabled,
+[data-page="service-report"] #svc-report-back:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
 [data-page="service-report"] .runner-layout {
   display: grid;
   grid-template-columns: 320px 1fr;

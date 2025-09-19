@@ -81,10 +81,19 @@ export async function initPage() {
     taskStatuses[index] = "pending";
   });
 
+  // Track whether a run is currently in progress to prevent duplicate clicks
+  let _isRunning = false;
+
   runBtn?.addEventListener("click", async () => {
     if (!tasks.length) return;
+    if (_isRunning) return; // guard against double clicks
+    _isRunning = true;
+    // Hard-disable UI controls
     runBtn.disabled = true;
+    runBtn.setAttribute("disabled", "");
+    runBtn.setAttribute("aria-disabled", "true");
     backBtn.disabled = true;
+    backBtn.setAttribute("disabled", "");
     summaryEl.hidden = true;
     finalJsonEl.textContent = "";
     clearLog();
@@ -93,6 +102,7 @@ export async function initPage() {
     const firstPendingIdx = taskState.findIndex((t) => t.status === "pending");
     if (firstPendingIdx >= 0) updateTaskStatus(firstPendingIdx, "running");
     try {
+      let startedNatively = false;
       const jsonArg = JSON.stringify({ tasks });
       // Try native streaming command first
       if (invoke) {
@@ -102,24 +112,43 @@ export async function initPage() {
             planJson: jsonArg,
           });
           appendLog(`[INFO] Started native runner plan: ${planPath}`);
+          startedNatively = true;
         } catch (err) {
           appendLog(
             `[WARN] Native runner failed, falling back to shell: ${err}`
           );
           const result = await runRunner(jsonArg); // fallback
           handleFinalResult(result);
+          // Fallback is synchronous to completion; re-enable controls now
+          _isRunning = false;
+          showOverlay(false);
+          backBtn.disabled = false;
+          runBtn.disabled = false;
+          runBtn.removeAttribute("aria-disabled");
+          runBtn.removeAttribute("disabled");
+          backBtn.removeAttribute("disabled");
         }
       } else {
         const result = await runRunner(jsonArg);
         handleFinalResult(result);
+        _isRunning = false;
+        showOverlay(false);
+        backBtn.disabled = false;
+        runBtn.disabled = false;
+        runBtn.removeAttribute("aria-disabled");
+        runBtn.removeAttribute("disabled");
+        backBtn.removeAttribute("disabled");
       }
     } catch (e) {
       appendLog(`[ERROR] ${new Date().toLocaleTimeString()} ${String(e)}`);
       showSummary(false);
-    } finally {
+      _isRunning = false;
       showOverlay(false);
       backBtn.disabled = false;
       runBtn.disabled = false;
+      runBtn.removeAttribute("aria-disabled");
+      runBtn.removeAttribute("disabled");
+      backBtn.removeAttribute("disabled");
     }
   });
 
@@ -132,23 +161,31 @@ export async function initPage() {
     if (!line.startsWith("PROGRESS_JSON:")) {
       if (!line.startsWith("PROGRESS_JSON_FINAL:")) return null;
     }
-    if (SHOW_RAW_PROGRESS_JSON) return `[RAW] ${line.substring(0, 120)}${line.length>120?'…':''}`; // truncated raw if enabled
+    if (SHOW_RAW_PROGRESS_JSON)
+      return `[RAW] ${line.substring(0, 120)}${line.length > 120 ? "…" : ""}`; // truncated raw if enabled
     try {
       const isFinal = line.startsWith("PROGRESS_JSON_FINAL:");
-      const jsonPart = line.slice(isFinal?"PROGRESS_JSON_FINAL:".length:"PROGRESS_JSON:".length).trim();
+      const jsonPart = line
+        .slice(
+          isFinal ? "PROGRESS_JSON_FINAL:".length : "PROGRESS_JSON:".length
+        )
+        .trim();
       const obj = JSON.parse(jsonPart);
       const completed = obj.completed ?? (obj.results ? obj.results.length : 0);
-      const total = obj.total ?? '?';
-      const overall = obj.overall_status || obj.status || 'unknown';
-      const last = obj.last_result || (obj.results && obj.results[obj.results.length-1]) || {};
-      const lastType = last.task_type || last.task || last.type || 'n/a';
-      const lastStatus = last.status || 'unknown';
+      const total = obj.total ?? "?";
+      const overall = obj.overall_status || obj.status || "unknown";
+      const last =
+        obj.last_result ||
+        (obj.results && obj.results[obj.results.length - 1]) ||
+        {};
+      const lastType = last.task_type || last.task || last.type || "n/a";
+      const lastStatus = last.status || "unknown";
       if (isFinal) {
         return `[PROGRESS] Final ${completed}/${total} overall=${overall}`;
       }
       return `[PROGRESS] ${completed}/${total} overall=${overall} last=${lastType}(${lastStatus})`;
     } catch {
-      return '[PROGRESS] update';
+      return "[PROGRESS] update";
     }
   }
 
@@ -163,7 +200,10 @@ export async function initPage() {
         const line = payload.line || "";
         if (!line) return;
         // Replace verbose progress JSON lines with concise summary
-        if (line.startsWith("PROGRESS_JSON:" ) || line.startsWith("PROGRESS_JSON_FINAL:")) {
+        if (
+          line.startsWith("PROGRESS_JSON:") ||
+          line.startsWith("PROGRESS_JSON_FINAL:")
+        ) {
           const summary = summarizeProgressLine(line);
           if (summary) appendLog(summary);
         } else {
@@ -190,6 +230,14 @@ export async function initPage() {
         finalJsonEl.textContent = String(e);
         showSummary(false);
       }
+      // Native run completed – re-enable UI controls
+      _isRunning = false;
+      showOverlay(false);
+      backBtn.disabled = false;
+      runBtn.disabled = false;
+      runBtn.removeAttribute("aria-disabled");
+      runBtn.removeAttribute("disabled");
+      backBtn.removeAttribute("disabled");
     });
   }
 
@@ -471,7 +519,10 @@ export async function initPage() {
       console.log("Raw stderr line received:", JSON.stringify(s));
 
       // Process stderr for task status updates and show as live logs
-      if (s.startsWith("PROGRESS_JSON:" ) || s.startsWith("PROGRESS_JSON_FINAL:")) {
+      if (
+        s.startsWith("PROGRESS_JSON:") ||
+        s.startsWith("PROGRESS_JSON_FINAL:")
+      ) {
         const summary = summarizeProgressLine(s);
         if (summary) appendLog(summary);
       } else {
@@ -492,7 +543,10 @@ export async function initPage() {
         finalJson += (finalJson ? "\n" : "") + s;
       } else {
         // Show other stdout messages as live logs
-        if (s.startsWith("PROGRESS_JSON:" ) || s.startsWith("PROGRESS_JSON_FINAL:")) {
+        if (
+          s.startsWith("PROGRESS_JSON:") ||
+          s.startsWith("PROGRESS_JSON_FINAL:")
+        ) {
           const summary = summarizeProgressLine(s);
           if (summary) appendLog(summary);
         } else {
