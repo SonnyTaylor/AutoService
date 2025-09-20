@@ -342,6 +342,19 @@ export async function initPage() {
   function renderParamControls(id, params) {
     const wrapper = document.createElement("div");
     wrapper.className = "param-controls";
+    // Prevent clicks within controls from bubbling to row/checkbox/drag
+    [
+      "mousedown",
+      "mouseup",
+      "click",
+      "dblclick",
+      "pointerdown",
+      "touchstart",
+    ].forEach((evt) => {
+      wrapper.addEventListener(evt, (e) => {
+        e.stopPropagation();
+      });
+    });
     Object.entries(params).forEach(([key, value]) => {
       if (key === "seconds") {
         wrapper.innerHTML += `<label class="tiny-lab"><span class="lab">Duration</span> <input type="number" class="minutes-input" min="10" max="3600" step="10" data-param="seconds" value="${value}" aria-label="Duration in seconds" /> <span class="unit">sec</span></label>`;
@@ -350,6 +363,9 @@ export async function initPage() {
       }
     });
     wrapper.querySelectorAll("input").forEach((inp) => {
+      ["mousedown", "pointerdown", "click"].forEach((evt) => {
+        inp.addEventListener(evt, (e) => e.stopPropagation());
+      });
       inp.addEventListener("change", () => {
         state[id].params[inp.dataset.param] =
           Number(inp.value) || state[id].params[inp.dataset.param];
@@ -368,16 +384,26 @@ export async function initPage() {
     const div = document.createElement("div");
     div.className = "gpu-sub";
     div.innerHTML = `
-      <label><input type="checkbox" data-sub="furmark" ${
-        gpuSubs.furmark ? "checked" : ""
-      }> FurMark <span class="sep">•</span> <span class="lab">Duration</span> <input type="number" class="dur" data-sub-dur="furmarkMinutes" value="${
-      gpuParams.furmarkMinutes
-    }" min="1" max="240" step="1" aria-label="FurMark duration in minutes"/> <span class="unit">min</span></label>
-      <label><input type="checkbox" data-sub="heavyload" ${
-        gpuSubs.heavyload ? "checked" : ""
-      }> HeavyLoad <span class="sep">•</span> <span class="lab">Duration</span> <input type="number" class="dur" data-sub-dur="heavyloadMinutes" value="${
-      gpuParams.heavyloadMinutes
-    }" min="1" max="240" step="1" aria-label="HeavyLoad duration in minutes"/> <span class="unit">min</span></label>
+      <div class="gpu-line">
+        <label class="gpu-check"><input type="checkbox" data-sub="furmark" ${
+          gpuSubs.furmark ? "checked" : ""
+        }> FurMark</label>
+        <span class="sep">•</span> <span class="lab">Duration</span>
+        <input type="number" class="dur" data-sub-dur="furmarkMinutes" value="${
+          gpuParams.furmarkMinutes
+        }" min="1" max="240" step="1" aria-label="FurMark duration in minutes"/>
+        <span class="unit">min</span>
+      </div>
+      <div class="gpu-line">
+        <label class="gpu-check"><input type="checkbox" data-sub="heavyload" ${
+          gpuSubs.heavyload ? "checked" : ""
+        }> HeavyLoad</label>
+        <span class="sep">•</span> <span class="lab">Duration</span>
+        <input type="number" class="dur" data-sub-dur="heavyloadMinutes" value="${
+          gpuParams.heavyloadMinutes
+        }" min="1" max="240" step="1" aria-label="HeavyLoad duration in minutes"/>
+        <span class="unit">min</span>
+      </div>
     `;
     div.querySelectorAll('input[type="checkbox"]').forEach((cb) =>
       cb.addEventListener("change", () => {
@@ -385,13 +411,18 @@ export async function initPage() {
         updateJson();
       })
     );
-    div.querySelectorAll("input.dur").forEach((inp) =>
+    div.querySelectorAll("input.dur").forEach((inp) => {
+      ["mousedown", "pointerdown", "click", "dblclick", "touchstart"].forEach(
+        (evt) => {
+          inp.addEventListener(evt, (e) => e.stopPropagation());
+        }
+      );
       inp.addEventListener("change", () => {
         gpuParams[inp.dataset.subDur] =
           Number(inp.value) || gpuParams[inp.dataset.subDur];
         updateJson();
-      })
-    );
+      });
+    });
     return div;
   }
 
@@ -523,7 +554,7 @@ export async function initPage() {
     paletteEl.__sortable = Sortable.create(paletteEl, {
       animation: 150,
       draggable: ".task-item",
-      handle: ".task-row",
+      handle: ".grab",
       ghostClass: "drag-ghost",
       dragClass: "drag-active",
       forceFallback: true,
@@ -535,7 +566,8 @@ export async function initPage() {
           dt.setData("text", "");
         } catch {}
       },
-      filter: "input, button",
+      filter:
+        "input, textarea, select, label, button, .param-controls, .gpu-sub",
       preventOnFilter: true,
       onEnd: () => {
         const allIds = listServiceIds().concat(GPU_PARENT_ID);
@@ -675,6 +707,9 @@ export async function initPage() {
 
   // Keyboard reordering on focused rows (ArrowUp/Down + Ctrl to move)
   paletteEl.addEventListener("keydown", (e) => {
+    // Ignore when typing in interactive controls
+    const tag = (e.target && e.target.tagName) || "";
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(tag)) return;
     const row = e.target?.closest?.(".task-item");
     if (!row) return;
     const id = row.dataset.id;
