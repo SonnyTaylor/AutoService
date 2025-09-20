@@ -30,6 +30,7 @@
   - [Clone & Install](#clone--install)
   - [Run (Dev)](#run-dev)
   - [Build Portable EXE](#build-portable-exe)
+- [Service Runner](#service-runner)
 - [Configuration](#configuration)
 - [Adding Programs](#adding-programs)
 - [Adding Scripts](#adding-scripts)
@@ -40,70 +41,79 @@
 
 ## Overview
 
-AutoService is an early-stage Rust + Tauri desktop application (HTML/CSS/vanilla JS frontend) focused on accelerating common service bench tasks:
+AutoService is a Rust + Tauri desktop application (HTML/CSS/vanilla JS frontend) focused on accelerating common service bench tasks:
 
 - Run multiple cleanup, security, and maintenance tools with minimal clicks.
 - Collect system information and component test results in one place.
 - Provide a consistent portable toolkit you can drop onto any Windows machine from a USB drive.
 
-The project is still in heavy development; many flows are prototypes or stubs. Feedback & contributions welcome.
+The project is under active development; flows are maturing quickly. Feedback & contributions welcome.
 
 ## Key Concepts
 
-- **Automation First**: Orchestrate tools like ClamAV, Windows Defender, CCleaner, BleachBit (more planned) and eventually consolidate their outputs.
+- **Automation First**: Orchestrate tools like AdwCleaner, BleachBit, SFC, DISM, smartctl, HeavyLoad, FurMark, with a growing catalog.
+- **Run Queue Builder**: Build an ordered run of tasks (with durations/toggles) directly from the UI; JSON is generated for the runner.
 - **Extensible Catalogs**: User‑editable lists (JSON) for programs and scripts so technicians can tailor their toolkit.
 - **Portable Data Folder**: A sibling `data/` directory travels with the built EXE (ideal for USB use).
-- **Low Friction UI**: Plain HTML/CSS/JS for fast iteration; Rust backend for execution, spawning tools, and future reporting logic.
+- **Low Friction UI**: Plain HTML/CSS/JS for fast iteration; Rust backend for system operations, Python runner for automation.
 
 ## Features
 
 Current & planned surface (implemented portions are minimal or WIP unless marked stable):
 
 ### Automation & Maintenance
-- Launch / orchestrate third‑party utilities (ClamAV, Defender, CCleaner, BleachBit, etc.).
-- Planned: unified run queue + progress + error capture.
-- Planned: post‑run artifact collection and summary report.
+
+- Run Queue Builder (Service → Run) with presets and drag‑reorder.
+- Tasks include: AdwCleaner clean, BleachBit junk cleanup, SFC, DISM health check, smartctl drive report.
+- GPU/CPU/RAM stress: FurMark and HeavyLoad (select toggles, set durations).
+- Live availability checks based on detected tools and saved programs.
 
 ### Diagnostics & System Info
-- System info page (hardware / OS snapshot – scope expanding).
+
+- System info snapshot (hardware / OS; more to come).
 - Component testing: camera, microphone, speakers, mouse, display, basic network tests.
 
 ### Convenience Shortcuts
+
 - Quick links to common Windows management surfaces (Control Panel, Device Manager, etc.).
 
 ### Programs Page
+
 - Display & launch curated tools stored inside `data/programs/`.
 - Add your own folders (portable apps, utilities) without code changes.
 
 ### Scripts Page
+
 - Maintain a catalog of frequently used PowerShell / CMD scripts.
 - Run scripts from the UI (execution plumbing expanding).
 
 ### Reports (Early)
+
 - Stub UI for past reports listing (`data/reports/`).
 - Planned: HTML/JSON report generation after automation batches.
 
 ### Settings
+
 - Adjust app behavior & paths via JSON (`settings/`).
 
 ## Portable Layout
 
-When built, place the executable and this folder structure together on a USB stick:
+AutoService is designed to be compiled and run from a USB drive (or locally) alongside a portable data folder. Place the executable next to the `data/` folder (also referred to as `@data/`) like so:
 
 ```
 AutoService.exe
-data/
-  programs/           # Portable tool folders (e.g. ClamAV, CCleaner, etc.)
-  logs/               # Raw logs captured from tool runs
-  reports/            # Generated report outputs (planned)
-  resources/          # Any auxiliary binaries/resources
+data/                 # aka @data/
+  programs/           # Portable tools (e.g., BleachBit, AdwCleaner, HeavyLoad, FurMark, smartctl)
+  logs/               # Logs captured from tool runs
+  reports/            # JSON/HTML reports (planned; some JSON available via runner)
+  resources/          # Auxiliary binaries/resources (e.g., resources/bin)
   settings/
     app_settings.json
     programs.json     # User-maintained list of launchable programs
     scripts.json      # User-maintained script definitions
 ```
 
-The app reads and (eventually) writes within `data/` so user customizations persist across target machines.
+The app reads and writes within `data/` so user customizations persist across target machines. Keep the structure intact when copying to a USB drive.
 
 ## Getting Started
 
@@ -124,6 +134,10 @@ pnpm install
 ### Run (Dev)
 
 ```powershell
+# Frontend only
+pnpm dev
+
+# Full app with Tauri (hot reload)
 pnpm tauri dev
 ```
 
@@ -135,6 +149,37 @@ pnpm tauri build
 
 The build output (under `src-tauri/target/` per Tauri conventions) can be moved alongside your prepared `data/` folder.
 
+## Service Runner
+
+AutoService ships with a Python automation runner (`runner/service_runner.py`) that executes tasks defined by the Run Queue Builder or ad‑hoc JSON. Highlights:
+
+- Windows UAC elevation is requested automatically when a task requires admin.
+- Streams progress lines to stderr so the UI can show live updates.
+- Emits a final JSON report to stdout; optionally writes to `--output-file`.
+
+CLI usage examples:
+
+```powershell
+# Pass raw JSON describing tasks
+python runner/service_runner.py '{
+  "tasks": [
+    { "type": "bleachbit_clean" },
+    { "type": "sfc_scan" },
+    { "type": "dism_health_check" },
+    { "type": "smartctl_report" },
+    { "type": "heavyload_stress_test", "duration_minutes": 2, "stress_cpu": true }
+  ]
+}' --output-file data/reports/run_%DATE%.json --log-file data/logs/runner.log
+
+# Or read JSON from a file path
+python runner/service_runner.py data/reports/preset_run.json -o data/reports/result.json
+```
+
+Progress markers sent to stderr include:
+
+- `TASK_START:<index>:<type>` / `TASK_OK:<index>:<type>` / `TASK_FAIL:<index>:<type>` / `TASK_SKIP`.
+- `PROGRESS_JSON:{...}` snapshots during the run and `PROGRESS_JSON_FINAL:{...}` at completion.
+
 ## Configuration
 
 Configuration lives in `data/settings/`:
@@ -143,7 +188,7 @@ Configuration lives in `data/settings/`:
 - `programs.json` – array of program definitions (name, path, maybe arguments – schema evolving).
 - `scripts.json` – script entries (id, description, interpreter, content or path).
 
-These JSON files are meant to be human‑editable but its just easier to edit within AutoService.
+These JSON files are human‑editable; you can also manage them from within AutoService.
 
 ## Adding Programs
 
@@ -160,7 +205,7 @@ These JSON files are meant to be human‑editable but its just easier to edit wi
 
 ## Reports
 
-Report generation is not functional yet. The intended pipeline:
+Report generation is in progress. The intended pipeline:
 
 1. Queue selected maintenance / scan tasks.
 2. Execute each tool, capturing exit status, timings, and log pointers.
@@ -173,43 +218,13 @@ Contributions toward this normalization layer are especially welcome.
 
 Planned (unordered) – check issues for details:
 
-- Core automation queue & progress UI
-- Log collection + normalization adapters (ClamAV, Defender, CCleaner, BleachBit, etc.)
 - First pass HTML/JSON report generator
 - Additional component tests (storage benchmarks, stress, sensors)
 - Export tech summary (quick ticket attachment)
 - Optional integrity hash list for portable tools
-- UI polish (dark mode, responsive layout)
+- UI polish (light mode, responsive layout)
 - Basic plugin architecture (register new task types)
-
-## Contributing
-
-Ways to help:
-
-1. File issues with clear reproduction / proposal.
-2. Implement a small self‑contained enhancement (mark WIP in PR).
-3. Improve JSON schema validation / runtime checks.
-4. Prototype a report adapter for one tool.
-5. Documentation improvements (screens, usage notes, troubleshooting).
-
-Suggested PR flow:
-
-```bash
-gh repo fork
-git checkout -b feature/short-description
-# commit changes
-git push origin feature/short-description
-# open PR
-```
-
-Please keep PRs focused; open an issue first for larger refactors.
 
 ## License
 
 Distributed under the GNU General Public License v3.0. See `LICENSE` for details.
-
----
-
-If this is useful, a star helps visibility. Feedback & ideas welcome via issues.
-
-> NOTE: AutoService is experimental and not yet suitable for production repair reporting; verify results manually.
