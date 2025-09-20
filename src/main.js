@@ -31,6 +31,12 @@ const baseRoutes = [
 // Pre-register all potential page controllers so Vite can analyze them
 // Keys are module paths relative to this file (starting with './')
 const controllers = import.meta.glob("./pages/**/*.js");
+// Statically include all page HTML so production build doesn't rely on network fetches
+const htmlModules = import.meta.glob("./pages/**/*.html", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+});
 
 /** Map logical routes to HTML file paths (without extension). */
 const htmlMap = {
@@ -101,7 +107,8 @@ async function loadPage(route) {
     // Dynamic technician pages are shown in a persistent iframe container
     if (nameIsDynamicTech(route)) {
       try {
-        const importer = controllers["./pages/technician-link-display/index.js"];
+        const importer =
+          controllers["./pages/technician-link-display/index.js"];
         if (importer) {
           const mod = await importer();
           if (typeof mod.showTechnicianLink === "function") {
@@ -117,22 +124,26 @@ async function loadPage(route) {
 
     // Choose HTML path; some routes use a different HTML file than the script
     const pagePath = htmlMap[route] || pathMap[route] || route;
-    const res = await fetch(`/pages/${pagePath}.html`, { cache: "no-cache" });
-    const html = await res.text();
+    const htmlKey = `./pages/${pagePath}.html`;
+    const html = htmlModules[htmlKey];
 
-    // Reset scroll before content change, then inject HTML
+    // Reset scroll before content change, then inject HTML (or a simple error state)
     window.scrollTo(0, 0);
-    content.innerHTML = html;
+    content.innerHTML =
+      html ||
+      `<div class="page"><h1>Not Found</h1><p class="muted">Missing page template: ${htmlKey}</p></div>`;
 
     // Focus the main landmark for a11y but prevent auto-scrolling
     content.focus({ preventScroll: true });
 
     // Ensure any persistent technician webviews are hidden when loading a normal page
     try {
-      const importerHide = controllers["./pages/technician-link-display/index.js"];
+      const importerHide =
+        controllers["./pages/technician-link-display/index.js"];
       if (importerHide) {
         const modHide = await importerHide();
-        if (typeof modHide.hideTechnicianLinks === "function") modHide.hideTechnicianLinks();
+        if (typeof modHide.hideTechnicianLinks === "function")
+          modHide.hideTechnicianLinks();
       }
     } catch {}
 

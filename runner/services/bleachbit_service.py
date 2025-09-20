@@ -7,7 +7,8 @@ structured metrics (space reclaimed, files deleted, etc.).
 import subprocess
 import re
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -67,13 +68,47 @@ def parse_bleachbit_output(output: str) -> Dict[str, Any]:
     return summary
 
 
+def _resolve_bleachbit_console_path(exec_path: str) -> Optional[str]:
+    """Given a path provided by the task, resolve the proper console executable.
+
+    Prefers bleachbit_console.exe. If the provided path is the GUI exe or a directory,
+    attempt to locate the console exe in the same folder.
+    """
+    if not exec_path:
+        return None
+
+    # If a directory was provided, assume portable layout and append console exe
+    if os.path.isdir(exec_path):
+        candidate = os.path.join(exec_path, "bleachbit_console.exe")
+        return candidate if os.path.exists(candidate) else None
+
+    # If a file path was provided
+    if os.path.isfile(exec_path):
+        folder = os.path.dirname(exec_path)
+        name = os.path.basename(exec_path).lower()
+        if name == "bleachbit.exe":
+            # Switch to console exe in the same folder
+            console_path = os.path.join(folder, "bleachbit_console.exe")
+            if os.path.exists(console_path):
+                logger.info(
+                    "Detected GUI executable; switching to console executable: %s",
+                    console_path,
+                )
+                return console_path
+        # If it's already the console exe, keep as is
+        return exec_path
+
+    # Path doesn't exist
+    return None
+
+
 def run_bleachbit_clean(task: Dict[str, Any]) -> Dict[str, Any]:
     """Execute the BleachBit cleaning task and return structured result."""
     logger.info("Starting BleachBit task.")
-    exec_path = task.get("executable_path")
+    provided_exec_path: Optional[str] = task.get("executable_path")
     options: List[str] = task.get("options", [])  # cleaners to run
 
-    if not exec_path:
+    if not provided_exec_path:
         logger.error("BleachBit task failed: 'executable_path' not provided.")
         return {
             "task_type": "bleachbit_clean",
@@ -81,7 +116,19 @@ def run_bleachbit_clean(task: Dict[str, Any]) -> Dict[str, Any]:
             "summary": {"error": "Executable path was missing."},
         }
 
-    command = [exec_path, "--clean"] + options
+    exec_path = _resolve_bleachbit_console_path(provided_exec_path)
+    if not exec_path:
+        logger.error(
+            "BleachBit executable not found or invalid path provided: '%s'",
+            provided_exec_path,
+        )
+        return {
+            "task_type": "bleachbit_clean",
+            "status": "failure",
+            "summary": {"error": f"Executable not found: {provided_exec_path}"},
+        }
+
+    command = [exec_path, "--clean", *options]
     logger.info(f"Executing command: {' '.join(command)}")
 
     try:
@@ -92,23 +139,36 @@ def run_bleachbit_clean(task: Dict[str, Any]) -> Dict[str, Any]:
             check=False,
             encoding="utf-8",
             errors="replace",
+            cwd=os.path.dirname(exec_path) or None,
         )
 
+        stdout = process.stdout or ""
+        stderr = process.stderr or ""
+
         if process.returncode != 0:
+            # Provide a more helpful hint for common Windows error 120 when the GUI exe was used
+            hint = None
+            if process.returncode == 120:
+                hint = (
+                    "Exit code 120: call not implemented. This often occurs when the GUI "
+                    "executable is invoked with console flags. Ensure bleachbit_console.exe is used."
+                )
             logger.error(
-                f"BleachBit process exited with error code {process.returncode}."
+                "BleachBit process exited with error code %s.", process.returncode
             )
+
             return {
                 "task_type": "bleachbit_clean",
                 "status": "failure",
                 "summary": {
                     "error": f"Process exited with code {process.returncode}.",
-                    "details": process.stderr.strip(),
+                    "details": stderr.strip() or stdout.strip(),
+                    **({"hint": hint} if hint else {}),
                 },
             }
 
         logger.info("BleachBit task completed successfully.")
-        summary_data = parse_bleachbit_output(process.stdout)
+        summary_data = parse_bleachbit_output(stdout)
         return {
             "task_type": "bleachbit_clean",
             "status": "success",

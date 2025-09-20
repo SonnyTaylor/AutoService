@@ -81,10 +81,19 @@ export async function initPage() {
     taskStatuses[index] = "pending";
   });
 
+  // Track whether a run is currently in progress to prevent duplicate clicks
+  let _isRunning = false;
+
   runBtn?.addEventListener("click", async () => {
     if (!tasks.length) return;
+    if (_isRunning) return; // guard against double clicks
+    _isRunning = true;
+    // Hard-disable UI controls
     runBtn.disabled = true;
+    runBtn.setAttribute("disabled", "");
+    runBtn.setAttribute("aria-disabled", "true");
     backBtn.disabled = true;
+    backBtn.setAttribute("disabled", "");
     summaryEl.hidden = true;
     finalJsonEl.textContent = "";
     clearLog();
@@ -93,33 +102,157 @@ export async function initPage() {
     const firstPendingIdx = taskState.findIndex((t) => t.status === "pending");
     if (firstPendingIdx >= 0) updateTaskStatus(firstPendingIdx, "running");
     try {
+      let startedNatively = false;
       const jsonArg = JSON.stringify({ tasks });
-      console.log("Sending tasks to Python runner:", tasks);
-      console.log("JSON argument:", jsonArg);
-      const result = await runRunner(jsonArg);
-      // Pretty print final JSON
-      try {
-        const obj = typeof result === "string" ? JSON.parse(result) : result;
-        finalJsonEl.textContent = JSON.stringify(obj, null, 2);
-        // Apply final statuses as a fallback if live markers weren't detected
+      // Try native streaming command first
+      if (invoke) {
         try {
-          applyFinalStatusesFromReport(obj);
-        } catch {}
-        const ok = obj?.overall_status === "success";
-        showSummary(ok);
-      } catch {
-        finalJsonEl.textContent = String(result || "");
-        showSummary(false);
+          wireNativeEvents(); // ensure listeners are ready before spawning (avoid missing very fast early lines)
+          const planPath = await invoke("start_service_run", {
+            planJson: jsonArg,
+          });
+          appendLog(`[INFO] Started native runner plan: ${planPath}`);
+          startedNatively = true;
+        } catch (err) {
+          appendLog(
+            `[WARN] Native runner failed, falling back to shell: ${err}`
+          );
+          const result = await runRunner(jsonArg); // fallback
+          handleFinalResult(result);
+          // Fallback is synchronous to completion; re-enable controls now
+          _isRunning = false;
+          showOverlay(false);
+          backBtn.disabled = false;
+          runBtn.disabled = false;
+          runBtn.removeAttribute("aria-disabled");
+          runBtn.removeAttribute("disabled");
+          backBtn.removeAttribute("disabled");
+        }
+      } else {
+        const result = await runRunner(jsonArg);
+        handleFinalResult(result);
+        _isRunning = false;
+        showOverlay(false);
+        backBtn.disabled = false;
+        runBtn.disabled = false;
+        runBtn.removeAttribute("aria-disabled");
+        runBtn.removeAttribute("disabled");
+        backBtn.removeAttribute("disabled");
       }
     } catch (e) {
       appendLog(`[ERROR] ${new Date().toLocaleTimeString()} ${String(e)}`);
       showSummary(false);
-    } finally {
+      _isRunning = false;
       showOverlay(false);
       backBtn.disabled = false;
       runBtn.disabled = false;
+      runBtn.removeAttribute("aria-disabled");
+      runBtn.removeAttribute("disabled");
+      backBtn.removeAttribute("disabled");
     }
   });
+
+  let _nativeEventsWired = false;
+  // Flag: whether to show raw (full) progress JSON lines in log. Default false for conciseness.
+  const SHOW_RAW_PROGRESS_JSON = false;
+
+  function summarizeProgressLine(line) {
+    // Accept raw line starting with PROGRESS_JSON or PROGRESS_JSON_FINAL
+    if (!line.startsWith("PROGRESS_JSON:")) {
+      if (!line.startsWith("PROGRESS_JSON_FINAL:")) return null;
+    }
+    if (SHOW_RAW_PROGRESS_JSON)
+      return `[RAW] ${line.substring(0, 120)}${line.length > 120 ? "…" : ""}`; // truncated raw if enabled
+    try {
+      const isFinal = line.startsWith("PROGRESS_JSON_FINAL:");
+      const jsonPart = line
+        .slice(
+          isFinal ? "PROGRESS_JSON_FINAL:".length : "PROGRESS_JSON:".length
+        )
+        .trim();
+      const obj = JSON.parse(jsonPart);
+      const completed = obj.completed ?? (obj.results ? obj.results.length : 0);
+      const total = obj.total ?? "?";
+      const overall = obj.overall_status || obj.status || "unknown";
+      const last =
+        obj.last_result ||
+        (obj.results && obj.results[obj.results.length - 1]) ||
+        {};
+      const lastType = last.task_type || last.task || last.type || "n/a";
+      const lastStatus = last.status || "unknown";
+      if (isFinal) {
+        return `[PROGRESS] Final ${completed}/${total} overall=${overall}`;
+      }
+      return `[PROGRESS] ${completed}/${total} overall=${overall} last=${lastType}(${lastStatus})`;
+    } catch {
+      return "[PROGRESS] update";
+    }
+  }
+
+  function wireNativeEvents() {
+    if (_nativeEventsWired) return; // avoid duplicate listeners across reruns
+    if (!window.__TAURI__?.event?.listen) return;
+    const { listen } = window.__TAURI__.event;
+    _nativeEventsWired = true;
+    listen("service_runner_line", (evt) => {
+      try {
+        const payload = evt?.payload || {};
+        const line = payload.line || "";
+        if (!line) return;
+        // Replace verbose progress JSON lines with concise summary
+        if (
+          line.startsWith("PROGRESS_JSON:") ||
+          line.startsWith("PROGRESS_JSON_FINAL:")
+        ) {
+          const summary = summarizeProgressLine(line);
+          if (summary) appendLog(summary);
+        } else {
+          appendLog(`[SR] ${line}`);
+        }
+        try {
+          maybeProcessStatus(line);
+        } catch (e) {
+          console.warn("maybeProcessStatus error", e);
+        }
+      } catch (e) {
+        console.warn("service_runner_line listener failed", e);
+      }
+    });
+    listen("service_runner_done", (evt) => {
+      const payload = evt?.payload || {};
+      const finalReport = payload.final_report || payload.finalReport || {};
+      try {
+        finalJsonEl.textContent = JSON.stringify(finalReport, null, 2);
+        applyFinalStatusesFromReport(finalReport);
+        const ok = finalReport?.overall_status === "success";
+        showSummary(ok);
+      } catch (e) {
+        finalJsonEl.textContent = String(e);
+        showSummary(false);
+      }
+      // Native run completed – re-enable UI controls
+      _isRunning = false;
+      showOverlay(false);
+      backBtn.disabled = false;
+      runBtn.disabled = false;
+      runBtn.removeAttribute("aria-disabled");
+      runBtn.removeAttribute("disabled");
+      backBtn.removeAttribute("disabled");
+    });
+  }
+
+  function handleFinalResult(result) {
+    try {
+      const obj = typeof result === "string" ? JSON.parse(result) : result;
+      finalJsonEl.textContent = JSON.stringify(obj, null, 2);
+      applyFinalStatusesFromReport(obj);
+      const ok = obj?.overall_status === "success";
+      showSummary(ok);
+    } catch {
+      finalJsonEl.textContent = String(result || "");
+      showSummary(false);
+    }
+  }
 
   function renderTaskList() {
     taskListEl.innerHTML = "";
@@ -212,6 +345,77 @@ export async function initPage() {
   }
 
   // Spawn the runner as a Tauri sidecar and capture stdout live.
+  // --- Shared status line parser (now hoisted so native events can reuse) ---
+  const maybeProcessStatus = (s) => {
+    const startMatch = s.match(/^TASK_START:(\d+):(.+)$/);
+    if (startMatch) {
+      const taskIndex = parseInt(startMatch[1]);
+      const taskType = startMatch[2];
+      updateTaskStatus(taskIndex, "running");
+      appendLog(`[INFO] Started: ${taskType}`);
+      return;
+    }
+    const okMatch = s.match(/^TASK_OK:(\d+):(.+)$/);
+    if (okMatch) {
+      const taskIndex = parseInt(okMatch[1]);
+      const taskType = okMatch[2];
+      updateTaskStatus(taskIndex, "success");
+      appendLog(`[SUCCESS] Completed: ${taskType}`);
+      return;
+    }
+    const failMatch = s.match(/^TASK_FAIL:(\d+):(.+?)(?:\s*-\s*(.+))?$/);
+    if (failMatch) {
+      const taskIndex = parseInt(failMatch[1]);
+      const taskType = failMatch[2];
+      const reason = failMatch[3] || "Failed";
+      updateTaskStatus(taskIndex, "failure");
+      appendLog(`[ERROR] Failed: ${taskType} - ${reason}`);
+      return;
+    }
+    const skipMatch = s.match(/^TASK_SKIP:(\d+):(.+?)(?:\s*-\s*(.+))?$/);
+    if (skipMatch) {
+      const taskIndex = parseInt(skipMatch[1]);
+      const taskType = skipMatch[2];
+      const reason = skipMatch[3] || "Skipped";
+      updateTaskStatus(taskIndex, "skipped");
+      appendLog(`[WARNING] Skipped: ${taskType} - ${reason}`);
+      return;
+    }
+
+    // Incremental JSON progress lines from runner
+    if (s.startsWith("PROGRESS_JSON:")) {
+      const jsonPart = s.slice("PROGRESS_JSON:".length).trim();
+      try {
+        const obj = JSON.parse(jsonPart);
+        renderProgressJson(obj);
+      } catch (e) {
+        // Ignore parse failures silently
+      }
+      return;
+    }
+    if (s.startsWith("PROGRESS_JSON_FINAL:")) {
+      const jsonPart = s.slice("PROGRESS_JSON_FINAL:".length).trim();
+      try {
+        const obj = JSON.parse(jsonPart);
+        renderProgressJson(obj, true);
+      } catch (e) {}
+      return;
+    }
+  };
+
+  function renderProgressJson(obj, isFinal = false) {
+    if (!obj || typeof obj !== "object") return;
+    // Only update preview; summary still triggered by final report or final marker
+    try {
+      const pretty = JSON.stringify(obj, null, 2);
+      finalJsonEl.textContent = pretty;
+      if (isFinal) {
+        const ok = obj?.overall_status === "success";
+        showSummary(ok);
+      }
+    } catch {}
+  }
+
   async function runRunner(jsonArg) {
     const { shell } = window.__TAURI__ || {};
     const { Command } = shell || {};
@@ -304,104 +508,6 @@ export async function initPage() {
       // no-op; final JSON already collected from stdout buffer
     });
 
-    const maybeProcessStatus = (s) => {
-      // Debug: Log what we're processing
-      console.log("Processing log line:", JSON.stringify(s));
-
-      // Parse new format: TASK_START:0:task_type or TASK_OK:0:task_type
-      const startMatch = s.match(/^TASK_START:(\d+):(.+)$/);
-      if (startMatch) {
-        const taskIndex = parseInt(startMatch[1]);
-        const taskType = startMatch[2];
-        console.log(`Found TASK_START for task ${taskIndex}: ${taskType}`);
-        updateTaskStatus(taskIndex, "running");
-        appendLog(`[INFO] Started: ${taskType}`);
-        return;
-      }
-
-      const okMatch = s.match(/^TASK_OK:(\d+):(.+)$/);
-      if (okMatch) {
-        const taskIndex = parseInt(okMatch[1]);
-        const taskType = okMatch[2];
-        console.log(`Found TASK_OK for task ${taskIndex}: ${taskType}`);
-        updateTaskStatus(taskIndex, "success");
-        appendLog(`[SUCCESS] Completed: ${taskType}`);
-        return;
-      }
-
-      const failMatch = s.match(/^TASK_FAIL:(\d+):(.+?)(?:\s*-\s*(.+))?$/);
-      if (failMatch) {
-        const taskIndex = parseInt(failMatch[1]);
-        const taskType = failMatch[2];
-        const reason = failMatch[3] || "Failed";
-        console.log(
-          `Found TASK_FAIL for task ${taskIndex}: ${taskType} - ${reason}`
-        );
-        updateTaskStatus(taskIndex, "failure");
-        appendLog(`[ERROR] Failed: ${taskType} - ${reason}`);
-        return;
-      }
-
-      const skipMatch = s.match(/^TASK_SKIP:(\d+):(.+?)(?:\s*-\s*(.+))?$/);
-      if (skipMatch) {
-        const taskIndex = parseInt(skipMatch[1]);
-        const taskType = skipMatch[2];
-        const reason = skipMatch[3] || "Skipped";
-        console.log(
-          `Found TASK_SKIP for task ${taskIndex}: ${taskType} - ${reason}`
-        );
-        updateTaskStatus(taskIndex, "skipped");
-        appendLog(`[WARNING] Skipped: ${taskType} - ${reason}`);
-        return;
-      }
-
-      // Also handle the old format for backward compatibility
-      if (/TASK\s+START:/i.test(s)) {
-        console.log("Found old format TASK START");
-        // Find the first pending task
-        const pendingTasks = Object.entries(taskStatuses).filter(
-          ([_, status]) => status === "pending"
-        );
-        if (pendingTasks.length > 0) {
-          const taskIndex = parseInt(pendingTasks[0][0]);
-          updateTaskStatus(taskIndex, "running");
-        }
-      }
-      if (/TASK\s+OK:/i.test(s)) {
-        console.log("Found old format TASK OK");
-        // Find the first running task
-        const runningTasks = Object.entries(taskStatuses).filter(
-          ([_, status]) => status === "running"
-        );
-        if (runningTasks.length > 0) {
-          const taskIndex = parseInt(runningTasks[0][0]);
-          updateTaskStatus(taskIndex, "success");
-        }
-      }
-      if (/TASK\s+FAIL:/i.test(s)) {
-        console.log("Found old format TASK FAIL");
-        // Find the first running task
-        const runningTasks = Object.entries(taskStatuses).filter(
-          ([_, status]) => status === "running"
-        );
-        if (runningTasks.length > 0) {
-          const taskIndex = parseInt(runningTasks[0][0]);
-          updateTaskStatus(taskIndex, "failure");
-        }
-      }
-      if (/TASK\s+SKIP:/i.test(s)) {
-        console.log("Found old format TASK SKIP");
-        // Find the first running task
-        const runningTasks = Object.entries(taskStatuses).filter(
-          ([_, status]) => status === "running"
-        );
-        if (runningTasks.length > 0) {
-          const taskIndex = parseInt(runningTasks[0][0]);
-          updateTaskStatus(taskIndex, "skipped");
-        }
-      }
-    };
-
     // Set up event handlers
     console.log("Setting up command event handlers...");
 
@@ -413,7 +519,15 @@ export async function initPage() {
       console.log("Raw stderr line received:", JSON.stringify(s));
 
       // Process stderr for task status updates and show as live logs
-      appendLog(`[STDERR] ${s}`);
+      if (
+        s.startsWith("PROGRESS_JSON:") ||
+        s.startsWith("PROGRESS_JSON_FINAL:")
+      ) {
+        const summary = summarizeProgressLine(s);
+        if (summary) appendLog(summary);
+      } else {
+        appendLog(`[STDERR] ${s}`);
+      }
       maybeProcessStatus(s);
     });
 
@@ -429,7 +543,15 @@ export async function initPage() {
         finalJson += (finalJson ? "\n" : "") + s;
       } else {
         // Show other stdout messages as live logs
-        appendLog(`[STDOUT] ${s}`);
+        if (
+          s.startsWith("PROGRESS_JSON:") ||
+          s.startsWith("PROGRESS_JSON_FINAL:")
+        ) {
+          const summary = summarizeProgressLine(s);
+          if (summary) appendLog(summary);
+        } else {
+          appendLog(`[STDOUT] ${s}`);
+        }
         // Also check stdout for task status markers
         maybeProcessStatus(s);
       }

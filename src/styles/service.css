@@ -287,11 +287,11 @@
   background: var(--panel-alt);
   border: 1px solid var(--border);
   border-radius: 10px;
-  cursor: grab;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
+  cursor: default;
+  -webkit-user-select: auto;
+  -moz-user-select: auto;
+  -ms-user-select: auto;
+  user-select: auto;
 }
 [data-page="service-run"] .task-row:focus-visible {
   outline: 2px solid var(--primary);
@@ -305,7 +305,7 @@
   opacity: 0.6;
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.06);
 }
-[data-page="service-run"] .task-row input {
+[data-page="service-run"] .task-row > input[type="checkbox"] {
   width: 18px;
   height: 18px;
   cursor: pointer;
@@ -317,6 +317,26 @@
   cursor: grab;
 }
 
+/* Re-enable selection and normal cursor inside interactive areas */
+[data-page="service-run"] .param-controls,
+[data-page="service-run"] .param-controls *,
+[data-page="service-run"] .gpu-sub,
+[data-page="service-run"] .gpu-sub * {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+  cursor: auto;
+}
+[data-page="service-run"] .param-controls input,
+[data-page="service-run"] .gpu-sub input {
+  cursor: text;
+}
+[data-page="service-run"] .param-controls label,
+[data-page="service-run"] .gpu-sub label {
+  cursor: default;
+}
+
 /* SortableJS drag helpers */
 [data-page="service-run"] .task-item.drag-active .task-row {
   opacity: 0.75;
@@ -324,7 +344,7 @@
 [data-page="service-run"] .drag-ghost {
   opacity: 0.6 !important;
 }
-[data-page="service-run"] .task-row:active {
+[data-page="service-run"] .task-row .grab:active {
   cursor: grabbing;
 }
 [data-page="service-run"] .task-row .main {
@@ -445,6 +465,22 @@
   gap: 4px;
   font-size: 0.7rem;
 }
+[data-page="service-run"] .gpu-sub .gpu-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #1a2332;
+  padding: 4px 6px;
+  border: 1px solid #2a3b55;
+  border-radius: 6px;
+}
+[data-page="service-run"] .gpu-sub .gpu-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 2px;
+  cursor: pointer;
+}
 [data-page="service-run"] .gpu-sub.disabled {
   opacity: 0.45;
 }
@@ -489,6 +525,13 @@
   margin-left: auto;
   display: flex;
   gap: 10px;
+}
+[data-page="service-report"] .run-header .run-actions button:disabled,
+[data-page="service-report"] #svc-report-run:disabled,
+[data-page="service-report"] #svc-report-back:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 [data-page="service-report"] .runner-layout {
   display: grid;

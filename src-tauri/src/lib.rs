@@ -16,7 +16,7 @@ mod shortcuts;
 mod state;
 mod system;
 
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 
 // Import command functions to bring them into scope for the handler
 use crate::icons::{read_image_as_data_url, suggest_logo_from_exe};
@@ -28,6 +28,10 @@ use crate::settings::{load_app_settings, save_app_settings};
 use crate::shortcuts::launch_shortcut;
 use crate::state::AppState;
 use crate::system::get_system_info;
+use std::io::{BufRead, BufReader, Read};
+use std::path::PathBuf;
+use std::process::{Command as StdCommand, Stdio};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 /// A simple greeting command for testing IPC communication.
 ///
@@ -84,6 +88,156 @@ fn get_data_dirs(state: tauri::State<AppState>) -> Result<serde_json::Value, Str
     }))
 }
 
+/// Starts the Python service runner executable and streams stderr lines as Tauri events.
+/// Frontend listens to `service_runner_line` (payload: {stream, line}) and
+/// `service_runner_done` (payload: { final_report, plan_file, log_file }).
+/// Returns the plan file path (for reference) immediately after spawning.
+#[tauri::command]
+fn start_service_run(
+    app: tauri::AppHandle,
+    state: tauri::State<AppState>,
+    plan_json: String,
+) -> Result<String, String> {
+    // Resolve runner path
+    let data_root = state.data_dir.as_path();
+    let runner_exe: PathBuf = data_root
+        .join("resources")
+        .join("bin")
+        .join("service_runner.exe");
+
+    // Dev fallback: if the compiled runner is missing, try to run the Python script directly.
+    // This makes `pnpm tauri dev` usable without PyInstaller.
+    let mut use_python_fallback = false;
+    let mut python_script_path: Option<PathBuf> = None;
+    if !runner_exe.exists() {
+        // Try to infer repo root from data_root (repo_root/data)
+        if let Some(repo_root) = data_root.parent() {
+            let script = repo_root.join("runner").join("service_runner.py");
+            if script.exists() {
+                use_python_fallback = true;
+                python_script_path = Some(script);
+            }
+        }
+
+        if !use_python_fallback {
+            return Err(format!(
+                "service_runner.exe not found at {} and Python fallback script was not located. \
+                 Expected script path: <repo>/runner/service_runner.py",
+                runner_exe.display()
+            ));
+        }
+    }
+
+    // Write plan file into reports directory
+    let (reports_dir, _programs, _settings, _resources) = crate::paths::subdirs(data_root);
+    if let Err(e) = std::fs::create_dir_all(&reports_dir) {
+        return Err(format!("Failed to create reports dir: {e}"));
+    }
+    let ts = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis();
+    let plan_file = reports_dir.join(format!("run_plan_{ts}.json"));
+    if let Err(e) = std::fs::write(&plan_file, &plan_json) {
+        return Err(format!("Failed to write plan file: {e}"));
+    }
+    let log_file = plan_file.with_extension("log.txt");
+    let plan_file_for_return = plan_file.clone();
+
+    let app_handle = app.clone();
+    let runner_exe_clone = runner_exe.clone();
+    let python_script_clone = python_script_path.clone();
+    std::thread::spawn(move || {
+        // Choose command: exe or python fallback
+        let spawn_result = if let Some(script) = python_script_clone.as_ref() {
+            // Prefer PY or PYTHON from PATH; use "python" here
+            StdCommand::new("python")
+                .arg(script)
+                .arg(&plan_file)
+                .arg("--log-file")
+                .arg(&log_file)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()
+        } else {
+            StdCommand::new(&runner_exe_clone)
+                .arg(&plan_file)
+                .arg("--log-file")
+                .arg(&log_file)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()
+        };
+
+        let mut child = match spawn_result {
+            Ok(c) => c,
+            Err(e) => {
+                let which = if python_script_clone.is_some() {
+                    format!(
+                        "Failed to spawn Python runner (python {}): {e}",
+                        python_script_clone.unwrap().display()
+                    )
+                } else {
+                    format!(
+                        "Failed to spawn runner EXE ({}): {e}",
+                        runner_exe_clone.display()
+                    )
+                };
+                let _ = app_handle.emit(
+                    "service_runner_line",
+                    serde_json::json!({"stream":"stderr","line": which}),
+                );
+                return;
+            }
+        };
+
+        // Stream stderr lines (Python logging)
+        if let Some(stderr) = child.stderr.take() {
+            let app_stderr = app_handle.clone();
+            std::thread::spawn(move || {
+                let reader = BufReader::new(stderr);
+                for line in reader.lines() {
+                    match line {
+                        Ok(l) => {
+                            let _ = app_stderr.emit(
+                                "service_runner_line",
+                                serde_json::json!({"stream":"stderr","line": l}),
+                            );
+                        }
+                        Err(_) => break,
+                    }
+                }
+            });
+        }
+
+        // Collect stdout after process exits (used mainly for final JSON)
+        let mut final_stdout = String::new();
+        if let Some(mut stdout) = child.stdout.take() {
+            // It's fine to read after wait if output is small; read concurrently anyway to be safe
+            let mut buf_reader = BufReader::new(stdout);
+            let _ = buf_reader.read_to_string(&mut final_stdout);
+        }
+
+        let _ = child.wait();
+
+        // Attempt to parse final JSON
+        let final_report = match serde_json::from_str::<serde_json::Value>(&final_stdout) {
+            Ok(v) => v,
+            Err(_) => serde_json::json!({"raw": final_stdout}),
+        };
+        let _ = app_handle.emit(
+            "service_runner_done",
+            serde_json::json!({
+                "final_report": final_report,
+                "plan_file": plan_file,
+                "log_file": log_file
+            }),
+        );
+    });
+
+    Ok(plan_file_for_return.to_string_lossy().to_string())
+}
+
 /// Main entry point for the Tauri application.
 ///
 /// This function sets up the Tauri application with all necessary plugins,
@@ -115,6 +269,7 @@ pub fn run() {
             greet,
             launch_shortcut,
             get_data_dirs,
+            start_service_run,
             list_programs,
             save_program,
             remove_program,

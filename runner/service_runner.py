@@ -55,10 +55,69 @@ from services.dism_service import run_dism_health_check  # type: ignore
 from services.ai_startup_service import run_ai_startup_disable  # type: ignore
 from services.ping_service import run_ping_test  # type: ignore
 
-# Configure logging to stderr for live streaming to the UI.
-# Use a simple format that's easy to parse.
+"""NOTE ON REAL-TIME LOG STREAMING
+
+Historically the UI only received task status updates after all tasks finished.
+Root causes observed on Windows when launching via PowerShell / Tauri shell:
+  * stdio stream buffering (especially when frozen into an .exe) delayed delivery
+  * file handler buffering (write combining) further postponed writes
+
+Mitigations implemented below:
+  * Force stdout/stderr into (best-effort) line-buffered / unbuffered modes
+  * Provide a helper flush_logs() and call it immediately after each marker line
+  * Keep log format minimal so the UI regex ( ^TASK_START etc.) matches directly
+"""
+
+# Attempt to force line buffering / unbuffered behavior for Python >=3.7
+try:  # pragma: no cover - defensive
+    _reconf_out = getattr(sys.stdout, "reconfigure", None)
+    if callable(_reconf_out):  # type: ignore[attr-defined]
+        try:
+            _reconf_out(line_buffering=True, write_through=True)  # type: ignore[call-arg]
+        except Exception:
+            pass
+    _reconf_err = getattr(sys.stderr, "reconfigure", None)
+    if callable(_reconf_err):  # type: ignore[attr-defined]
+        try:
+            _reconf_err(line_buffering=True, write_through=True)  # type: ignore[call-arg]
+        except Exception:
+            pass
+except Exception:  # noqa: BLE001
+    pass
+
+# Configure logging to stderr for live streaming to the UI (message only).
 _DEFAULT_LOG_FMT = "%(message)s"
-logging.basicConfig(level=logging.INFO, stream=sys.stderr, format=_DEFAULT_LOG_FMT)
+logging.basicConfig(
+    level=logging.INFO, stream=sys.stderr, format=_DEFAULT_LOG_FMT, force=True
+)
+
+
+def flush_logs():  # pragma: no cover - simple utility
+    """Flush all logging handlers & stdio to push incremental lines to UI ASAP."""
+    try:
+        for h in logging.getLogger().handlers:
+            try:
+                h.flush()
+                # Force underlying OS write for file handlers to minimize buffering delays
+                stream = getattr(h, "stream", None)
+                if stream is not None and hasattr(stream, "fileno"):
+                    try:
+                        os.fsync(stream.fileno())  # type: ignore[arg-type]
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+        try:
+            sys.stderr.flush()
+        except Exception:
+            pass
+        try:
+            sys.stdout.flush()
+        except Exception:
+            pass
+    except Exception:
+        pass
+
 
 # Truncation threshold for log snippets to keep logs readable in the UI.
 MAX_LOG_SNIPPET: int = 200
@@ -126,8 +185,10 @@ def main():
             fh.setFormatter(logging.Formatter(_DEFAULT_LOG_FMT))
             logging.getLogger().addHandler(fh)
             logging.info("Log file initialized: %s", args.log_file)
+            flush_logs()
         except Exception as e:  # noqa: BLE001
             logging.error("Failed to initialize log file '%s': %s", args.log_file, e)
+            flush_logs()
 
     # Elevation (Windows only): avoid confusing failures for tools that need admin rights.
     if os.name == "nt" and not is_admin():
@@ -168,8 +229,10 @@ def main():
     # Extract tasks list; default to empty list if key missing.
     tasks = input_data.get("tasks", [])
     logging.info(f"Parsed {len(tasks)} tasks")
+    flush_logs()
     for i, task in enumerate(tasks):
         logging.info(f"Task {i}: {task.get('type', 'unknown')}")
+        flush_logs()
 
     all_results = []
     overall_success = True
@@ -181,6 +244,7 @@ def main():
         if handler:
             logging.info("TASK_START:%d:%s", idx, task_type)
             logging.info("Starting task %d/%d: %s", idx + 1, len(tasks), task_type)
+            flush_logs()
 
             try:
                 result = handler(task)
@@ -203,6 +267,7 @@ def main():
                     )
                 else:
                     logging.info("TASK_OK:%d:%s", idx, task_type)
+                flush_logs()
 
                 # Log additional details if available
                 summary = result.get("summary", {})
@@ -216,39 +281,85 @@ def main():
                             if len(out_text) > MAX_LOG_SNIPPET
                             else out_text,
                         )
+                        flush_logs()
                     if "duration_seconds" in summary:
                         logging.info(
                             "Task %s took %.2f seconds",
                             task_type,
                             summary["duration_seconds"],
                         )
+                        flush_logs()
 
                 all_results.append(result)
+                # Emit incremental progress JSON line for UI consumption
+                try:
+                    progress_obj = {
+                        "type": "progress",
+                        "completed": len(all_results),
+                        "total": len(tasks),
+                        "last_result": result,
+                        "results": all_results,
+                        "overall_status": "success"
+                        if overall_success
+                        else "completed_with_errors",
+                    }
+                    logging.info("PROGRESS_JSON:%s", json.dumps(progress_obj))
+                    flush_logs()
+                except Exception:
+                    pass
 
             except Exception as e:
                 overall_success = False
                 logging.error("TASK_FAIL:%d:%s - Exception: %s", idx, task_type, str(e))
-                all_results.append(
-                    {
-                        "task_type": task_type,
-                        "status": "failure",
-                        "summary": {"reason": f"Exception during execution: {str(e)}"},
+                flush_logs()
+                failure_result = {
+                    "task_type": task_type,
+                    "status": "failure",
+                    "summary": {"reason": f"Exception during execution: {str(e)}"},
+                }
+                all_results.append(failure_result)
+                try:
+                    progress_obj = {
+                        "type": "progress",
+                        "completed": len(all_results),
+                        "total": len(tasks),
+                        "last_result": failure_result,
+                        "results": all_results,
+                        "overall_status": "success"
+                        if overall_success
+                        else "completed_with_errors",
                     }
-                )
+                    logging.info("PROGRESS_JSON:%s", json.dumps(progress_obj))
+                    flush_logs()
+                except Exception:
+                    pass
 
         else:
             logging.warning(
                 "TASK_SKIP:%d:%s - No handler found for task type", idx, task_type
             )
-            all_results.append(
-                {
-                    "task_type": task_type,
-                    "status": "skipped",
-                    "summary": {
-                        "reason": f"No handler implemented for this task type."
-                    },
+            flush_logs()
+            skipped_result = {
+                "task_type": task_type,
+                "status": "skipped",
+                "summary": {"reason": f"No handler implemented for this task type."},
+            }
+            all_results.append(skipped_result)
+            try:
+                progress_obj = {
+                    "type": "progress",
+                    "completed": len(all_results),
+                    "total": len(tasks),
+                    "last_result": skipped_result,
+                    "results": all_results,
+                    "overall_status": "success"
+                    if overall_success
+                    else "completed_with_errors",
                 }
-            )
+                logging.info("PROGRESS_JSON:%s", json.dumps(progress_obj))
+                flush_logs()
+            except Exception:
+                pass
 
     final_report = {
         "overall_status": "success" if overall_success else "completed_with_errors",
@@ -258,6 +369,19 @@ def main():
     # Print the final JSON report to stdout for the parent process (AutoService) to capture.
     report_json = json.dumps(final_report, indent=2)
     print(report_json)
+    # Also emit final progress snapshot as PROGRESS_JSON_FINAL for UI
+    try:
+        final_progress = {
+            "type": "final",
+            "completed": len(all_results),
+            "total": len(tasks),
+            "results": all_results,
+            "overall_status": final_report["overall_status"],
+        }
+        logging.info("PROGRESS_JSON_FINAL:%s", json.dumps(final_progress))
+    except Exception:
+        pass
+    flush_logs()
 
     # Write the final report to disk only if the user supplied --output-file.
     output_path = args.output_file
@@ -269,10 +393,13 @@ def main():
             with open(output_path, "w", encoding="utf-8") as out_f:
                 out_f.write(report_json)
             logging.info(f"Final report written to '{output_path}'")
+            flush_logs()
         except Exception as e:  # noqa: BLE001
             logging.error(f"Failed to write final report to '{output_path}': {e}")
+            flush_logs()
     else:
         logging.info("No --output-file provided; final report not written to disk.")
+        flush_logs()
 
 
 if __name__ == "__main__":

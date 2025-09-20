@@ -16,6 +16,21 @@ const PYTHON_COMMAND: &str = "python"; // program used to invoke PyInstaller
 
 fn main() {
     println!("cargo:warning=build.rs STARTING EXECUTION");
+    // Ensure cargo rebuilds when the runner or its services change
+    println!("cargo:rerun-if-changed=../runner/service_runner.py");
+    // Watch all service modules (shallow) – if this becomes too broad we can refine
+    if let Ok(read_dir) = std::fs::read_dir("../runner/services") {
+        for entry in read_dir.flatten() {
+            if let Ok(ft) = entry.file_type() {
+                if ft.is_file() {
+                    println!(
+                        "cargo:rerun-if-changed=../runner/services/{}",
+                        entry.file_name().to_string_lossy()
+                    );
+                }
+            }
+        }
+    }
 
     // Resolve manifest and repository roots for diagnostics
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -70,11 +85,15 @@ fn main() {
         // don't fail the build; continue and try to create the bin dir below
     }
 
-    // We now build the Python runner directly into the app's data/resources/bin folder
-    // so the runtime can spawn it without sidecar registration.
+    // We now build the Python runner directly into the resolved data/resources/bin folder
+    // so the runtime can spawn it without sidecar registration. In dev, the resolved path
+    // may differ from the repository root data folder (e.g. if AUTOSERVICE_DATA_DIR is set
+    // or executable path heuristics change). To guarantee the developer sees the binary in
+    // the repo `data/resources/bin`, we also mirror/copy the built exe there when different.
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let repo_root = manifest_dir.parent().unwrap_or(&manifest_dir).to_path_buf();
     let bin_dir = data_root.join("resources").join("bin");
+    let repo_data_bin = repo_root.join("data").join("resources").join("bin");
     if let Err(e) = fs::create_dir_all(&bin_dir) {
         println!(
             "cargo:warning=Failed to create binaries directory {}: {}",
@@ -82,6 +101,15 @@ fn main() {
             e
         );
         return; // nothing more we can do
+    }
+    if bin_dir != repo_data_bin {
+        if let Err(e) = fs::create_dir_all(&repo_data_bin) {
+            println!(
+                "cargo:warning=Failed to create repo data bin {}: {}",
+                repo_data_bin.display(),
+                e
+            );
+        }
     }
 
     // Locate the Python source file in the repository: <repo root>/runner/service_runner.py
@@ -136,32 +164,78 @@ fn main() {
     // Target executable path in the bin folder. We'll remove it first so the
     // new build effectively overwrites the previous one.
     let target_exe = bin_dir.join(PYTHON_RUNNER_EXE_NAME);
+    let mirror_exe = repo_data_bin.join(PYTHON_RUNNER_EXE_NAME);
 
     println!("cargo:warning=Target executable: {}", target_exe.display());
     println!(
         "cargo:warning=Target executable exists: {}",
         target_exe.exists()
     );
+    println!("cargo:warning=Mirror exe path: {}", mirror_exe.display());
+    println!("cargo:warning=Mirror exe exists: {}", mirror_exe.exists());
 
-    // Check modification times to see if we need to rebuild
+    // Helper: get latest modification time among a list of files
+    fn latest_mtime(paths: &[PathBuf]) -> std::time::SystemTime {
+        let mut latest = std::time::SystemTime::UNIX_EPOCH;
+        for p in paths {
+            if let Ok(meta) = fs::metadata(p) {
+                if let Ok(m) = meta.modified() {
+                    if m > latest {
+                        latest = m;
+                    }
+                }
+            }
+        }
+        latest
+    }
+
+    // Collect Python sources to consider for rebuild: runner/service_runner.py, runner/requirements.txt, and all files under runner/services (recursive)
+    let mut py_sources: Vec<PathBuf> = vec![py_src.clone()];
+    let requirements = repo_root.join("runner").join("requirements.txt");
+    if requirements.exists() {
+        py_sources.push(requirements);
+    }
+    let services_dir = repo_root.join("runner").join("services");
+    if services_dir.exists() {
+        let mut stack = vec![services_dir.clone()];
+        while let Some(dir) = stack.pop() {
+            if let Ok(read_dir) = fs::read_dir(&dir) {
+                for entry in read_dir.flatten() {
+                    let path = entry.path();
+                    if let Ok(ft) = entry.file_type() {
+                        if ft.is_dir() {
+                            stack.push(path);
+                        } else if ft.is_file() {
+                            py_sources.push(path);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Determine if rebuild is needed by comparing latest source mtime vs exe mtime
     let needs_rebuild = if target_exe.exists() {
-        match (fs::metadata(&py_src), fs::metadata(&target_exe)) {
-            (Ok(src_meta), Ok(exe_meta)) => {
-                let src_modified = src_meta
-                    .modified()
-                    .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+        match fs::metadata(&target_exe) {
+            Ok(exe_meta) => {
                 let exe_modified = exe_meta
                     .modified()
                     .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
-                let needs_rebuild = src_modified > exe_modified;
+                let src_latest = latest_mtime(&py_sources);
+                let needs = src_latest > exe_modified;
                 println!(
-                    "cargo:warning=Source modified: {:?}, Exe modified: {:?}, Needs rebuild: {}",
-                    src_modified, exe_modified, needs_rebuild
+                    "cargo:warning=Latest Python source mtime: {:?}, Exe mtime: {:?}, Needs rebuild: {}",
+                    src_latest, exe_modified, needs
                 );
-                needs_rebuild
+                // In debug builds, also rebuild if an env var forces it
+                let force_rebuild = env::var("AUTOSERVICE_FORCE_RUNNER_REBUILD").is_ok();
+                if force_rebuild {
+                    println!("cargo:warning=AUTOSERVICE_FORCE_RUNNER_REBUILD is set: will rebuild");
+                }
+                needs || force_rebuild
             }
-            _ => {
-                println!("cargo:warning=Could not check file modification times, will rebuild");
+            Err(_) => {
+                println!("cargo:warning=Could not stat target exe, will rebuild");
                 true
             }
         }
@@ -172,6 +246,16 @@ fn main() {
 
     if !needs_rebuild {
         println!("cargo:warning=Executable is up to date, skipping PyInstaller build");
+        // Still ensure mirror copy exists / updated
+        if target_exe.exists() {
+            if mirror_exe != target_exe {
+                if let Err(e) = fs::copy(&target_exe, &mirror_exe) {
+                    println!("cargo:warning=Failed to refresh mirror exe copy: {}", e);
+                } else {
+                    println!("cargo:warning=Mirror exe refreshed (skip build path)");
+                }
+            }
+        }
         return;
     }
 
@@ -286,6 +370,19 @@ fn main() {
                     target_exe.display(),
                     target_exe.metadata().map(|m| m.len()).unwrap_or(0)
                 );
+                if mirror_exe != target_exe {
+                    match fs::copy(&target_exe, &mirror_exe) {
+                        Ok(_) => println!(
+                            "cargo:warning=Copied exe to mirror location: {}",
+                            mirror_exe.display()
+                        ),
+                        Err(e) => println!(
+                            "cargo:warning=Failed to copy exe to mirror location {}: {}",
+                            mirror_exe.display(),
+                            e
+                        ),
+                    }
+                }
             } else {
                 println!(
                     "cargo:warning=PyInstaller reported success but {} was not found",
