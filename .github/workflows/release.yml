@@ -54,11 +54,26 @@ jobs:
       - name: Locate portable executable
         id: find_exe
         run: |
-          $exePath = Join-Path $env:GITHUB_WORKSPACE "src-tauri/target/release/autoservice.exe"
-          if (-not (Test-Path $exePath)) {
-            Write-Error "No .exe found at $exePath"; exit 1
+          $candidates = @(
+            "src-tauri/target/release/autoservice.exe",
+            "src-tauri/target/x86_64-pc-windows-msvc/release/autoservice.exe"
+          )
+          $exePath = $null
+          foreach ($p in $candidates) {
+            if (Test-Path $p) { $exePath = $p; break }
           }
-          "exe=$exePath" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          if (-not $exePath) {
+            $found = Get-ChildItem -Path "src-tauri/target" -Filter "autoservice.exe" -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($found) { $exePath = $found.FullName }
+          }
+          if (-not $exePath) {
+            Write-Error "No autoservice.exe found under src-tauri/target"; exit 1
+          }
+          $workspace = (Resolve-Path $env:GITHUB_WORKSPACE).Path
+          $full = (Resolve-Path $exePath).Path
+          $relative = $full.Substring($workspace.Length + 1)
+          $posixPath = $relative -replace "\\", "/"
+          "exe=$posixPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       - name: Create draft GitHub Release
         uses: softprops/action-gh-release@v1
@@ -67,4 +82,5 @@ jobs:
         with:
           draft: true
           generate_release_notes: false
+          fail_on_unmatched_files: true
           files: ${{ steps.find_exe.outputs.exe }}
