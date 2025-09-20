@@ -98,7 +98,7 @@ Current & planned surface (implemented portions are minimal or WIP unless marked
 
 ## Portable Layout
 
-AutoService is designed to be compiled and run from a USB drive (or locally) alongside a portable data folder. Place the executable next to the `data/` folder (also referred to as `@data/`) like so:
+AutoService is designed to be compiled and run from a USB drive (or locally) alongside a portable data folder. Place the executable next to the `data/` folder like so:
 
 ```
 AutoService.exe
@@ -151,7 +151,7 @@ The build output (under `src-tauri/target/` per Tauri conventions) can be moved 
 
 ## Service Runner
 
-AutoService ships with a Python automation runner (`runner/service_runner.py`) that executes tasks defined by the Run Queue Builder or ad‑hoc JSON. Highlights:
+I originally wanted autoservice to use rust to run and automate programs but my rust knowledge was too limited to get me anywhere so i decided to go with having an external python binary to handle the running of services instead. It executes tasks defined by the Run Queue Builder or ad‑hoc JSON. Highlights:
 
 - Windows UAC elevation is requested automatically when a task requires admin.
 - Streams progress lines to stderr so the UI can show live updates.
