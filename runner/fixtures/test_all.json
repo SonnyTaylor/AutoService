@@ -1,0 +1,65 @@
+{
+  "tasks": [
+    {
+      "type": "adwcleaner_clean",
+      "executable_path": "..\\data\\programs\\AdwCleaner - 8.5.0\\adwcleaner.exe",
+      "working_path": "..\\data\\logs",
+      "clean_preinstalled": false
+    },
+    {
+      "type": "bleachbit_clean",
+      "executable_path": "..\\data\\programs\\BleachBit - 5.0.0\\BleachBit-Portable\\bleachbit_console.exe",
+      "options": [
+        "system.tmp",
+        "system.recycle_bin",
+        "system.prefetch",
+        "google_chrome.cache",
+        "google_chrome.vacuum",
+        "firefox.cache",
+        "firefox.vacuum",
+        "microsoft_edge.cache",
+        "microsoft_edge.vacuum",
+        "windows_media_player.cache",
+        "java.cache",
+        "flash.cache"
+      ]
+    },
+    {
+      "type": "heavyload_stress_test",
+      "executable_path": "..\\data\\programs\\HeavyLoad - 4.0\\HeavyLoad.exe",
+      "duration_minutes": 1,
+      "headless": false,
+      "stress_cpu": true,
+      "stress_memory": true,
+      "stress_gpu": true
+    },
+    {
+      "type": "furmark_stress_test",
+      "executable_path": "..\\data\\programs\\FurMark2 - 2.9.0\\furmark.exe",
+      "duration_seconds": 60,
+      "width": 1920,
+      "height": 1080,
+      "demo": "furmark-gl",
+      "extra_args": ["--no-gui"]
+    },
+    {
+      "type": "smartctl_report",
+      "executable_path": "..\\data\\programs\\GSmartControl - 2.0.2\\smartctl.exe",
+      "detail_level": "basic"
+    }
+    ,
+    {
+      "type": "sfc_scan"
+    },
+    {
+      "type": "dism_health_check",
+      "actions": ["checkhealth", "scanhealth", "restorehealth"]
+    },
+    {
+      "type": "ai_startup_disable",
+      "api_key": "env:AUTOSERVICE_OPENAI_KEY",
+      "model": "gpt-4o-mini",
+      "apply_changes": false
+    }
+  ]
+}

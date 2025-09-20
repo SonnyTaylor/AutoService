@@ -1,0 +1,38 @@
+<section class="page" data-page="service-run">
+  <div class="run-header">
+    <div class="titles">
+      <h1 id="svc-run-title">Build Run Queue</h1>
+      <p class="muted" id="svc-run-desc">Loading preset...</p>
+    </div>
+    <div class="run-actions">
+      <button id="svc-run-back" class="ghost">Back</button>
+      <button id="svc-run-next" disabled>Next</button>
+    </div>
+  </div>
+
+  <div class="builder-layout" id="svc-run-builder" hidden>
+    <div class="task-palette">
+      <h2 class="section-title">Tasks</h2>
+      <p class="muted small">Toggle & drag to set execution order.</p>
+      <div class="palette-actions" aria-label="Selection helpers">
+        <button id="svc-select-all" class="ghost small">Select All</button>
+        <button id="svc-deselect-all" class="ghost small">Deselect All</button>
+        <button id="svc-reset" class="ghost small">Reset</button>
+      </div>
+      <ul
+        id="svc-task-palette"
+        class="task-list"
+        aria-label="Available service tasks"
+      ></ul>
+    </div>
+    <div class="task-preview">
+      <h2 class="section-title">Run Plan JSON</h2>
+      <p class="muted small">Auto‑updates as you modify tasks.</p>
+      <div class="json-actions">
+        <button id="svc-copy-json" class="ghost small">Copy JSON</button>
+      </div>
+      <pre id="svc-json" class="json-preview" aria-label="Generated JSON"></pre>
+    </div>
+  </div>
+</section>
+<script type="module" src="./run.js"></script>

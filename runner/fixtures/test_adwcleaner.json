@@ -1,0 +1,10 @@
+{
+  "tasks": [
+    {
+      "type": "adwcleaner_clean",
+      "executable_path": "..\\data\\programs\\AdwCleaner - 8.5.0\\adwcleaner.exe",
+      "working_path": "..\\data\\logs",
+      "clean_preinstalled": false
+    }
+  ]
+}

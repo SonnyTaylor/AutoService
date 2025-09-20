@@ -1,0 +1,8 @@
+{
+  "tasks": [
+    {
+      "type": "dism_health_check",
+      "actions": ["checkhealth", "scanhealth", "restorehealth"]
+    }
+  ]
+}

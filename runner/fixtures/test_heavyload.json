@@ -1,0 +1,18 @@
+{
+  "tasks": [
+    {
+      "type": "heavyload_stress_test",
+      "executable_path": "..\\data\\programs\\HeavyLoad - 4.0\\HeavyLoad.exe",
+      "duration_minutes": 1,
+      "headless": true,
+      "stress_cpu": true,
+      "cpu_cores": 2,
+      "stress_memory": true,
+      "memory_threshold_mb": 256,
+      "stress_disk": true,
+      "disk_threshold_mb": 512,
+      "testfile_path": "C:/Temp",
+      "stress_gpu": false
+    }
+  ]
+}

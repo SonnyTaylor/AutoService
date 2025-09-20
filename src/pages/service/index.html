@@ -1,0 +1,91 @@
+<section class="page service-page" data-page="service">
+  <div class="service-header">
+    <div class="left">
+      <h1>Servicing</h1>
+      <p class="muted">
+        Choose a preset workflow or build a custom sequence of maintenance
+        tasks.
+      </p>
+    </div>
+    <div class="actions">
+      <button id="svc-start" disabled>Start</button>
+    </div>
+  </div>
+
+  <div class="preset-grid" role="list" aria-label="Service presets">
+    <button
+      class="preset-card"
+      data-preset="general"
+      role="listitem"
+      aria-pressed="false"
+    >
+      <div class="preset-head">
+        <span class="icon ph ph-wrench"></span>
+        <h2>General Service</h2>
+      </div>
+      <p class="desc">
+        Essential maintenance package: comprehensive system diagnostics,
+        security cleaning, and performance optimization.
+      </p>
+      <ul class="summary">
+        <li>Hardware Diagnostics</li>
+        <li>Malware Removal</li>
+        <li>Virus Removal</li>
+        <li>Registry Cleanup</li>
+        <li>Junk Files Removal</li>
+        <li>Startup Clean</li>
+        <li>Driver Updates</li>
+      </ul>
+    </button>
+
+    <button
+      class="preset-card"
+      data-preset="complete"
+      role="listitem"
+      aria-pressed="false"
+    >
+      <div class="preset-head">
+        <span class="icon ph ph-toolbox"></span>
+        <h2>Complete Service</h2>
+      </div>
+      <p class="desc">
+        Comprehensive overhaul: all General Service tasks plus deep system
+        cleaning, browser maintenance, and full system updates.
+      </p>
+      <ul class="summary">
+        <li>All General tasks</li>
+        <li>Hardware Diagnostics & Report</li>
+        <li>Browser Cleanup</li>
+        <li>Windows Updates</li>
+        <li>BIOS Update</li>
+      </ul>
+    </button>
+
+    <button
+      class="preset-card"
+      data-preset="custom"
+      role="listitem"
+      aria-pressed="false"
+    >
+      <div class="preset-head">
+        <span class="icon ph ph-sliders-horizontal"></span>
+        <h2>Custom Service</h2>
+      </div>
+      <p class="desc">
+        Manually pick and reorder tasks to suit a unique situation.
+        (Configurator loads on next screen.)
+      </p>
+      <ul class="summary">
+        <li>Build your own queue</li>
+        <li>Reorder + toggle steps</li>
+        <li>Save preset (planned)</li>
+      </ul>
+    </button>
+  </div>
+
+  <p class="muted foot-note">
+    Future: Presets become editable JSON definitions in
+    <code>data/settings/service-presets.json</code>.
+  </p>
+</section>
+<script type="module" src="./index.js"></script>

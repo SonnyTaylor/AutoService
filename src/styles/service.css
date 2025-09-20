@@ -1,27 +1,759 @@
-/* =============================== */
-/* Service Options page            */
-/* =============================== */
-[data-page="service"] .service-toolbar {
+/* Service pages: presets, run builder, and runner/report styling */
+[data-page="service-run"] .param-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 12px;
+}
+[data-page="service-run"] .param-controls .lab {
+  opacity: 0.8;
+  font-size: 12px;
+}
+[data-page="service-run"] .param-controls .unit {
+  opacity: 0.7;
+  font-size: 12px;
+}
+[data-page="service-run"] .param-controls input[type="number"],
+[data-page="service-run"] .gpu-sub input[type="number"] {
+  width: 64px;
+}
+[data-page="service-run"] .gpu-sub {
+  display: grid;
+  gap: 6px;
+  margin-left: 28px;
+}
+[data-page="service-run"] .gpu-sub .sep {
+  opacity: 0.5;
+  margin: 0 6px;
+}
+/* Service Report: ensure overlay respects hidden attribute and polish badges */
+[data-page="service-report"] .log-overlay[hidden] {
+  display: none !important;
+}
+
+[data-page="service-report"] .log-overlay {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+[data-page="service-report"] .task-status-list {
+  display: grid;
+  gap: 8px;
+}
+
+[data-page="service-report"] .task-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--panel-2);
+}
+
+[data-page="service-report"] .task-status .left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+[data-page="service-report"] .task-status .idx {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+[data-page="service-report"] .badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1.6;
+  background: #3a4157;
+}
+[data-page="service-report"] .badge.ok {
+  background: #2f6a3b;
+}
+[data-page="service-report"] .badge.fail {
+  background: #7a2e2e;
+}
+[data-page="service-report"] .badge.skipped {
+  background: #5a5a5a;
+}
+[data-page="service-report"] .badge.running {
+  background: #2d4e7a;
+}
+/* .badge.running .dot is defined later with animation; remove duplicate */
+/* Service (Servicing) first screen */
+[data-page="service"] .service-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+[data-page="service"] .service-header h1 {
+  margin: 0 0 6px;
+}
+[data-page="service"] .service-header .actions {
+  margin-left: auto;
   display: flex;
   gap: 10px;
-  align-items: center;
-  margin: 8px 0 14px;
 }
-[data-page="service"] .service-toolbar .spacer { flex: 1; }
-[data-page="service"] .task-list { display: grid; gap: 10px; }
-[data-page="service"] .task-row {
+[data-page="service"] #svc-start {
+  min-width: 120px;
+  font-weight: 600;
+}
+[data-page="service"] #svc-start:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+[data-page="service"] .preset-grid {
   display: grid;
-  grid-template-columns: 22px 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
+  margin-top: 8px;
+}
+[data-page="service"] .preset-card {
+  text-align: left;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 18px 16px;
+  display: grid;
+  gap: 10px;
+  cursor: pointer;
+  position: relative;
+  transition: background-color 0.18s, border-color 0.18s, box-shadow 0.22s;
+}
+[data-page="service"] .preset-card:hover {
+  background: var(--panel-hover);
+  border-color: #2e3b55;
+}
+[data-page="service"] .preset-card[aria-pressed="true"] {
+  border-color: #2b416b;
+  box-shadow: 0 0 0 2px rgba(79, 140, 255, 0.25);
+  background: #21304a;
+}
+[data-page="service"] .preset-card:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+[data-page="service"] .preset-card .preset-head {
+  display: flex;
   align-items: center;
+  gap: 10px;
+}
+[data-page="service"] .preset-card h2 {
+  font-size: 1.05rem;
+  margin: 0;
+}
+[data-page="service"] .preset-card .icon {
+  font-size: 22px;
+  color: var(--primary);
+  display: inline-flex;
+}
+[data-page="service"] .preset-card .desc {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.35;
+}
+[data-page="service"] .preset-card ul.summary {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+[data-page="service"] .preset-card ul.summary li {
+  position: relative;
+  padding-left: 14px;
+}
+[data-page="service"] .preset-card ul.summary li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 6px;
+  height: 6px;
+  background: #335d9b;
+  border-radius: 50%;
+}
+
+[data-page="service"] .foot-note {
+  margin-top: 28px;
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+[data-page="service"] .foot-note code {
+  background: #1d2738;
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  font-size: 0.75rem;
+}
+
+/* Placeholder future task configuration page (service-run) basic layout scaffold to keep style consistent later */
+[data-page="service-run"] .config-scaffold {
+  display: grid;
+  gap: 20px;
+}
+[data-page="service-run"] .config-scaffold .group {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+[data-page="service-run"] .config-scaffold h2 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+}
+
+@media (max-width: 780px) {
+  [data-page="service"] .preset-card {
+    padding: 16px 14px;
+  }
+  [data-page="service"] .service-header {
+    gap: 14px;
+  }
+}
+
+/* Run builder page */
+[data-page="service-run"] .run-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+[data-page="service-run"] .run-header h1 {
+  margin: 0 0 4px;
+  font-size: 1.15rem;
+}
+[data-page="service-run"] .run-header .run-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 10px;
+}
+[data-page="service-run"] .builder-layout {
+  display: grid;
+  grid-template-columns: 1fr minmax(300px, 360px);
+  gap: 20px;
+}
+[data-page="service-run"] .task-palette,
+[data-page="service-run"] .task-preview {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: grid;
   gap: 12px;
+  align-content: start;
+}
+[data-page="service-run"] .palette-actions,
+[data-page="service-run"] .json-actions {
+  display: flex;
+  gap: 8px;
+}
+[data-page="service-run"] .small {
+  font-size: 0.75rem;
+}
+[data-page="service-run"] .section-title {
+  margin: 0;
+  font-size: 1rem;
+}
+[data-page="service-run"] .task-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+[data-page="service-run"] .task-item {
+  position: relative;
+}
+[data-page="service-run"] .task-row {
+  display: grid;
+  grid-template-columns: 22px auto 1fr;
+  gap: 10px;
+  align-items: center;
   padding: 10px 12px;
+  background: var(--panel-alt);
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: #202636;
+  cursor: default;
+  -webkit-user-select: auto;
+  -moz-user-select: auto;
+  -ms-user-select: auto;
+  user-select: auto;
 }
-[data-page="service"] .task-row:hover { background: #263043; border-color: #2e3b55; }
-[data-page="service"] .task-row input[type="checkbox"] { width: 18px; height: 18px; }
-[data-page="service"] .task-row .name { font-weight: 600; }
-[data-page="service"] .subtasks { padding: 8px 12px 6px 36px; display: grid; gap: 6px; }
-[data-page="service"] .subtasks .sub-title { font-size: 0.9rem; }
-[data-page="service"] .subtasks .sub-row { display: inline-flex; align-items: center; gap: 8px; }
+[data-page="service-run"] .task-row:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+[data-page="service-run"] .task-row:hover {
+  background: var(--panel-hover);
+  border-color: #2e3b55;
+}
+[data-page="service-run"] .task-item.dragging .task-row {
+  opacity: 0.6;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.06);
+}
+[data-page="service-run"] .task-row > input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+[data-page="service-run"] .task-row .grab {
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.55;
+  cursor: grab;
+}
+
+/* Re-enable selection and normal cursor inside interactive areas */
+[data-page="service-run"] .param-controls,
+[data-page="service-run"] .param-controls *,
+[data-page="service-run"] .gpu-sub,
+[data-page="service-run"] .gpu-sub * {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+  cursor: auto;
+}
+[data-page="service-run"] .param-controls input,
+[data-page="service-run"] .gpu-sub input {
+  cursor: text;
+}
+[data-page="service-run"] .param-controls label,
+[data-page="service-run"] .gpu-sub label {
+  cursor: default;
+}
+
+/* SortableJS drag helpers */
+[data-page="service-run"] .task-item.drag-active .task-row {
+  opacity: 0.75;
+}
+[data-page="service-run"] .drag-ghost {
+  opacity: 0.6 !important;
+}
+[data-page="service-run"] .task-row .grab:active {
+  cursor: grabbing;
+}
+[data-page="service-run"] .task-row .main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+[data-page="service-run"] .task-row .name {
+  font-weight: 600;
+}
+[data-page="service-run"] .task-row .meta {
+  font-size: 0.65rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+[data-page="service-run"] .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.65rem;
+  background: #1d2738;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 2px 6px;
+  border-radius: 999px;
+}
+[data-page="service-run"] .badge.ok {
+  color: #8bd17c;
+  border-color: #2d4a33;
+  background: #16221a;
+}
+[data-page="service-run"] .badge.missing {
+  color: #e8b27c;
+  border-color: #4a3a2d;
+  background: #221a16;
+}
+[data-page="service-run"] .order-pill {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  background: #24314a;
+  border: 1px solid #2b416b;
+  color: var(--text);
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+[data-page="service-run"] .drop-indicator {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 2px dashed #4f8cff;
+}
+[data-page="service-run"] .drop-top {
+  top: -4px;
+}
+[data-page="service-run"] .drop-bottom {
+  bottom: -4px;
+}
+[data-page="service-run"] .json-preview {
+  margin: 0;
+  background: #0e131b;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: ui-monospace, monospace;
+  font-size: 0.75rem;
+  max-height: 420px;
+  overflow: auto;
+}
+[data-page="service-run"] #svc-run-next:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+/* Parameter mini controls */
+[data-page="service-run"] .param-controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+[data-page="service-run"] .param-controls .tiny-lab {
+  font-size: 0.55rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #1d2738;
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+[data-page="service-run"] .param-controls input {
+  width: 78px;
+  padding: 6px 8px;
+  font-size: 0.8rem;
+  min-height: auto;
+  background: #0f1722;
+  border: 1px solid #2a3b55;
+  border-radius: 6px;
+  color: var(--text);
+}
+/* GPU parent */
+[data-page="service-run"] .task-row.gpu-parent {
+  background: #202c3f;
+}
+[data-page="service-run"] .task-row.gpu-parent:hover {
+  background: #28364d;
+}
+[data-page="service-run"] .gpu-sub {
+  margin-top: 6px;
+  display: grid;
+  gap: 4px;
+  font-size: 0.7rem;
+}
+[data-page="service-run"] .gpu-sub .gpu-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #1a2332;
+  padding: 4px 6px;
+  border: 1px solid #2a3b55;
+  border-radius: 6px;
+}
+[data-page="service-run"] .gpu-sub .gpu-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 2px;
+  cursor: pointer;
+}
+[data-page="service-run"] .gpu-sub.disabled {
+  opacity: 0.45;
+}
+[data-page="service-run"] .gpu-sub label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #1a2332;
+  padding: 4px 6px;
+  border: 1px solid #2a3b55;
+  border-radius: 6px;
+}
+[data-page="service-run"] .gpu-sub input[type="number"] {
+  width: 86px;
+  padding: 6px 8px;
+  font-size: 0.75rem;
+  background: #0f1722;
+  border: 1px solid #2a3b55;
+  border-radius: 6px;
+  color: var(--text);
+}
+@media (max-width: 640px) {
+  [data-page="service-run"] .param-controls input {
+    width: 56px;
+  }
+}
+@media (max-width: 980px) {
+  [data-page="service-run"] .builder-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Service report (runner) */
+[data-page="service-report"] .run-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+[data-page="service-report"] .run-header .run-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 10px;
+}
+[data-page="service-report"] .run-header .run-actions button:disabled,
+[data-page="service-report"] #svc-report-run:disabled,
+[data-page="service-report"] #svc-report-back:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+[data-page="service-report"] .runner-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 20px;
+}
+[data-page="service-report"] .runner-left,
+[data-page="service-report"] .runner-right {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  min-width: 0; /* allow long code/log blocks to scroll instead of forcing grid expansion */
+}
+[data-page="service-report"] .task-status-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+[data-page="service-report"] .task-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+[data-page="service-report"] .task-status .left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+[data-page="service-report"] .task-status .idx {
+  font-size: 0.7rem;
+  opacity: 0.7;
+  width: 22px;
+}
+[data-page="service-report"] .task-status .name {
+  font-weight: 600;
+}
+[data-page="service-report"] .badge {
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #1d2738;
+  color: var(--muted);
+}
+[data-page="service-report"] .badge.ok {
+  color: #8bd17c;
+  border-color: #2d4a33;
+  background: #16221a;
+}
+[data-page="service-report"] .badge.fail {
+  color: #f29a9a;
+  border-color: #522a2a;
+  background: #221616;
+}
+[data-page="service-report"] .badge.skipped {
+  color: #e8b27c;
+  border-color: #4a3a2d;
+  background: #221a16;
+}
+[data-page="service-report"] .badge.running {
+  color: #9cbcff;
+  border-color: #2b416b;
+  background: #1a2332;
+  display: inline-flex; /* ensure dot and text sit horizontally */
+  align-items: center;
+  gap: 6px;
+}
+[data-page="service-report"] .badge.running .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4f8cff;
+  display: block; /* avoid baseline misalignment */
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.3;
+  }
+}
+
+[data-page="service-report"] .log-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0; /* prevent expansion from long content */
+}
+[data-page="service-report"] .log-view {
+  margin: 0;
+  background: #0e131b;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: ui-monospace, monospace;
+  font-size: 0.75rem;
+  max-height: 360px;
+  overflow: auto;
+  white-space: pre-wrap;
+  max-width: 100%;
+  box-sizing: border-box;
+  width: 100%; /* force to parent width */
+  overflow-x: auto; /* horizontal scroll for long lines */
+}
+[data-page="service-report"] .log-view:empty::before {
+  content: "Log output will appear here once the run starts.";
+  display: block;
+  opacity: 0.5;
+  font-style: italic;
+  pointer-events: none;
+}
+[data-page="service-report"] .log-view:empty {
+  background: #0b1016;
+}
+[data-page="service-report"] .log-overlay {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.7rem;
+  background: #1a2332;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  color: var(--muted);
+  box-shadow: 0 0 0 1px #1a2332, 0 0 0 3px rgba(79, 140, 255, 0.06);
+}
+[data-page="service-report"] .log-overlay .status-text {
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+[data-page="service-report"] .spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #2b416b;
+  border-top-color: #4f8cff;
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+[data-page="service-report"] .final-json .json-preview {
+  margin: 0;
+  background: #0e131b;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: ui-monospace, monospace;
+  font-size: 0.75rem;
+  max-height: 360px;
+  overflow: auto;
+  white-space: pre; /* keep long lines on one line */
+  max-width: 100%; /* constrain to container */
+  box-sizing: border-box;
+  width: 100%; /* force to parent width */
+  overflow-x: auto; /* horizontal scroll for long lines */
+}
+[data-page="service-report"] .final-json .json-preview:empty::before {
+  content: "Final report JSON will appear here after the run completes.";
+  display: block;
+  opacity: 0.5;
+  font-style: italic;
+  pointer-events: none;
+  white-space: normal;
+}
+[data-page="service-report"] .final-json .json-preview:empty {
+  background: #0b1016;
+}
+[data-page="service-report"] .final-json {
+  display: grid;
+  gap: 12px;
+  min-width: 0; /* prevent expansion from long content */
+}
+[data-page="service-report"] .final-json-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+[data-page="service-report"] .runner-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #1a2332;
+}
+[data-page="service-report"] .runner-summary.ok {
+  background: #16221a;
+  border-color: #2d4a33;
+}
+[data-page="service-report"] .runner-summary.fail {
+  background: #221616;
+  border-color: #522a2a;
+}
+[data-page="service-report"] .runner-summary #svc-summary-icon {
+  font-weight: 700;
+}
+
+@media (max-width: 980px) {
+  [data-page="service-report"] .runner-layout {
+    grid-template-columns: 1fr;
+  }
+}

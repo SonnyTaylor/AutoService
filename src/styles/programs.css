@@ -1,3 +1,4 @@
+/* Programs and Scripts pages: lists, editors, and responsive adjustments */
 /* Programs page */
 .programs-toolbar {
   display: flex;
@@ -18,18 +19,23 @@
   height: 40px; /* align with buttons */
   line-height: 1.2;
   /* custom chevron */
-  background-image:
-    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
     linear-gradient(135deg, var(--muted) 50%, transparent 50%);
   background-position: right 12px center, right 6px center;
   background-size: 6px 6px, 6px 6px;
   background-repeat: no-repeat;
   padding-right: 28px;
 }
-.programs-toolbar #program-sort:hover { background: #222a3a; }
-.programs-toolbar #program-sort:disabled { opacity: 0.6; }
+.programs-toolbar #program-sort:hover {
+  background: #222a3a;
+}
+.programs-toolbar #program-sort:disabled {
+  opacity: 0.6;
+}
 /* Keep Add button to the right when space allows */
-.programs-toolbar #program-add-btn { margin-left: auto; }
+.programs-toolbar #program-add-btn {
+  margin-left: auto;
+}
 .programs-list {
   display: flex;
   flex-direction: column;
@@ -50,31 +56,130 @@
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--panel-2);
+  transition: background-color 0.15s, border-color 0.15s; /* smooth hover */
 }
-.program-logo-wrap { grid-area: logo; position: relative; width: 56px; height: 56px; }
-.program-logo { width: 100%; height: 100%; object-fit: contain; border-radius: 8px; background: #12151d; display: block; }
-.exe-status { position: absolute; right: -2px; bottom: -2px; width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 10px; line-height: 1; }
-.exe-status.ok { background: #1f6f3f; border-color: #2e8b57; color: #dff7e6; }
-.exe-status.missing { background: #6f1f2a; border-color: #a33a45; color: #ffe5e8; }
-.program-main { grid-area: main; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.program-title { font-weight: 600; display: flex; align-items: center; gap: 8px; min-width: 0; }
-.program-title .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.program-title .ver { color: var(--muted); font-weight: 500; margin-left: 2px; background: #24314a; border: 1px solid #2b416b; padding: 2px 6px; border-radius: 999px; font-size: 0.75rem; }
-.program-desc { color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.program-path { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace; }
-.program-actions { grid-area: actions; display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-.program-actions .secondary { background: #2a3753; }
-.program-actions .ghost { background: transparent; border-color: var(--border); }
-.program-actions .ghost:hover { background: #222a3a; }
-.program-actions button:disabled { opacity: 0.6; cursor: not-allowed; }
+.program-logo-wrap {
+  grid-area: logo;
+  position: relative;
+  width: 56px;
+  height: 56px;
+}
+.program-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #12151d;
+  display: block;
+}
+.exe-status {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  line-height: 1;
+}
+.exe-status.ok {
+  background: #1f6f3f;
+  border-color: #2e8b57;
+  color: #dff7e6;
+}
+.exe-status.missing {
+  background: #6f1f2a;
+  border-color: #a33a45;
+  color: #ffe5e8;
+}
+.program-main {
+  grid-area: main;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.program-title {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.program-title .name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.program-title .ver {
+  color: var(--muted);
+  font-weight: 500;
+  margin-left: 2px;
+  background: #24314a;
+  border: 1px solid #2b416b;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+}
+.program-desc {
+  color: var(--muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.program-path {
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo,
+    monospace;
+}
+.program-actions {
+  grid-area: actions;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.program-actions .secondary {
+  background: #2a3753;
+}
+.program-actions .ghost {
+  background: transparent;
+  border-color: var(--border);
+}
+.program-actions .ghost:hover {
+  background: #222a3a;
+}
+.program-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 
 /* Better hover to distinguish rows */
-.program-row:hover { background: #263043; border-color: #2e3b55; }
+.program-row:hover {
+  background: var(--panel-hover);
+  border-color: #2e3b55;
+}
 
 /* Add subtle labels on tighter layouts so sections don't blend */
 @media (max-width: 900px) {
-  .program-desc::before { content: "Description — "; color: #8996ac; }
-  .program-path::before { content: "Path — "; color: #8996ac; }
+  .program-desc::before {
+    content: "Description — ";
+    color: #8996ac;
+  }
+  .program-path::before {
+    content: "Path — ";
+    color: #8996ac;
+  }
 }
 
 /* Stack actions below content on small widths */
@@ -86,28 +191,94 @@
       "actions actions";
     align-items: start;
   }
-  .program-actions { justify-content: flex-start; gap: 6px; }
-  .program-actions button { padding: 6px 10px; }
+  .program-actions {
+    justify-content: flex-start;
+    gap: 6px;
+  }
+  .program-actions button {
+    padding: 6px 10px;
+  }
 }
 
-.program-editor::backdrop { backdrop-filter: blur(2px); background: rgba(0,0,0,0.4); }
-.program-editor { border: 1px solid var(--border); border-radius: 12px; background: var(--panel); color: var(--text); padding: 0; width: min(780px, 92vw); }
-.program-editor form { padding: 16px; }
-.editor-grid { display: grid; grid-template-columns: 180px 1fr; gap: 16px; }
-.logo-col { display: flex; flex-direction: column; gap: 10px; align-items: center; }
-.logo-col img { width: 160px; height: 160px; border-radius: 12px; background: #0e1118; object-fit: contain; border: 1px solid var(--border); }
-.fields-col { display: grid; gap: 10px; }
-.fields-col label { display: grid; gap: 6px; font-size: 0.95rem; color: var(--muted); }
-.fields-col input, .fields-col textarea { padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel-2); color: var(--text); }
-.input-with-btn { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
-.editor-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
+.program-editor::backdrop {
+  backdrop-filter: blur(2px);
+  background: rgba(0, 0, 0, 0.4);
+}
+.program-editor {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--text);
+  padding: 0;
+  width: min(780px, 92vw);
+}
+.program-editor form {
+  padding: 16px;
+}
+.editor-grid {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 16px;
+}
+.logo-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+.logo-col img {
+  width: 160px;
+  height: 160px;
+  border-radius: 12px;
+  background: #0e1118;
+  object-fit: contain;
+  border: 1px solid var(--border);
+}
+.fields-col {
+  display: grid;
+  gap: 10px;
+}
+.fields-col label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+.fields-col input,
+.fields-col textarea {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+}
+.input-with-btn {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+.editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+}
 
 /* Editor responsive stacking */
 @media (max-width: 720px) {
-  .program-editor form { padding: 12px; }
-  .editor-grid { grid-template-columns: 1fr; }
-  .logo-col img { width: 120px; height: 120px; }
-  .editor-actions { flex-wrap: wrap; }
+  .program-editor form {
+    padding: 12px;
+  }
+  .editor-grid {
+    grid-template-columns: 1fr;
+  }
+  .logo-col img {
+    width: 120px;
+    height: 120px;
+  }
+  .editor-actions {
+    flex-wrap: wrap;
+  }
 }
 
 /* Scripts page tweaks (re-use Programs styles) */
@@ -122,23 +293,28 @@
   color: var(--text);
   height: 40px;
   line-height: 1.2;
-  background-image:
-    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
     linear-gradient(135deg, var(--muted) 50%, transparent 50%);
   background-position: right 12px center, right 6px center;
   background-size: 6px 6px, 6px 6px;
   background-repeat: no-repeat;
   padding-right: 28px;
 }
-.programs-toolbar #script-sort:hover { background: #222a3a; }
-.programs-toolbar #script-sort:disabled { opacity: 0.6; }
+.programs-toolbar #script-sort:hover {
+  background: #222a3a;
+}
+.programs-toolbar #script-sort:disabled {
+  opacity: 0.6;
+}
 
 /* Remove logo column for scripts list */
 .scripts-list .program-row {
   grid-template-columns: 1fr auto;
   grid-template-areas: "main actions";
 }
-.scripts-list .program-logo-wrap { display: none; }
+.scripts-list .program-logo-wrap {
+  display: none;
+}
 
 /* Make selects in editors look like inputs */
 .program-editor .fields-col select {
@@ -149,8 +325,7 @@
   color: var(--text);
   appearance: none;
   -webkit-appearance: none;
-  background-image:
-    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
     linear-gradient(135deg, var(--muted) 50%, transparent 50%);
   background-position: right 12px center, right 6px center;
   background-size: 6px 6px, 6px 6px;

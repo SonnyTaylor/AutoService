@@ -1,11 +1,24 @@
-// Minimal hash router that loads pages from /pages/*.html into #content
+// Router and page loader for AutoService frontend
+import "@phosphor-icons/web/regular";
+//
+// Responsibilities:
+// - Maintain a minimal hash-based router: #/<route>[?query]
+// - Load HTML from /pages/** into #content and optionally initialize controllers
+// - Manage dynamic technician tabs derived from app settings
+// - Keep focus/scroll behavior accessible and predictable
 
-// Base static routes; technician custom links will be appended at runtime
+// -----------------------------
+// Route registry
+// -----------------------------
+
+/** Dynamic technician routes constructed from settings at runtime. */
 let dynamicTechRoutes = [];
+
+/** Base static routes available in the app. */
 const baseRoutes = [
-  "scans",
   "service",
   "service-run",
+  "service-report",
   "system-info",
   "shortcuts",
   "programs",
@@ -15,66 +28,141 @@ const baseRoutes = [
   "settings",
 ];
 
-function allRoutes() { return [...baseRoutes, ...dynamicTechRoutes]; }
+// Pre-register all potential page controllers so Vite can analyze them
+// Keys are module paths relative to this file (starting with './')
+const controllers = import.meta.glob("./pages/**/*.js");
+// Statically include all page HTML so production build doesn't rely on network fetches
+const htmlModules = import.meta.glob("./pages/**/*.html", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+});
 
+/** Map logical routes to HTML file paths (without extension). */
+const htmlMap = {
+  "system-info": "system-info/system-info",
+  shortcuts: "shortcuts/shortcuts",
+  scripts: "scripts/scripts",
+  settings: "settings/settings",
+};
+
+/** Map logical routes to script controller module paths (without extension). */
+const scriptMap = {
+  "system-info": "system-info/index",
+  shortcuts: "shortcuts/index",
+  scripts: "scripts/index",
+  settings: "settings/index",
+  programs: "programs/index",
+};
+
+/** Map logical routes to foldered page files (fallback when not in htmlMap). */
+const pathMap = {
+  service: "service/index",
+  "service-run": "service/run",
+  "service-report": "service/report",
+  programs: "programs/index",
+  reports: "reports/index",
+  "component-test": "component-test/index",
+};
+
+/** Return all known routes including dynamic technician routes. */
+function allRoutes() {
+  return [...baseRoutes, ...dynamicTechRoutes];
+}
+
+/**
+ * Normalize the current window hash to the format #/<route>[?query].
+ * Falls back to #/service for invalid or unknown routes.
+ * @returns {string} normalized hash
+ */
 function normalizeHash() {
-  const hash = window.location.hash || "#\/scans";
+  const hash = window.location.hash || "#/service";
   // ensure format #/route[?query]
-  if (!hash.startsWith("#/")) return "#/scans";
+  if (!hash.startsWith("#/")) return "#/service";
   const route = hash.slice(2);
   const [name, query] = route.split("?", 2);
-  if (!allRoutes().includes(name)) return "#/scans";
+  if (!allRoutes().includes(name)) return "#/service";
   return `#/${name}${query ? `?${query}` : ""}`;
 }
 
+/**
+ * Determine if a route is a dynamic technician route.
+ * @param {string} name logical route name (no leading #/)
+ * @returns {boolean}
+ */
+function nameIsDynamicTech(name) {
+  return name.startsWith("tech-");
+}
+
+/**
+ * Load a page's HTML into #content and initialize its controller (if any).
+ * Handles dynamic technician link display specially by delegating to a dedicated module.
+ * @param {string} route logical route name (e.g., "service" or "system-info")
+ */
 async function loadPage(route) {
   const content = document.getElementById("content");
   if (!content) return;
   content.setAttribute("aria-busy", "true");
   try {
-    // map logical routes to foldered page files
-    const pathMap = {
-      scans: 'scans/index',
-      service: 'scans/options',
-      'service-run': 'scans/run',
-    };
+    // Dynamic technician pages are shown in a persistent iframe container
     if (nameIsDynamicTech(route)) {
-      // dynamic technician pages are now shown in a persistent iframe container
       try {
-        const mod = await import(`./pages/technician-link.js?ts=${Date.now()}`);
-        if (typeof mod.showTechnicianLink === 'function') {
-          await mod.showTechnicianLink(route.replace(/^tech-/, ''));
-          content.setAttribute("aria-busy", "false");
-          return;
+        const importer =
+          controllers["./pages/technician-link-display/index.js"];
+        if (importer) {
+          const mod = await importer();
+          if (typeof mod.showTechnicianLink === "function") {
+            await mod.showTechnicianLink(route.replace(/^tech-/, ""));
+            content.setAttribute("aria-busy", "false");
+            return;
+          }
+        } else {
+          console.warn("Technician link display module not found");
         }
       } catch {}
     }
-    const pagePath = pathMap[route] || route;
-    const res = await fetch(`pages/${pagePath}.html`, { cache: "no-cache" });
-    const html = await res.text();
-    // Reset scroll before content change
+
+    // Choose HTML path; some routes use a different HTML file than the script
+    const pagePath = htmlMap[route] || pathMap[route] || route;
+    const htmlKey = `./pages/${pagePath}.html`;
+    const html = htmlModules[htmlKey];
+
+    // Reset scroll before content change, then inject HTML (or a simple error state)
     window.scrollTo(0, 0);
-    content.innerHTML = html;
-    
+    content.innerHTML =
+      html ||
+      `<div class="page"><h1>Not Found</h1><p class="muted">Missing page template: ${htmlKey}</p></div>`;
+
     // Focus the main landmark for a11y but prevent auto-scrolling
     content.focus({ preventScroll: true });
 
     // Ensure any persistent technician webviews are hidden when loading a normal page
     try {
-      const modHide = await import('./pages/technician-link.js');
-      if (typeof modHide.hideTechnicianLinks === 'function') modHide.hideTechnicianLinks();
+      const importerHide =
+        controllers["./pages/technician-link-display/index.js"];
+      if (importerHide) {
+        const modHide = await importerHide();
+        if (typeof modHide.hideTechnicianLinks === "function")
+          modHide.hideTechnicianLinks();
+      }
     } catch {}
 
     // Try to load optional page controller: /pages/<route>.js
     try {
-      const scriptPath = pathMap[route] || route;
-      const mod = await import(`./pages/${scriptPath}.js?ts=${Date.now()}`);
-      if (typeof mod.initPage === "function") {
-        await mod.initPage();
+      const scriptPath = scriptMap[route] || pathMap[route] || route;
+      const key = `./pages/${scriptPath}.js`;
+      const importer = controllers[key];
+      if (!importer) {
+        console.log("No page controller registered for", key);
+      } else {
+        const mod = await importer();
+        if (typeof mod.initPage === "function") {
+          await mod.initPage();
+        }
       }
     } catch (e) {
       // No controller or failed to load; ignore silently
-      // console.debug("No page controller for", route, e);
+      console.log("Failed to load page controller for", route, e);
     }
   } catch (e) {
     content.innerHTML = `<div class="page"><h1>Error</h1><p class="muted">Failed to load page: ${route}</p></div>`;
@@ -83,6 +171,10 @@ async function loadPage(route) {
   }
 }
 
+/**
+ * Set the active tab button in the header based on the route.
+ * @param {string} route logical route name
+ */
 function setActiveTab(route) {
   document.querySelectorAll(".tab-bar .tab").forEach((el) => {
     const r = el.getAttribute("data-route");
@@ -91,6 +183,9 @@ function setActiveTab(route) {
   });
 }
 
+/**
+ * Update UI when the hash changes: normalize hash, compute route, set tab, and load page.
+ */
 function onRouteChange() {
   const hash = normalizeHash();
   if (window.location.hash !== hash) {
@@ -103,35 +198,48 @@ function onRouteChange() {
   loadPage(name);
 }
 
-function nameIsDynamicTech(name){ return name.startsWith('tech-'); }
-
-async function refreshTechnicianTabs(){
+/**
+ * Load app settings, rebuild dynamic technician tabs, and inject them into the header.
+ * Emits no errors to the user; silently no-ops if settings are unavailable.
+ */
+async function refreshTechnicianTabs() {
   // Load settings and rebuild dynamic tabs area
   let settings = {};
-  try { settings = await window.__TAURI__.core.invoke('load_app_settings'); } catch {}
+  try {
+    if (window.__TAURI__) {
+      settings = await window.__TAURI__.core.invoke("load_app_settings");
+    }
+  } catch {}
   const links = settings?.technician_links || [];
-  dynamicTechRoutes = links.map(l => `tech-${l.id}`);
-  const nav = document.querySelector('.tab-bar');
+  dynamicTechRoutes = links.map((l) => `tech-${l.id}`);
+  const nav = document.querySelector(".tab-bar");
   if (!nav) return;
   // Remove old dynamic items
-  nav.querySelectorAll('.tab.tech-link').forEach(el => el.remove());
-  nav.querySelectorAll('.tab-divider-tech').forEach(el => el.remove());
-  if (!links.length) { return; }
+  nav.querySelectorAll(".tab.tech-link").forEach((el) => el.remove());
+  nav.querySelectorAll(".tab-divider-tech").forEach((el) => el.remove());
+  if (!links.length) {
+    return;
+  }
   // Insert divider then links
-  const insertPoint = nav.querySelector('.tab-dynamic-insert-point');
-  const divider = document.createElement('span');
-  divider.className = 'tab-divider-tech';
-  divider.style.cssText = 'display:inline-block;width:1px;height:24px;background:var(--border-color,#444);margin:0 4px;align-self:center;';
+  const insertPoint = nav.querySelector(".tab-dynamic-insert-point");
+  const divider = document.createElement("span");
+  divider.className = "tab-divider-tech";
+  divider.style.cssText =
+    "display:inline-block;width:1px;height:24px;background:var(--border-color,#444);margin:0 4px;align-self:center;";
   insertPoint?.before(divider);
-  links.forEach(link => {
-    const a = document.createElement('a');
-    a.className = 'tab tech-link';
+  links.forEach((link) => {
+    const a = document.createElement("a");
+    a.className = "tab tech-link";
     a.textContent = link.title || link.url;
     a.href = `#/tech-${link.id}`;
-    a.setAttribute('data-route', `tech-${link.id}`);
+    a.setAttribute("data-route", `tech-${link.id}`);
     insertPoint?.before(a);
   });
 }
+
+// -----------------------------
+// Wire up events
+// -----------------------------
 
 window.addEventListener("hashchange", onRouteChange);
 window.addEventListener("DOMContentLoaded", () => {
@@ -139,21 +247,29 @@ window.addEventListener("DOMContentLoaded", () => {
   // Background prewarm of system info so navigating there is instant.
   (async () => {
     try {
-      const mod = await import('./pages/system-info.js');
-      if (typeof mod.prewarmSystemInfo === 'function') {
+      const importer = controllers["./pages/system-info/index.js"];
+      const mod = importer ? await importer() : null;
+      if (typeof mod.prewarmSystemInfo === "function") {
         mod.prewarmSystemInfo();
       }
     } catch {}
   })();
   // Wire custom titlebar controls
-  const { getCurrentWindow } = window.__TAURI__.window || {};
+  const { getCurrentWindow } =
+    (window.__TAURI__ && window.__TAURI__.window) || {};
   if (getCurrentWindow) {
     const appWindow = getCurrentWindow();
-    document.getElementById('titlebar-minimize')?.addEventListener('click', () => appWindow.minimize());
-    document.getElementById('titlebar-maximize')?.addEventListener('click', () => appWindow.toggleMaximize());
-    document.getElementById('titlebar-close')?.addEventListener('click', () => appWindow.close());
+    document
+      .getElementById("titlebar-minimize")
+      ?.addEventListener("click", () => appWindow.minimize());
+    document
+      .getElementById("titlebar-maximize")
+      ?.addEventListener("click", () => appWindow.toggleMaximize());
+    document
+      .getElementById("titlebar-close")
+      ?.addEventListener("click", () => appWindow.close());
   }
   refreshTechnicianTabs();
   // Listen for custom event to refresh tabs when settings change
-  window.addEventListener('technician-links-updated', refreshTechnicianTabs);
+  window.addEventListener("technician-links-updated", refreshTechnicianTabs);
 });

@@ -1,20 +1,17 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AutoService</title>
-  <link rel="stylesheet" href="/styles/core.css" />
-  <link rel="stylesheet" href="/styles/subtabs.css" />
-  <link rel="stylesheet" href="/styles/shortcuts.css" />
-  <link rel="stylesheet" href="/styles/programs.css" />
-  <link rel="stylesheet" href="/styles/system-info.css" />
-  <link rel="stylesheet" href="/styles/scans.css" />
-  <link rel="stylesheet" href="/styles/service.css" />
-  <link rel="stylesheet" href="/styles/service-run.css" />
-  <link rel="stylesheet" href="/styles/component-test.css" />
-  <!-- Phosphor Icons CDN --> 
-  <script src="https://unpkg.com/@phosphor-icons/web" defer></script>
+    <link rel="stylesheet" href="/styles/core.css" />
+    <link rel="stylesheet" href="/styles/subtabs.css" />
+    <link rel="stylesheet" href="/styles/shortcuts.css" />
+    <link rel="stylesheet" href="/styles/programs.css" />
+    <link rel="stylesheet" href="/styles/system-info.css" />
+    <link rel="stylesheet" href="/styles/component-test.css" />
+    <link rel="stylesheet" href="/styles/service.css" />
+    <!-- Phosphor Icons now loaded via pnpm package in main.js -->
     <script type="module" src="/main.js" defer></script>
   </head>
   <body>
@@ -23,35 +20,83 @@
         <span class="title">AutoService</span>
       </div>
       <div class="controls">
-        <button id="titlebar-minimize" title="Minimize" aria-label="Minimize window">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M5 13v-2h14v2H5Z"/></svg>
+        <button
+          id="titlebar-minimize"
+          title="Minimize"
+          aria-label="Minimize window"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+          >
+            <path d="M5 13v-2h14v2H5Z" />
+          </svg>
         </button>
-        <button id="titlebar-maximize" title="Maximize" aria-label="Maximize window">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v16H4V4m2 4v10h12V8H6Z"/></svg>
+        <button
+          id="titlebar-maximize"
+          title="Maximize"
+          aria-label="Maximize window"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+          >
+            <path d="M4 4h16v16H4V4m2 4v10h12V8H6Z" />
+          </svg>
         </button>
         <button id="titlebar-close" title="Close" aria-label="Close window">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+          >
+            <path
+              d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"
+            />
+          </svg>
         </button>
       </div>
     </div>
     <header>
       <nav class="tab-bar" aria-label="Primary">
-        <a class="tab" data-route="scans" href="#/scans">Scans</a>
-        <a class="tab" data-route="system-info" href="#/system-info">System Info</a>
-        <a class="tab" data-route="component-test" href="#/component-test">Component Test</a>
+        <a class="tab" data-route="service" href="#/service">Service</a>
+        <a class="tab" data-route="system-info" href="#/system-info"
+          >System Info</a
+        >
+        <a class="tab" data-route="component-test" href="#/component-test"
+          >Component Test</a
+        >
         <a class="tab" data-route="shortcuts" href="#/shortcuts">Shortcuts</a>
         <a class="tab" data-route="programs" href="#/programs">Programs</a>
         <a class="tab" data-route="scripts" href="#/scripts">Scripts</a>
         <a class="tab" data-route="reports" href="#/reports">Reports</a>
         <a class="tab" data-route="settings" href="#/settings">Settings</a>
-  <span class="tab-dynamic-insert-point"></span>
+        <span class="tab-dynamic-insert-point"></span>
       </nav>
     </header>
 
-    <main id="content" class="page-container" tabindex="-1" aria-live="polite" aria-busy="false">
+    <main
+      id="content"
+      class="page-container"
+      tabindex="-1"
+      aria-live="polite"
+      aria-busy="false"
+    >
       <!-- Page content is injected here by main.js router -->
     </main>
-  <!-- Persistent container for technician webviews (iframes) so they can stay loaded like browser tabs -->
-  <div id="tech-wv-container" class="tech-link-full" style="display:none;"></div>
+    <!-- Persistent container for technician webviews (iframes) so they can stay loaded like browser tabs -->
+    <div
+      id="tech-wv-container"
+      class="tech-link-full"
+      style="display: none"
+    ></div>
   </body>
 </html>

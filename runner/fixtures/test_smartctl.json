@@ -1,0 +1,9 @@
+{
+  "tasks": [
+    {
+      "type": "smartctl_report",
+      "executable_path": "..\\data\\programs\\GSmartControl - 2.0.2\\smartctl.exe",
+      "detail_level": "basic"
+    }
+  ]
+}
