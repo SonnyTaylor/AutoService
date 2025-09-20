@@ -1,0 +1,74 @@
+name: Release (Windows)
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build and Draft Release
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Install pnpm
+        run: npm i -g pnpm
+
+      - name: Install frontend dependencies
+        run: pnpm install
+
+      - name: Build frontend (Vite)
+        run: pnpm build
+
+      - name: Setup Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Build Tauri (portable .exe)
+        run: pnpm tauri build
+
+      - name: Locate portable executable
+        id: find_exe
+        run: |
+          $files = Get-ChildItem -Path "src-tauri/target/release" -Filter "*.exe" -File -ErrorAction SilentlyContinue
+          if (-not $files -or $files.Count -eq 0) {
+            Write-Error "No .exe found in src-tauri/target/release"; exit 1
+          }
+          # Prefer AutoService/autoservice if multiple are present
+          $preferred = $files | Where-Object { $_.Name -imatch '^autoservice\.exe$' -or $_.Name -ieq 'AutoService.exe' }
+          if ($preferred) { $exe = $preferred[0] } else { $exe = $files[0] }
+          "exe=$($exe.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Create draft GitHub Release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          draft: true
+          generate_release_notes: false
+          files: |
+            ${{ steps.find_exe.outputs.exe }}
