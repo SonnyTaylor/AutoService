@@ -17,7 +17,7 @@ jobs:
         shell: pwsh
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Node.js 18
@@ -26,7 +26,7 @@ jobs:
           node-version: "18"
 
       - name: Install pnpm
-        run: npm i -g pnpm
+        run: npm install -g pnpm
 
       - name: Install frontend dependencies
         run: pnpm install
@@ -54,14 +54,11 @@ jobs:
       - name: Locate portable executable
         id: find_exe
         run: |
-          $files = Get-ChildItem -Path "src-tauri/target/release" -Filter "*.exe" -File -ErrorAction SilentlyContinue
-          if (-not $files -or $files.Count -eq 0) {
-            Write-Error "No .exe found in src-tauri/target/release"; exit 1
+          $exePath = Join-Path $env:GITHUB_WORKSPACE "src-tauri/target/release/autoservice.exe"
+          if (-not (Test-Path $exePath)) {
+            Write-Error "No .exe found at $exePath"; exit 1
           }
-          # Prefer AutoService/autoservice if multiple are present
-          $preferred = $files | Where-Object { $_.Name -imatch '^autoservice\.exe$' -or $_.Name -ieq 'AutoService.exe' }
-          if ($preferred) { $exe = $preferred[0] } else { $exe = $files[0] }
-          "exe=$($exe.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "exe=$exePath" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       - name: Create draft GitHub Release
         uses: softprops/action-gh-release@v1
@@ -70,5 +67,4 @@ jobs:
         with:
           draft: true
           generate_release_notes: false
-          files: |
-            ${{ steps.find_exe.outputs.exe }}
+          files: ${{ steps.find_exe.outputs.exe }}
