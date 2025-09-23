@@ -150,7 +150,7 @@
 [data-page="service"] .preset-card .icon {
   font-size: 22px;
   color: var(--primary);
-  display: inline-flex;
+  vertical-align: middle;
 }
 [data-page="service"] .preset-card .desc {
   margin: 0;
