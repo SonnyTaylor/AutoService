@@ -412,7 +412,8 @@ function stopAllTones() {
   if (audioState.spkAltTimer) {
     clearInterval(audioState.spkAltTimer);
     audioState.spkAltTimer = 0;
-    if (audioState.spkAltToggle) audioState.spkAltToggle.classList.remove("active");
+    if (audioState.spkAltToggle)
+      audioState.spkAltToggle.classList.remove("active");
   }
 
   if (audioState.spkStatus) {
@@ -489,7 +490,8 @@ function toggleAlternateLR() {
   if (audioState.spkAltTimer) {
     clearInterval(audioState.spkAltTimer);
     audioState.spkAltTimer = 0;
-    if (audioState.spkAltToggle) audioState.spkAltToggle.classList.remove("active");
+    if (audioState.spkAltToggle)
+      audioState.spkAltToggle.classList.remove("active");
     if (audioState.spkStatus) audioState.spkStatus.textContent = "Idle";
     return;
   }
@@ -499,7 +501,8 @@ function toggleAlternateLR() {
     const n = audioState.spkFreq?.value || "A4";
     // short blip on each side
     playTone(n, "8n", left ? "Left" : "Right");
-    if (audioState.spkStatus) audioState.spkStatus.textContent = `Alternating ${left ? "L" : "R"}`;
+    if (audioState.spkStatus)
+      audioState.spkStatus.textContent = `Alternating ${left ? "L" : "R"}`;
     left = !left;
   };
   tick();
