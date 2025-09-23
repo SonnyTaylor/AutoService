@@ -16,7 +16,8 @@
         "title": "AutoService",
         "width": 1450,
         "height": 600,
-        "decorations": false
+        "decorations": false,
+        "maximized": true
       }
     ],
     "security": {
