@@ -173,11 +173,16 @@
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 6px;
+  gap: 6px; /* fixed spacing between bullet rows */
   font-size: 0.8rem;
   color: var(--muted);
   line-height: 1.3;
-  flex: 1;
+  /* Prevent the grid items (li) from stretching to fill leftover space */
+  align-content: start;
+  align-items: start;
+  justify-content: start;
+  /* Ensure this section doesn't force extra space between bullets */
+  flex: 0 0 auto;
 }
 
 [data-page="service"] .preset-card ul.summary li {
