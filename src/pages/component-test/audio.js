@@ -34,6 +34,7 @@ let audioState = {
 
   // Tone.js objects
   synth: null, // Main synthesizer for speaker testing
+  panner: null, // Stereo panner for channel routing
   mic: null, // Microphone input
   meter: null, // Audio meter for microphone analysis
   analyser: null, // Analyser for microphone data
@@ -108,8 +109,9 @@ function initializeToneSynth() {
     const initialVolume = parseFloat(audioState.spkVol?.value || "0.5");
     audioState.synth.volume.value = Tone.gainToDb(initialVolume);
 
-    // Connect to destination (speakers)
-    audioState.synth.toDestination();
+  // Create stereo panner and route synth -> panner -> destination
+  audioState.panner = new Tone.Panner(0).toDestination();
+  audioState.synth.connect(audioState.panner);
 
     console.log("Tone.js synthesizer initialized");
   } catch (error) {
@@ -161,7 +163,16 @@ async function playTone(note, duration, channel) {
       await Tone.start();
     }
 
-    // Play the note
+    // Pan based on channel selection
+    if (audioState.panner) {
+      let pan = 0;
+      if (channel === "Left") pan = -1;
+      else if (channel === "Right") pan = 1;
+      else pan = 0; // Both
+      audioState.panner.pan.value = pan;
+    }
+
+    // Play the note centered/with selected pan
     audioState.synth.triggerAttackRelease(note, duration);
 
     // Update status
@@ -378,6 +389,10 @@ function stopAllTones() {
   if (audioState.synth) {
     audioState.synth.triggerRelease();
   }
+  if (audioState.panner) {
+    // Reset to center after stopping
+    audioState.panner.pan.value = 0;
+  }
 
   if (audioState.spkStatus) {
     audioState.spkStatus.textContent = "Idle";
@@ -469,6 +484,10 @@ export function cleanupAudio() {
   if (audioState.synth) {
     audioState.synth.dispose();
     audioState.synth = null;
+  }
+  if (audioState.panner) {
+    audioState.panner.dispose();
+    audioState.panner = null;
   }
 
   // Close Tone.js context
