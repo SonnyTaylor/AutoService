@@ -109,9 +109,9 @@ function initializeToneSynth() {
     const initialVolume = parseFloat(audioState.spkVol?.value || "0.5");
     audioState.synth.volume.value = Tone.gainToDb(initialVolume);
 
-  // Create stereo panner and route synth -> panner -> destination
-  audioState.panner = new Tone.Panner(0).toDestination();
-  audioState.synth.connect(audioState.panner);
+    // Create stereo panner and route synth -> panner -> destination
+    audioState.panner = new Tone.Panner(0).toDestination();
+    audioState.synth.connect(audioState.panner);
 
     console.log("Tone.js synthesizer initialized");
   } catch (error) {
