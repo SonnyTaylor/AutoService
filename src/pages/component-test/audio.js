@@ -2,9 +2,8 @@
  * Audio testing functionality (microphone and speakers) using Tone.js
  * @module audio
  */
-
-import { qs, supportsAPI } from './utils.js';
-import * as Tone from 'tone';
+import { qs, supportsAPI, clamp } from "./utils.js";
+import * as Tone from "tone";
 
 /**
  * Audio test state
@@ -42,7 +41,11 @@ let audioState = {
 
   // Microphone analysis state
   clipCount: 0,
-  peakDb: -Infinity
+  peakDb: -Infinity,
+  // Smoothing and clip debounce
+  levelSmooth: 0,
+  lastClipAt: 0,
+  monitorConnected: false,
 };
 
 /**
@@ -50,31 +53,31 @@ let audioState = {
  * Sets up DOM elements, Tone.js objects, and event listeners
  */
 export async function initAudio() {
-  if (!supportsAPI('webAudio')) {
-    console.warn('Web Audio API not supported - audio tests will be limited');
+  if (!supportsAPI("webAudio")) {
+    console.warn("Web Audio API not supported - audio tests will be limited");
   }
 
   // Get microphone elements
-  audioState.micSel = qs('#mic-select');
-  audioState.micStart = qs('#mic-start');
-  audioState.micStop = qs('#mic-stop');
-  audioState.micMonitor = qs('#mic-monitor');
-  audioState.micMeter = qs('#mic-meter');
-  audioState.micKpiLevel = qs('#mic-kpi-level');
-  audioState.micKpiPeak = qs('#mic-kpi-peak');
-  audioState.micKpiClip = qs('#mic-kpi-clip');
-  audioState.micStatus = qs('#mic-status');
+  audioState.micSel = qs("#mic-select");
+  audioState.micStart = qs("#mic-start");
+  audioState.micStop = qs("#mic-stop");
+  audioState.micMonitor = qs("#mic-monitor");
+  audioState.micMeter = qs("#mic-meter");
+  audioState.micKpiLevel = qs("#mic-kpi-level");
+  audioState.micKpiPeak = qs("#mic-kpi-peak");
+  audioState.micKpiClip = qs("#mic-kpi-clip");
+  audioState.micStatus = qs("#mic-status");
 
   // Get speaker elements
-  audioState.spkSel = qs('#spk-select');
-  audioState.spkLeft = qs('#spk-left');
-  audioState.spkRight = qs('#spk-right');
-  audioState.spkBoth = qs('#spk-both');
-  audioState.spkSweep = qs('#spk-sweep');
-  audioState.spkStop = qs('#spk-stop');
-  audioState.spkVol = qs('#spk-volume');
-  audioState.spkStatus = qs('#spk-status');
-  audioState.spkNote = qs('#spk-note');
+  audioState.spkSel = qs("#spk-select");
+  audioState.spkLeft = qs("#spk-left");
+  audioState.spkRight = qs("#spk-right");
+  audioState.spkBoth = qs("#spk-both");
+  audioState.spkSweep = qs("#spk-sweep");
+  audioState.spkStop = qs("#spk-stop");
+  audioState.spkVol = qs("#spk-volume");
+  audioState.spkStatus = qs("#spk-status");
+  audioState.spkNote = qs("#spk-note");
 
   // Initialize Tone.js synthesizer for speaker testing
   initializeToneSynth();
@@ -85,30 +88,32 @@ export async function initAudio() {
 
 /**
  * Initialize Tone.js synthesizer for speaker testing
+ * Kept simple (single Synth -> Destination) because output-device routing
+ * is OS-controlled in most browsers/embedders. Volume is set from slider.
  */
 function initializeToneSynth() {
   try {
     // Create main synthesizer for speaker testing
     audioState.synth = new Tone.Synth({
-      oscillator: { type: 'sine' },
+      oscillator: { type: "sine" },
       envelope: {
         attack: 0.01,
         decay: 0.1,
         sustain: 1,
-        release: 0.1
-      }
+        release: 0.1,
+      },
     });
 
     // Set initial volume based on slider
-    const initialVolume = parseFloat(audioState.spkVol?.value || '0.5');
+    const initialVolume = parseFloat(audioState.spkVol?.value || "0.5");
     audioState.synth.volume.value = Tone.gainToDb(initialVolume);
 
     // Connect to destination (speakers)
     audioState.synth.toDestination();
 
-    console.log('Tone.js synthesizer initialized');
+    console.log("Tone.js synthesizer initialized");
   } catch (error) {
-    console.error('Failed to initialize Tone.js synthesizer:', error);
+    console.error("Failed to initialize Tone.js synthesizer:", error);
   }
 }
 
@@ -117,22 +122,28 @@ function initializeToneSynth() {
  */
 function setupAudioEventListeners() {
   // Microphone controls
-  audioState.micStart?.addEventListener('click', startMic);
-  audioState.micStop?.addEventListener('click', stopMic);
-  audioState.micMonitor?.addEventListener('change', updateMonitoring);
+  audioState.micStart?.addEventListener("click", startMic);
+  audioState.micStop?.addEventListener("click", stopMic);
+  audioState.micMonitor?.addEventListener("change", updateMonitoring);
 
   // Speaker controls - simplified with Tone.js
-  audioState.spkLeft?.addEventListener('click', () => playTone('C4', '4n', 'Left'));
-  audioState.spkRight?.addEventListener('click', () => playTone('C4', '4n', 'Right'));
-  audioState.spkBoth?.addEventListener('click', () => playTone('C4', '4n', 'Both'));
-  audioState.spkStop?.addEventListener('click', stopAllTones);
-  audioState.spkSweep?.addEventListener('click', startSweepTone);
+  audioState.spkLeft?.addEventListener("click", () =>
+    playTone("C4", "4n", "Left")
+  );
+  audioState.spkRight?.addEventListener("click", () =>
+    playTone("C4", "4n", "Right")
+  );
+  audioState.spkBoth?.addEventListener("click", () =>
+    playTone("C4", "4n", "Both")
+  );
+  audioState.spkStop?.addEventListener("click", stopAllTones);
+  audioState.spkSweep?.addEventListener("click", startSweepTone);
 
   // Volume control
-  audioState.spkVol?.addEventListener('input', updateMasterVolume);
+  audioState.spkVol?.addEventListener("input", updateMasterVolume);
 
   // Speaker selection (limited support with Tone.js)
-  audioState.spkSel?.addEventListener('change', applySpeakerSelection);
+  audioState.spkSel?.addEventListener("change", applySpeakerSelection);
 }
 
 /**
@@ -146,7 +157,7 @@ async function playTone(note, duration, channel) {
 
   try {
     // Start Tone.js context if needed
-    if (Tone.context.state !== 'running') {
+    if (Tone.context.state !== "running") {
       await Tone.start();
     }
 
@@ -157,42 +168,45 @@ async function playTone(note, duration, channel) {
     if (audioState.spkStatus) {
       audioState.spkStatus.textContent = `Playing ${channel} (${note})`;
     }
-
   } catch (error) {
-    console.error('Failed to play tone:', error);
+    console.error("Failed to play tone:", error);
     if (audioState.spkStatus) {
-      audioState.spkStatus.textContent = 'Error playing tone';
+      audioState.spkStatus.textContent = "Error playing tone";
     }
   }
 }
 
 /**
- * Start microphone recording and analysis using Tone.js
+ * Start microphone capture and real-time analysis.
+ * We use a waveform analyser to compute RMS (perceived loudness proxy)
+ * and PEAK (for dBFS peak-hold) in the linear domain, then convert to dBFS.
+ * Clipping is detected when peak exceeds ~0.98 FS and debounced to avoid
+ * counting every animation frame as a separate clip.
  */
 async function startMic() {
   try {
     if (audioState.micStatus) {
-      audioState.micStatus.textContent = 'Starting…';
-      audioState.micStatus.className = 'badge';
+      audioState.micStatus.textContent = "Starting…";
+      audioState.micStatus.className = "badge";
     }
 
     // Start Tone.js context if needed
-    if (Tone.context.state !== 'running') {
+    if (Tone.context.state !== "running") {
       await Tone.start();
     }
 
     // Create microphone input
     audioState.mic = new Tone.UserMedia();
 
-    // Create meter for level detection
-    audioState.meter = new Tone.Meter();
-    audioState.analyser = new Tone.Analyser('fft', 2048);
+    // Create a waveform analyser for time-domain samples
+    // Using waveform allows accurate RMS/peak and clipping detection.
+    audioState.analyser = new Tone.Analyser("waveform", 1024);
 
-    // Connect microphone to analyser and meter
+    // Connect microphone to analyser (we do not use Tone.Meter as it can be ambiguous
+    // about units; we compute RMS/peak directly from waveform samples).
     audioState.mic.connect(audioState.analyser);
-    audioState.mic.connect(audioState.meter);
 
-    // Open microphone with device selection
+    // Open microphone with device selection (if provided in UI).
     const constraints = audioState.micSel?.value
       ? { deviceId: { exact: audioState.micSel.value } }
       : true;
@@ -202,47 +216,68 @@ async function startMic() {
     // Reset analysis state
     audioState.peakDb = -Infinity;
     audioState.clipCount = 0;
+    audioState.levelSmooth = 0;
+    audioState.lastClipAt = 0;
+    audioState.monitorConnected = false;
 
-    // Start analysis loop
+    // Start analysis loop (runs every animation frame ~60 Hz)
     const loop = () => {
-      // Get current level from meter
-      const level = audioState.meter.getValue();
-      const levelDb = Tone.gainToDb(Math.abs(level) + 0.001); // Add small offset to avoid -∞
+      // Pull latest time-domain samples in the linear range [-1, 1]
+      const buf = audioState.analyser.getValue();
 
-      // Get FFT data for peak detection
-      const fftData = audioState.analyser.getValue();
-      let peak = 0;
-      let clipped = false;
-
-      // Find peak in FFT data
-      for (let i = 0; i < fftData.length; i++) {
-        const magnitude = Math.abs(fftData[i]);
-        if (magnitude > peak) peak = magnitude;
-        if (magnitude > 0.98) clipped = true;
+      // Defensive: ensure we have samples
+      if (!buf || buf.length === 0) {
+        audioState.micRafId = requestAnimationFrame(loop);
+        return;
       }
 
-      const peakDbNow = Tone.gainToDb(peak + 0.001);
+      // Compute RMS and PEAK from waveform
+      let sumSq = 0;
+      let peakAbs = 0;
+      for (let i = 0; i < buf.length; i++) {
+        const s = buf[i];
+        const a = Math.abs(s);
+        sumSq += s * s;
+        if (a > peakAbs) peakAbs = a;
+      }
+      const rms = Math.sqrt(sumSq / buf.length);
 
-      // Update peak tracking
+      // Exponential smoothing to stabilize the UI meter
+      audioState.levelSmooth = audioState.levelSmooth * 0.85 + rms * 0.15;
+
+      // Convert to dBFS: 0 dBFS == full scale (peakAbs/rms == 1)
+      const toDb = (x) => (x > 0 ? 20 * Math.log10(x) : -Infinity);
+      const levelDb = toDb(rms);
+      const peakDbNow = toDb(peakAbs);
+
+      // Track max peak (hold-highest)
       if (peakDbNow > audioState.peakDb) audioState.peakDb = peakDbNow;
-      if (clipped) audioState.clipCount++;
 
-      // Update UI
+      // Clip detection with debounce so we count discrete events, not every frame
+      const now = performance.now();
+      if (peakAbs >= 0.98 && now - audioState.lastClipAt > 200) {
+        audioState.clipCount++;
+        audioState.lastClipAt = now;
+      }
+
+      // Update UI elements
       if (audioState.micMeter) {
-        const meterPercent = Math.max(0, Math.min(100, Math.round(Math.abs(level) * 140)));
+        const meterPercent = Math.round(
+          clamp(audioState.levelSmooth * 100, 0, 100)
+        );
         audioState.micMeter.style.width = `${meterPercent}%`;
       }
 
       if (audioState.micKpiLevel) {
         audioState.micKpiLevel.textContent = Number.isFinite(levelDb)
-          ? `${levelDb.toFixed(1)} dB`
-          : '-∞ dB';
+          ? `${levelDb.toFixed(1)} dBFS`
+          : "-∞ dBFS";
       }
 
       if (audioState.micKpiPeak) {
         audioState.micKpiPeak.textContent = Number.isFinite(audioState.peakDb)
-          ? `${audioState.peakDb.toFixed(1)} dB`
-          : '-∞ dB';
+          ? `${audioState.peakDb.toFixed(1)} dBFS`
+          : "-∞ dBFS";
       }
 
       if (audioState.micKpiClip) {
@@ -256,20 +291,22 @@ async function startMic() {
 
     // Update UI state
     if (audioState.micStatus) {
-      audioState.micStatus.textContent = 'Listening';
-      audioState.micStatus.className = 'badge ok';
+      audioState.micStatus.textContent = "Listening";
+      audioState.micStatus.className = "badge ok";
     }
+
+    // Apply monitor setting if requested
+    updateMonitoring();
 
     if (audioState.micStart) audioState.micStart.disabled = true;
     if (audioState.micStop) audioState.micStop.disabled = false;
-
   } catch (error) {
-    const message = error.message || 'Unknown error';
+    const message = error.message || "Unknown error";
     if (audioState.micStatus) {
       audioState.micStatus.textContent = `Error: ${message}`;
-      audioState.micStatus.className = 'badge warn';
+      audioState.micStatus.className = "badge warn";
     }
-    console.error('Microphone start failed:', error);
+    console.error("Microphone start failed:", error);
   }
 }
 
@@ -284,27 +321,29 @@ function stopMic() {
 
   // Close microphone
   if (audioState.mic) {
+    // Disconnect from destination if we were monitoring
+    try {
+      if (audioState.monitorConnected) {
+        // Disconnect from the master output
+        audioState.mic.disconnect(Tone.Destination);
+      }
+    } catch {}
     audioState.mic.close();
     audioState.mic = null;
   }
 
   // Dispose of Tone.js objects
-  if (audioState.meter) {
-    audioState.meter.dispose();
-    audioState.meter = null;
-  }
-
   if (audioState.analyser) {
     audioState.analyser.dispose();
     audioState.analyser = null;
   }
 
   // Reset UI
-  if (audioState.micMeter) audioState.micMeter.style.width = '0%';
+  if (audioState.micMeter) audioState.micMeter.style.width = "0%";
 
   if (audioState.micStatus) {
-    audioState.micStatus.textContent = 'Stopped';
-    audioState.micStatus.className = 'badge';
+    audioState.micStatus.textContent = "Stopped";
+    audioState.micStatus.className = "badge";
   }
 
   if (audioState.micStart) audioState.micStart.disabled = false;
@@ -315,8 +354,21 @@ function stopMic() {
  * Update microphone monitoring state (Tone.js handles this automatically)
  */
 function updateMonitoring() {
-  // With Tone.js, monitoring is handled by the connections
-  // The mic is already connected to the destination when monitoring is enabled
+  // Toggle routing the mic input to the system output based on checkbox state.
+  // We connect/disconnect explicitly to avoid unintended feedback.
+  if (!audioState.mic || !audioState.micMonitor) return;
+  try {
+    const dest = Tone.Destination; // master output
+    if (audioState.micMonitor.checked && !audioState.monitorConnected) {
+      audioState.mic.connect(dest);
+      audioState.monitorConnected = true;
+    } else if (!audioState.micMonitor.checked && audioState.monitorConnected) {
+      audioState.mic.disconnect(dest);
+      audioState.monitorConnected = false;
+    }
+  } catch (err) {
+    console.warn("Unable to toggle mic monitoring:", err);
+  }
 }
 
 /**
@@ -328,7 +380,7 @@ function stopAllTones() {
   }
 
   if (audioState.spkStatus) {
-    audioState.spkStatus.textContent = 'Idle';
+    audioState.spkStatus.textContent = "Idle";
   }
 }
 
@@ -345,7 +397,7 @@ async function startSweepTone() {
 
   try {
     // Start Tone.js context if needed
-    if (Tone.context.state !== 'running') {
+    if (Tone.context.state !== "running") {
       await Tone.start();
     }
 
@@ -354,29 +406,31 @@ async function startSweepTone() {
     const duration = 4; // seconds
 
     // Schedule frequency sweep from C3 to C6
-    audioState.synth.frequency.setValueAtTime('C3', Tone.now());
-    audioState.synth.frequency.exponentialRampToValueAtTime('C6', Tone.now() + duration);
+    audioState.synth.frequency.setValueAtTime("C3", Tone.now());
+    audioState.synth.frequency.exponentialRampToValueAtTime(
+      "C6",
+      Tone.now() + duration
+    );
 
     // Trigger the note
-    audioState.synth.triggerAttack('C3', Tone.now());
+    audioState.synth.triggerAttack("C3", Tone.now());
     audioState.synth.triggerRelease(Tone.now() + duration);
 
     // Update status
     if (audioState.spkStatus) {
-      audioState.spkStatus.textContent = 'Frequency sweep';
+      audioState.spkStatus.textContent = "Frequency sweep";
     }
 
     // Reset status after sweep completes
     setTimeout(() => {
       if (audioState.spkStatus) {
-        audioState.spkStatus.textContent = 'Idle';
+        audioState.spkStatus.textContent = "Idle";
       }
     }, duration * 1000 + 100);
-
   } catch (error) {
-    console.error('Failed to start sweep tone:', error);
+    console.error("Failed to start sweep tone:", error);
     if (audioState.spkStatus) {
-      audioState.spkStatus.textContent = 'Error starting sweep';
+      audioState.spkStatus.textContent = "Error starting sweep";
     }
   }
 }
@@ -386,7 +440,7 @@ async function startSweepTone() {
  */
 function updateMasterVolume() {
   if (audioState.synth) {
-    const volume = parseFloat(audioState.spkVol?.value || '0.5');
+    const volume = parseFloat(audioState.spkVol?.value || "0.5");
     audioState.synth.volume.value = Tone.gainToDb(volume);
   }
 }
@@ -398,8 +452,8 @@ function updateMasterVolume() {
 async function applySpeakerSelection() {
   if (audioState.spkNote) {
     audioState.spkNote.textContent =
-      'Note: Output device selection is limited with Tone.js. ' +
-      'Use your system audio settings for device selection.';
+      "Note: Output device selection is limited with Tone.js. " +
+      "Use your system audio settings for device selection.";
   }
 }
 
@@ -421,6 +475,6 @@ export function cleanupAudio() {
   try {
     Tone.context.close();
   } catch (error) {
-    console.warn('Error closing Tone.js context:', error);
+    console.warn("Error closing Tone.js context:", error);
   }
 }
