@@ -212,7 +212,7 @@ fn start_service_run(
 
         // Collect stdout after process exits (used mainly for final JSON)
         let mut final_stdout = String::new();
-        if let Some(mut stdout) = child.stdout.take() {
+        if let Some(stdout) = child.stdout.take() {
             // It's fine to read after wait if output is small; read concurrently anyway to be safe
             let mut buf_reader = BufReader::new(stdout);
             let _ = buf_reader.read_to_string(&mut final_stdout);
