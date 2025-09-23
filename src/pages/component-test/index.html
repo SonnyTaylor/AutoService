@@ -246,15 +246,23 @@
           />
         </div>
 
-        <div class="stereo-vu" aria-hidden="true">
-          <div class="stereo-row">
-            <span class="ch">L</span>
-            <div class="vu"><div class="vu-fill" style="width: 0%"></div></div>
-          </div>
-          <div class="stereo-row">
-            <span class="ch">R</span>
-            <div class="vu"><div class="vu-fill" style="width: 0%"></div></div>
-          </div>
+        <!-- Useful speaker tools: tone frequency and L/R alternator -->
+        <div class="row wrap" style="gap: 12px">
+          <label for="spk-freq">Tone</label>
+          <select id="spk-freq" aria-label="Select test tone">
+            <option value="C3">C3 (131 Hz)</option>
+            <option value="A4" selected>A4 (440 Hz)</option>
+            <option value="C5">C5 (523 Hz)</option>
+            <option value="C6">C6 (1046 Hz)</option>
+            <option value="C7">C7 (2093 Hz)</option>
+          </select>
+        </div>
+
+        <div class="row wrap" style="gap: 12px">
+          <button id="spk-alt-toggle" class="ghost" title="Alternate sounds between left and right channels">Alternate L/R</button>
+          <label for="spk-alt-speed">Interval</label>
+          <input id="spk-alt-speed" type="range" min="200" max="1500" step="50" value="500" />
+          <span id="spk-alt-speed-label" class="muted" aria-live="polite">500 ms</span>
         </div>
 
         <p id="spk-note" class="muted audio-note">

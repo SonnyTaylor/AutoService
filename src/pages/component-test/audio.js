@@ -31,6 +31,11 @@ let audioState = {
   spkVol: null,
   spkStatus: null,
   spkNote: null,
+  spkFreq: null, // frequency selector
+  spkAltToggle: null,
+  spkAltSpeed: null,
+  spkAltSpeedLabel: null,
+  spkAltTimer: 0,
 
   // Tone.js objects
   synth: null, // Main synthesizer for speaker testing
@@ -79,6 +84,10 @@ export async function initAudio() {
   audioState.spkVol = qs("#spk-volume");
   audioState.spkStatus = qs("#spk-status");
   audioState.spkNote = qs("#spk-note");
+  audioState.spkFreq = qs("#spk-freq");
+  audioState.spkAltToggle = qs("#spk-alt-toggle");
+  audioState.spkAltSpeed = qs("#spk-alt-speed");
+  audioState.spkAltSpeedLabel = qs("#spk-alt-speed-label");
 
   // Initialize Tone.js synthesizer for speaker testing
   initializeToneSynth();
@@ -143,6 +152,11 @@ function setupAudioEventListeners() {
 
   // Volume control
   audioState.spkVol?.addEventListener("input", updateMasterVolume);
+  audioState.spkFreq?.addEventListener("change", () => {
+    // No-op until next tone; sweep uses its own path
+  });
+  audioState.spkAltToggle?.addEventListener("click", toggleAlternateLR);
+  audioState.spkAltSpeed?.addEventListener("input", onAltSpeedChange);
 
   // Speaker selection (limited support with Tone.js)
   audioState.spkSel?.addEventListener("change", applySpeakerSelection);
@@ -168,12 +182,13 @@ async function playTone(note, duration, channel) {
       let pan = 0;
       if (channel === "Left") pan = -1;
       else if (channel === "Right") pan = 1;
-      else pan = 0; // Both
+      else pan = 0; // Both -> center
       audioState.panner.pan.value = pan;
     }
 
-    // Play the note centered/with selected pan
-    audioState.synth.triggerAttackRelease(note, duration);
+    // Use selected frequency if note equals 'A4' default and frequency picker is set
+    const selected = audioState.spkFreq?.value || note;
+    audioState.synth.triggerAttackRelease(selected, duration);
 
     // Update status
     if (audioState.spkStatus) {
@@ -393,6 +408,12 @@ function stopAllTones() {
     // Reset to center after stopping
     audioState.panner.pan.value = 0;
   }
+  // Stop alternator if running
+  if (audioState.spkAltTimer) {
+    clearInterval(audioState.spkAltTimer);
+    audioState.spkAltTimer = 0;
+    if (audioState.spkAltToggle) audioState.spkAltToggle.classList.remove("active");
+  }
 
   if (audioState.spkStatus) {
     audioState.spkStatus.textContent = "Idle";
@@ -457,6 +478,46 @@ function updateMasterVolume() {
   if (audioState.synth) {
     const volume = parseFloat(audioState.spkVol?.value || "0.5");
     audioState.synth.volume.value = Tone.gainToDb(volume);
+  }
+}
+
+/**
+ * Alternate tones between L and R at a configurable interval
+ */
+function toggleAlternateLR() {
+  if (!audioState.synth) return;
+  if (audioState.spkAltTimer) {
+    clearInterval(audioState.spkAltTimer);
+    audioState.spkAltTimer = 0;
+    if (audioState.spkAltToggle) audioState.spkAltToggle.classList.remove("active");
+    if (audioState.spkStatus) audioState.spkStatus.textContent = "Idle";
+    return;
+  }
+  const getMs = () => parseInt(audioState.spkAltSpeed?.value || "500", 10);
+  let left = true;
+  const tick = () => {
+    const n = audioState.spkFreq?.value || "A4";
+    // short blip on each side
+    playTone(n, "8n", left ? "Left" : "Right");
+    if (audioState.spkStatus) audioState.spkStatus.textContent = `Alternating ${left ? "L" : "R"}`;
+    left = !left;
+  };
+  tick();
+  audioState.spkAltTimer = setInterval(tick, getMs());
+  if (audioState.spkAltToggle) audioState.spkAltToggle.classList.add("active");
+}
+
+/** Update label for alternator speed */
+function onAltSpeedChange() {
+  if (audioState.spkAltSpeedLabel && audioState.spkAltSpeed) {
+    const v = parseInt(audioState.spkAltSpeed.value || "500", 10);
+    audioState.spkAltSpeedLabel.textContent = `${v} ms`;
+  }
+  // If running, restart interval with new speed
+  if (audioState.spkAltTimer) {
+    clearInterval(audioState.spkAltTimer);
+    audioState.spkAltTimer = 0;
+    toggleAlternateLR();
   }
 }
 
