@@ -37,6 +37,24 @@ jobs:
       - name: Setup Rust (stable)
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Setup Python 3.x
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install PyInstaller for runner build
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pyinstaller
+
+      - name: Install runner Python dependencies
+        run: |
+          if (Test-Path 'runner/requirements.txt') {
+            python -m pip install -r runner/requirements.txt
+          } else {
+            Write-Host 'runner/requirements.txt not found; skipping optional deps install.'
+          }
+
       - name: Cache Cargo
         uses: actions/cache@v4
         with:
@@ -75,6 +93,50 @@ jobs:
           $posixPath = $relative -replace "\\", "/"
           "exe=$posixPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
+      - name: Package data folder (zip)
+        id: package_data
+        run: |
+          # Create a clean staging area for the data/ bundle
+          $stage = Join-Path $env:RUNNER_TEMP "data_stage"
+          $root = Join-Path $stage "data"
+          New-Item -ItemType Directory -Force -Path $root | Out-Null
+          # Required subfolders
+          $dirs = @(
+            "$root\programs",
+            "$root\reports",
+            "$root\logs",
+            "$root\settings",
+            "$root\resources\bin"
+          )
+          foreach ($d in $dirs) { New-Item -ItemType Directory -Force -Path $d | Out-Null }
+
+          # Copy the service_runner.exe built (or tracked) into resources/bin
+          $runnerSrc = "data/resources/bin/service_runner.exe"
+          if (-not (Test-Path $runnerSrc)) {
+            Write-Error "Missing $runnerSrc. Ensure build produced the runner or the file exists in the repo."; exit 1
+          }
+          Copy-Item -LiteralPath $runnerSrc -Destination (Join-Path $root "resources/bin/service_runner.exe") -Force
+
+          # Name zip with tag name if available; fallback to timestamp
+          $tag = "$env:GITHUB_REF_NAME"
+          if ([string]::IsNullOrWhiteSpace($tag)) { $tag = (Get-Date -Format 'yyyyMMddHHmmss') }
+          $zipName = "autoservice_data_${tag}.zip"
+          $zipFull = Join-Path $stage $zipName
+
+          # Use Compress-Archive to create zip, preserving empty directories
+          Push-Location $stage
+          Compress-Archive -Path * -DestinationPath $zipFull -Force
+          Pop-Location
+          if (-not (Test-Path $zipFull)) { Write-Error "Failed to create data zip at $zipFull"; exit 1 }
+
+          # Move/copy the zip into the workspace root so the release action can find it
+          $zipWorkspace = Join-Path $env:GITHUB_WORKSPACE $zipName
+          Copy-Item -LiteralPath $zipFull -Destination $zipWorkspace -Force
+          if (-not (Test-Path $zipWorkspace)) { Write-Error "Zip not found at $zipWorkspace after copy"; exit 1 }
+
+          # Emit a simple workspace-relative path
+          "zip=$zipName" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
       - name: Create draft GitHub Release
         uses: softprops/action-gh-release@v1
         env:
@@ -83,4 +145,6 @@ jobs:
           draft: true
           generate_release_notes: false
           fail_on_unmatched_files: true
-          files: ${{ steps.find_exe.outputs.exe }}
+          files: |
+            ${{ steps.find_exe.outputs.exe }}
+            ${{ steps.package_data.outputs.zip }}
