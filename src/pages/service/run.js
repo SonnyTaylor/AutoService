@@ -288,13 +288,13 @@ export async function initPage() {
       if (!raw) return false;
       const data = JSON.parse(raw);
       if (!data || !Array.isArray(data.order)) return false;
-      
+
       // Check if the saved preset matches the current preset
       const currentPreset = preset || mode || null;
       if (data.preset !== currentPreset) {
         return false; // Different preset, don't restore old state
       }
-      
+
       order = data.order;
       selection.clear();
       (data.selection || []).forEach((id) => selection.add(id));
