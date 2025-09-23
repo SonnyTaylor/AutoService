@@ -209,6 +209,7 @@ const PRESET_MAP = {
     "sfc_scan",
     "smartctl_report",
   ],
+  diagnostics: ["sfc_scan", "dism_health_check", "smartctl_report"],
 };
 
 // ---- Page Initialization --------------------------------------------------
