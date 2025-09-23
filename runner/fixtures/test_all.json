@@ -46,8 +46,7 @@
       "type": "smartctl_report",
       "executable_path": "..\\data\\programs\\GSmartControl - 2.0.2\\smartctl.exe",
       "detail_level": "basic"
-    }
-    ,
+    },
     {
       "type": "sfc_scan"
     },
@@ -60,6 +59,12 @@
       "api_key": "env:AUTOSERVICE_OPENAI_KEY",
       "model": "gpt-4o-mini",
       "apply_changes": false
+    },
+    {
+      "type": "battery_info",
+      "index": 0,
+      "time_format": "human",
+      "temp_unit": "degF"
     }
   ]
 }

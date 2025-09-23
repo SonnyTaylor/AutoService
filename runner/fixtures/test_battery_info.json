@@ -1,0 +1,10 @@
+{
+  "tasks": [
+    {
+      "type": "battery_info",
+      "index": 0,
+      "time_format": "human",
+      "temp_unit": "degF"
+    }
+  ]
+}
