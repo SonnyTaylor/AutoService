@@ -209,6 +209,7 @@ const PRESET_MAP = {
     "sfc_scan",
     "smartctl_report",
   ],
+  diagnostics: ["sfc_scan", "dism_health_check", "smartctl_report"],
 };
 
 // ---- Page Initialization --------------------------------------------------
@@ -265,6 +266,7 @@ export async function initPage() {
   function persist() {
     try {
       const data = {
+        preset: preset || mode || null,
         order,
         selection: [...selection],
         state,
@@ -286,6 +288,13 @@ export async function initPage() {
       if (!raw) return false;
       const data = JSON.parse(raw);
       if (!data || !Array.isArray(data.order)) return false;
+
+      // Check if the saved preset matches the current preset
+      const currentPreset = preset || mode || null;
+      if (data.preset !== currentPreset) {
+        return false; // Different preset, don't restore old state
+      }
+
       order = data.order;
       selection.clear();
       (data.selection || []).forEach((id) => selection.add(id));

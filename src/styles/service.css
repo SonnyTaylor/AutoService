@@ -120,10 +120,12 @@
   border-radius: 14px;
   padding: 18px 18px 16px;
   display: grid;
-  gap: 10px;
+  grid-template-rows: auto auto 1fr auto;
+  gap: 12px;
   cursor: pointer;
   position: relative;
   transition: background-color 0.18s, border-color 0.18s, box-shadow 0.22s;
+  min-height: 280px;
 }
 [data-page="service"] .preset-card:hover {
   background: var(--panel-hover);
@@ -141,40 +143,59 @@
 [data-page="service"] .preset-card .preset-head {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  margin-bottom: 2px;
 }
 [data-page="service"] .preset-card h2 {
   font-size: 1.05rem;
   margin: 0;
+  font-weight: 600;
+  line-height: 1.2;
 }
 [data-page="service"] .preset-card .icon {
   font-size: 22px;
   color: var(--primary);
-  display: inline-flex;
+  vertical-align: middle;
 }
 [data-page="service"] .preset-card .desc {
   margin: 0;
   color: var(--muted);
-  line-height: 1.35;
+  line-height: 1.4;
+  min-height: 3.2em;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  line-clamp: 3;
+  overflow: hidden;
 }
 [data-page="service"] .preset-card ul.summary {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 4px;
+  gap: 6px; /* fixed spacing between bullet rows */
   font-size: 0.8rem;
   color: var(--muted);
+  line-height: 1.3;
+  /* Prevent the grid items (li) from stretching to fill leftover space */
+  align-content: start;
+  align-items: start;
+  justify-content: start;
+  /* Ensure this section doesn't force extra space between bullets */
+  flex: 0 0 auto;
 }
+
 [data-page="service"] .preset-card ul.summary li {
   position: relative;
-  padding-left: 14px;
+  padding-left: 16px;
+  margin: 0;
 }
+
 [data-page="service"] .preset-card ul.summary li::before {
   content: "";
   position: absolute;
   left: 0;
-  top: 8px;
+  top: 7px;
   width: 6px;
   height: 6px;
   background: #335d9b;
@@ -213,6 +234,7 @@
 @media (max-width: 780px) {
   [data-page="service"] .preset-card {
     padding: 16px 14px;
+    min-height: 240px;
   }
   [data-page="service"] .service-header {
     gap: 14px;
