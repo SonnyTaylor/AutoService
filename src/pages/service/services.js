@@ -73,6 +73,25 @@ export const SERVICES = {
       };
     },
   },
+  chkdsk_scan: {
+    id: "chkdsk_scan",
+    label: "File System Check (CHKDSK)",
+    group: "System Integrity",
+    defaultParams: { drive: "C:", mode: "read_only", schedule_if_busy: false },
+    toolKeys: [],
+    async build({ params }) {
+      const drive = (params?.drive || "C:").toString();
+      const mode = params?.mode || "read_only"; // read_only | fix_errors | comprehensive
+      const schedule = Boolean(params?.schedule_if_busy);
+      return {
+        type: "chkdsk_scan",
+        drive,
+        mode,
+        schedule_if_busy: schedule,
+        ui_label: `CHKDSK (${drive}, ${mode})`,
+      };
+    },
+  },
   bleachbit_clean: {
     id: "bleachbit_clean",
     label: "Junk Cleanup (BleachBit)",
