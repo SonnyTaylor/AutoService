@@ -60,6 +60,12 @@
       "api_key": "env:AUTOSERVICE_OPENAI_KEY",
       "model": "gpt-4o-mini",
       "apply_changes": false
+    },
+    {
+      "type": "chkdsk_scan",
+      "drive": "C:",
+      "mode": "read_only",
+      "schedule_if_busy": false
     }
   ]
 }
