@@ -202,13 +202,7 @@ const PRESET_MAP = {
     "heavyload_stress_cpu",
     "heavyload_stress_memory",
   ],
-  custom: [
-    "adwcleaner_clean",
-    "bleachbit_clean",
-    "dism_health_check",
-    "sfc_scan",
-    "smartctl_report",
-  ],
+  custom: [],
   diagnostics: ["sfc_scan", "dism_health_check", "smartctl_report"],
 };
 
