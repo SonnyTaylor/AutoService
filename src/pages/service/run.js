@@ -358,6 +358,52 @@ export async function initPage() {
         e.stopPropagation();
       });
     });
+    // Special UI for CHKDSK
+    if (id === "chkdsk_scan") {
+      const driveVal = params?.drive ?? "C:";
+      const modeVal = params?.mode ?? "read_only";
+      const schedVal = !!params?.schedule_if_busy;
+      wrapper.innerHTML = `
+        <label class="tiny-lab" style="margin-right:8px;">
+          <span class="lab">Drive</span>
+          <input type="text" class="text-input" data-param="drive" value="${driveVal}" size="4" aria-label="Drive letter (e.g., C:)" />
+        </label>
+        <label class="tiny-lab" style="margin-right:8px;">
+          <span class="lab">Mode</span>
+          <select data-param="mode" aria-label="CHKDSK mode">
+            <option value="read_only" ${modeVal === "read_only" ? "selected" : ""}>Read-only</option>
+            <option value="fix_errors" ${modeVal === "fix_errors" ? "selected" : ""}>Fix errors (/f)</option>
+            <option value="comprehensive" ${modeVal === "comprehensive" ? "selected" : ""}>Comprehensive (/f /r)</option>
+          </select>
+        </label>
+        <label class="tiny-lab">
+          <input type="checkbox" data-param="schedule_if_busy" ${schedVal ? "checked" : ""} />
+          <span class="lab">Schedule if busy</span>
+        </label>
+      `;
+      const driveInput = wrapper.querySelector('input[data-param="drive"]');
+      const modeSelect = wrapper.querySelector('select[data-param="mode"]');
+      const schedCb = wrapper.querySelector('input[data-param="schedule_if_busy"]');
+      [driveInput, modeSelect, schedCb].forEach((el) => {
+        ["mousedown", "pointerdown", "click"].forEach((evt) => {
+          el.addEventListener(evt, (e) => e.stopPropagation());
+        });
+      });
+      driveInput.addEventListener("change", () => {
+        state[id].params.drive = (driveInput.value || "C:").trim();
+        updateJson();
+      });
+      modeSelect.addEventListener("change", () => {
+        state[id].params.mode = modeSelect.value;
+        updateJson();
+      });
+      schedCb.addEventListener("change", () => {
+        state[id].params.schedule_if_busy = !!schedCb.checked;
+        updateJson();
+      });
+      return wrapper;
+    }
+
     Object.entries(params).forEach(([key, value]) => {
       if (key === "seconds") {
         wrapper.innerHTML += `<label class="tiny-lab"><span class="lab">Duration</span> <input type="number" class="minutes-input" min="10" max="3600" step="10" data-param="seconds" value="${value}" aria-label="Duration in seconds" /> <span class="unit">sec</span></label>`;
@@ -825,7 +871,7 @@ export async function initPage() {
    * @returns {string} HTML string for the badge.
    */
   function renderAvailabilityBadge(id) {
-    if (id === "sfc_scan" || id === "dism_health_check") {
+    if (id === "sfc_scan" || id === "dism_health_check" || id === "chkdsk_scan") {
       return '<span class="badge ok" title="Built-in Windows tool">Built-in</span>';
     }
     if (id === GPU_PARENT_ID) {
