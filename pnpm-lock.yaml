@@ -23,6 +23,9 @@ importers:
       pretty-bytes:
         specifier: ^7.0.1
         version: 7.0.1
+      print-js:
+        specifier: ^1.6.0
+        version: 1.6.0
       sortablejs:
         specifier: ^1.15.0
         version: 1.15.6
@@ -451,6 +454,9 @@ packages:
     resolution: {integrity: sha512-285/jRCYIbMGDciDdrw0KPNC4LKEEwz/bwErcYNxSJOi4CpGUuLpb9gQpg3XJP0XYj9ldSRluXxih4lX2YN8Xw==}
     engines: {node: '>=20'}
 
+  print-js@1.6.0:
+    resolution: {integrity: sha512-BfnOIzSKbqGRtO4o0rnj/K3681BSd2QUrsIZy/+WdCIugjIswjmx3lDEZpXB2ruGf9d4b3YNINri81+J0FsBWg==}
+
   rollup@4.50.1:
     resolution: {integrity: sha512-78E9voJHwnXQMiQdiqswVLZwJIzdBKJ1GdI5Zx6XwoFKUIk09/sSrr+05QFzvYb8q6Y9pPV45zzDuYa3907TZA==}
     engines: {node: '>=18.0.0', npm: '>=8.0.0'}
@@ -786,6 +792,8 @@ snapshots:
       source-map-js: 1.2.1
 
   pretty-bytes@7.0.1: {}
+
+  print-js@1.6.0: {}
 
   rollup@4.50.1:
     dependencies:
