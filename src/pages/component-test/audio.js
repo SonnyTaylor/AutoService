@@ -2,7 +2,7 @@
  * Audio testing functionality (microphone and speakers) using Tone.js
  * @module audio
  */
-import { qs, supportsAPI, clamp } from "./utils.js";
+import { qs, supportsAPI } from "./utils.js";
 import * as Tone from "tone";
 
 /**
@@ -16,8 +16,10 @@ let audioState = {
   micStop: null,
   micMonitor: null,
   micMeter: null,
+  micCanvas: null, // optional canvas visualizer
+  micCanvasCtx: null,
+  micVizPlaceholder: null,
   micKpiLevel: null,
-  micKpiPeak: null,
   micKpiClip: null,
   micStatus: null,
 
@@ -40,18 +42,31 @@ let audioState = {
   // Tone.js objects
   synth: null, // Main synthesizer for speaker testing
   panner: null, // Stereo panner for channel routing
-  mic: null, // Microphone input
-  meter: null, // Audio meter for microphone analysis
-  analyser: null, // Analyser for microphone data
-  micRafId: 0, // Animation frame for microphone updates
+  // Native Web Audio for microphone
+  micContext: null,
+  micStream: null,
+  micSourceNode: null,
+  analyserNode: null,
+  monitorGainNode: null,
+  micRafId: 0, // Animation frame for microphone analysis
+  vizRafId: 0, // Animation frame for canvas visualizer
 
   // Microphone analysis state
   clipCount: 0,
-  peakDb: -Infinity,
-  // Smoothing and clip debounce
-  levelSmooth: 0,
+  levelDbVu: -Infinity, // VU-like RMS in dBFS with ballistics
+  peakDbInstant: -Infinity, // instantaneous peak (linear->dB)
+  peakDbHold: -Infinity, // peak-hold display with decay
+  // Ballistics, clip debounce, calibration
   lastClipAt: 0,
+  clipHoldUntil: 0,
   monitorConnected: false,
+  // Config (tunable)
+  vuAttackMs: 80, // faster rise for responsiveness
+  vuReleaseMs: 400, // slower fall for readability
+  peakHoldMs: 1200, // hold peak for readability
+  peakDecayDbPerSec: 6, // decay of peak-hold after hold period
+  clipThreshold: 0.98, // near full scale
+  clipMinSamples: 8, // require n clipped samples within buffer
 };
 
 /**
@@ -69,8 +84,12 @@ export async function initAudio() {
   audioState.micStop = qs("#mic-stop");
   audioState.micMonitor = qs("#mic-monitor");
   audioState.micMeter = qs("#mic-meter");
+  audioState.micCanvas = qs("#mic-canvas") || qs("#mic-visualizer");
+  if (audioState.micCanvas && audioState.micCanvas.getContext) {
+    audioState.micCanvasCtx = audioState.micCanvas.getContext("2d");
+  }
+  audioState.micVizPlaceholder = qs("#mic-viz-placeholder");
   audioState.micKpiLevel = qs("#mic-kpi-level");
-  audioState.micKpiPeak = qs("#mic-kpi-peak");
   audioState.micKpiClip = qs("#mic-kpi-clip");
   audioState.micStatus = qs("#mic-status");
 
@@ -216,99 +235,187 @@ async function startMic() {
       audioState.micStatus.className = "badge";
     }
 
-    // Start Tone.js context if needed
-    if (Tone.context.state !== "running") {
-      await Tone.start();
+    // Ensure AudioContext
+    if (!audioState.micContext) {
+      audioState.micContext = new (window.AudioContext ||
+        window.webkitAudioContext)();
     }
 
-    // Create microphone input
-    audioState.mic = new Tone.UserMedia();
+    // Build constraints (device selection optional)
+    const constraints = {
+      audio: audioState.micSel?.value
+        ? { deviceId: { exact: audioState.micSel.value } }
+        : true,
+      video: false,
+    };
 
-    // Create a waveform analyser for time-domain samples
-    // Using waveform allows accurate RMS/peak and clipping detection.
-    audioState.analyser = new Tone.Analyser("waveform", 1024);
+    // getUserMedia must be called outside of AudioContext in some environments, but
+    // here it is user-initiated, so it should be fine
+    audioState.micStream = await navigator.mediaDevices.getUserMedia(
+      constraints
+    );
 
-    // Connect microphone to analyser (we do not use Tone.Meter as it can be ambiguous
-    // about units; we compute RMS/peak directly from waveform samples).
-    audioState.mic.connect(audioState.analyser);
+    // Create nodes
+    audioState.micSourceNode = audioState.micContext.createMediaStreamSource(
+      audioState.micStream
+    );
+    audioState.analyserNode = audioState.micContext.createAnalyser();
+    audioState.analyserNode.fftSize = 2048;
+    audioState.analyserNode.smoothingTimeConstant = 0.0; // no built-in smoothing for true math
 
-    // Open microphone with device selection (if provided in UI).
-    const constraints = audioState.micSel?.value
-      ? { deviceId: { exact: audioState.micSel.value } }
-      : true;
+    // Optional monitor routing via gain node
+    audioState.monitorGainNode = audioState.micContext.createGain();
+    audioState.monitorGainNode.gain.value = 1.0;
 
-    await audioState.mic.open(constraints);
-
-    // Reset analysis state
-    audioState.peakDb = -Infinity;
-    audioState.clipCount = 0;
-    audioState.levelSmooth = 0;
-    audioState.lastClipAt = 0;
+    // Wiring: source -> analyser (always)
+    audioState.micSourceNode.connect(audioState.analyserNode);
+    // Monitoring connection is toggled in updateMonitoring
     audioState.monitorConnected = false;
 
-    // Start analysis loop (runs every animation frame ~60 Hz)
-    const loop = () => {
-      // Pull latest time-domain samples in the linear range [-1, 1]
-      const buf = audioState.analyser.getValue();
+    // Reset analysis state
+    audioState.clipCount = 0;
+    audioState.levelDbVu = -Infinity;
+    audioState.peakDbInstant = -Infinity;
+    audioState.peakDbHold = -Infinity;
+    audioState.lastClipAt = 0;
+    audioState.clipHoldUntil = 0;
 
-      // Defensive: ensure we have samples
-      if (!buf || buf.length === 0) {
-        audioState.micRafId = requestAnimationFrame(loop);
-        return;
+    const timeData = new Float32Array(audioState.analyserNode.fftSize);
+    let lastNow = performance.now();
+
+    const toDb = (x) => (x > 0 ? 20 * Math.log10(x) : -Infinity);
+
+    const updateUi = (levelDbVu, clipCount, peakPercent) => {
+      // Meter map: -60 dBFS .. 0 dBFS -> 0 .. 100 %
+      const minDb = -60;
+      const maxDb = 0;
+      const clamped = Math.max(minDb, Math.min(levelDbVu, maxDb));
+      const meterPercent = Math.round(
+        ((clamped - minDb) / (maxDb - minDb)) * 100
+      );
+
+      if (audioState.micMeter) {
+        audioState.micMeter.style.width = `${meterPercent}%`;
       }
+      if (audioState.micKpiLevel) {
+        audioState.micKpiLevel.textContent = Number.isFinite(levelDbVu)
+          ? `${levelDbVu.toFixed(1)} dBFS`
+          : "-∞ dBFS";
+      }
+      if (audioState.micKpiClip) {
+        audioState.micKpiClip.textContent = String(clipCount);
+      }
+    };
 
-      // Compute RMS and PEAK from waveform
+    const drawVisualizer = (buf, meterPercent) => {
+      const ctx = audioState.micCanvasCtx;
+      const canvas = audioState.micCanvas;
+      if (!ctx || !canvas) return;
+      const w = canvas.width | 0;
+      const h = canvas.height | 0;
+      ctx.clearRect(0, 0, w, h);
+
+      // Background
+      ctx.fillStyle = "#0b0f14";
+      ctx.fillRect(0, 0, w, h);
+
+      // Grid lines
+      ctx.strokeStyle = "#1b2733";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, h / 2);
+      ctx.lineTo(w, h / 2);
+      ctx.stroke();
+
+      // Waveform
+      ctx.strokeStyle = "#4cc2ff";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      const step = Math.max(1, Math.floor(buf.length / w));
+      for (let x = 0, i = 0; x < w; x++, i += step) {
+        const s = buf[Math.min(i, buf.length - 1)] || 0;
+        const y = (0.5 - s * 0.48) * h;
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      // VU bar at bottom
+      const barH = 8;
+      const filled = Math.round((meterPercent / 100) * w);
+      ctx.fillStyle =
+        meterPercent > 90
+          ? "#ff6b6b"
+          : meterPercent > 75
+          ? "#ffd166"
+          : "#2dd4bf";
+      ctx.fillRect(0, h - barH, filled, barH);
+      ctx.fillStyle = "#0f1720";
+      ctx.fillRect(filled, h - barH, w - filled, barH);
+    };
+
+    // Analysis + visualizer loop
+    const loop = () => {
+      audioState.analyserNode.getFloatTimeDomainData(timeData);
+
       let sumSq = 0;
       let peakAbs = 0;
-      for (let i = 0; i < buf.length; i++) {
-        const s = buf[i];
+      let clippedSamples = 0;
+      for (let i = 0; i < timeData.length; i++) {
+        const s = timeData[i];
         const a = Math.abs(s);
         sumSq += s * s;
         if (a > peakAbs) peakAbs = a;
+        if (a >= audioState.clipThreshold) clippedSamples++;
       }
-      const rms = Math.sqrt(sumSq / buf.length);
-
-      // Exponential smoothing to stabilize the UI meter
-      audioState.levelSmooth = audioState.levelSmooth * 0.85 + rms * 0.15;
-
-      // Convert to dBFS: 0 dBFS == full scale (peakAbs/rms == 1)
-      const toDb = (x) => (x > 0 ? 20 * Math.log10(x) : -Infinity);
-      const levelDb = toDb(rms);
-      const peakDbNow = toDb(peakAbs);
-
-      // Track max peak (hold-highest)
-      if (peakDbNow > audioState.peakDb) audioState.peakDb = peakDbNow;
-
-      // Clip detection with debounce so we count discrete events, not every frame
+      const rms = Math.sqrt(sumSq / timeData.length);
       const now = performance.now();
-      if (peakAbs >= 0.98 && now - audioState.lastClipAt > 200) {
+      const dtSec = Math.max(0.001, (now - lastNow) / 1000);
+      lastNow = now;
+
+      // Convert to dBFS
+      const levelDbInst = toDb(rms);
+      audioState.peakDbInstant = toDb(peakAbs);
+
+      // VU ballistics
+      const attack = Math.max(0.001, audioState.vuAttackMs / 1000);
+      const release = Math.max(0.001, audioState.vuReleaseMs / 1000);
+      const tau = levelDbInst > audioState.levelDbVu ? attack : release;
+      const alpha = 1 - Math.exp(-dtSec / tau);
+      if (!Number.isFinite(audioState.levelDbVu))
+        audioState.levelDbVu = levelDbInst;
+      audioState.levelDbVu =
+        audioState.levelDbVu + alpha * (levelDbInst - audioState.levelDbVu);
+
+      // Peak-hold with decay
+      if (audioState.peakDbInstant > audioState.peakDbHold) {
+        audioState.peakDbHold = audioState.peakDbInstant;
+        audioState.clipHoldUntil = now + audioState.peakHoldMs;
+      } else if (now > audioState.clipHoldUntil) {
+        audioState.peakDbHold = Math.max(
+          audioState.peakDbInstant,
+          audioState.peakDbHold - audioState.peakDecayDbPerSec * dtSec
+        );
+      }
+
+      // Clip detection (contiguous-event style)
+      if (
+        clippedSamples >= audioState.clipMinSamples &&
+        now - audioState.lastClipAt > 200
+      ) {
         audioState.clipCount++;
         audioState.lastClipAt = now;
       }
 
-      // Update UI elements
-      if (audioState.micMeter) {
-        const meterPercent = Math.round(
-          clamp(audioState.levelSmooth * 100, 0, 100)
-        );
-        audioState.micMeter.style.width = `${meterPercent}%`;
-      }
-
-      if (audioState.micKpiLevel) {
-        audioState.micKpiLevel.textContent = Number.isFinite(levelDb)
-          ? `${levelDb.toFixed(1)} dBFS`
-          : "-∞ dBFS";
-      }
-
-      if (audioState.micKpiPeak) {
-        audioState.micKpiPeak.textContent = Number.isFinite(audioState.peakDb)
-          ? `${audioState.peakDb.toFixed(1)} dBFS`
-          : "-∞ dBFS";
-      }
-
-      if (audioState.micKpiClip) {
-        audioState.micKpiClip.textContent = String(audioState.clipCount);
-      }
+      // Update UI
+      const minDb = -60;
+      const maxDb = 0;
+      const clamped = Math.max(minDb, Math.min(audioState.levelDbVu, maxDb));
+      const meterPercent = Math.round(
+        ((clamped - minDb) / (maxDb - minDb)) * 100
+      );
+      updateUi(audioState.levelDbVu, audioState.clipCount, meterPercent);
+      drawVisualizer(timeData, meterPercent);
 
       audioState.micRafId = requestAnimationFrame(loop);
     };
@@ -320,6 +427,9 @@ async function startMic() {
       audioState.micStatus.textContent = "Listening";
       audioState.micStatus.className = "badge ok";
     }
+    if (audioState.micCanvas) audioState.micCanvas.style.display = "block";
+    if (audioState.micVizPlaceholder)
+      audioState.micVizPlaceholder.style.display = "none";
 
     // Apply monitor setting if requested
     updateMonitoring();
@@ -327,7 +437,7 @@ async function startMic() {
     if (audioState.micStart) audioState.micStart.disabled = true;
     if (audioState.micStop) audioState.micStop.disabled = false;
   } catch (error) {
-    const message = error.message || "Unknown error";
+    const message = error?.message || "Unknown error";
     if (audioState.micStatus) {
       audioState.micStatus.textContent = `Error: ${message}`;
       audioState.micStatus.className = "badge warn";
@@ -344,28 +454,64 @@ function stopMic() {
     cancelAnimationFrame(audioState.micRafId);
     audioState.micRafId = 0;
   }
+  if (audioState.vizRafId) {
+    cancelAnimationFrame(audioState.vizRafId);
+    audioState.vizRafId = 0;
+  }
 
-  // Close microphone
-  if (audioState.mic) {
-    // Disconnect from destination if we were monitoring
-    try {
-      if (audioState.monitorConnected) {
-        // Disconnect from the master output
-        audioState.mic.disconnect(Tone.Destination);
+  // Tear down Web Audio nodes and stream
+  try {
+    if (audioState.micSourceNode) {
+      try {
+        audioState.micSourceNode.disconnect();
+      } catch {}
+      audioState.micSourceNode = null;
+    }
+    if (audioState.analyserNode) {
+      try {
+        audioState.analyserNode.disconnect();
+      } catch {}
+      audioState.analyserNode = null;
+    }
+    if (audioState.monitorGainNode) {
+      try {
+        audioState.monitorGainNode.disconnect();
+      } catch {}
+      audioState.monitorGainNode = null;
+    }
+    if (audioState.micStream) {
+      for (const track of audioState.micStream.getTracks()) {
+        try {
+          track.stop();
+        } catch {}
       }
-    } catch {}
-    audioState.mic.close();
-    audioState.mic = null;
-  }
-
-  // Dispose of Tone.js objects
-  if (audioState.analyser) {
-    audioState.analyser.dispose();
-    audioState.analyser = null;
-  }
+      audioState.micStream = null;
+    }
+    if (audioState.micContext) {
+      const ctx = audioState.micContext;
+      audioState.micContext = null;
+      // Close asynchronously to release device promptly
+      ctx.close().catch(() => {});
+    }
+  } catch {}
 
   // Reset UI
   if (audioState.micMeter) audioState.micMeter.style.width = "0%";
+  // Toggle visualizer visibility
+  if (audioState.micCanvas) {
+    const ctx = audioState.micCanvasCtx;
+    if (ctx) {
+      ctx.clearRect(
+        0,
+        0,
+        audioState.micCanvas.width,
+        audioState.micCanvas.height
+      );
+    }
+    audioState.micCanvas.style.display = "none";
+  }
+  if (audioState.micVizPlaceholder)
+    audioState.micVizPlaceholder.style.display = "flex";
 
   if (audioState.micStatus) {
     audioState.micStatus.textContent = "Stopped";
@@ -382,14 +528,20 @@ function stopMic() {
 function updateMonitoring() {
   // Toggle routing the mic input to the system output based on checkbox state.
   // We connect/disconnect explicitly to avoid unintended feedback.
-  if (!audioState.mic || !audioState.micMonitor) return;
+  if (
+    !audioState.micSourceNode ||
+    !audioState.monitorGainNode ||
+    !audioState.micMonitor
+  )
+    return;
   try {
-    const dest = Tone.Destination; // master output
-    if (audioState.micMonitor.checked && !audioState.monitorConnected) {
-      audioState.mic.connect(dest);
+    const shouldMonitor = !!audioState.micMonitor.checked;
+    if (shouldMonitor && !audioState.monitorConnected) {
+      audioState.micSourceNode.connect(audioState.monitorGainNode);
+      audioState.monitorGainNode.connect(audioState.micContext.destination);
       audioState.monitorConnected = true;
-    } else if (!audioState.micMonitor.checked && audioState.monitorConnected) {
-      audioState.mic.disconnect(dest);
+    } else if (!shouldMonitor && audioState.monitorConnected) {
+      audioState.monitorGainNode.disconnect();
       audioState.monitorConnected = false;
     }
   } catch (err) {

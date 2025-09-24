@@ -170,20 +170,43 @@
             <div class="value" id="mic-kpi-level">— dB</div>
           </div>
           <div class="stat">
-            <div class="label">Peak</div>
-            <div class="value" id="mic-kpi-peak">— dB</div>
-          </div>
-          <div class="stat">
             <div class="label">Clipping</div>
             <div class="value" id="mic-kpi-clip">0</div>
           </div>
         </div>
 
-        <div class="vu-wrap" aria-label="Microphone level meter">
-          <div class="vu" role="meter" aria-valuemin="0" aria-valuemax="100">
-            <div id="mic-meter" class="vu-fill" style="width: 0%"></div>
-            <div class="vu-peak" aria-hidden="true"></div>
+        <div
+          class="visualizer-wrap"
+          aria-label="Microphone visualizer"
+          style="margin-top: 8px"
+        >
+          <div
+            id="mic-viz-placeholder"
+            class="visualizer-placeholder"
+            style="
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              gap: 8px;
+              color: var(--muted-fg, #8ea0ae);
+              height: 120px;
+              border: 1px dashed rgba(255, 255, 255, 0.08);
+              border-radius: 6px;
+            "
+          >
+            <i
+              class="ph ph-waveform"
+              aria-hidden="true"
+              style="font-size: 20px"
+            ></i>
+            <span>Click Start to begin microphone test</span>
           </div>
+          <canvas
+            id="mic-canvas"
+            width="600"
+            height="120"
+            style="width: 100%; height: 120px; display: none"
+          ></canvas>
         </div>
 
         <p class="audio-note muted">
