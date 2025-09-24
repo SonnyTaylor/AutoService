@@ -133,9 +133,8 @@ function initializeToneSynth() {
       },
     });
 
-    // Set initial volume based on slider
-    const initialVolume = parseFloat(audioState.spkVol?.value || "0.5");
-    audioState.synth.volume.value = Tone.gainToDb(initialVolume);
+    // Fixed at 0 dB; users adjust system volume
+    audioState.synth.volume.value = 0;
 
     // Create stereo panner and route synth -> panner -> destination
     audioState.panner = new Tone.Panner(0).toDestination();
@@ -169,8 +168,7 @@ function setupAudioEventListeners() {
   audioState.spkStop?.addEventListener("click", stopAllTones);
   audioState.spkSweep?.addEventListener("click", startSweepTone);
 
-  // Volume control
-  audioState.spkVol?.addEventListener("input", updateMasterVolume);
+  // Volume control removed; synth fixed at 0 dB (use system volume)
   audioState.spkFreq?.addEventListener("change", () => {
     // No-op until next tone; sweep uses its own path
   });
@@ -624,15 +622,7 @@ async function startSweepTone() {
   }
 }
 
-/**
- * Update master volume for synthesizer
- */
-function updateMasterVolume() {
-  if (audioState.synth) {
-    const volume = parseFloat(audioState.spkVol?.value || "0.5");
-    audioState.synth.volume.value = Tone.gainToDb(volume);
-  }
-}
+// Volume control removed; synth uses system volume
 
 /**
  * Alternate tones between L and R at a configurable interval
