@@ -6,6 +6,7 @@
 import { renderRequiredPrograms } from "./tools.js";
 import { initializePaneNavigation } from "./navigation.js";
 import { initializeTechnicianLinks } from "./links-manager.js";
+import { initializeNetworkSettings } from "./network.js";
 
 /**
  * Initializes the settings page functionality.
@@ -23,4 +24,5 @@ export async function initPage() {
   await renderRequiredPrograms();
   initializePaneNavigation(root);
   await initializeTechnicianLinks(root);
+  await initializeNetworkSettings(root);
 }
