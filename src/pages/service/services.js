@@ -228,6 +228,42 @@ export const SERVICES = {
       };
     },
   },
+  iperf_test: {
+    id: "iperf_test",
+    label: "Network Stability (iPerf3)",
+    group: "Network",
+    defaultParams: { minutes: 10 },
+    toolKeys: ["iperf3"],
+    async build({ params, resolveToolPath }) {
+      const p = await resolveToolPath(["iperf3"]);
+      // Load saved iperf server from app settings
+      let server = "";
+      try {
+        const { core } = window.__TAURI__ || {};
+        const inv = core?.invoke;
+        const settings = inv ? await inv("load_app_settings") : {};
+        server = settings?.network?.iperf_server || "";
+      } catch {}
+
+      const minutes = params?.minutes || 10;
+      return {
+        type: "iperf_test",
+        executable_path: p,
+        server,
+        port: 5201,
+        duration_minutes: minutes,
+        protocol: "tcp",
+        reverse: false,
+        parallel_streams: 1,
+        omit_seconds: 0,
+        interval_seconds: 1,
+        stability_threshold_mbps: "20Mbps",
+        ui_label: `Network Stability (iPerf3)${
+          server ? ` – ${server}` : " (server not set)"
+        }`,
+      };
+    },
+  },
 };
 
 /**
