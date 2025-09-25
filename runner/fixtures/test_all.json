@@ -46,8 +46,7 @@
       "type": "smartctl_report",
       "executable_path": "..\\data\\programs\\GSmartControl - 2.0.2\\smartctl.exe",
       "detail_level": "basic"
-    }
-    ,
+    },
     {
       "type": "sfc_scan"
     },
@@ -60,6 +59,18 @@
       "api_key": "env:AUTOSERVICE_OPENAI_KEY",
       "model": "gpt-4o-mini",
       "apply_changes": false
+    },
+    {
+      "type": "iperf_test",
+      "executable_path": "..\\data\\programs\\iperf3\\iperf3.exe",
+      "server": "192.168.0.34",
+      "port": 5201,
+      "duration_minutes": 1,
+      "protocol": "tcp",
+      "reverse": false,
+      "parallel_streams": 1,
+      "omit_seconds": 0,
+      "interval_seconds": 1
     },
     {
       "type": "chkdsk_scan",
