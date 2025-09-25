@@ -46,6 +46,12 @@ export const REQUIRED_TOOLS = [
     match: ["furmark.exe", " furmark "],
     hint: "furmark.exe",
   },
+  {
+    key: "iperf3",
+    name: "iPerf3",
+    match: ["iperf3"],
+    hint: "iperf3.exe",
+  },
 ];
 
 /**
