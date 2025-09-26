@@ -33,8 +33,10 @@ Return dict structure:
       aggregates: { bits_per_second, retransmits (TCP), jitter_ms/packet_loss (UDP) ... },
       interval_stats: { samples, mean_bps, median_bps, min_bps, max_bps, stdev_bps, cov, p10_bps, p90_bps, zero_throughput_intervals, below_threshold_intervals? },
       intervals: [ trimmed per-interval summaries ] (only if include_intervals True),
+      human_readable: { direction, throughput (Mbps stats), stability_score 0-100, verdict, notes, udp_quality? },
       raw: { parsed iperf3 JSON (on success) } (only if include_raw True),
-      error: str (on failure)
+      error: str (on failure),
+      reason: str (on failure)
     },
     command: [ ... executed command ... ]
   }
