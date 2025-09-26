@@ -527,7 +527,12 @@ export async function initPage() {
     }
 
     if (!isGpuParent && selected && getServiceById(id)?.defaultParams) {
-      row.appendChild(renderParamControls(id, state[id].params));
+      // Only render inline controls for supported generic params to avoid empty expansion
+      const p = state[id]?.params || {};
+      const hasGenericParams = Object.prototype.hasOwnProperty.call(p, "minutes") || Object.prototype.hasOwnProperty.call(p, "seconds") || id === "chkdsk_scan";
+      if (hasGenericParams) {
+        row.appendChild(renderParamControls(id, p));
+      }
     }
 
     if (isGpuParent && selected) {
@@ -886,6 +891,9 @@ export async function initPage() {
       }</span>`;
     }
     const key = toolKeyForTask(id);
+    if (Array.isArray(key) && key.length === 0) {
+      return '<span class="badge ok" title="Built-in">Built-in</span>';
+    }
     if (!key) return "";
     const ok = isToolOk(key);
     return `<span class="badge ${ok ? "ok" : "missing"}">${

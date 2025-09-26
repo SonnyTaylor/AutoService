@@ -73,6 +73,32 @@ export const SERVICES = {
       };
     },
   },
+  ping_test: {
+    id: "ping_test",
+    label: "Ping Test",
+    group: "Network",
+    defaultParams: { host: "" , count: 4 },
+    toolKeys: [],
+    async build({ params }) {
+      // Load default ping host from app settings if not provided
+      let host = (params?.host || "").toString();
+      if (!host) {
+        try {
+          const { core } = window.__TAURI__ || {};
+          const inv = core?.invoke;
+          const settings = inv ? await inv("load_app_settings") : {};
+          host = settings?.network?.ping_host || "google.com";
+        } catch {}
+      }
+      const count = parseInt(params?.count ?? 4, 10) || 4;
+      return {
+        type: "ping_test",
+        host,
+        count,
+        ui_label: `Ping Test (${host}, ${count}x)`,
+      };
+    },
+  },
   chkdsk_scan: {
     id: "chkdsk_scan",
     label: "File System Check (CHKDSK)",

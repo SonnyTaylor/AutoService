@@ -127,7 +127,7 @@
         </div>
       </div>
 
-      <!-- Network pane (iperf) -->
+      <!-- Network pane (iperf, ping) -->
       <div class="card" data-pane="network" style="display: none">
         <div class="card-title"><span>Network</span></div>
         <div class="card-body" style="gap: 12px">
@@ -159,6 +159,35 @@
           </form>
           <div
             id="iperf-settings-status"
+            class="muted"
+            style="font-size: 12px"
+          ></div>
+
+          <hr style="margin: 14px 0; opacity: 0.25" />
+
+          <form id="ping-settings-form" class="tech-input-row">
+            <label
+              style="
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                flex: 2;
+                min-width: 260px;
+              "
+            >
+              <span class="muted" style="font-size: 12px">Ping Host</span>
+              <input
+                type="text"
+                name="ping_host"
+                id="ping-host-input"
+                placeholder="e.g. 8.8.8.8"
+                autocomplete="off"
+              />
+            </label>
+            <button type="submit" class="primary">Save</button>
+          </form>
+          <div
+            id="ping-settings-status"
             class="muted"
             style="font-size: 12px"
           ></div>
