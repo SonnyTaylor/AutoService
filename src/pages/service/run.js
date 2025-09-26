@@ -23,6 +23,7 @@
  */
 
 import { getToolPath, getToolStatuses } from "../../utils/tools.js";
+import Fuse from "fuse.js";
 import Sortable from "sortablejs";
 import {
   SERVICES,
@@ -231,6 +232,8 @@ export async function initPage() {
   const btnDeselectAll = document.getElementById("svc-deselect-all");
   const btnReset = document.getElementById("svc-reset");
   const btnCopyJson = document.getElementById("svc-copy-json");
+  const searchInput = document.getElementById("svc-search");
+  const searchClear = document.getElementById("svc-search-clear");
 
   backBtn?.addEventListener("click", () => {
     window.location.hash = "#/service";
@@ -332,6 +335,53 @@ export async function initPage() {
     titleEl.textContent = "Build Run Queue";
     descEl.textContent = "Select tasks for this run.";
   }
+
+  // ---- Search / Filtering --------------------------------------------------
+  let fuse = null;
+  let filterQuery = "";
+  function buildFuseIndex() {
+    const items = listServiceIds().map((id) => {
+      const def = getServiceById(id) || {};
+      return { id, label: def.label || id, group: def.group || "", keywords: [] };
+    });
+    // Include virtual GPU parent in the index so queries like "gpu" or "stress" match
+    items.push({
+      id: GPU_PARENT_ID,
+      label: "GPU Stress",
+      group: "Stress",
+      keywords: ["gpu", "stress", "graphics", "furmark", "heavyload"],
+    });
+    fuse = new Fuse(items, {
+      keys: [
+        { name: "label", weight: 0.6 },
+        { name: "id", weight: 0.2 },
+        { name: "group", weight: 0.1 },
+        { name: "keywords", weight: 0.1 },
+      ],
+      threshold: 0.4,
+      ignoreLocation: true,
+      minMatchCharLength: 2,
+    });
+  }
+  buildFuseIndex();
+
+  function applyFilter(ids) {
+    if (!filterQuery) return ids;
+    if (!fuse) buildFuseIndex();
+    const results = fuse.search(filterQuery);
+    const allowed = new Set(results.map((r) => r.item.id));
+    return ids.filter((id) => allowed.has(id));
+  }
+
+  searchInput?.addEventListener("input", () => {
+    filterQuery = (searchInput.value || "").trim();
+    renderPalette();
+  });
+  searchClear?.addEventListener("click", () => {
+    filterQuery = "";
+    if (searchInput) searchInput.value = "";
+    renderPalette();
+  });
 
   // ---- Rendering Helpers --------------------------------------------------
   /**
@@ -595,8 +645,17 @@ export async function initPage() {
         displayOrder.push(id);
       }
     }
+    // Apply search filter (hide GPU parent when filtering unless matched)
+    let finalOrder = displayOrder;
+    if (filterQuery) {
+      finalOrder = applyFilter(displayOrder.filter((id) => id !== GPU_PARENT_ID));
+      // include GPU parent only if matched explicitly
+      if (applyFilter([GPU_PARENT_ID]).includes(GPU_PARENT_ID)) {
+        finalOrder.push(GPU_PARENT_ID);
+      }
+    }
     // Render in unified order
-    displayOrder.forEach((id) => {
+    finalOrder.forEach((id) => {
       paletteEl.appendChild(renderItem(id));
     });
 
