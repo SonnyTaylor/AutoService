@@ -50,6 +50,142 @@ from typing import Dict, Any, List, Optional
 logger = logging.getLogger(__name__)
 
 
+def _to_mbps(bits_per_second: Optional[float]) -> Optional[float]:
+    if bits_per_second is None:
+        return None
+    try:
+        return float(bits_per_second) / 1_000_000.0
+    except Exception:
+        return None
+
+
+def _build_human_readable_summary(
+    base: Dict[str, Any], summarized: Dict[str, Any]
+) -> Dict[str, Any]:
+    protocol = base.get("protocol")
+    reverse = bool(base.get("reverse"))
+    direction = "download" if reverse else "upload"
+
+    aggregates: Dict[str, Any] = summarized.get("aggregates", {}) or {}
+    interval_stats: Dict[str, Any] = summarized.get("interval_stats", {}) or {}
+
+    mean_bps = interval_stats.get("mean_bps")
+    median_bps = interval_stats.get("median_bps")
+    p10_bps = interval_stats.get("p10_bps")
+    p90_bps = interval_stats.get("p90_bps")
+    min_bps = interval_stats.get("min_bps")
+    max_bps = interval_stats.get("max_bps")
+    stdev_bps = interval_stats.get("stdev_bps")
+    cov = interval_stats.get("cov")
+    zero_intervals = interval_stats.get("zero_throughput_intervals", 0) or 0
+    samples = interval_stats.get("samples", 0) or 0
+
+    mean_mbps = _to_mbps(mean_bps)
+    median_mbps = _to_mbps(median_bps)
+    p10_mbps = _to_mbps(p10_bps)
+    p90_mbps = _to_mbps(p90_bps)
+    min_mbps = _to_mbps(min_bps)
+    max_mbps = _to_mbps(max_bps)
+    stdev_mbps = _to_mbps(stdev_bps)
+    cov_percent = (
+        (float(cov) * 100.0)
+        if isinstance(cov, (int, float)) and cov is not None
+        else None
+    )
+
+    retransmits = aggregates.get("retransmits")
+    jitter_ms = aggregates.get("jitter_ms")
+    loss_percent = aggregates.get("packet_loss_percent")
+
+    # Stability score 0-100 based on variability and errors
+    score = 100.0
+    notes: List[str] = []
+    if cov_percent is not None:
+        score -= min(50.0, max(0.0, cov_percent * 1.5))
+        if cov_percent <= 5:
+            notes.append("very low variability")
+        elif cov_percent <= 10:
+            notes.append("low variability")
+        elif cov_percent <= 20:
+            notes.append("moderate variability")
+        else:
+            notes.append("high variability")
+
+    if zero_intervals > 0:
+        score -= 30.0
+        notes.append(f"{zero_intervals} zero-throughput intervals")
+
+    if isinstance(retransmits, (int, float)):
+        if retransmits > 0:
+            score -= min(20.0, 2.0 + (float(retransmits) ** 0.5))
+            notes.append(f"retransmits: {int(retransmits)}")
+
+    if isinstance(loss_percent, (int, float)):
+        loss = float(loss_percent)
+        if loss >= 5.0:
+            score -= 60.0
+            notes.append(f"high UDP loss: {loss:.2f}%")
+        elif loss >= 1.0:
+            score -= 30.0
+            notes.append(f"elevated UDP loss: {loss:.2f}%")
+        elif loss > 0.0:
+            score -= 10.0
+            notes.append(f"some UDP loss: {loss:.2f}%")
+
+    score = max(0.0, min(100.0, score))
+    if score >= 85:
+        verdict = "excellent"
+    elif score >= 70:
+        verdict = "good"
+    elif score >= 50:
+        verdict = "fair"
+    else:
+        verdict = "poor"
+
+    # Helpful range visualization data
+    throughput = {
+        "unit": "Mbps",
+        "mean": mean_mbps,
+        "median": median_mbps,
+        "p10": p10_mbps,
+        "p90": p90_mbps,
+        "min": min_mbps,
+        "max": max_mbps,
+        "stdev": stdev_mbps,
+        "cov_percent": cov_percent,
+        "samples": samples,
+    }
+
+    stability_threshold_bps = base.get("stability_threshold_bps")
+    below_threshold = interval_stats.get("below_threshold_intervals")
+    if (
+        isinstance(stability_threshold_bps, (int, float))
+        and isinstance(below_threshold, int)
+        and samples
+    ):
+        throughput["below_threshold_percent"] = round(
+            100.0 * below_threshold / samples, 2
+        )
+        throughput["threshold_mbps"] = _to_mbps(stability_threshold_bps)
+
+    hr: Dict[str, Any] = {
+        "protocol": protocol,
+        "direction": direction,
+        "throughput": throughput,
+        "stability_score": round(score, 1),
+        "verdict": verdict,
+        "notes": notes,
+    }
+
+    if protocol == "udp":
+        hr["udp_quality"] = {
+            "jitter_ms": jitter_ms,
+            "loss_percent": loss_percent,
+        }
+
+    return hr
+
+
 def _build_iperf_command(task: Dict[str, Any]) -> Dict[str, Any]:
     exec_path = task.get("executable_path") or "iperf3"
     server = task.get("server")
@@ -381,6 +517,16 @@ def run_iperf_test(task: Dict[str, Any]) -> Dict[str, Any]:
         "exit_code": proc.returncode,
         "stderr_excerpt": stderr_text[:1000],
     }
+
+    # Add human-readable helper section for quick interpretation
+    try:
+        final_summary["human_readable"] = _build_human_readable_summary(
+            summary_base, summarized
+        )
+    except Exception as _hr_err:  # noqa: BLE001
+        final_summary["human_readable_error"] = (
+            f"Failed to build human summary: {_hr_err}"
+        )
 
     # Provide human-readable reason and include stdout excerpt on failures
     if status == "failure":
