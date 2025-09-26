@@ -25,6 +25,10 @@
 import { getToolPath, getToolStatuses } from "../../utils/tools.js";
 import Fuse from "fuse.js";
 import Sortable from "sortablejs";
+import hljs from "highlight.js/lib/core";
+import jsonLang from "highlight.js/lib/languages/json";
+import "highlight.js/styles/github-dark.css";
+hljs.registerLanguage("json", jsonLang);
 import {
   SERVICES,
   listServiceIds,
@@ -234,6 +238,8 @@ export async function initPage() {
   const btnCopyJson = document.getElementById("svc-copy-json");
   const searchInput = document.getElementById("svc-search");
   const searchClear = document.getElementById("svc-search-clear");
+  // Raw JSON string for copy-to-clipboard while rendering highlighted HTML
+  let lastJsonString = "{}";
 
   backBtn?.addEventListener("click", () => {
     window.location.hash = "#/service";
@@ -755,7 +761,9 @@ export async function initPage() {
   async function updateJson() {
     jsonEl.textContent = "Generating...";
     const tasks = await generateTasksArray();
-    jsonEl.textContent = JSON.stringify({ tasks }, null, 2);
+    lastJsonString = JSON.stringify({ tasks }, null, 2);
+    const highlighted = hljs.highlight(lastJsonString, { language: "json" }).value;
+    jsonEl.innerHTML = `<code class="hljs language-json">${highlighted}</code>`;
     persist();
     // Re-validate Next button whenever JSON changes (e.g., GPU sub-options)
     validateNext(tasksCountRunnable());
@@ -812,7 +820,7 @@ export async function initPage() {
   });
   btnCopyJson?.addEventListener("click", async () => {
     try {
-      await navigator.clipboard.writeText(jsonEl.textContent || "{}");
+      await navigator.clipboard.writeText(lastJsonString || "{}");
       btnCopyJson.textContent = "Copied";
       setTimeout(() => (btnCopyJson.textContent = "Copy JSON"), 1200);
     } catch {}

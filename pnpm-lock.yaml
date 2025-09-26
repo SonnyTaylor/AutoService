@@ -20,6 +20,9 @@ importers:
       fuse.js:
         specifier: ^7.1.0
         version: 7.1.0
+      highlight.js:
+        specifier: ^11.11.1
+        version: 11.11.1
       humanize-duration:
         specifier: ^3.33.0
         version: 3.33.0
@@ -438,6 +441,10 @@ packages:
     resolution: {integrity: sha512-trLf4SzuuUxfusZADLINj+dE8clK1frKdmqiJNb1Es75fmI5oY6X2mxLVUciLLjxqw/xr72Dhy+lER6dGd02FQ==}
     engines: {node: '>=10'}
 
+  highlight.js@11.11.1:
+    resolution: {integrity: sha512-Xwwo44whKBVCYoliBQwaPvtd/2tYFkRQtXDWj1nackaV2JPXx3L0+Jvd8/qCJ2p+ML0/XVkJ2q+Mr+UVdpJK5w==}
+    engines: {node: '>=12.0.0'}
+
   humanize-duration@3.33.0:
     resolution: {integrity: sha512-vYJX7BSzn7EQ4SaP2lPYVy+icHDppB6k7myNeI3wrSRfwMS5+BHyGgzpHR0ptqJ2AQ6UuIKrclSg5ve6Ci4IAQ==}
 
@@ -785,6 +792,8 @@ snapshots:
     optional: true
 
   fuse.js@7.1.0: {}
+
+  highlight.js@11.11.1: {}
 
   humanize-duration@3.33.0: {}
 
