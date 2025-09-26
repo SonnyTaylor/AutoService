@@ -22,8 +22,11 @@ export const { invoke } = window.__TAURI__.core;
 
 /** CSS selector for the list container element on the Programs page. */
 export const LIST_SELECTOR = ".programs-list";
-/** Fallback logo shown when a program has no extracted or provided logo. */
-export const DEFAULT_LOGO = "./assets/tauri.svg";
+/**
+ * Fallback logo shown when a program has no extracted or provided logo.
+ * Uses Phosphor Icons class names (e.g., "ph ph-wrench").
+ */
+export const DEFAULT_LOGO = "ph ph-wrench";
 
 /**
  * A portable tool or installer entry managed by the Programs page.

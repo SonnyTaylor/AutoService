@@ -37,8 +37,14 @@
     <form method="dialog" id="program-form">
       <div class="editor-grid">
         <div class="logo-col">
-          <!-- Live preview of the chosen or extracted logo image -->
+          <!-- Live preview of the chosen or extracted logo image, with icon fallback -->
           <img id="p-logo-preview" alt="Logo preview" />
+          <i
+            id="p-logo-fallback"
+            class="program-logo-icon ph ph-wrench"
+            aria-hidden="true"
+            style="display: none"
+          ></i>
           <!-- Lets the user pick a logo image from disk -->
           <button type="button" id="p-pick-logo" class="secondary">
             Add Logo

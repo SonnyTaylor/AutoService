@@ -72,6 +72,17 @@
   background: #12151d;
   display: block;
 }
+.program-logo-icon {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  background: #12151d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #a7b3cc;
+  font-size: 28px;
+}
 .exe-status {
   position: absolute;
   right: -2px;
@@ -234,6 +245,18 @@
   object-fit: contain;
   border: 1px solid var(--border);
 }
+.logo-col #p-logo-fallback {
+  width: 160px;
+  height: 160px;
+  border-radius: 12px;
+  background: #0e1118;
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #a7b3cc;
+  font-size: 96px;
+}
 .fields-col {
   display: grid;
   gap: 10px;
@@ -275,6 +298,11 @@
   .logo-col img {
     width: 120px;
     height: 120px;
+  }
+  .logo-col #p-logo-fallback {
+    width: 120px;
+    height: 120px;
+    font-size: 72px;
   }
   .editor-actions {
     flex-wrap: wrap;

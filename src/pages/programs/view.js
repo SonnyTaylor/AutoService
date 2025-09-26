@@ -30,9 +30,13 @@ function renderProgramRow(p) {
   return `
     <div class="program-row" data-id="${p.id}">
       <div class="program-logo-wrap">
-        <img class="program-logo" src="${
-          p.logo_data_url || DEFAULT_LOGO
-        }" alt="${escapeHtml(p.name)} logo"/>
+        ${
+          p.logo_data_url
+            ? `<img class="program-logo" src="${p.logo_data_url}" alt="${escapeHtml(
+                p.name
+              )} logo"/>`
+            : `<i class="program-logo-icon ${DEFAULT_LOGO}" aria-hidden="true"></i>`
+        }
         <span class="exe-status ${p.exe_exists ? "ok" : "missing"}" title="${
     p.exe_exists ? "Executable found" : "Executable missing"
   }">${p.exe_exists ? "✓" : "✕"}</span>

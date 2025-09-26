@@ -42,7 +42,18 @@ export function openEditor(prog) {
   /** @type {HTMLInputElement} */ ($("#p-exe")).value =
     state.editing.exe_path || "";
   const preview = /** @type {HTMLImageElement} */ ($("#p-logo-preview"));
-  preview.src = state.editing.logo_data_url || DEFAULT_LOGO;
+  const fallbackIcon = /** @type {HTMLElement} */ ($("#p-logo-fallback"));
+  if (state.editing.logo_data_url) {
+    preview.src = state.editing.logo_data_url;
+    if (fallbackIcon) fallbackIcon.style.display = "none";
+    if (preview) preview.style.display = "block";
+  } else {
+    if (fallbackIcon) {
+      fallbackIcon.className = `program-logo-icon ${DEFAULT_LOGO}`;
+      fallbackIcon.style.display = "flex";
+    }
+    if (preview) preview.style.display = "none";
+  }
   dlg.showModal();
 }
 
@@ -59,7 +70,12 @@ export async function tryExtractLogo(exePath) {
     if (suggested) {
       state.editing.logo_data_url = suggested;
       const img = /** @type {HTMLImageElement} */ ($("#p-logo-preview"));
-      if (img) img.src = suggested;
+      const icon = /** @type {HTMLElement} */ ($("#p-logo-fallback"));
+      if (img) {
+        img.src = suggested;
+        img.style.display = "block";
+      }
+      if (icon) icon.style.display = "none";
     }
   } catch {
     // ignore
@@ -128,7 +144,12 @@ export function wireEditor() {
         });
         state.editing.logo_data_url = dataUrl;
         const img = /** @type {HTMLImageElement} */ ($("#p-logo-preview"));
-        if (img) img.src = dataUrl;
+        const icon = /** @type {HTMLElement} */ ($("#p-logo-fallback"));
+        if (img) {
+          img.src = dataUrl;
+          img.style.display = "block";
+        }
+        if (icon) icon.style.display = "none";
       } catch (e) {
         console.error(e);
       }
