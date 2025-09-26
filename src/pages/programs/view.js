@@ -19,6 +19,7 @@ import {
   escapeHtml,
 } from "./state.js";
 import { openEditor } from "./editor.js";
+import Fuse from "fuse.js";
 
 /**
  * Render a single program row as HTML.
@@ -79,17 +80,21 @@ export function renderList() {
 export async function loadPrograms() {
   // Fetch all programs from the backend and refresh the view.
   state.all = await invoke("list_programs");
+  buildFuseIndex();
   applyFilter();
 }
 
 export function applyFilter() {
   // Compute derived filtered list from `state.all` using current query/sort.
-  const q = state.query.trim().toLowerCase();
-  const base = q
-    ? state.all.filter((p) =>
-        `${p.name} ${p.description} ${p.version}`.toLowerCase().includes(q)
-      )
-    : [...state.all];
+  const q = state.query.trim();
+  let base;
+  if (q) {
+    if (!fuse) buildFuseIndex();
+    const results = fuse.search(q);
+    base = results.map((r) => r.item);
+  } else {
+    base = [...state.all];
+  }
   const sort = state.sort;
   base.sort((a, b) => {
     switch (sort) {
@@ -120,6 +125,35 @@ export function applyFilter() {
   });
   state.filtered = base;
   renderList();
+}
+
+// --- Fuzzy Search Index -----------------------------------------------------
+let fuse = null;
+function buildFuseIndex() {
+  const items = state.all.map((p) => ({
+    id: p.id,
+    name: p.name || "",
+    description: p.description || "",
+    version: p.version || "",
+    exe_path: p.exe_path || "",
+    raw: p,
+  }));
+  fuse = new Fuse(items, {
+    keys: [
+      { name: "name", weight: 0.6 },
+      { name: "description", weight: 0.25 },
+      { name: "version", weight: 0.1 },
+      { name: "exe_path", weight: 0.05 },
+    ],
+    threshold: 0.38,
+    ignoreLocation: true,
+    minMatchCharLength: 2,
+  });
+  // Map Fuse items back to the original program objects
+  fuse.search = ((origSearch) => (query) => {
+    const res = origSearch.call(fuse, query);
+    return res.map((r) => ({ ...r, item: state.all.find((p) => p.id === r.item.id) || r.item.raw }));
+  })(fuse.search);
 }
 
 export function wireToolbar() {
