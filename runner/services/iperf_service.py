@@ -68,11 +68,13 @@ def _build_iperf_command(task: Dict[str, Any]) -> Dict[str, Any]:
         "stability_threshold_mbps"
     )
     # allow Mbps convenience
-    if isinstance(stability_threshold_bps, str) and stability_threshold_bps.lower().endswith(
-        "mbps"
-    ):
+    if isinstance(
+        stability_threshold_bps, str
+    ) and stability_threshold_bps.lower().endswith("mbps"):
         try:
-            stability_threshold_bps = int(float(stability_threshold_bps[:-4]) * 1_000_000)
+            stability_threshold_bps = int(
+                float(stability_threshold_bps[:-4]) * 1_000_000
+            )
         except Exception:
             stability_threshold_bps = None
 
@@ -135,13 +137,21 @@ def _build_iperf_command(task: Dict[str, Any]) -> Dict[str, Any]:
         "bandwidth": bandwidth if protocol == "udp" else None,
         "include_intervals": include_intervals,
         "include_raw": include_raw,
-        **({"stability_threshold_bps": stability_threshold_bps} if stability_threshold_bps else {}),
+        **(
+            {"stability_threshold_bps": stability_threshold_bps}
+            if stability_threshold_bps
+            else {}
+        ),
     }
 
     return {"command": cmd, "summary": summary}
 
 
-def _summarize_iperf_json(data: Dict[str, Any], include_intervals: bool, stability_threshold_bps: Optional[int]) -> Dict[str, Any]:
+def _summarize_iperf_json(
+    data: Dict[str, Any],
+    include_intervals: bool,
+    stability_threshold_bps: Optional[int],
+) -> Dict[str, Any]:
     """Extract a concise, stable summary from iperf3 JSON output.
 
     Handles both TCP and UDP result structures.
@@ -165,7 +175,7 @@ def _summarize_iperf_json(data: Dict[str, Any], include_intervals: bool, stabili
 
         # UDP aggregates
         cpu = end.get("cpu_utilization_percent") or {}
-        streams = (end.get("streams") or [])
+        streams = end.get("streams") or []
         udp_jitter_ms = None
         udp_loss_percent = None
         # If UDP, the receiver section typically includes jitter and lost_percent
@@ -208,7 +218,10 @@ def _summarize_iperf_json(data: Dict[str, Any], include_intervals: bool, stabili
                 bps_values.append(float(bps))
                 if bps == 0:
                     zero_intervals += 1
-                if stability_threshold_bps is not None and bps < stability_threshold_bps:
+                if (
+                    stability_threshold_bps is not None
+                    and bps < stability_threshold_bps
+                ):
                     below_threshold += 1
             if include_intervals:
                 trimmed_intervals.append(
@@ -244,7 +257,7 @@ def _summarize_iperf_json(data: Dict[str, Any], include_intervals: bool, stabili
             max_v = vals[-1]
             # simple population stdev
             var = sum((v - mean) ** 2 for v in vals) / n
-            stdev = var ** 0.5
+            stdev = var**0.5
             cov = stdev / mean if mean else None
             p10 = _percentile(vals, 0.1)
             p90 = _percentile(vals, 0.9)
@@ -328,6 +341,7 @@ def run_iperf_test(task: Dict[str, Any]) -> Dict[str, Any]:
             "summary": {
                 **summary_base,
                 "error": "Failed to parse iperf3 JSON output",
+                "reason": "Failed to parse iperf3 JSON output",
                 "stdout_excerpt": stdout_text[:1000],
                 "stderr_excerpt": stderr_text[:1000],
                 "exit_code": proc.returncode,
@@ -341,24 +355,48 @@ def run_iperf_test(task: Dict[str, Any]) -> Dict[str, Any]:
         stability_threshold_bps=summary_base.get("stability_threshold_bps"),
     )
 
-    status = "success" if proc.returncode == 0 else "failure"
+    # Surface iperf3-reported error (top-level field in JSON) when present
+    iperf_error: Optional[str] = None
+    try:
+        if isinstance(parsed_json, dict):
+            err = parsed_json.get("error")
+            if isinstance(err, str) and err.strip():
+                iperf_error = err.strip()
+    except Exception:  # noqa: BLE001
+        iperf_error = None
+
+    # Treat any iperf3-reported error as a failure regardless of exit code
+    status = "success" if (proc.returncode == 0 and not iperf_error) else "failure"
     # For stability testing, even with non-zero exit, provide completed data but
     # mark as failure so the UI can highlight issues.
+
+    final_summary: Dict[str, Any] = {
+        **{
+            k: v
+            for k, v in summary_base.items()
+            if k not in ("include_raw", "include_intervals")
+        },
+        **summarized,
+        **({"raw": parsed_json} if summary_base.get("include_raw") else {}),
+        "exit_code": proc.returncode,
+        "stderr_excerpt": stderr_text[:1000],
+    }
+
+    # Provide human-readable reason and include stdout excerpt on failures
+    if status == "failure":
+        if iperf_error:
+            final_summary["error"] = iperf_error
+            final_summary["reason"] = iperf_error
+        else:
+            final_summary["reason"] = f"iperf3 exited with code {proc.returncode}"
+        final_summary["stdout_excerpt"] = stdout_text[:1000]
 
     return {
         "task_type": "iperf_test",
         "status": status,
-        "summary": {
-            **{k: v for k, v in summary_base.items() if k not in ("include_raw", "include_intervals")},
-            **summarized,
-            **({"raw": parsed_json} if summary_base.get("include_raw") else {}),
-            "exit_code": proc.returncode,
-            "stderr_excerpt": stderr_text[:1000],
-        },
+        "summary": final_summary,
         "command": command,
     }
 
 
 __all__ = ["run_iperf_test"]
-
-
