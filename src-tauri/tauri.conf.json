@@ -14,9 +14,10 @@
     "windows": [
       {
         "title": "AutoService",
-        "width": 985,
+        "width": 1450,
         "height": 600,
-        "decorations": false
+        "decorations": false,
+        "maximized": true
       }
     ],
     "security": {

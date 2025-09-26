@@ -1,4 +1,8 @@
 import { getToolStatuses } from "../../utils/tools.js";
+import hljs from "highlight.js/lib/core";
+import jsonLang from "highlight.js/lib/languages/json";
+import "highlight.js/styles/github-dark.css";
+hljs.registerLanguage("json", jsonLang);
 
 /**
  * Service Runner report controller.
@@ -22,6 +26,8 @@ export async function initPage() {
   const summaryEl = document.getElementById("svc-summary");
   const summaryTitleEl = document.getElementById("svc-summary-title");
   const summaryIconEl = document.getElementById("svc-summary-icon");
+  // Keep raw JSON for copy-to-clipboard while showing highlighted HTML
+  let lastFinalJsonString = "{}";
 
   // Ensure the log overlay is hidden on initial load
   const forceHideOverlay = () => {
@@ -37,7 +43,7 @@ export async function initPage() {
 
   copyFinalBtn?.addEventListener("click", async () => {
     try {
-      await navigator.clipboard.writeText(finalJsonEl.textContent || "{}");
+      await navigator.clipboard.writeText(lastFinalJsonString || "{}");
       copyFinalBtn.textContent = "Copied";
       setTimeout(() => (copyFinalBtn.textContent = "Copy JSON"), 1200);
     } catch {}
@@ -222,7 +228,9 @@ export async function initPage() {
       const payload = evt?.payload || {};
       const finalReport = payload.final_report || payload.finalReport || {};
       try {
-        finalJsonEl.textContent = JSON.stringify(finalReport, null, 2);
+        lastFinalJsonString = JSON.stringify(finalReport, null, 2);
+        const highlighted = hljs.highlight(lastFinalJsonString, { language: "json" }).value;
+        finalJsonEl.innerHTML = `<code class="hljs language-json">${highlighted}</code>`;
         applyFinalStatusesFromReport(finalReport);
         const ok = finalReport?.overall_status === "success";
         showSummary(ok);
@@ -244,7 +252,9 @@ export async function initPage() {
   function handleFinalResult(result) {
     try {
       const obj = typeof result === "string" ? JSON.parse(result) : result;
-      finalJsonEl.textContent = JSON.stringify(obj, null, 2);
+      lastFinalJsonString = JSON.stringify(obj, null, 2);
+      const highlighted = hljs.highlight(lastFinalJsonString, { language: "json" }).value;
+      finalJsonEl.innerHTML = `<code class=\"hljs language-json\">${highlighted}</code>`;
       applyFinalStatusesFromReport(obj);
       const ok = obj?.overall_status === "success";
       showSummary(ok);
@@ -408,7 +418,9 @@ export async function initPage() {
     // Only update preview; summary still triggered by final report or final marker
     try {
       const pretty = JSON.stringify(obj, null, 2);
-      finalJsonEl.textContent = pretty;
+      lastFinalJsonString = pretty;
+      const highlighted = hljs.highlight(pretty, { language: "json" }).value;
+      finalJsonEl.innerHTML = `<code class=\"hljs language-json\">${highlighted}</code>`;
       if (isFinal) {
         const ok = obj?.overall_status === "success";
         showSummary(ok);

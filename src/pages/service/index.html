@@ -15,6 +15,27 @@
   <div class="preset-grid" role="list" aria-label="Service presets">
     <button
       class="preset-card"
+      data-preset="diagnostics"
+      role="listitem"
+      aria-pressed="false"
+    >
+      <div class="preset-head">
+        <span class="icon ph ph-magnifying-glass"></span>
+        <h2>Diagnostics</h2>
+      </div>
+      <p class="desc">
+        Run read-only diagnostic tools and commands to identify potential issues
+        and problems.
+      </p>
+      <ul class="summary">
+        <li>System File Checker</li>
+        <li>DISM Health Check</li>
+        <li>SMART Drive Reports</li>
+      </ul>
+    </button>
+
+    <button
+      class="preset-card"
       data-preset="general"
       role="listitem"
       aria-pressed="false"

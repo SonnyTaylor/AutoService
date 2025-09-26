@@ -54,6 +54,8 @@ from services.sfc_service import run_sfc_scan  # type: ignore
 from services.dism_service import run_dism_health_check  # type: ignore
 from services.ai_startup_service import run_ai_startup_disable  # type: ignore
 from services.ping_service import run_ping_test  # type: ignore
+from services.chkdsk_service import run_chkdsk_scan  # type: ignore
+from services.iperf_service import run_iperf_test  # type: ignore
 
 """NOTE ON REAL-TIME LOG STREAMING
 
@@ -141,6 +143,8 @@ TASK_HANDLERS: Dict[str, TaskHandler] = {
     "dism_health_check": run_dism_health_check,
     "ai_startup_disable": run_ai_startup_disable,
     "ping_test": run_ping_test,
+    "chkdsk_scan": run_chkdsk_scan,
+    "iperf_test": run_iperf_test,
     # "kvrt_scan": run_kvrt_scan, # Example for the future
     # "windows_defender_scan": run_windows_defender_scan, # Example for the future
 }
@@ -226,8 +230,19 @@ def main():
             }
             print(json.dumps(final_report, indent=2))
             sys.exit(1)
-    # Extract tasks list; default to empty list if key missing.
-    tasks = input_data.get("tasks", [])
+    # Extract/normalize tasks: accept {"tasks": [...]}, a single task dict, or a list of tasks.
+    tasks: List[Task] = []
+    try:
+        if isinstance(input_data, dict):
+            if isinstance(input_data.get("tasks"), list):
+                tasks = input_data["tasks"]
+            elif "type" in input_data:
+                # Single task object shorthand
+                tasks = [input_data]
+        elif isinstance(input_data, list):
+            tasks = input_data
+    except Exception:
+        tasks = []
     logging.info(f"Parsed {len(tasks)} tasks")
     flush_logs()
     for i, task in enumerate(tasks):

@@ -14,6 +14,23 @@
     <div class="task-palette">
       <h2 class="section-title">Tasks</h2>
       <p class="muted small">Toggle & drag to set execution order.</p>
+      <div class="palette-actions search-row" aria-label="Search tasks">
+        <input
+          id="svc-search"
+          type="search"
+          placeholder="Search tasks…"
+          aria-label="Search tasks"
+          class="text-input"
+          style="flex: 1; min-width: 200px"
+        />
+        <button
+          id="svc-search-clear"
+          class="ghost small"
+          aria-label="Clear search"
+        >
+          Clear
+        </button>
+      </div>
       <div class="palette-actions" aria-label="Selection helpers">
         <button id="svc-select-all" class="ghost small">Select All</button>
         <button id="svc-deselect-all" class="ghost small">Deselect All</button>

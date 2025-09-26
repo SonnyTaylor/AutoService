@@ -23,7 +23,12 @@
  */
 
 import { getToolPath, getToolStatuses } from "../../utils/tools.js";
+import Fuse from "fuse.js";
 import Sortable from "sortablejs";
+import hljs from "highlight.js/lib/core";
+import jsonLang from "highlight.js/lib/languages/json";
+import "highlight.js/styles/github-dark.css";
+hljs.registerLanguage("json", jsonLang);
 import {
   SERVICES,
   listServiceIds,
@@ -202,13 +207,8 @@ const PRESET_MAP = {
     "heavyload_stress_cpu",
     "heavyload_stress_memory",
   ],
-  custom: [
-    "adwcleaner_clean",
-    "bleachbit_clean",
-    "dism_health_check",
-    "sfc_scan",
-    "smartctl_report",
-  ],
+  custom: [],
+  diagnostics: ["sfc_scan", "dism_health_check", "smartctl_report"],
 };
 
 // ---- Page Initialization --------------------------------------------------
@@ -236,6 +236,10 @@ export async function initPage() {
   const btnDeselectAll = document.getElementById("svc-deselect-all");
   const btnReset = document.getElementById("svc-reset");
   const btnCopyJson = document.getElementById("svc-copy-json");
+  const searchInput = document.getElementById("svc-search");
+  const searchClear = document.getElementById("svc-search-clear");
+  // Raw JSON string for copy-to-clipboard while rendering highlighted HTML
+  let lastJsonString = "{}";
 
   backBtn?.addEventListener("click", () => {
     window.location.hash = "#/service";
@@ -265,6 +269,7 @@ export async function initPage() {
   function persist() {
     try {
       const data = {
+        preset: preset || mode || null,
         order,
         selection: [...selection],
         state,
@@ -286,6 +291,13 @@ export async function initPage() {
       if (!raw) return false;
       const data = JSON.parse(raw);
       if (!data || !Array.isArray(data.order)) return false;
+
+      // Check if the saved preset matches the current preset
+      const currentPreset = preset || mode || null;
+      if (data.preset !== currentPreset) {
+        return false; // Different preset, don't restore old state
+      }
+
       order = data.order;
       selection.clear();
       (data.selection || []).forEach((id) => selection.add(id));
@@ -330,6 +342,53 @@ export async function initPage() {
     descEl.textContent = "Select tasks for this run.";
   }
 
+  // ---- Search / Filtering --------------------------------------------------
+  let fuse = null;
+  let filterQuery = "";
+  function buildFuseIndex() {
+    const items = listServiceIds().map((id) => {
+      const def = getServiceById(id) || {};
+      return { id, label: def.label || id, group: def.group || "", keywords: [] };
+    });
+    // Include virtual GPU parent in the index so queries like "gpu" or "stress" match
+    items.push({
+      id: GPU_PARENT_ID,
+      label: "GPU Stress",
+      group: "Stress",
+      keywords: ["gpu", "stress", "graphics", "furmark", "heavyload"],
+    });
+    fuse = new Fuse(items, {
+      keys: [
+        { name: "label", weight: 0.6 },
+        { name: "id", weight: 0.2 },
+        { name: "group", weight: 0.1 },
+        { name: "keywords", weight: 0.1 },
+      ],
+      threshold: 0.4,
+      ignoreLocation: true,
+      minMatchCharLength: 2,
+    });
+  }
+  buildFuseIndex();
+
+  function applyFilter(ids) {
+    if (!filterQuery) return ids;
+    if (!fuse) buildFuseIndex();
+    const results = fuse.search(filterQuery);
+    const allowed = new Set(results.map((r) => r.item.id));
+    return ids.filter((id) => allowed.has(id));
+  }
+
+  searchInput?.addEventListener("input", () => {
+    filterQuery = (searchInput.value || "").trim();
+    renderPalette();
+  });
+  searchClear?.addEventListener("click", () => {
+    filterQuery = "";
+    if (searchInput) searchInput.value = "";
+    renderPalette();
+  });
+
   // ---- Rendering Helpers --------------------------------------------------
   /**
    * Render per-task parameter controls for a given service id.
@@ -355,6 +414,52 @@ export async function initPage() {
         e.stopPropagation();
       });
     });
+    // Special UI for CHKDSK
+    if (id === "chkdsk_scan") {
+      const driveVal = params?.drive ?? "C:";
+      const modeVal = params?.mode ?? "read_only";
+      const schedVal = !!params?.schedule_if_busy;
+      wrapper.innerHTML = `
+        <label class="tiny-lab" style="margin-right:8px;">
+          <span class="lab">Drive</span>
+          <input type="text" class="text-input" data-param="drive" value="${driveVal}" size="4" aria-label="Drive letter (e.g., C:)" />
+        </label>
+        <label class="tiny-lab" style="margin-right:8px;">
+          <span class="lab">Mode</span>
+          <select data-param="mode" aria-label="CHKDSK mode">
+            <option value="read_only" ${modeVal === "read_only" ? "selected" : ""}>Read-only</option>
+            <option value="fix_errors" ${modeVal === "fix_errors" ? "selected" : ""}>Fix errors (/f)</option>
+            <option value="comprehensive" ${modeVal === "comprehensive" ? "selected" : ""}>Comprehensive (/f /r)</option>
+          </select>
+        </label>
+        <label class="tiny-lab">
+          <input type="checkbox" data-param="schedule_if_busy" ${schedVal ? "checked" : ""} />
+          <span class="lab">Schedule if busy</span>
+        </label>
+      `;
+      const driveInput = wrapper.querySelector('input[data-param="drive"]');
+      const modeSelect = wrapper.querySelector('select[data-param="mode"]');
+      const schedCb = wrapper.querySelector('input[data-param="schedule_if_busy"]');
+      [driveInput, modeSelect, schedCb].forEach((el) => {
+        ["mousedown", "pointerdown", "click"].forEach((evt) => {
+          el.addEventListener(evt, (e) => e.stopPropagation());
+        });
+      });
+      driveInput.addEventListener("change", () => {
+        state[id].params.drive = (driveInput.value || "C:").trim();
+        updateJson();
+      });
+      modeSelect.addEventListener("change", () => {
+        state[id].params.mode = modeSelect.value;
+        updateJson();
+      });
+      schedCb.addEventListener("change", () => {
+        state[id].params.schedule_if_busy = !!schedCb.checked;
+        updateJson();
+      });
+      return wrapper;
+    }
+
     Object.entries(params).forEach(([key, value]) => {
       if (key === "seconds") {
         wrapper.innerHTML += `<label class="tiny-lab"><span class="lab">Duration</span> <input type="number" class="minutes-input" min="10" max="3600" step="10" data-param="seconds" value="${value}" aria-label="Duration in seconds" /> <span class="unit">sec</span></label>`;
@@ -478,7 +583,12 @@ export async function initPage() {
     }
 
     if (!isGpuParent && selected && getServiceById(id)?.defaultParams) {
-      row.appendChild(renderParamControls(id, state[id].params));
+      // Only render inline controls for supported generic params to avoid empty expansion
+      const p = state[id]?.params || {};
+      const hasGenericParams = Object.prototype.hasOwnProperty.call(p, "minutes") || Object.prototype.hasOwnProperty.call(p, "seconds") || id === "chkdsk_scan";
+      if (hasGenericParams) {
+        row.appendChild(renderParamControls(id, p));
+      }
     }
 
     if (isGpuParent && selected) {
@@ -541,8 +651,17 @@ export async function initPage() {
         displayOrder.push(id);
       }
     }
+    // Apply search filter (hide GPU parent when filtering unless matched)
+    let finalOrder = displayOrder;
+    if (filterQuery) {
+      finalOrder = applyFilter(displayOrder.filter((id) => id !== GPU_PARENT_ID));
+      // include GPU parent only if matched explicitly
+      if (applyFilter([GPU_PARENT_ID]).includes(GPU_PARENT_ID)) {
+        finalOrder.push(GPU_PARENT_ID);
+      }
+    }
     // Render in unified order
-    displayOrder.forEach((id) => {
+    finalOrder.forEach((id) => {
       paletteEl.appendChild(renderItem(id));
     });
 
@@ -642,7 +761,9 @@ export async function initPage() {
   async function updateJson() {
     jsonEl.textContent = "Generating...";
     const tasks = await generateTasksArray();
-    jsonEl.textContent = JSON.stringify({ tasks }, null, 2);
+    lastJsonString = JSON.stringify({ tasks }, null, 2);
+    const highlighted = hljs.highlight(lastJsonString, { language: "json" }).value;
+    jsonEl.innerHTML = `<code class="hljs language-json">${highlighted}</code>`;
     persist();
     // Re-validate Next button whenever JSON changes (e.g., GPU sub-options)
     validateNext(tasksCountRunnable());
@@ -699,7 +820,7 @@ export async function initPage() {
   });
   btnCopyJson?.addEventListener("click", async () => {
     try {
-      await navigator.clipboard.writeText(jsonEl.textContent || "{}");
+      await navigator.clipboard.writeText(lastJsonString || "{}");
       btnCopyJson.textContent = "Copied";
       setTimeout(() => (btnCopyJson.textContent = "Copy JSON"), 1200);
     } catch {}
@@ -822,7 +943,7 @@ export async function initPage() {
    * @returns {string} HTML string for the badge.
    */
   function renderAvailabilityBadge(id) {
-    if (id === "sfc_scan" || id === "dism_health_check") {
+    if (id === "sfc_scan" || id === "dism_health_check" || id === "chkdsk_scan") {
       return '<span class="badge ok" title="Built-in Windows tool">Built-in</span>';
     }
     if (id === GPU_PARENT_ID) {
@@ -837,6 +958,9 @@ export async function initPage() {
       }</span>`;
     }
     const key = toolKeyForTask(id);
+    if (Array.isArray(key) && key.length === 0) {
+      return '<span class="badge ok" title="Built-in">Built-in</span>';
+    }
     if (!key) return "";
     const ok = isToolOk(key);
     return `<span class="badge ${ok ? "ok" : "missing"}">${

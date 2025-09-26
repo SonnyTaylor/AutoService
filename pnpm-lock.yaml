@@ -17,12 +17,21 @@ importers:
       escape-html:
         specifier: ^1.0.3
         version: 1.0.3
+      fuse.js:
+        specifier: ^7.1.0
+        version: 7.1.0
+      highlight.js:
+        specifier: ^11.11.1
+        version: 11.11.1
       humanize-duration:
         specifier: ^3.33.0
         version: 3.33.0
       pretty-bytes:
         specifier: ^7.0.1
         version: 7.0.1
+      print-js:
+        specifier: ^1.6.0
+        version: 1.6.0
       sortablejs:
         specifier: ^1.15.0
         version: 1.15.6
@@ -428,6 +437,14 @@ packages:
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
 
+  fuse.js@7.1.0:
+    resolution: {integrity: sha512-trLf4SzuuUxfusZADLINj+dE8clK1frKdmqiJNb1Es75fmI5oY6X2mxLVUciLLjxqw/xr72Dhy+lER6dGd02FQ==}
+    engines: {node: '>=10'}
+
+  highlight.js@11.11.1:
+    resolution: {integrity: sha512-Xwwo44whKBVCYoliBQwaPvtd/2tYFkRQtXDWj1nackaV2JPXx3L0+Jvd8/qCJ2p+ML0/XVkJ2q+Mr+UVdpJK5w==}
+    engines: {node: '>=12.0.0'}
+
   humanize-duration@3.33.0:
     resolution: {integrity: sha512-vYJX7BSzn7EQ4SaP2lPYVy+icHDppB6k7myNeI3wrSRfwMS5+BHyGgzpHR0ptqJ2AQ6UuIKrclSg5ve6Ci4IAQ==}
 
@@ -450,6 +467,9 @@ packages:
   pretty-bytes@7.0.1:
     resolution: {integrity: sha512-285/jRCYIbMGDciDdrw0KPNC4LKEEwz/bwErcYNxSJOi4CpGUuLpb9gQpg3XJP0XYj9ldSRluXxih4lX2YN8Xw==}
     engines: {node: '>=20'}
+
+  print-js@1.6.0:
+    resolution: {integrity: sha512-BfnOIzSKbqGRtO4o0rnj/K3681BSd2QUrsIZy/+WdCIugjIswjmx3lDEZpXB2ruGf9d4b3YNINri81+J0FsBWg==}
 
   rollup@4.50.1:
     resolution: {integrity: sha512-78E9voJHwnXQMiQdiqswVLZwJIzdBKJ1GdI5Zx6XwoFKUIk09/sSrr+05QFzvYb8q6Y9pPV45zzDuYa3907TZA==}
@@ -771,6 +791,10 @@ snapshots:
   fsevents@2.3.3:
     optional: true
 
+  fuse.js@7.1.0: {}
+
+  highlight.js@11.11.1: {}
+
   humanize-duration@3.33.0: {}
 
   nanoid@3.3.11: {}
@@ -786,6 +810,8 @@ snapshots:
       source-map-js: 1.2.1
 
   pretty-bytes@7.0.1: {}
+
+  print-js@1.6.0: {}
 
   rollup@4.50.1:
     dependencies:

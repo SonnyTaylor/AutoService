@@ -1,0 +1,12 @@
+{
+  "type": "iperf_test",
+  "executable_path": "..\\data\\programs\\iPerf3 - 3.19.1\\iperf3.exe",
+  "server": "192.168.0.34",
+  "port": 5201,
+  "duration_minutes": 1,
+  "protocol": "tcp",
+  "reverse": false,
+  "parallel_streams": 1,
+  "omit_seconds": 0,
+  "interval_seconds": 1
+}

@@ -73,6 +73,51 @@ export const SERVICES = {
       };
     },
   },
+  ping_test: {
+    id: "ping_test",
+    label: "Ping Test",
+    group: "Network",
+    defaultParams: { host: "" , count: 4 },
+    toolKeys: [],
+    async build({ params }) {
+      // Load default ping host from app settings if not provided
+      let host = (params?.host || "").toString();
+      if (!host) {
+        try {
+          const { core } = window.__TAURI__ || {};
+          const inv = core?.invoke;
+          const settings = inv ? await inv("load_app_settings") : {};
+          host = settings?.network?.ping_host || "google.com";
+        } catch {}
+      }
+      const count = parseInt(params?.count ?? 4, 10) || 4;
+      return {
+        type: "ping_test",
+        host,
+        count,
+        ui_label: `Ping Test (${host}, ${count}x)`,
+      };
+    },
+  },
+  chkdsk_scan: {
+    id: "chkdsk_scan",
+    label: "File System Check (CHKDSK)",
+    group: "System Integrity",
+    defaultParams: { drive: "C:", mode: "read_only", schedule_if_busy: false },
+    toolKeys: [],
+    async build({ params }) {
+      const drive = (params?.drive || "C:").toString();
+      const mode = params?.mode || "read_only"; // read_only | fix_errors | comprehensive
+      const schedule = Boolean(params?.schedule_if_busy);
+      return {
+        type: "chkdsk_scan",
+        drive,
+        mode,
+        schedule_if_busy: schedule,
+        ui_label: `CHKDSK (${drive}, ${mode})`,
+      };
+    },
+  },
   bleachbit_clean: {
     id: "bleachbit_clean",
     label: "Junk Cleanup (BleachBit)",
@@ -206,6 +251,42 @@ export const SERVICES = {
         stress_memory: false,
         stress_gpu: true,
         ui_label: "GPU Stress (HeavyLoad)",
+      };
+    },
+  },
+  iperf_test: {
+    id: "iperf_test",
+    label: "Network Stability (iPerf3)",
+    group: "Network",
+    defaultParams: { minutes: 10 },
+    toolKeys: ["iperf3"],
+    async build({ params, resolveToolPath }) {
+      const p = await resolveToolPath(["iperf3"]);
+      // Load saved iperf server from app settings
+      let server = "";
+      try {
+        const { core } = window.__TAURI__ || {};
+        const inv = core?.invoke;
+        const settings = inv ? await inv("load_app_settings") : {};
+        server = settings?.network?.iperf_server || "";
+      } catch {}
+
+      const minutes = params?.minutes || 10;
+      return {
+        type: "iperf_test",
+        executable_path: p,
+        server,
+        port: 5201,
+        duration_minutes: minutes,
+        protocol: "tcp",
+        reverse: false,
+        parallel_streams: 1,
+        omit_seconds: 0,
+        interval_seconds: 1,
+        stability_threshold_mbps: "20Mbps",
+        ui_label: `Network Stability (iPerf3)${
+          server ? ` – ${server}` : " (server not set)"
+        }`,
       };
     },
   },

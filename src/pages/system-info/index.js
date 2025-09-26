@@ -44,6 +44,8 @@ import {
   setupToggleAll,
   $,
 } from "./ui.js";
+import { formatBytes, formatDuration, escapeHtml } from "./formatters.js";
+import printJS from "print-js";
 import {
   renderOS,
   renderUsers,
@@ -91,6 +93,213 @@ async function enhanceWindowsInfo(info) {
 }
 
 /**
+ * Generate printable light-mode HTML for customer-facing system specs.
+ * Uses inline styles and does not rely on app CSS.
+ * @param {Object} info
+ * @returns {string}
+ */
+function generatePrintHtml(info) {
+  const product = info.product || {};
+  const motherboard = info.motherboard || {};
+  const hostname = info.hostname || "-";
+  const os = info.os || "-";
+  const osBuild = info.os_version || info.kernel_version || "-";
+  const uptime = formatDuration(info.uptime_seconds);
+  const bootStr = (() => {
+    try {
+      return info.boot_time_seconds
+        ? new Date(info.boot_time_seconds * 1000).toLocaleString()
+        : "-";
+    } catch {
+      return "-";
+    }
+  })();
+
+  const cpu = info.cpu || {};
+  const cpuCores = cpu.num_physical_cores != null ? String(cpu.num_physical_cores) : "-";
+  const cpuThreads = cpu.num_logical_cpus != null ? String(cpu.num_logical_cpus) : "-";
+  const cpuFreq = cpu.frequency_mhz ? `${(cpu.frequency_mhz / 1000).toFixed(2)} GHz` : "-";
+
+  const mem = info.memory || { total: 0, used: 0, free: 0, swap_total: 0, swap_used: 0 };
+  const memPct = mem.total ? Math.min(100, Math.round((mem.used / mem.total) * 100)) : 0;
+
+  const gpus = Array.isArray(info.gpus) ? info.gpus : [];
+  const gpuRows = gpus
+    .map(
+      (g) => `
+        <tr>
+          <td>${escapeHtml(g.name || "-")}</td>
+          <td>${escapeHtml(String(g.device_type || "-"))}</td>
+          <td>${escapeHtml([g.driver, g.driver_info].filter(Boolean).join(" ") || "-")}</td>
+          <td>${escapeHtml(String(g.backend || "-"))}</td>
+        </tr>`
+    )
+    .join("");
+
+  const disks = Array.isArray(info.disks) ? info.disks : [];
+  const diskRows = disks
+    .map((d) => {
+      const used = Math.max(0, (d.total_space || 0) - (d.available_space || 0));
+      const pct = d.total_space ? Math.min(100, Math.round((used / d.total_space) * 100)) : 0;
+      return `
+        <tr>
+          <td>${escapeHtml(d.name || d.mount_point || "-")}</td>
+          <td>${escapeHtml(d.mount_point || "-")}</td>
+          <td>${escapeHtml(d.file_system || "-")}</td>
+          <td>${formatBytes(used)} / ${formatBytes(d.total_space || 0)} (${pct}%)</td>
+          <td>${escapeHtml(d.kind || "-")}</td>
+        </tr>`;
+    })
+    .join("");
+
+  const nets = Array.isArray(info.networks) ? info.networks : [];
+  const netRows = nets
+    .map((n) => `
+      <tr>
+        <td>${escapeHtml(n.interface || "-")}</td>
+        <td>${escapeHtml(n.mac || "-")}</td>
+        <td>${escapeHtml((n.ips || []).join(", ") || "-")}</td>
+        <td>Rx ${formatBytes(n.total_received || 0)} / Tx ${formatBytes(n.total_transmitted || 0)}</td>
+      </tr>`)
+    .join("");
+
+  const batteries = Array.isArray(info.batteries) ? info.batteries : [];
+  const battRows = batteries
+    .map((b, i) => {
+      const pct = b.percentage != null ? `${b.percentage.toFixed(0)}%` : "-";
+      const health = b.state_of_health_pct != null ? `${b.state_of_health_pct.toFixed(0)}%` : "-";
+      const ident = [b.vendor, b.model].filter(Boolean).join(" ") || "-";
+      return `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${escapeHtml(ident)}</td>
+          <td>${escapeHtml(b.state || "-")}</td>
+          <td>${pct}</td>
+          <td>${health}</td>
+        </tr>`;
+    })
+    .join("");
+
+  const nowStr = new Date().toLocaleString();
+  const customerTitle = `System Specifications`;
+  const subTitle = `${escapeHtml(hostname)}${product.name ? " • " + escapeHtml(product.name) : ""}`;
+
+  return `
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>${customerTitle} - ${escapeHtml(hostname)}</title>
+    <style>
+      :root {
+        --text: #0b1220;
+        --muted: #5a667f;
+        --border: #e4e8f0;
+        --bg: #ffffff;
+        --bg-alt: #f7f9fc;
+        --heading: #0b1220;
+        --accent: #1b66ff;
+      }
+      * { box-sizing: border-box; }
+      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji'; color: var(--text); background: var(--bg); margin: 0; padding: 24px; }
+      .header { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; border-bottom: 2px solid var(--border); padding-bottom: 12px; margin-bottom: 16px; }
+      .title h1 { margin: 0; font-size: 24px; color: var(--heading); }
+      .title .sub { color: var(--muted); margin-top: 4px; }
+      .meta { text-align: right; color: var(--muted); font-size: 12px; }
+      .section { margin: 18px 0; }
+      .section h2 { font-size: 16px; color: var(--heading); margin: 0 0 8px; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+      thead th { background: var(--bg-alt); font-weight: 600; color: var(--muted); }
+      .kv { width: 100%; }
+      .kv th { width: 200px; color: var(--muted); font-weight: 500; background: transparent; }
+      .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #eaf1ff; color: #1346b5; font-weight: 600; font-size: 12px; }
+      .small { font-size: 12px; color: var(--muted); }
+      @media print {
+        body { padding: 0; }
+        .page-break { page-break-after: always; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="title">
+        <h1>${customerTitle}</h1>
+        <div class="sub">${subTitle}</div>
+      </div>
+      <div class="meta">
+        <div><strong>Date:</strong> ${escapeHtml(nowStr)}</div>
+        <div><strong>OS:</strong> ${escapeHtml(os)} (${escapeHtml(osBuild)})</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Overview</h2>
+      <table class="kv">
+        <tbody>
+          <tr><th>Computer</th><td>${escapeHtml([product.vendor, product.name].filter(Boolean).join(" ") || "-")}</td></tr>
+          <tr><th>Serial</th><td>${escapeHtml(product.serial_number || "-")}</td></tr>
+          <tr><th>Motherboard</th><td>${escapeHtml([motherboard.vendor, motherboard.name].filter(Boolean).join(" ") || "-")}</td></tr>
+          <tr><th>Uptime</th><td>${escapeHtml(uptime)}</td></tr>
+          <tr><th>Booted</th><td>${escapeHtml(bootStr)}</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>Processor</h2>
+      <table class="kv"><tbody>
+        <tr><th>Model</th><td>${escapeHtml(cpu.brand || "-")}</td></tr>
+        <tr><th>Cores / Threads</th><td>${cpuCores}C / ${cpuThreads}T</td></tr>
+        <tr><th>Base Frequency</th><td>${cpuFreq}</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="section">
+      <h2>Memory</h2>
+      <table class="kv"><tbody>
+        <tr><th>Usage</th><td>${formatBytes(mem.used || 0)} / ${formatBytes(mem.total || 0)} <span class="badge">${memPct}%</span></td></tr>
+        <tr><th>Free</th><td>${formatBytes(mem.free || 0)}</td></tr>
+        <tr><th>Swap</th><td>${formatBytes(mem.swap_used || 0)} / ${formatBytes(mem.swap_total || 0)}</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="section">
+      <h2>Graphics</h2>
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Driver</th><th>Backend</th></tr></thead>
+        <tbody>${gpuRows || '<tr><td colspan="4" class="small">No GPU information</td></tr>'}</tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>Storage</h2>
+      <table>
+        <thead><tr><th>Name</th><th>Mount</th><th>FS</th><th>Usage</th><th>Kind</th></tr></thead>
+        <tbody>${diskRows || '<tr><td colspan="5" class="small">No storage information</td></tr>'}</tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>Network</h2>
+      <table>
+        <thead><tr><th>Interface</th><th>MAC</th><th>IPs</th><th>Totals</th></tr></thead>
+        <tbody>${netRows || '<tr><td colspan="4" class="small">No network information</td></tr>'}</tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>Battery</h2>
+      <table>
+        <thead><tr><th>#</th><th>Identity</th><th>State</th><th>Charge</th><th>Health</th></tr></thead>
+        <tbody>${battRows || '<tr><td colspan="5" class="small">No batteries detected</td></tr>'}</tbody>
+      </table>
+    </div>
+  </body>
+</html>`;
+}
+
+/**
  * Main render function that builds the entire system info UI.
  * @param {Object} info - System info object from Tauri backend
  */
@@ -109,6 +318,7 @@ function render(info) {
         <p class="muted" style="margin:0;">All your hardware and system info at a glance.</p>
       </div>
       <div style="display:flex; gap:8px; flex-wrap: wrap;">
+        <button id="sysinfo-print-btn" class="ghost">Print</button>
         <button id="sysinfo-toggle-all-btn" class="ghost">Collapse all</button>
         <button id="sysinfo-refresh-btn" class="ghost">Refresh</button>
         <span id="sysinfo-last-refreshed" class="muted" style="font-size:.85rem; align-self:center;"></span>
@@ -211,6 +421,29 @@ function render(info) {
         render(data);
       } catch (error) {
         console.error("Failed to refresh system info:", error);
+      }
+    });
+  }
+
+  // Bind print button
+  const printBtn = $("#sysinfo-print-btn");
+  if (printBtn) {
+    printBtn.addEventListener("click", () => {
+      try {
+        const html = generatePrintHtml(info);
+        const titleParts = [
+          "System Specifications",
+          info.hostname || undefined,
+          new Date().toLocaleDateString(),
+        ].filter(Boolean);
+        printJS({
+          printable: html,
+          type: "raw-html",
+          scanStyles: false,
+          documentTitle: titleParts.join(" - "),
+        });
+      } catch (e) {
+        console.error("Failed to print system info:", e);
       }
     });
   }

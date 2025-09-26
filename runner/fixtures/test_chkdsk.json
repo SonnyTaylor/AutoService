@@ -1,0 +1,12 @@
+{
+  "tasks": [
+    {
+      "type": "chkdsk_scan",
+      "drive": "C:",
+      "mode": "read_only",
+      "schedule_if_busy": false
+    }
+  ]
+}
+
+

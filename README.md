@@ -1,7 +1,7 @@
 <div align="center">
   <img src="https://github.com/SonnyTaylor/AutoService/blob/dev/src-tauri/icons/128x128@2x.png?raw=true" alt="AutoService Logo" width="128" height="128" />
   <h1>AutoService</h1>
-  <p><strong>A Swiss-Army knife desktop toolkit for computer repair technicians and power users.</strong><br/>
+  <p><strong>A Windows 10/11 Swiss-Army knife desktop toolkit for computer repair technicians and power users.</strong><br/>
   Automate cleanup, diagnostics, testing, scripted workflows, and reporting – from a single portable executable.</p>
   <p>
     <a href="#getting-started">Getting Started</a> ·
@@ -17,6 +17,11 @@
   <a href="https://github.com/SonnyTaylor/AutoService/issues"><img alt="Issues" src="https://img.shields.io/github/issues/SonnyTaylor/AutoService" /></a>
   <a href="https://github.com/SonnyTaylor/AutoService/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/badge/License-GPLv3-blue.svg" /></a>
   <a href="https://github.com/SonnyTaylor/AutoService/commits/dev"><img alt="Last Commit" src="https://img.shields.io/github/last-commit/SonnyTaylor/AutoService/dev" /></a>
+  <a href="https://github.com/SonnyTaylor/AutoService/releases"><img alt="Latest Release" src="https://img.shields.io/github/v/release/SonnyTaylor/AutoService?display_name=tag" /></a>
+  <a href="https://github.com/SonnyTaylor/AutoService/graphs/contributors"><img alt="Contributors" src="https://img.shields.io/github/contributors/SonnyTaylor/AutoService" /></a>
+  <img alt="Platform" src="https://img.shields.io/badge/Platform-Windows-blue?logo=windows" />
+  <img alt="Built With" src="https://img.shields.io/badge/Built%20with-Tauri%20%2B%20Rust-orange?logo=tauri" />
+  <img alt="Commit Activity" src="https://img.shields.io/github/commit-activity/m/SonnyTaylor/AutoService" />
 </p>
 
 ## Table of Contents
@@ -36,12 +41,11 @@
 - [Adding Scripts](#adding-scripts)
 - [Reports](#reports)
 - [Roadmap](#roadmap)
-- [Contributing](#contributing)
 - [License](#license)
 
 ## Overview
 
-AutoService is a Rust + Tauri desktop application (HTML/CSS/vanilla JS frontend) focused on accelerating common service bench tasks:
+AutoService is a Rust + Tauri desktop application (HTML/CSS/vanilla JS frontend) for Windows focused on accelerating common service bench tasks:
 
 - Run multiple cleanup, security, and maintenance tools with minimal clicks.
 - Collect system information and component test results in one place.
