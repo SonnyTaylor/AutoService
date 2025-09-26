@@ -3,6 +3,7 @@
  */
 
 const { invoke } = window.__TAURI__.core;
+import Fuse from "fuse.js";
 
 /**
  * Application state for scripts management.
@@ -27,6 +28,7 @@ export const state = {
  */
 export async function loadScripts() {
   state.all = await invoke("list_scripts");
+  buildFuseIndex();
   applyFilter();
 }
 
@@ -35,14 +37,15 @@ export async function loadScripts() {
  * Updates state.filtered and re-renders the list.
  */
 export function applyFilter() {
-  const searchQuery = state.query.trim().toLowerCase();
-  let filteredScripts = searchQuery
-    ? state.all.filter((script) =>
-        `${script.name} ${script.description} ${script.version}`
-          .toLowerCase()
-          .includes(searchQuery)
-      )
-    : [...state.all];
+  const searchQuery = state.query.trim();
+  let filteredScripts;
+  if (searchQuery) {
+    if (!fuse) buildFuseIndex();
+    const results = fuse.search(searchQuery);
+    filteredScripts = results.map((r) => r.item);
+  } else {
+    filteredScripts = [...state.all];
+  }
 
   const sortOrder = state.sort;
   filteredScripts.sort((a, b) => {
@@ -73,4 +76,35 @@ export function applyFilter() {
   });
 
   state.filtered = filteredScripts;
+}
+
+// --- Fuzzy Search Index -----------------------------------------------------
+let fuse = null;
+function buildFuseIndex() {
+  const items = state.all.map((s) => ({
+    id: s.id,
+    name: s.name || "",
+    description: s.description || "",
+    version: s.version || "",
+    path: s.path || s.exe_path || "",
+    command: s.command || "",
+    raw: s,
+  }));
+  fuse = new Fuse(items, {
+    keys: [
+      { name: "name", weight: 0.6 },
+      { name: "description", weight: 0.25 },
+      { name: "version", weight: 0.08 },
+      { name: "path", weight: 0.04 },
+      { name: "command", weight: 0.03 },
+    ],
+    threshold: 0.38,
+    ignoreLocation: true,
+    minMatchCharLength: 2,
+  });
+  // Map Fuse items back to current state.all by id in case the array mutates
+  fuse.search = ((origSearch) => (query) => {
+    const res = origSearch.call(fuse, query);
+    return res.map((r) => ({ ...r, item: state.all.find((s) => s.id === r.item.id) || r.item.raw }));
+  })(fuse.search);
 }
