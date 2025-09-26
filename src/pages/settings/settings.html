@@ -29,6 +29,13 @@
         >
           Technician
         </button>
+        <button
+          class="shortcut-btn"
+          data-target="network"
+          style="justify-content: flex-start"
+        >
+          Network
+        </button>
       </nav>
     </aside>
 
@@ -117,6 +124,44 @@
               </div>
             </form>
           </dialog>
+        </div>
+      </div>
+
+      <!-- Network pane (iperf) -->
+      <div class="card" data-pane="network" style="display: none">
+        <div class="card-title"><span>Network</span></div>
+        <div class="card-body" style="gap: 12px">
+          <p class="muted" style="margin-top: 0">
+            Configure network test options used by diagnostics.
+          </p>
+          <form id="iperf-settings-form" class="tech-input-row">
+            <label
+              style="
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                flex: 2;
+                min-width: 260px;
+              "
+            >
+              <span class="muted" style="font-size: 12px"
+                >iPerf Server IP/Host</span
+              >
+              <input
+                type="text"
+                name="iperf_server"
+                id="iperf-server-input"
+                placeholder="e.g. 192.168.0.34"
+                autocomplete="off"
+              />
+            </label>
+            <button type="submit" class="primary">Save</button>
+          </form>
+          <div
+            id="iperf-settings-status"
+            class="muted"
+            style="font-size: 12px"
+          ></div>
         </div>
       </div>
     </div>
