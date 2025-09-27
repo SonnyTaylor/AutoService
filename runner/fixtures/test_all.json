@@ -77,6 +77,18 @@
       "drive": "C:",
       "mode": "read_only",
       "schedule_if_busy": false
+    },
+    {
+      "type": "kvrt_scan",
+      "executable_path": "..\\data\\programs\\KVRT\\KVRT.exe",
+      "quarantine_dir": "C:\\KVRT_ScanResults",
+      "accept_eula": true,
+      "silent": true,
+      "details": true,
+      "dontencrypt": true,
+      "noads": true,
+      "fixednames": true,
+      "allvolumes": false
     }
   ]
 }

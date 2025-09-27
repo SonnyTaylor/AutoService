@@ -58,6 +58,41 @@
  * @type {Record<string, ServiceDef>}
  */
 export const SERVICES = {
+  kvrt_scan: {
+    id: "kvrt_scan",
+    label: "Malware Scan (KVRT)",
+    group: "Security",
+    defaultParams: {
+      allVolumes: false,
+      processLevel: 2,
+    },
+    toolKeys: ["kvrt"],
+    async build({ params, resolveToolPath, getDataDirs }) {
+      const p = await resolveToolPath(["kvrt"]);
+      const dirs = (await getDataDirs()) || {};
+      const dataRoot = (dirs.data || "..\\data").toString().replace(/[\\/]+$/, "");
+      const quarantineDir = `${dataRoot}\\logs\\KVRT`;
+      const allVolumes = !!params?.allVolumes;
+      const processLevel = Number.isFinite(params?.processLevel)
+        ? Math.max(0, Math.min(3, parseInt(params.processLevel, 10)))
+        : 2;
+      const task = {
+        type: "kvrt_scan",
+        executable_path: p,
+        accept_eula: true,
+        silent: true,
+        details: true,
+        dontencrypt: true,
+        noads: true,
+        fixednames: true,
+        processlevel: processLevel,
+        quarantine_dir: quarantineDir,
+        allvolumes: allVolumes,
+        ui_label: `Malware Scan (KVRT${allVolumes ? ": all volumes" : ""})`,
+      };
+      return task;
+    },
+  },
   adwcleaner_clean: {
     id: "adwcleaner_clean",
     label: "Adware Clean (AdwCleaner)",

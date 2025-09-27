@@ -460,6 +460,71 @@ export async function initPage() {
       return wrapper;
     }
 
+    // KVRT options (Malware Scan)
+    if (id === "kvrt_scan") {
+      const allVolumesVal = !!params?.allVolumes;
+      const processLevelVal = Number.isFinite(params?.processLevel)
+        ? Math.max(0, Math.min(3, parseInt(params.processLevel, 10)))
+        : 2;
+      const detailsVal = true;
+
+      wrapper.innerHTML = `
+        <label class="tiny-lab" style="margin-right:12px;" title="Add all volumes to scan">
+          <input type="checkbox" data-param="allVolumes" ${allVolumesVal ? "checked" : ""} />
+          <span class="lab">Scan all volumes</span>
+        </label>
+        <label class="tiny-lab" style="margin-right:12px;" title="Set the level of danger of objects to be neutralized">
+          <span class="lab">Process level</span>
+          <select data-param="processLevel" aria-label="KVRT process level">
+            <option value="0" ${processLevelVal === 0 ? "selected" : ""}>0: Skip all</option>
+            <option value="1" ${processLevelVal === 1 ? "selected" : ""}>1: High</option>
+            <option value="2" ${processLevelVal === 2 ? "selected" : ""}>2: High+Medium</option>
+            <option value="3" ${processLevelVal === 3 ? "selected" : ""}>3: High+Medium+Low</option>
+          </select>
+        </label>
+      `;
+
+      // Layout horizontally
+      try {
+        wrapper.style.display = "flex";
+        wrapper.style.flexWrap = "wrap";
+        wrapper.style.alignItems = "center";
+        wrapper.style.columnGap = "12px";
+        wrapper.style.rowGap = "6px";
+      } catch {}
+
+      // Prevent bubbling from controls
+      wrapper.querySelectorAll("input, select").forEach((el) => {
+        ["mousedown", "pointerdown", "click"].forEach((evt) => {
+          el.addEventListener(evt, (e) => e.stopPropagation());
+        });
+      });
+
+      // Initialize state if missing
+      state[id] = state[id] || { params: {} };
+      state[id].params.allVolumes = allVolumesVal;
+      state[id].params.processLevel = processLevelVal;
+      state[id].params.details = detailsVal;
+
+      // Bind events
+      const cbAll = wrapper.querySelector('input[data-param="allVolumes"]');
+      const selProc = wrapper.querySelector('select[data-param="processLevel"]');
+      const cbDetails = null;
+
+      cbAll?.addEventListener("change", () => {
+        state[id].params.allVolumes = !!cbAll.checked;
+        updateJson();
+      });
+      selProc?.addEventListener("change", () => {
+        const v = parseInt(selProc.value, 10);
+        state[id].params.processLevel = Number.isFinite(v) ? Math.max(0, Math.min(3, v)) : 2;
+        updateJson();
+      });
+      // details always enabled; no UI toggle
+
+      return wrapper;
+    }
+
     Object.entries(params).forEach(([key, value]) => {
       if (key === "seconds") {
         wrapper.innerHTML += `<label class="tiny-lab"><span class="lab">Duration</span> <input type="number" class="minutes-input" min="10" max="3600" step="10" data-param="seconds" value="${value}" aria-label="Duration in seconds" /> <span class="unit">sec</span></label>`;
@@ -585,7 +650,11 @@ export async function initPage() {
     if (!isGpuParent && selected && getServiceById(id)?.defaultParams) {
       // Only render inline controls for supported generic params to avoid empty expansion
       const p = state[id]?.params || {};
-      const hasGenericParams = Object.prototype.hasOwnProperty.call(p, "minutes") || Object.prototype.hasOwnProperty.call(p, "seconds") || id === "chkdsk_scan";
+      const hasGenericParams =
+        Object.prototype.hasOwnProperty.call(p, "minutes") ||
+        Object.prototype.hasOwnProperty.call(p, "seconds") ||
+        id === "chkdsk_scan" ||
+        id === "kvrt_scan";
       if (hasGenericParams) {
         row.appendChild(renderParamControls(id, p));
       }

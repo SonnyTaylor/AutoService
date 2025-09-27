@@ -56,6 +56,7 @@ from services.ai_startup_service import run_ai_startup_disable  # type: ignore
 from services.ping_service import run_ping_test  # type: ignore
 from services.chkdsk_service import run_chkdsk_scan  # type: ignore
 from services.iperf_service import run_iperf_test  # type: ignore
+from services.kvrt_service import run_kvrt_scan  # type: ignore
 
 """NOTE ON REAL-TIME LOG STREAMING
 
@@ -145,7 +146,7 @@ TASK_HANDLERS: Dict[str, TaskHandler] = {
     "ping_test": run_ping_test,
     "chkdsk_scan": run_chkdsk_scan,
     "iperf_test": run_iperf_test,
-    # "kvrt_scan": run_kvrt_scan, # Example for the future
+    "kvrt_scan": run_kvrt_scan,
     # "windows_defender_scan": run_windows_defender_scan, # Example for the future
 }
 
