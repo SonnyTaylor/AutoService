@@ -727,6 +727,7 @@ export async function initPage() {
 
     // Helper: service category
     const getCategory = (id) => {
+      if (id === GPU_PARENT_ID) return "Stress";
       const def = getServiceById(id) || {};
       return def.category || def.group || "Other";
     };
@@ -750,8 +751,26 @@ export async function initPage() {
       catMap.get(cat).push(id);
     });
 
-    // Stable category order: alphabetical
-    const categories = Array.from(catMap.keys()).sort((a, b) => a.localeCompare(b));
+    // Stable category order per spec
+    const priority = [
+      "Antivirus",
+      "System Integrity",
+      "Stress",
+      "Diagnostics",
+      "Network",
+      "Other",
+    ];
+    const rank = (name) => {
+      const idx = priority.findIndex(
+        (p) => p.toLowerCase() === String(name || "").toLowerCase()
+      );
+      return idx === -1 ? priority.length - 1 : idx; // unknowns near end; 'Other' last explicitly
+    };
+    const categories = Array.from(catMap.keys()).sort((a, b) => {
+      const ra = rank(a);
+      const rb = rank(b);
+      return ra === rb ? String(a).localeCompare(String(b)) : ra - rb;
+    });
     categories.forEach((cat) => {
       const block = document.createElement("div");
       block.className = "group-block category-block";
