@@ -19,7 +19,9 @@ Return dict structure:
       results: speedtest-cli results dict,
       human_readable: {
         download_mbps, upload_mbps, ping_ms, jitter_ms?, server_description,
-        isp, verdict, notes
+        isp, verdict, notes,
+        score,                 # numeric performance score (0-100)
+        rating_stars           # integer 1-5 star rating derived from score
       },
       share_url?
     }
@@ -179,6 +181,18 @@ def run_speedtest(task: Dict[str, Any]) -> Dict[str, Any]:
             else "poor"
         )
 
+        # Star rating 1-5 derived from score thresholds
+        if score >= 85:
+            rating_stars = 5
+        elif score >= 70:
+            rating_stars = 4
+        elif score >= 50:
+            rating_stars = 3
+        elif score >= 30:
+            rating_stars = 2
+        else:
+            rating_stars = 1
+
         duration_seconds = round(time.time() - start_time, 2)
 
         summary: Dict[str, Any] = {
@@ -195,6 +209,8 @@ def run_speedtest(task: Dict[str, Any]) -> Dict[str, Any]:
                 else None,
                 "verdict": verdict,
                 "notes": notes,
+                "score": round(score, 1),
+                "rating_stars": rating_stars,
             },
         }
         if share_url:
