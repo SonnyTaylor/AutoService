@@ -252,10 +252,37 @@ export function renderMotherboard(info, ex) {
     );
   }
   if (ex?.bios_release_date) {
+    const raw = String(ex.bios_release_date || "");
+    let display = raw;
+    try {
+      const m = raw.match(/^\/Date\((\d+)\)\/$/);
+      if (m && m[1]) {
+        const ms = parseInt(m[1], 10);
+        if (!Number.isNaN(ms)) {
+          const d = new Date(ms);
+          const months = [
+            "January",
+            "February",
+            "March",
+            "April",
+            "May",
+            "June",
+            "July",
+            "August",
+            "September",
+            "October",
+            "November",
+            "December",
+          ];
+          const pad = (n) => String(n).padStart(2, "0");
+          display = `${months[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}, ${pad(
+            d.getUTCHours()
+          )}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())} UTC`;
+        }
+      }
+    } catch {}
     rows.push(
-      `<tr><th>BIOS Release</th><td>${escapeHtml(
-        ex.bios_release_date
-      )}</td></tr>`
+      `<tr><th>BIOS Release</th><td>${escapeHtml(display)}</td></tr>`
     );
   }
 
