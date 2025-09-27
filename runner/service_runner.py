@@ -59,6 +59,7 @@ from services.iperf_service import run_iperf_test  # type: ignore
 from services.kvrt_service import run_kvrt_scan  # type: ignore
 from services.speedtest_service import run_speedtest  # type: ignore
 from services.windows_update_service import run_windows_update  # type: ignore
+from services.whynotwin11_service import run_whynotwin11_check  # type: ignore
 
 """NOTE ON REAL-TIME LOG STREAMING
 
@@ -151,6 +152,7 @@ TASK_HANDLERS: Dict[str, TaskHandler] = {
     "kvrt_scan": run_kvrt_scan,
     "speedtest": run_speedtest,
     "windows_update": run_windows_update,
+    "whynotwin11_check": run_whynotwin11_check,
     # "windows_defender_scan": run_windows_defender_scan, # Example for the future
 }
 
