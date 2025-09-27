@@ -469,11 +469,11 @@ export async function initPage() {
       const detailsVal = !!params?.details;
 
       wrapper.innerHTML = `
-        <label class="tiny-lab" style="margin-right:12px;">
+        <label class="tiny-lab" style="margin-right:12px;" title="Add all volumes to scan">
           <input type="checkbox" data-param="allVolumes" ${allVolumesVal ? "checked" : ""} />
           <span class="lab">Scan all volumes</span>
         </label>
-        <label class="tiny-lab" style="margin-right:12px;">
+        <label class="tiny-lab" style="margin-right:12px;" title="Set the level of danger of objects to be neutralized">
           <span class="lab">Process level</span>
           <select data-param="processLevel" aria-label="KVRT process level">
             <option value="0" ${processLevelVal === 0 ? "selected" : ""}>0: Skip all</option>
@@ -482,7 +482,7 @@ export async function initPage() {
             <option value="3" ${processLevelVal === 3 ? "selected" : ""}>3: High+Medium+Low</option>
           </select>
         </label>
-        <label class="tiny-lab" style="margin-right:8px;">
+        <label class="tiny-lab" style="margin-right:8px;" title="Enable detailed reports">
           <input type="checkbox" data-param="details" ${detailsVal ? "checked" : ""} />
           <span class="lab">Detailed report</span>
         </label>
