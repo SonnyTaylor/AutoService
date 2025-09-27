@@ -26,6 +26,9 @@ export async function initPage() {
   const summaryEl = document.getElementById("svc-summary");
   const summaryTitleEl = document.getElementById("svc-summary-title");
   const summaryIconEl = document.getElementById("svc-summary-icon");
+  const summarySubEl = document.getElementById("svc-summary-sub");
+  const summaryProgWrap = document.getElementById("svc-summary-progress");
+  const summaryProgBar = document.getElementById("svc-summary-progress-bar");
   // Keep raw JSON for copy-to-clipboard while showing highlighted HTML
   let lastFinalJsonString = "{}";
 
@@ -100,7 +103,8 @@ export async function initPage() {
     runBtn.setAttribute("aria-disabled", "true");
     backBtn.disabled = true;
     backBtn.setAttribute("disabled", "");
-    summaryEl.hidden = true;
+    // Show reactive running summary for this new session
+    resetSummaryForNewRun();
     finalJsonEl.textContent = "";
     clearLog();
     showOverlay(true);
@@ -310,6 +314,40 @@ export async function initPage() {
     return '<span class="badge">Pending</span>';
   }
 
+  function resetSummaryForNewRun() {
+    try {
+      summaryEl.hidden = false;
+      summaryEl.classList.remove("ok", "fail");
+      summaryIconEl.innerHTML = '<span class="spinner" aria-hidden="true"></span>';
+      summaryTitleEl.textContent = "Running…";
+      if (summarySubEl) summarySubEl.textContent = "Live progress appears below.";
+      if (summaryProgWrap) summaryProgWrap.removeAttribute("aria-hidden");
+      if (summaryProgBar) summaryProgBar.style.width = "0%";
+    } catch {}
+  }
+
+  function updateSummaryDuringRun() {
+    try {
+      const total = taskState.length;
+      const completed = taskState.filter((t) => ["success", "failure", "skipped"].includes(t.status)).length;
+      const runningIdx = taskState.findIndex((t) => t.status === "running");
+      const runningName = runningIdx >= 0 ? taskState[runningIdx].label : null;
+      summaryEl.hidden = false;
+      summaryEl.classList.remove("ok", "fail");
+      // Keep spinner visible while running
+      summaryIconEl.innerHTML = '<span class="spinner" aria-hidden="true"></span>';
+      if (runningName) {
+        summaryTitleEl.textContent = `Running… ${completed}/${total}`;
+        if (summarySubEl) summarySubEl.textContent = `Current: ${runningName}`;
+      } else {
+        summaryTitleEl.textContent = `Running… ${completed}/${total}`;
+        if (summarySubEl) summarySubEl.textContent = "Preparing next task…";
+      }
+      const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+      if (summaryProgBar) summaryProgBar.style.width = `${pct}%`;
+    } catch {}
+  }
+
   function applyFinalStatusesFromReport(obj) {
     const results = Array.isArray(obj?.results) ? obj.results : [];
     // Map results 1:1 to our displayed task order (assumes runner ran in provided order)
@@ -352,6 +390,13 @@ export async function initPage() {
     summaryIconEl.textContent = ok ? "✔" : "!";
     summaryEl.classList.toggle("ok", !!ok);
     summaryEl.classList.toggle("fail", !ok);
+    if (summarySubEl) {
+      summarySubEl.textContent = ok
+        ? "Review the final report below."
+        : "Check the log and JSON report for details.";
+    }
+    // Hide progress once finished
+    if (summaryProgWrap) summaryProgWrap.setAttribute("aria-hidden", "true");
   }
 
   // Spawn the runner as a Tauri sidecar and capture stdout live.
@@ -363,6 +408,7 @@ export async function initPage() {
       const taskType = startMatch[2];
       updateTaskStatus(taskIndex, "running");
       appendLog(`[INFO] Started: ${taskType}`);
+      updateSummaryDuringRun();
       return;
     }
     const okMatch = s.match(/^TASK_OK:(\d+):(.+)$/);
@@ -371,6 +417,7 @@ export async function initPage() {
       const taskType = okMatch[2];
       updateTaskStatus(taskIndex, "success");
       appendLog(`[SUCCESS] Completed: ${taskType}`);
+      updateSummaryDuringRun();
       return;
     }
     const failMatch = s.match(/^TASK_FAIL:(\d+):(.+?)(?:\s*-\s*(.+))?$/);
@@ -380,6 +427,7 @@ export async function initPage() {
       const reason = failMatch[3] || "Failed";
       updateTaskStatus(taskIndex, "failure");
       appendLog(`[ERROR] Failed: ${taskType} - ${reason}`);
+      updateSummaryDuringRun();
       return;
     }
     const skipMatch = s.match(/^TASK_SKIP:(\d+):(.+?)(?:\s*-\s*(.+))?$/);
@@ -389,6 +437,7 @@ export async function initPage() {
       const reason = skipMatch[3] || "Skipped";
       updateTaskStatus(taskIndex, "skipped");
       appendLog(`[WARNING] Skipped: ${taskType} - ${reason}`);
+      updateSummaryDuringRun();
       return;
     }
 
@@ -398,6 +447,7 @@ export async function initPage() {
       try {
         const obj = JSON.parse(jsonPart);
         renderProgressJson(obj);
+        updateSummaryDuringRun();
       } catch (e) {
         // Ignore parse failures silently
       }
@@ -408,6 +458,7 @@ export async function initPage() {
       try {
         const obj = JSON.parse(jsonPart);
         renderProgressJson(obj, true);
+        // final update handled by showSummary via renderProgressJson
       } catch (e) {}
       return;
     }

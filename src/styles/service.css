@@ -854,6 +854,41 @@
   font-weight: 700;
 }
 
+/* Ensure inline spinner displays correctly when used as summary icon */
+[data-page="service-report"] .runner-summary .spinner {
+  display: inline-block;
+}
+
+/* Summary progress */
+[data-page="service-report"] .summary-progress[aria-hidden="true"] {
+  display: none;
+}
+[data-page="service-report"] .summary-progress {
+  margin-top: 8px;
+  display: grid;
+  gap: 6px;
+}
+[data-page="service-report"] .summary-progress .progress-track {
+  position: relative;
+  height: 6px;
+  background: #0f1722;
+  border: 1px solid #2a3b55;
+  border-radius: 999px;
+  overflow: hidden;
+}
+[data-page="service-report"] .summary-progress .progress-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0%;
+  background: linear-gradient(90deg, #4f8cff, #6ea8ff);
+  transition: width 0.25s ease;
+}
+[data-page="service-report"] .summary-progress .progress-meta {
+  text-align: right;
+}
+
 @media (max-width: 980px) {
   [data-page="service-report"] .runner-layout {
     grid-template-columns: 1fr;
