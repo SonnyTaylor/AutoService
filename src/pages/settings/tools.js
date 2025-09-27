@@ -52,6 +52,12 @@ export const REQUIRED_TOOLS = [
     match: ["iperf3"],
     hint: "iperf3.exe",
   },
+  {
+    key: "whynotwin11",
+    name: "WhyNotWin11 Portable",
+    match: ["whynotwin11portable.exe", "whynotwin11", "why not win 11"],
+    hint: "WhyNotWin11Portable.exe",
+  },
 ];
 
 /**
