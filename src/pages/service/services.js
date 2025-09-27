@@ -83,6 +83,21 @@ export const SERVICES = {
       return task;
     },
   },
+  whynotwin11_check: {
+    id: "whynotwin11_check",
+    label: "Windows 11 Upgrade Check",
+    group: "Diagnostics",
+    category: "Diagnostics",
+    toolKeys: ["whynotwin11"],
+    async build({ resolveToolPath }) {
+      const p = await resolveToolPath(["whynotwin11", "whynotwin11portable"]);
+      return {
+        type: "whynotwin11_check",
+        executable_path: p,
+        ui_label: "Windows 11 Upgrade Check",
+      };
+    },
+  },
   windows_update: {
     id: "windows_update",
     label: "Windows Update",
