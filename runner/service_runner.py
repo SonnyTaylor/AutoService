@@ -58,6 +58,7 @@ from services.chkdsk_service import run_chkdsk_scan  # type: ignore
 from services.iperf_service import run_iperf_test  # type: ignore
 from services.kvrt_service import run_kvrt_scan  # type: ignore
 from services.speedtest_service import run_speedtest  # type: ignore
+from services.windows_update_service import run_windows_update  # type: ignore
 
 """NOTE ON REAL-TIME LOG STREAMING
 
@@ -149,6 +150,7 @@ TASK_HANDLERS: Dict[str, TaskHandler] = {
     "iperf_test": run_iperf_test,
     "kvrt_scan": run_kvrt_scan,
     "speedtest": run_speedtest,
+    "windows_update": run_windows_update,
     # "windows_defender_scan": run_windows_defender_scan, # Example for the future
 }
 

@@ -95,6 +95,12 @@
       "threads": 1,
       "share": false,
       "secure": true
+    },
+    {
+      "type": "windows_update",
+      "microsoft_update": true,
+      "accept_all": true,
+      "ignore_reboot": true
     }
   ]
 }

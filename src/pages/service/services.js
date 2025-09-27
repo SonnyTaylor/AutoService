@@ -83,6 +83,30 @@ export const SERVICES = {
       return task;
     },
   },
+  windows_update: {
+    id: "windows_update",
+    label: "Windows Update",
+    group: "System Integrity",
+    category: "System Integrity",
+    defaultParams: {
+      microsoftUpdate: true,
+      acceptAll: true,
+      ignoreReboot: true,
+    },
+    toolKeys: [],
+    async build({ params }) {
+      const microsoft_update = params?.microsoftUpdate !== false;
+      const accept_all = params?.acceptAll !== false;
+      const ignore_reboot = params?.ignoreReboot !== false;
+      return {
+        type: "windows_update",
+        microsoft_update,
+        accept_all,
+        ignore_reboot,
+        ui_label: "Windows Update",
+      };
+    },
+  },
   kvrt_scan: {
     id: "kvrt_scan",
     label: "Malware Scan (KVRT)",
