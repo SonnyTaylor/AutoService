@@ -466,7 +466,7 @@ export async function initPage() {
       const processLevelVal = Number.isFinite(params?.processLevel)
         ? Math.max(0, Math.min(3, parseInt(params.processLevel, 10)))
         : 2;
-      const detailsVal = !!params?.details;
+      const detailsVal = true;
 
       wrapper.innerHTML = `
         <label class="tiny-lab" style="margin-right:12px;" title="Add all volumes to scan">
@@ -481,10 +481,6 @@ export async function initPage() {
             <option value="2" ${processLevelVal === 2 ? "selected" : ""}>2: High+Medium</option>
             <option value="3" ${processLevelVal === 3 ? "selected" : ""}>3: High+Medium+Low</option>
           </select>
-        </label>
-        <label class="tiny-lab" style="margin-right:8px;" title="Enable detailed reports">
-          <input type="checkbox" data-param="details" ${detailsVal ? "checked" : ""} />
-          <span class="lab">Detailed report</span>
         </label>
       `;
 
@@ -513,7 +509,7 @@ export async function initPage() {
       // Bind events
       const cbAll = wrapper.querySelector('input[data-param="allVolumes"]');
       const selProc = wrapper.querySelector('select[data-param="processLevel"]');
-      const cbDetails = wrapper.querySelector('input[data-param="details"]');
+      const cbDetails = null;
 
       cbAll?.addEventListener("change", () => {
         state[id].params.allVolumes = !!cbAll.checked;
@@ -524,10 +520,7 @@ export async function initPage() {
         state[id].params.processLevel = Number.isFinite(v) ? Math.max(0, Math.min(3, v)) : 2;
         updateJson();
       });
-      cbDetails?.addEventListener("change", () => {
-        state[id].params.details = !!cbDetails.checked;
-        updateJson();
-      });
+      // details always enabled; no UI toggle
 
       return wrapper;
     }

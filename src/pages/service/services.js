@@ -64,7 +64,6 @@ export const SERVICES = {
     group: "Security",
     defaultParams: {
       allVolumes: false,
-      details: true,
       processLevel: 2,
     },
     toolKeys: ["kvrt"],
@@ -82,7 +81,7 @@ export const SERVICES = {
         executable_path: p,
         accept_eula: true,
         silent: true,
-        details: !!params?.details,
+        details: true,
         dontencrypt: true,
         noads: true,
         fixednames: true,
