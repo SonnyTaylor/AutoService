@@ -5,6 +5,14 @@
   gap: 8px;
   margin-left: 12px;
 }
+[data-page="service-run"] .task-row .param-controls {
+  /* Make parameter controls span full row width under the task header */
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: 0;
+}
 [data-page="service-run"] .param-controls .lab {
   opacity: 0.8;
   font-size: 12px;
@@ -468,7 +476,22 @@
   border-radius: 6px;
   border: 1px solid var(--border);
 }
-[data-page="service-run"] .param-controls input {
+[data-page="service-run"] .param-controls select {
+  height: 22px;
+  padding: 0 6px;
+  font-size: 0.8rem;
+  background: #0f1722;
+  border: 1px solid #2a3b55;
+  border-radius: 6px;
+  color: var(--text);
+  box-sizing: border-box;
+}
+[data-page="service-run"] .param-controls input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+}
+[data-page="service-run"] .param-controls input[type="text"],
+[data-page="service-run"] .param-controls input[type="number"] {
   width: 78px;
   padding: 6px 8px;
   font-size: 0.8rem;

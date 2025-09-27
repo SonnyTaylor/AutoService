@@ -488,6 +488,15 @@ export async function initPage() {
         </label>
       `;
 
+      // Layout horizontally
+      try {
+        wrapper.style.display = "flex";
+        wrapper.style.flexWrap = "wrap";
+        wrapper.style.alignItems = "center";
+        wrapper.style.columnGap = "12px";
+        wrapper.style.rowGap = "6px";
+      } catch {}
+
       // Prevent bubbling from controls
       wrapper.querySelectorAll("input, select").forEach((el) => {
         ["mousedown", "pointerdown", "click"].forEach((evt) => {
