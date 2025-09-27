@@ -68,13 +68,15 @@ export const SERVICES = {
       processLevel: 2,
     },
     toolKeys: ["kvrt"],
-    async build({ params, resolveToolPath }) {
+    async build({ params, resolveToolPath, getDataDirs }) {
       const p = await resolveToolPath(["kvrt"]);
+      const dirs = (await getDataDirs()) || {};
+      const dataRoot = (dirs.data || "..\\data").toString().replace(/[\\/]+$/, "");
+      const quarantineDir = `${dataRoot}\\logs\\KVRT`;
       const allVolumes = !!params?.allVolumes;
       const processLevel = Number.isFinite(params?.processLevel)
         ? Math.max(0, Math.min(3, parseInt(params.processLevel, 10)))
         : 2;
-      const quarantineDir = "..\\data\\logs\\KVRT";
       const task = {
         type: "kvrt_scan",
         executable_path: p,
