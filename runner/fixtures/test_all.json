@@ -89,6 +89,12 @@
       "noads": true,
       "fixednames": true,
       "allvolumes": false
+    },
+    {
+      "type": "speedtest",
+      "threads": 1,
+      "share": false,
+      "secure": true
     }
   ]
 }
