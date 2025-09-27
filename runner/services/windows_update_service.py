@@ -107,6 +107,8 @@ def _build_ps_script(
     ignore_ps = "$true" if ignore_reboot else "$false"
     return f"""
 $ErrorActionPreference = 'Continue'
+$ProgressPreference = 'SilentlyContinue'
+try {{ [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 }} catch {{ }}
 function Ensure-NuGetProvider {{
   try {{ if (-not (Get-PackageProvider -Name NuGet -ListAvailable -ErrorAction SilentlyContinue)) {{
       Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Scope AllUsers | Out-Null
@@ -121,8 +123,11 @@ function Ensure-PSWindowsUpdateModule {{
   try {{ if (-not (Get-Module -ListAvailable -Name 'PSWindowsUpdate')) {{
       Ensure-NuGetProvider; Ensure-PSGalleryTrusted;
       Install-Module -Name 'PSWindowsUpdate' -Force -Scope AllUsers -AllowClobber -ErrorAction SilentlyContinue
+      if (-not (Get-Module -ListAvailable -Name 'PSWindowsUpdate')) {{
+        Install-Module -Name 'PSWindowsUpdate' -Force -Scope CurrentUser -AllowClobber -ErrorAction SilentlyContinue
+      }}
     }} }} catch {{ }}
-  Import-Module 'PSWindowsUpdate' -ErrorAction SilentlyContinue
+  try {{ Import-Module 'PSWindowsUpdate' -ErrorAction SilentlyContinue }} catch {{ }}
 }}
 
 function Get-RebootRequired {{
@@ -162,28 +167,78 @@ function As-ItemObject($it, $stage) {{
 Ensure-PSWindowsUpdateModule
 
 $out = @{{}}
+$out.errors = @()
+$out.meta = @{{}}
 
 $mu = {mu_ps}
 $acceptAll = {accept_ps}
 $ignoreReboot = {ignore_ps}
 
-# Pre-scan
+# Discover module + versions
 try {{
-  if ($mu) {{ $pre = Get-WindowsUpdate -MicrosoftUpdate -ErrorAction SilentlyContinue }}
-  else {{ $pre = Get-WindowsUpdate -ErrorAction SilentlyContinue }}
-}} catch {{ $pre = @() }}
+  $mod = Get-Module -Name 'PSWindowsUpdate' -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1
+  $out.meta.module_available = [bool]($mod -ne $null)
+  $out.meta.module_version = if ($mod) {{ $mod.Version.ToString() }} else {{ $null }}
+}} catch {{ $out.meta.module_available = $false; $out.meta.module_version = $null }}
+
+# Register Microsoft Update service when requested (best-effort)
+if ($mu) {{ try {{ if (Get-Command -Name Add-WUServiceManager -ErrorAction SilentlyContinue) {{
+    Add-WUServiceManager -MicrosoftUpdate -ErrorAction SilentlyContinue | Out-Null
+  }} }} catch {{ $out.errors += [pscustomobject]@{{ where='Add-WUServiceManager'; message=$_ | Out-String }} }}
+}}
+
+function Invoke-GetUpdates([bool]$useMU) {{
+  try {{
+    if (Get-Command -Name Get-WindowsUpdate -ErrorAction SilentlyContinue) {{
+      $out.meta.get_command = 'Get-WindowsUpdate'
+      if ($useMU) {{ return Get-WindowsUpdate -MicrosoftUpdate -ErrorAction SilentlyContinue }}
+      else {{ return Get-WindowsUpdate -ErrorAction SilentlyContinue }}
+    }} elseif (Get-Command -Name Get-WUList -ErrorAction SilentlyContinue) {{
+      $out.meta.get_command = 'Get-WUList'
+      if ($useMU) {{ return Get-WUList -MicrosoftUpdate -ErrorAction SilentlyContinue }}
+      else {{ return Get-WUList -ErrorAction SilentlyContinue }}
+    }} else {{
+      $out.meta.get_command = $null
+      return @()
+    }}
+  }} catch {{ $out.errors += [pscustomobject]@{{ where='GetUpdates'; message=$_ | Out-String }}; return @() }}
+}}
+
+function Invoke-InstallUpdates([bool]$useMU, [bool]$acceptAll, [bool]$ignoreReboot) {{
+  try {{
+    if (Get-Command -Name Install-WindowsUpdate -ErrorAction SilentlyContinue) {{
+      $out.meta.install_command = 'Install-WindowsUpdate'
+      if ($useMU) {{ return Install-WindowsUpdate -AcceptAll:$acceptAll -IgnoreReboot:$ignoreReboot -MicrosoftUpdate -ErrorAction Continue }}
+      else {{ return Install-WindowsUpdate -AcceptAll:$acceptAll -IgnoreReboot:$ignoreReboot -ErrorAction Continue }}
+    }} elseif (Get-Command -Name Get-WUInstall -ErrorAction SilentlyContinue) {{
+      $out.meta.install_command = 'Get-WUInstall'
+      if ($useMU) {{ return Get-WUInstall -AcceptAll:$acceptAll -IgnoreReboot:$ignoreReboot -MicrosoftUpdate -ErrorAction Continue }}
+      else {{ return Get-WUInstall -AcceptAll:$acceptAll -IgnoreReboot:$ignoreReboot -ErrorAction Continue }}
+    }} else {{
+      $out.meta.install_command = $null
+      return @()
+    }}
+  }} catch {{ $out.errors += [pscustomobject]@{{ where='InstallUpdates'; message=$_ | Out-String }}; return @() }}
+}}
+
+# Pre-scan
+$t0 = Get-Date
+try {{
+  $pre = Invoke-GetUpdates $mu
+}} catch {{ $pre = @(); $out.errors += [pscustomobject]@{{ where='pre_scan'; message=$_ | Out-String }} }}
 if ($null -eq $pre) {{ $pre = @() }}
 $preItems = @(); foreach ($u in $pre) {{ $preItems += (As-ItemObject $u 'available') }}
 $preWindows = @($preItems | Where-Object {{ -not $_.IsDriver }})
 $preDrivers = @($preItems | Where-Object {{ $_.IsDriver }})
 $out.pre_scan = @{{ count_total = $preItems.Count; count_windows = $preWindows.Count; count_driver = $preDrivers.Count; items = $preItems }}
+$out.timings = @{{ pre_scan_seconds = ((Get-Date) - $t0).TotalSeconds }}
 
 # Install
 $installItems = @();
+$t1 = Get-Date
 try {{
-  if ($mu) {{ $inst = Install-WindowsUpdate -AcceptAll:$acceptAll -IgnoreReboot:$ignoreReboot -MicrosoftUpdate -ErrorAction SilentlyContinue }}
-  else {{ $inst = Install-WindowsUpdate -AcceptAll:$acceptAll -IgnoreReboot:$ignoreReboot -ErrorAction SilentlyContinue }}
-}} catch {{ $inst = @() }}
+  $inst = Invoke-InstallUpdates $mu $acceptAll $ignoreReboot
+}} catch {{ $inst = @(); $out.errors += [pscustomobject]@{{ where='install'; message=$_ | Out-String }} }}
 if ($null -eq $inst) {{ $inst = @() }}
 foreach ($r in $inst) {{ $installItems += (As-ItemObject $r 'installed') }}
 $installed = @($installItems | Where-Object {{ $_.Result -match 'Installed' }})
@@ -199,15 +254,17 @@ $out.install = @{{
   count_driver_installed = ($instDrivers | Where-Object {{ $_.Result -match 'Installed' }}).Count;
   items = $installItems
 }}
+$out.timings.install_seconds = ((Get-Date) - $t1).TotalSeconds
 
 # Post-scan
+$t2 = Get-Date
 try {{
-  if ($mu) {{ $post = Get-WindowsUpdate -MicrosoftUpdate -ErrorAction SilentlyContinue }}
-  else {{ $post = Get-WindowsUpdate -ErrorAction SilentlyContinue }}
-}} catch {{ $post = @() }}
+  $post = Invoke-GetUpdates $mu
+}} catch {{ $post = @(); $out.errors += [pscustomobject]@{{ where='post_scan'; message=$_ | Out-String }} }}
 if ($null -eq $post) {{ $post = @() }}
 $postItems = @(); foreach ($u in $post) {{ $postItems += (As-ItemObject $u 'remaining') }}
 $out.post_scan = @{{ count_remaining = $postItems.Count; items = $postItems }}
+$out.timings.post_scan_seconds = ((Get-Date) - $t2).TotalSeconds
 
 $out.reboot_required = (Get-RebootRequired)
 
@@ -222,7 +279,7 @@ if ($out.install.count_installed -gt 0) {{ $verdict = 'updated' }}
 elseif ($out.post_scan.count_remaining -gt 0) {{ $verdict = 'updates-remaining' }}
 $out.human_readable = @{{ verdict = $verdict; notes = $notes; summary_line = ($notes -join '; ') }}
 
-$out | ConvertTo-Json -Depth 6
+$out | ConvertTo-Json -Depth 8
 """
 
 
@@ -265,6 +322,20 @@ def run_windows_update(task: Dict[str, Any]) -> Dict[str, Any]:
             status = "completed_with_errors"
     except Exception:
         status = "completed_with_errors"
+
+    # Escalate status based on module availability and captured errors
+    try:
+        meta = data.get("meta") or {}
+        if not meta.get("module_available", False):
+            status = "failure"
+        elif (
+            data.get("errors")
+            and isinstance(data.get("errors"), list)
+            and len(data["errors"]) > 0
+        ) and status == "success":
+            status = "completed_with_errors"
+    except Exception:
+        pass
 
     summary: Dict[str, Any] = {
         **data,
