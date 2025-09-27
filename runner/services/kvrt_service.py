@@ -32,6 +32,7 @@ Return dict structure:
     summary: {
       processed, processing_errors, detected, password_protected, corrupted,
       detections: [ { threat, object_path, action? } ],
+      removed_count: int,  # number of items neutralized/removed/quarantined
       quarantine_dir, exit_code, stdout_excerpt, stderr_excerpt
     },
     command: [ ... executed command ... ]
@@ -198,9 +199,11 @@ def parse_kvrt_output(output: str) -> Dict[str, Any]:
         "password_protected": None,
         "corrupted": None,
         "detections": [],
+        "removed_count": 0,
     }
 
     detections_map: Dict[Tuple[str, str], Dict[str, Any]] = {}
+    removed_count = 0
 
     for raw_line in (output or "").splitlines():
         line = raw_line.strip()
@@ -244,8 +247,26 @@ def parse_kvrt_output(output: str) -> Dict[str, Any]:
                     "object_path": obj,
                     "action": action,
                 }
+            # Count removal/neutralization actions
+            try:
+                act_lower = action.lower()
+                # KVRT action vocabulary commonly includes: Delete, Disinfect, Quarantine, Skip
+                if any(
+                    k in act_lower
+                    for k in [
+                        "delete",
+                        "disinfect",
+                        "quarantine",
+                        "neutraliz",
+                        "remove",
+                    ]
+                ):
+                    removed_count += 1
+            except Exception:
+                pass
 
     summary["detections"] = list(detections_map.values())
+    summary["removed_count"] = removed_count
     return summary
 
 
