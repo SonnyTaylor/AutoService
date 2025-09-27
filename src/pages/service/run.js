@@ -742,6 +742,21 @@ export async function initPage() {
     paletteEl.appendChild(queueBlock);
     const queueListEl = queueBlock.querySelector("#svc-queue-list");
     selectedIds.forEach((id) => queueListEl.appendChild(renderItem(id)));
+    if (selectedIds.length === 0) {
+      const placeholder = document.createElement("div");
+      placeholder.className = "queue-empty";
+      placeholder.innerHTML = `
+        <span class="icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 256 256" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <rect x="40" y="56" width="176" height="24" rx="6"/>
+            <rect x="40" y="116" width="176" height="24" rx="6" opacity="0.75"/>
+            <rect x="40" y="176" width="120" height="24" rx="6" opacity="0.5"/>
+          </svg>
+        </span>
+        <span class="text">No tasks selected. Click a task below to add it to the queue.</span>
+      `;
+      queueBlock.appendChild(placeholder);
+    }
 
     // Build category map from remaining IDs
     const catMap = new Map();
