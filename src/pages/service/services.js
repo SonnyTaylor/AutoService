@@ -64,40 +64,31 @@ export const SERVICES = {
     group: "Security",
     defaultParams: {
       allVolumes: false,
-      customPath: "",
-      quarantineDir: "..\\data\\logs\\KVRT",
       details: true,
-      dontEncrypt: true,
-      noAds: true,
-      fixedNames: true,
       processLevel: 2,
     },
     toolKeys: ["kvrt"],
     async build({ params, resolveToolPath }) {
       const p = await resolveToolPath(["kvrt"]);
       const allVolumes = !!params?.allVolumes;
-      const customPath = (params?.customPath || "").toString().trim();
       const processLevel = Number.isFinite(params?.processLevel)
         ? Math.max(0, Math.min(3, parseInt(params.processLevel, 10)))
         : 2;
-      const quarantineDir = (params?.quarantineDir || "..\\data\\logs\\KVRT").toString();
+      const quarantineDir = "..\\data\\logs\\KVRT";
       const task = {
         type: "kvrt_scan",
         executable_path: p,
         accept_eula: true,
         silent: true,
         details: !!params?.details,
-        dontencrypt: !!params?.dontEncrypt,
-        noads: !!params?.noAds,
-        fixednames: !!params?.fixedNames,
+        dontencrypt: true,
+        noads: true,
+        fixednames: true,
         processlevel: processLevel,
         quarantine_dir: quarantineDir,
         allvolumes: allVolumes,
-        ui_label: `Malware Scan (KVRT${allVolumes ? ": all volumes" : customPath ? ": custom" : ""})`,
+        ui_label: `Malware Scan (KVRT${allVolumes ? ": all volumes" : ""})`,
       };
-      if (!allVolumes && customPath) {
-        task.custom_path = customPath;
-      }
       return task;
     },
   },
