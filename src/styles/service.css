@@ -281,6 +281,41 @@
   gap: 10px;
   align-content: start;
 }
+[data-page="service-run"] .group-block {
+  display: grid;
+  gap: 8px;
+}
+[data-page="service-run"] .group-block .group-title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: var(--muted);
+}
+[data-page="service-run"] .queue-block .group-title {
+  color: #9cbcff;
+}
+[data-page="service-run"] .queue-list .task-row {
+  border-color: #2b416b;
+}
+
+/* Boxed categories & queue to match app panels */
+[data-page="service-run"] .category-block,
+[data-page="service-run"] .queue-block {
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+}
+[data-page="service-run"] .queue-block {
+  border-color: #2b416b;
+  box-shadow: 0 0 0 1px rgba(79, 140, 255, 0.06) inset;
+}
+[data-page="service-run"] .group-block .task-list {
+  margin: 4px 0 0;
+  display: grid;
+  gap: 8px;
+}
 [data-page="service-run"] .palette-actions,
 [data-page="service-run"] .json-actions {
   display: flex;

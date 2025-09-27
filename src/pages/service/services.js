@@ -49,6 +49,7 @@
  * @property {string} label
  * @property {string} group
  * @property {Object<string, any>=} defaultParams
+ * @property {string=} category // UI category used for grouping in the picker
  * @property {string[]=} toolKeys
  * @property {(args: ServiceBuildArgs) => Promise<Record<string, any>>} build
  */
@@ -62,6 +63,7 @@ export const SERVICES = {
     id: "kvrt_scan",
     label: "Malware Scan (KVRT)",
     group: "Security",
+    category: "Antivirus",
     defaultParams: {
       allVolumes: false,
       processLevel: 2,
@@ -97,6 +99,7 @@ export const SERVICES = {
     id: "adwcleaner_clean",
     label: "Adware Clean (AdwCleaner)",
     group: "Cleanup",
+    category: "Antivirus",
     toolKeys: ["adwcleaner"],
     async build({ resolveToolPath }) {
       return {
@@ -112,6 +115,7 @@ export const SERVICES = {
     id: "ping_test",
     label: "Ping Test",
     group: "Network",
+    category: "Network",
     defaultParams: { host: "" , count: 4 },
     toolKeys: [],
     async build({ params }) {
@@ -138,6 +142,7 @@ export const SERVICES = {
     id: "chkdsk_scan",
     label: "File System Check (CHKDSK)",
     group: "System Integrity",
+    category: "System Integrity",
     defaultParams: { drive: "C:", mode: "read_only", schedule_if_busy: false },
     toolKeys: [],
     async build({ params }) {
@@ -157,6 +162,7 @@ export const SERVICES = {
     id: "bleachbit_clean",
     label: "Junk Cleanup (BleachBit)",
     group: "Cleanup",
+    category: "Junk",
     toolKeys: ["bleachbit"],
     async build({ resolveToolPath }) {
       return {
@@ -171,6 +177,7 @@ export const SERVICES = {
     id: "dism_health_check",
     label: "DISM Health Check",
     group: "System Integrity",
+    category: "System Integrity",
     toolKeys: [],
     async build() {
       return {
@@ -184,6 +191,7 @@ export const SERVICES = {
     id: "sfc_scan",
     label: "SFC Scan",
     group: "System Integrity",
+    category: "System Integrity",
     toolKeys: [],
     async build() {
       return { type: "sfc_scan", ui_label: "SFC Scan" };
@@ -193,6 +201,7 @@ export const SERVICES = {
     id: "smartctl_report",
     label: "Drive Health Report (smartctl)",
     group: "Diagnostics",
+    category: "Diagnostics",
     toolKeys: ["smartctl", "gsmartcontrol"],
     async build({ resolveToolPath }) {
       let pSmart = await resolveToolPath(["smartctl", "gsmartcontrol"]);
@@ -211,6 +220,7 @@ export const SERVICES = {
     id: "furmark_stress_test",
     label: "GPU Stress (FurMark)",
     group: "Stress",
+    category: "Stress",
     defaultParams: { minutes: 1 },
     toolKeys: ["furmark", "furmark2"],
     async build({ params, resolveToolPath }) {
@@ -233,6 +243,7 @@ export const SERVICES = {
     id: "heavyload_stress_cpu",
     label: "CPU Stress (HeavyLoad)",
     group: "Stress",
+    category: "Stress",
     defaultParams: { minutes: 1 },
     toolKeys: ["heavyload"],
     async build({ params, resolveToolPath }) {
@@ -253,6 +264,7 @@ export const SERVICES = {
     id: "heavyload_stress_memory",
     label: "RAM Stress (HeavyLoad)",
     group: "Stress",
+    category: "Stress",
     defaultParams: { minutes: 1 },
     toolKeys: ["heavyload"],
     async build({ params, resolveToolPath }) {
@@ -273,6 +285,7 @@ export const SERVICES = {
     id: "heavyload_stress_gpu",
     label: "GPU Stress (HeavyLoad)",
     group: "Stress",
+    category: "Stress",
     defaultParams: { minutes: 1 },
     toolKeys: ["heavyload"],
     async build({ params, resolveToolPath }) {
@@ -293,6 +306,7 @@ export const SERVICES = {
     id: "iperf_test",
     label: "Network Stability (iPerf3)",
     group: "Network",
+    category: "Network",
     defaultParams: { minutes: 10 },
     toolKeys: ["iperf3"],
     async build({ params, resolveToolPath }) {

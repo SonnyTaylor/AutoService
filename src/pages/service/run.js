@@ -691,82 +691,111 @@ export async function initPage() {
    */
   function renderPalette() {
     paletteEl.innerHTML = "";
-    // Recreate Sortable each render to ensure it binds to fresh DOM
+    // Destroy old Sortable on palette (we will attach to Queue only)
     if (paletteEl.__sortable) {
-      try {
-        paletteEl.__sortable.destroy();
-      } catch {}
+      try { paletteEl.__sortable.destroy(); } catch {}
       paletteEl.__sortable = null;
     }
+
     const allTasks = listServiceIds().concat(GPU_PARENT_ID);
     const displayOrder = [];
     const seen = new Set();
-    // Start with current order
     for (const id of order) {
       if (!allTasks.includes(id)) continue;
-      if (["furmark_stress_test", "heavyload_stress_gpu"].includes(id))
-        continue;
-      if (!seen.has(id)) {
-        seen.add(id);
-        displayOrder.push(id);
-      }
+      if (["furmark_stress_test", "heavyload_stress_gpu"].includes(id)) continue;
+      if (!seen.has(id)) { seen.add(id); displayOrder.push(id); }
     }
-    // Append any tasks not yet in order (so they appear and can be re-ordered later)
     for (const id of allTasks) {
-      if (["furmark_stress_test", "heavyload_stress_gpu"].includes(id))
-        continue;
-      if (!seen.has(id)) {
-        seen.add(id);
-        displayOrder.push(id);
-      }
+      if (["furmark_stress_test", "heavyload_stress_gpu"].includes(id)) continue;
+      if (!seen.has(id)) { seen.add(id); displayOrder.push(id); }
     }
-    // Apply search filter (hide GPU parent when filtering unless matched)
-    let finalOrder = displayOrder;
-    if (filterQuery) {
-      finalOrder = applyFilter(displayOrder.filter((id) => id !== GPU_PARENT_ID));
-      // include GPU parent only if matched explicitly
-      if (applyFilter([GPU_PARENT_ID]).includes(GPU_PARENT_ID)) {
-        finalOrder.push(GPU_PARENT_ID);
-      }
-    }
-    // Render in unified order
-    finalOrder.forEach((id) => {
-      paletteEl.appendChild(renderItem(id));
+
+    const finalOrder = filterQuery
+      ? (() => {
+          const base = displayOrder.filter((id) => id !== GPU_PARENT_ID);
+          const filtered = applyFilter(base);
+          if (applyFilter([GPU_PARENT_ID]).includes(GPU_PARENT_ID)) {
+            filtered.push(GPU_PARENT_ID);
+          }
+          return filtered;
+        })()
+      : displayOrder;
+
+    // Build Queue (selected) and Category groups
+    const selectedIds = finalOrder.filter((id) => selection.has(id));
+    const unselectedIds = finalOrder.filter((id) => !selection.has(id));
+
+    // Helper: service category
+    const getCategory = (id) => {
+      const def = getServiceById(id) || {};
+      return def.category || def.group || "Other";
+    };
+
+    // Render Queue block
+    const queueBlock = document.createElement("div");
+    queueBlock.className = "group-block queue-block";
+    queueBlock.innerHTML = `
+      <div class="group-title">Queue</div>
+      <ul id="svc-queue-list" class="task-list queue-list" aria-label="Selected tasks"></ul>
+    `;
+    paletteEl.appendChild(queueBlock);
+    const queueListEl = queueBlock.querySelector("#svc-queue-list");
+    selectedIds.forEach((id) => queueListEl.appendChild(renderItem(id)));
+
+    // Build category map from remaining IDs
+    const catMap = new Map();
+    unselectedIds.forEach((id) => {
+      const cat = getCategory(id);
+      if (!catMap.has(cat)) catMap.set(cat, []);
+      catMap.get(cat).push(id);
+    });
+
+    // Stable category order: alphabetical
+    const categories = Array.from(catMap.keys()).sort((a, b) => a.localeCompare(b));
+    categories.forEach((cat) => {
+      const block = document.createElement("div");
+      block.className = "group-block category-block";
+      block.innerHTML = `
+        <div class="group-title">${cat}</div>
+        <ul class="task-list" aria-label="${cat} tasks"></ul>
+      `;
+      const ul = block.querySelector("ul");
+      catMap.get(cat).forEach((id) => ul.appendChild(renderItem(id)));
+      paletteEl.appendChild(block);
     });
 
     validateNext(tasksCountRunnable());
     updateJson();
 
-    // Initialize/refresh SortableJS for drag-to-reorder on the whole list
-    // Only allow dragging selected items (those that currently show an order-pill)
-    paletteEl.__sortable = Sortable.create(paletteEl, {
-      animation: 150,
-      draggable: ".task-item",
-      handle: ".grab",
-      ghostClass: "drag-ghost",
-      dragClass: "drag-active",
-      forceFallback: true,
-      fallbackOnBody: true,
-      fallbackTolerance: 5,
-      setData: (dt) => {
-        // Avoid browser showing dragged text contents
-        try {
-          dt.setData("text", "");
-        } catch {}
-      },
-      filter:
-        "input, textarea, select, label, button, .param-controls, .gpu-sub",
-      preventOnFilter: true,
-      onEnd: () => {
-        const allIds = listServiceIds().concat(GPU_PARENT_ID);
-        const domOrder = Array.from(paletteEl.querySelectorAll(".task-item"))
-          .map((li) => li.dataset.id)
-          .filter((id) => id && allIds.includes(id));
-        if (domOrder.length) order = domOrder;
-        persist();
-        renderPalette();
-      },
-    });
+    // Enable Sortable only on Queue list (reordering selected tasks)
+    if (queueListEl) {
+      try { if (queueListEl.__sortable) queueListEl.__sortable.destroy(); } catch {}
+      queueListEl.__sortable = Sortable.create(queueListEl, {
+        animation: 150,
+        draggable: ".task-item",
+        handle: ".grab",
+        ghostClass: "drag-ghost",
+        dragClass: "drag-active",
+        forceFallback: true,
+        fallbackOnBody: true,
+        fallbackTolerance: 5,
+        setData: (dt) => { try { dt.setData("text", ""); } catch {} },
+        filter: "input, textarea, select, label, button, .param-controls, .gpu-sub",
+        preventOnFilter: true,
+        onEnd: () => {
+          // New queue order
+          const newQueueOrder = Array.from(queueListEl.querySelectorAll(".task-item"))
+            .map((li) => li.dataset.id)
+            .filter(Boolean);
+          // Rebuild global order: selected in new order + rest in prior order
+          const selectedSet = new Set(newQueueOrder);
+          const rest = order.filter((id) => !selectedSet.has(id));
+          order = newQueueOrder.concat(rest);
+          persist();
+          renderPalette();
+        },
+      });
+    }
   }
 
   // ---- JSON Generation ----------------------------------------------------
