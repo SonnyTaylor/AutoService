@@ -168,7 +168,30 @@ export const SERVICES = {
       return {
         type: "bleachbit_clean",
         executable_path: await resolveToolPath("bleachbit"),
-        options: ["system.tmp", "system.recycle_bin", "system.prefetch"],
+        options: [
+          "system.tmp",                 // Windows temporary files
+          "system.recycle_bin",         // Recycle Bin
+          "system.prefetch",            // Prefetch (can grow large)
+          "system.logs",                // System logs
+          "system.memory_dump",         // Memory/crash dumps (often GBs)
+          "system.updates",             // Windows Update leftovers
+          "google_chrome.cache",        // Chrome browser cache
+          "microsoft_edge.cache",       // Edge browser cache
+          "firefox.cache",              // Firefox cache
+          "brave.cache",                // Brave cache
+          "opera.cache",                // Opera cache
+          "librewolf.cache",            // LibreWolf cache
+          "palemoon.cache",             // Pale Moon cache
+          "waterfox.cache",             // Waterfox cache
+          "discord.cache",              // Discord cache
+          "slack.cache",                // Slack cache
+          "zoom.cache",                 // Zoom cache
+          "zoom.recordings",            // Zoom local recordings (can be very large if unused)
+          "windows_defender.temp",      // Defender temp files
+          "winrar.temp",                // WinRAR temp
+          "vuze.cache",                 // Vuze cache
+          "vuze.temp"                   // Vuze temp
+        ],
         ui_label: "Junk Cleanup (BleachBit)",
       };
     },
