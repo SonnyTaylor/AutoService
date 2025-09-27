@@ -478,8 +478,34 @@ export async function initPage() {
   try {
     // Load from cache if available
     if (getCache() == null) loadCache();
-    if (getCache()) {
-      render(getCache());
+    const cached = getCache();
+    if (cached) {
+      render(cached);
+      // Visually indicate background refresh is in progress
+      const btn = $("#sysinfo-refresh-btn");
+      const restore = btn ? btn.innerHTML : null;
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML =
+          '<span class="spinner sm" aria-hidden="true"></span><span style="margin-left:8px;">Refreshing…</span>';
+      }
+      // Kick off a background refresh to update stale data without blocking UI
+      (async () => {
+        try {
+          let info = await invoke("get_system_info");
+          info = await enhanceWindowsInfo(info);
+          saveCache(info, Date.now());
+          // Success re-renders the whole section, which resets the button UI
+          render(info);
+        } catch (error) {
+          console.warn("Background refresh failed:", error);
+          // Restore button state if we didn't re-render
+          if (btn && restore != null) {
+            btn.disabled = false;
+            btn.innerHTML = restore;
+          }
+        }
+      })();
       return;
     }
 
