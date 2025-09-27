@@ -45,6 +45,25 @@ def _bool_from_str(s: str) -> Optional[bool]:
     return None
 
 
+def _read_csv_flex(path: str) -> Dict[str, List[str]]:
+    """Read 1-2 line CSV (header optional) trying multiple encodings.
+
+    Returns dict with keys: header, row. If only one line exists, header is [].
+    """
+    encodings = ["utf-8-sig", "utf-8", "utf-16", "cp1252"]
+    for enc in encodings:
+        try:
+            with open(path, "r", encoding=enc, errors="replace") as f:
+                reader = list(csv.reader(f))
+                if len(reader) >= 2:
+                    return {"header": reader[0] or [], "row": reader[1] or []}
+                if len(reader) == 1:
+                    return {"header": [], "row": reader[0] or []}
+        except Exception:
+            continue
+    return {"header": [], "row": []}
+
+
 def run_whynotwin11_check(task: Dict[str, Any]) -> Dict[str, Any]:
     exec_path = task.get("executable_path")
     working_dir = task.get("working_dir")
@@ -99,13 +118,18 @@ def run_whynotwin11_check(task: Dict[str, Any]) -> Dict[str, Any]:
             check=False,
         )
 
-        # Some variants exit 0 even when no updates; still attempt to read CSV
-        if not os.path.exists(csv_path):
+        # Locate CSV (some builds place it under App\WhyNotWin11 regardless of provided path)
+        candidates = [csv_path]
+        candidates.append(os.path.join(work_dir, "App", "WhyNotWin11", "result.csv"))
+        candidates.append(os.path.join(work_dir, "result.csv"))
+        found_csv = next((p for p in candidates if os.path.exists(p)), None)
+        if not found_csv:
             return {
                 "task_type": "whynotwin11_check",
                 "status": "failure",
                 "summary": {
                     "error": "CSV result not produced",
+                    "tried_paths": candidates,
                     "exit_code": proc.returncode,
                     "stderr_excerpt": (proc.stderr or "")[:800],
                     "stdout_excerpt": (proc.stdout or "")[:800],
@@ -114,15 +138,30 @@ def run_whynotwin11_check(task: Dict[str, Any]) -> Dict[str, Any]:
             }
 
         # Parse CSV (expected single row + header)
-        header: List[str] = []
-        row: List[str] = []
-        with open(csv_path, "r", encoding="utf-8", errors="replace") as f:
-            reader = csv.reader(f)
-            try:
-                header = next(reader)
-                row = next(reader)
-            except StopIteration:
-                header = list(next(csv.reader([f.readline() or ""])) or [])
+        parsed = _read_csv_flex(found_csv)
+        header: List[str] = parsed.get("header", [])
+        row: List[str] = parsed.get("row", [])
+
+        # Default column order used by WhyNotWin11 when header might be missing
+        default_columns = [
+            "Hostname",
+            "Architecture",
+            "Boot Method",
+            "CPU Compatibility",
+            "CPU Core Count",
+            "CPU Frequency",
+            "DirectX + WDDM2",
+            "Disk Partition Type",
+            "RAM Installed",
+            "Secure Boot",
+            "Storage Available",
+            "TPM Version",
+        ]
+
+        if (not header) and row:
+            # If the single row length matches expected columns, adopt defaults
+            if len(row) == len(default_columns):
+                header = list(default_columns)
 
         checks: Dict[str, Optional[bool]] = {}
         failing: List[str] = []
@@ -154,17 +193,33 @@ def run_whynotwin11_check(task: Dict[str, Any]) -> Dict[str, Any]:
                     failing.append(name)
 
         ready = len(failing) == 0 and any(name in checks for name in known_bool_cols)
+        hostname = None
+        if header and row and header[0].strip().lower() == "hostname":
+            try:
+                hostname = row[0]
+            except Exception:
+                hostname = None
 
         summary: Dict[str, Any] = {
             "ready": ready,
             "checks": checks,
             "failing_checks": failing,
             "passing_checks": passing,
-            "csv_path": csv_path,
+            "hostname": hostname,
+            "csv_path": found_csv,
             "raw": {"header": header, "row": row},
             "command": command,
             "exit_code": proc.returncode,
             "stderr_excerpt": (proc.stderr or "")[:800],
+        }
+
+        # Human-readable quick verdict and notes
+        hr_notes: List[str] = []
+        if failing:
+            hr_notes.append("Failing: " + ", ".join(failing))
+        summary["human_readable"] = {
+            "verdict": "ready" if ready else "not_ready",
+            "notes": hr_notes,
         }
 
         return {
