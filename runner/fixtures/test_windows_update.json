@@ -1,0 +1,8 @@
+{
+  "type": "windows_update",
+  "microsoft_update": true,
+  "accept_all": true,
+  "ignore_reboot": true
+}
+
+
