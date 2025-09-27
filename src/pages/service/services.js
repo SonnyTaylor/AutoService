@@ -59,6 +59,30 @@
  * @type {Record<string, ServiceDef>}
  */
 export const SERVICES = {
+  speedtest: {
+    id: "speedtest",
+    label: "Internet Speed Test",
+    group: "Network",
+    category: "Network",
+    defaultParams: {},
+    toolKeys: [],
+    async build({ params }) {
+      // Optional parameters supported by the runner; UI currently keeps defaults
+      const threads = Number.isFinite(params?.threads)
+        ? Math.max(1, parseInt(params.threads, 10))
+        : null;
+      const share = !!params?.share;
+      const secure = params?.secure === false ? false : true;
+      const task = {
+        type: "speedtest",
+        ...(threads ? { threads } : {}),
+        ...(share ? { share: true } : {}),
+        secure,
+        ui_label: "Internet Speed Test",
+      };
+      return task;
+    },
+  },
   kvrt_scan: {
     id: "kvrt_scan",
     label: "Malware Scan (KVRT)",

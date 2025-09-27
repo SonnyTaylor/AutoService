@@ -196,6 +196,7 @@ const PRESET_MAP = {
     "sfc_scan",
     "dism_health_check",
     "smartctl_report",
+    "speedtest",
   ],
   complete: [
     "adwcleaner_clean",
@@ -206,6 +207,7 @@ const PRESET_MAP = {
     GPU_PARENT_ID,
     "heavyload_stress_cpu",
     "heavyload_stress_memory",
+    "speedtest",
   ],
   custom: [],
   diagnostics: ["sfc_scan", "dism_health_check", "smartctl_report"],
