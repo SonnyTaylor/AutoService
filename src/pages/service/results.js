@@ -22,7 +22,6 @@ const RENDERERS = {
 export async function initPage() {
   const container = document.getElementById("svc-results");
   const backBtn = document.getElementById("svc-results-back");
-  const printBtn = document.getElementById("svc-results-print");
   const printSideBtn = document.getElementById("svc-results-print-side");
   const summaryEl = document.getElementById("svc-results-summary");
   const sectionsEl = document.getElementById("svc-results-sections");
@@ -57,9 +56,6 @@ export async function initPage() {
       <div class="left">
         <div class="title">Overall: ${overall === "success" ? "Success" : "Completed with errors"}</div>
         <div class="muted small">${report.results.length} task(s)</div>
-      </div>
-      <div class="right">
-        <button id="svc-results-print-top">Print</button>
       </div>
     </div>
   `;
@@ -98,8 +94,6 @@ export async function initPage() {
     } catch {}
   };
 
-  document.getElementById("svc-results-print-top")?.addEventListener("click", doPrint);
-  printBtn?.addEventListener("click", doPrint);
   printSideBtn?.addEventListener("click", doPrint);
 
   container.hidden = false;
