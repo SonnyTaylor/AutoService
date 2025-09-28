@@ -1,6 +1,7 @@
 import printJS from "print-js";
 import { html, render } from "lit-html";
 import { map } from "lit-html/directives/map.js";
+import prettyBytes from "pretty-bytes";
 
 /**
  * @file Renders the service results page (#/service-results).
@@ -431,9 +432,30 @@ function renderPing(res) {
 function renderChkdsk(res) {
   return renderGeneric(res);
 }
-/** @param {object} res @returns {import("lit-html").TemplateResult} */
+/**
+ * Renders the result for a BleachBit disk cleanup.
+ * @param {object} res The result object for the task.
+ * @returns {import("lit-html").TemplateResult}
+ */
 function renderBleachBit(res) {
-  return renderGeneric(res);
+  const s = res.summary || {};
+  const recovered = s.space_recovered_bytes;
+  return html`
+    <div class="card bleachbit">
+      ${renderHeader("Disk Cleanup (BleachBit)", res.status)}
+      <div class="kpi-row">
+        ${kpiBox(
+          "Space Recovered",
+          recovered != null ? prettyBytes(recovered) : "-"
+        )}
+        ${kpiBox("Files Deleted", s.files_deleted ?? "-")}
+        ${kpiBox("Errors", s.errors ?? "-")}
+        ${s.special_operations
+          ? kpiBox("Special Ops", s.special_operations)
+          : ""}
+      </div>
+    </div>
+  `;
 }
 /** @param {object} res @returns {import("lit-html").TemplateResult} */
 function renderFurmark(res) {
