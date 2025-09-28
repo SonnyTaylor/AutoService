@@ -1,4 +1,6 @@
 import printJS from "print-js";
+import { html, render } from "lit-html";
+import { map } from "lit-html/directives/map.js";
 
 // Modular renderers per task type. Extend incrementally here.
 const RENDERERS = {
@@ -44,14 +46,14 @@ export async function initPage() {
   }
 
   if (!report || !Array.isArray(report.results)) {
-    summaryEl.innerHTML = `<div class="muted">No report found. Run a service first.</div>`;
+    render(html`<div class="muted">No report found. Run a service first.</div>`, summaryEl);
     container.hidden = false;
     return;
   }
 
   // Summary header
   const overall = String(report.overall_status || "").toLowerCase();
-  summaryEl.innerHTML = `
+  const summaryTemplate = html`
     <div class="summary-head ${overall === "success" ? "ok" : "warn"}">
       <div class="left">
         <div class="title">Overall: ${overall === "success" ? "Success" : "Completed with errors"}</div>
@@ -59,26 +61,30 @@ export async function initPage() {
       </div>
     </div>
   `;
+  render(summaryTemplate, summaryEl);
 
   // Build sections modularly (fault-tolerant per task)
-  sectionsEl.innerHTML = "";
-  for (const res of report.results) {
-    const type = res?.task_type || res?.type || "unknown";
-    const renderer = RENDERERS[type] || renderGeneric;
-    const section = document.createElement("section");
-    section.className = "result-section";
-    try {
-      section.appendChild(renderer(res));
-    } catch (e) {
-      section.appendChild(renderGeneric(res));
-    }
-    sectionsEl.appendChild(section);
-  }
+  const sectionsTemplate = html`
+    ${map(report.results, (res) => {
+      const type = res?.task_type || res?.type || "unknown";
+      const renderer = RENDERERS[type] || renderGeneric;
+      let content;
+      try {
+        content = renderer(res);
+      } catch (e) {
+        console.error("Failed to render result section:", res, e);
+        content = renderGeneric(res);
+      }
+      return html`<section class="result-section">${content}</section>`;
+    })}
+  `;
+  render(sectionsTemplate, sectionsEl);
+
 
   // Prepare printable HTML content
   try {
     const printableHtml = buildPrintableHtml(report, sectionsEl);
-    printContainer.innerHTML = printableHtml;
+    if (printContainer) printContainer.innerHTML = printableHtml;
     if (printPreview) printPreview.innerHTML = printableHtml;
   } catch {}
 
@@ -100,32 +106,22 @@ export async function initPage() {
 }
 
 // ---------- Renderers ----------
-function el(tag, className, text) {
-  const e = document.createElement(tag);
-  if (className) e.className = className;
-  if (text != null) e.textContent = text;
-  return e;
-}
 
-function renderHeader(label, status) {
-  const wrap = el("div", "result-header");
-  wrap.appendChild(el("h3", "", label || "Task"));
-  const s = el("span", `status ${String(status || "").toLowerCase()}`);
-  s.textContent = status || "unknown";
-  wrap.appendChild(s);
-  return wrap;
-}
+const renderHeader = (label, status) => html`
+  <div class="result-header">
+    <h3>${label || "Task"}</h3>
+    <span class="status ${String(status || "").toLowerCase()}">${status || "unknown"}</span>
+  </div>
+`;
 
-function renderList(obj) {
-  const dl = el("dl", "kv");
-  for (const [k, v] of Object.entries(obj || {})) {
-    const dt = el("dt", "", prettifyKey(k));
-    const dd = el("dd", "", formatValue(v));
-    dl.appendChild(dt);
-    dl.appendChild(dd);
-  }
-  return dl;
-}
+const renderList = (obj) => html`
+  <dl class="kv">
+    ${map(Object.entries(obj || {}), ([k, v]) => html`
+      <dt>${prettifyKey(k)}</dt>
+      <dd>${formatValue(v)}</dd>
+    `)}
+  </dl>
+`;
 
 function prettifyKey(k) {
   return String(k)
@@ -145,31 +141,31 @@ function formatValue(v) {
 }
 
 function renderGeneric(res) {
-  const root = el("div", "result generic");
-  root.appendChild(renderHeader(res.ui_label || res.task_type, res.status));
-  root.appendChild(renderList(res.summary || {}));
-  return root;
+  return html`
+    <div class="result generic">
+      ${renderHeader(res.ui_label || res.task_type, res.status)}
+      ${renderList(res.summary || {})}
+    </div>
+  `;
 }
 
 function renderSpeedtest(res) {
-  const root = el("div", "card speedtest");
-  root.appendChild(renderHeader("Internet Speed Test", res.status));
   const h = res.summary?.human_readable || {};
-  const kpi = document.createElement("div");
-  kpi.className = "kpi-row";
-  kpi.appendChild(kpiBox("Download", fmtMbps(h.download_mbps)));
-  kpi.appendChild(kpiBox("Upload", fmtMbps(h.upload_mbps)));
-  kpi.appendChild(kpiBox("Ping", fmtMs(h.ping_ms)));
-  kpi.appendChild(kpiBox("Jitter", h.jitter_ms == null ? "-" : fmtMs(h.jitter_ms)));
-  kpi.appendChild(kpiBox("Rating", h.rating_stars != null ? `${h.rating_stars}★` : "-"));
-  root.appendChild(kpi);
-  // Intentionally omit heuristic notes and server/ISP details for a cleaner summary
-  return root;
+  return html`
+    <div class="card speedtest">
+      ${renderHeader("Internet Speed Test", res.status)}
+      <div class="kpi-row">
+        ${kpiBox("Download", fmtMbps(h.download_mbps))}
+        ${kpiBox("Upload", fmtMbps(h.upload_mbps))}
+        ${kpiBox("Ping", fmtMs(h.ping_ms))}
+        ${kpiBox("Jitter", h.jitter_ms == null ? "-" : fmtMs(h.jitter_ms))}
+        ${kpiBox("Rating", h.rating_stars != null ? `${h.rating_stars}★` : "-")}
+      </div>
+    </div>
+  `;
 }
 
 function renderBatteryHealth(res) {
-  const root = el("div", "result battery");
-  root.appendChild(renderHeader("Battery Health", res.status));
   const s = res.summary || {};
   const info = {
     Batteries: s.count_batteries,
@@ -177,169 +173,156 @@ function renderBatteryHealth(res) {
     "Low‑health batteries": s.low_health_batteries,
     Verdict: s.human_readable?.verdict,
   };
-  // Show as KPI row
-  const k = document.createElement("div");
-  k.className = "kpi-row";
-  k.appendChild(kpiBox("Batteries", info.Batteries ?? "-"));
-  k.appendChild(kpiBox("Avg SOH", info["Average SOH %"] != null ? `${info["Average SOH %"]}%` : "-"));
-  k.appendChild(kpiBox("Low Health", info["Low‑health batteries"] ?? "-"));
-  k.appendChild(kpiBox("Verdict", (info.Verdict || "").toString()));
-  root.appendChild(k);
-  return root;
+  return html`
+    <div class="result battery">
+      ${renderHeader("Battery Health", res.status)}
+      <div class="kpi-row">
+        ${kpiBox("Batteries", info.Batteries ?? "-")}
+        ${kpiBox("Avg SOH", info["Average SOH %"] != null ? `${info["Average SOH %"]}%` : "-")}
+        ${kpiBox("Low Health", info["Low‑health batteries"] ?? "-")}
+        ${kpiBox("Verdict", (info.Verdict || "").toString())}
+      </div>
+    </div>
+  `;
 }
 
 function renderSfc(res) { return renderGeneric(res); }
 function renderDism(res) { return renderGeneric(res); }
 function renderSmartctl(res) {
-  const root = el("div", "card smartctl");
-  root.appendChild(renderHeader("Drive Health (smartctl)", res.status));
   const s = res.summary || {};
   const drives = Array.isArray(s.drives) ? s.drives : [];
-  const list = document.createElement("div");
-  list.className = "drive-list";
-  drives.forEach((d) => {
-    const card = el("div", "drive-card");
-    const head = el("div", "drive-head");
-    head.appendChild(el("div", "drive-model", `${d.model_name || d.name || "Drive"}`));
-    const badge = el("span", `badge ${d.health_passed ? "ok" : "fail"}`, d.health_passed ? "PASSED" : "FAILED");
-    head.appendChild(badge);
-    card.appendChild(head);
-    const k = document.createElement("div"); k.className = "kpi-row";
-    k.appendChild(kpiBox("Temp", d.temperature || "-"));
-    k.appendChild(kpiBox("Power On Hrs", d.power_on_hours != null ? String(d.power_on_hours) : "-"));
-    k.appendChild(kpiBox("Power Cycles", d.power_cycles != null ? String(d.power_cycles) : "-"));
-    if (d.wear_level_percent_used != null) k.appendChild(kpiBox("Wear Used", `${d.wear_level_percent_used}%`));
-    if (d.media_errors != null) k.appendChild(kpiBox("Media Errors", String(d.media_errors)));
-    card.appendChild(k);
-    if (d.friendly) {
-      const fr = el("div", "muted small", d.friendly);
-      card.appendChild(fr);
-    }
-    list.appendChild(card);
-  });
-  if (!drives.length) list.appendChild(el("div", "muted", "No drive data"));
-  root.appendChild(list);
-  return root;
+  return html`
+    <div class="card smartctl">
+      ${renderHeader("Drive Health (smartctl)", res.status)}
+      <div class="drive-list">
+        ${drives.length > 0
+          ? map(drives, (d) => html`
+            <div class="drive-card">
+              <div class="drive-head">
+                <div class="drive-model">${d.model_name || d.name || "Drive"}</div>
+                <span class="badge ${d.health_passed ? "ok" : "fail"}">${d.health_passed ? "PASSED" : "FAILED"}</span>
+              </div>
+              <div class="kpi-row">
+                ${kpiBox("Temp", d.temperature || "-")}
+                ${kpiBox("Power On Hrs", d.power_on_hours != null ? String(d.power_on_hours) : "-")}
+                ${kpiBox("Power Cycles", d.power_cycles != null ? String(d.power_cycles) : "-")}
+                ${d.wear_level_percent_used != null ? kpiBox("Wear Used", `${d.wear_level_percent_used}%`) : ""}
+                ${d.media_errors != null ? kpiBox("Media Errors", String(d.media_errors)) : ""}
+              </div>
+              ${d.friendly ? html`<div class="muted small">${d.friendly}</div>` : ""}
+            </div>
+          `)
+          : html`<div class="muted">No drive data</div>`
+        }
+      </div>
+    </div>
+  `;
 }
 function renderKvrt(res) { return renderGeneric(res); }
 function renderAdwCleaner(res) {
-  const root = el("div", "card adwcleaner");
-  root.appendChild(renderHeader("AdwCleaner Cleanup", res.status));
   const s = res.summary || {};
-
   const getLen = (a) => (Array.isArray(a) ? a.length : 0);
-  const browserHits = Object.values(s.browsers || {}).reduce((sum, v) => {
-    return sum + (Array.isArray(v) ? v.length : 0);
-  }, 0);
-
-  const k = document.createElement("div");
-  k.className = "kpi-row";
-  k.appendChild(kpiBox("Cleaned", s.cleaned != null ? String(s.cleaned) : "-"));
-  k.appendChild(kpiBox("Failed", s.failed != null ? String(s.failed) : "-"));
-  k.appendChild(kpiBox("Browser Items", browserHits));
-  const pre = getLen(s.preinstalled);
-  if (pre) k.appendChild(kpiBox("Preinstalled", pre));
-  root.appendChild(k);
-
-  // Badges line
+  const browserHits = Object.values(s.browsers || {}).reduce((sum, v) => sum + (Array.isArray(v) ? v.length : 0), 0);
   const lines = [
-    ...(s.registry || []),
-    ...(s.files || []),
-    ...(s.folders || []),
-    ...(s.services || []),
-    ...(s.tasks || []),
-    ...(s.shortcuts || []),
-    ...(s.dlls || []),
-    ...(s.wmi || []),
-    ...(s.preinstalled || []),
+    ...(s.registry || []), ...(s.files || []), ...(s.folders || []),
+    ...(s.services || []), ...(s.tasks || []), ...(s.shortcuts || []),
+    ...(s.dlls || []), ...(s.wmi || []), ...(s.preinstalled || []),
   ].map(String);
   const needsReboot = lines.some((t) => /reboot/i.test(t));
   const problems = (s.failed || 0) > 0 || lines.some((t) => /not deleted|failed/i.test(t));
-  if (needsReboot || problems) {
-    const wrap = el("div", "pill-row", "");
-    if (needsReboot) wrap.appendChild(pill("Reboot Required", "warn"));
-    if ((s.failed || 0) > 0) wrap.appendChild(pill(`Failed ${s.failed}`, "fail"));
-    root.appendChild(wrap);
-  }
 
-  // Compact tag grid of affected categories (only show non-empty)
-  const tagGrid = el("div", "tag-grid", "");
-  const addTag = (label, count, variant) => {
-    if (count > 0) tagGrid.appendChild(pill(`${label} ${count}`, variant));
+  const categories = {
+    Registry: getLen(s.registry), Files: getLen(s.files), Folders: getLen(s.folders),
+    Services: getLen(s.services), Tasks: getLen(s.tasks), Shortcuts: getLen(s.shortcuts),
+    DLLs: getLen(s.dlls), WMI: getLen(s.wmi), "Browser Items": browserHits,
+    Preinstalled: { count: getLen(s.preinstalled), variant: "warn" }
   };
-  addTag("Registry", getLen(s.registry));
-  addTag("Files", getLen(s.files));
-  addTag("Folders", getLen(s.folders));
-  addTag("Services", getLen(s.services));
-  addTag("Tasks", getLen(s.tasks));
-  addTag("Shortcuts", getLen(s.shortcuts));
-  addTag("DLLs", getLen(s.dlls));
-  addTag("WMI", getLen(s.wmi));
-  addTag("Browser Items", browserHits);
-  addTag("Preinstalled", getLen(s.preinstalled), "warn");
-  if (tagGrid.children.length) root.appendChild(tagGrid);
 
-  return root;
+  return html`
+    <div class="card adwcleaner">
+      ${renderHeader("AdwCleaner Cleanup", res.status)}
+      <div class="kpi-row">
+        ${kpiBox("Cleaned", s.cleaned != null ? String(s.cleaned) : "-")}
+        ${kpiBox("Failed", s.failed != null ? String(s.failed) : "-")}
+        ${kpiBox("Browser Items", browserHits)}
+        ${getLen(s.preinstalled) ? kpiBox("Preinstalled", getLen(s.preinstalled)) : ""}
+      </div>
+
+      ${(needsReboot || problems) ? html`
+        <div class="pill-row">
+          ${needsReboot ? pill("Reboot Required", "warn") : ""}
+          ${(s.failed || 0) > 0 ? pill(`Failed ${s.failed}`, "fail") : ""}
+        </div>
+      ` : ""}
+
+      <div class="tag-grid">
+        ${map(Object.entries(categories), ([label, data]) => {
+          const count = typeof data === 'object' ? data.count : data;
+          const variant = typeof data === 'object' ? data.variant : undefined;
+          return count > 0 ? pill(`${label} ${count}`, variant) : "";
+        })}
+      </div>
+    </div>
+  `;
 }
 function renderPing(res) {
-  const root = el("div", "card ping");
-  root.appendChild(renderHeader("Ping Test", res.status));
   const s = res.summary || {};
   const hr = s.human_readable || {};
-  const k = document.createElement("div"); k.className = "kpi-row";
-  k.appendChild(kpiBox("Average", fmtMs(s.average_latency_ms)));
-  k.appendChild(kpiBox("Min", fmtMs(s.latency_ms?.min)));
-  k.appendChild(kpiBox("Max", fmtMs(s.latency_ms?.max)));
-  k.appendChild(kpiBox("Loss", s.packet_loss_percent != null ? `${s.packet_loss_percent}%` : "-"));
-  k.appendChild(kpiBox("Verdict", hr.verdict || "-"));
-  root.appendChild(k);
-  if (Array.isArray(hr.notes) && hr.notes.length) {
-    const line = el("div", "", "");
-    hr.notes.forEach(n => line.appendChild(pill(n)));
-    root.appendChild(line);
-  }
-  return root;
+  return html`
+    <div class="card ping">
+      ${renderHeader("Ping Test", res.status)}
+      <div class="kpi-row">
+        ${kpiBox("Average", fmtMs(s.average_latency_ms))}
+        ${kpiBox("Min", fmtMs(s.latency_ms?.min))}
+        ${kpiBox("Max", fmtMs(s.latency_ms?.max))}
+        ${kpiBox("Loss", s.packet_loss_percent != null ? `${s.packet_loss_percent}%` : "-")}
+        ${kpiBox("Verdict", hr.verdict || "-")}
+      </div>
+      ${Array.isArray(hr.notes) && hr.notes.length
+        ? html`<div class="pill-row">${map(hr.notes, (n) => pill(n))}</div>`
+        : ""}
+    </div>
+  `;
 }
 function renderChkdsk(res) { return renderGeneric(res); }
 function renderBleachBit(res) { return renderGeneric(res); }
 function renderFurmark(res) { return renderGeneric(res); }
 function renderHeavyload(res) {
-  const root = el("div", "card heavyload");
-  const label = res.summary?.stress_cpu ? "CPU Stress (HeavyLoad)" : res.summary?.stress_memory ? "RAM Stress (HeavyLoad)" : res.summary?.stress_gpu ? "GPU Stress (HeavyLoad)" : "HeavyLoad Stress";
-  root.appendChild(renderHeader(label, res.status));
   const s = res.summary || {};
-  const k = document.createElement("div"); k.className = "kpi-row";
-  k.appendChild(kpiBox("Duration", s.duration_minutes != null ? `${s.duration_minutes} min` : "-"));
-  k.appendChild(kpiBox("Exit Code", s.exit_code != null ? String(s.exit_code) : "-"));
-  root.appendChild(k);
-  return root;
+  const label = s.stress_cpu ? "CPU Stress (HeavyLoad)"
+              : s.stress_memory ? "RAM Stress (HeavyLoad)"
+              : s.stress_gpu ? "GPU Stress (HeavyLoad)"
+              : "HeavyLoad Stress";
+  return html`
+    <div class="card heavyload">
+      ${renderHeader(label, res.status)}
+      <div class="kpi-row">
+        ${kpiBox("Duration", s.duration_minutes != null ? `${s.duration_minutes} min` : "-")}
+        ${kpiBox("Exit Code", s.exit_code != null ? String(s.exit_code) : "-")}
+      </div>
+    </div>
+  `;
 }
 function renderIperf(res) { return renderGeneric(res); }
 function renderWhyNotWin11(res) {
-  const root = el("div", "card wn11");
-  root.appendChild(renderHeader("Windows 11 Compatibility", res.status));
   const s = res.summary || {};
   const hr = s.human_readable || {};
-  const k = document.createElement("div"); k.className = "kpi-row";
-  k.appendChild(kpiBox("Hostname", s.hostname || "-"));
-  k.appendChild(kpiBox("Ready", s.ready ? "Yes" : "No"));
-  k.appendChild(kpiBox("Verdict", (hr.verdict || "").toString()));
   const failing = Array.isArray(s.failing_checks) ? s.failing_checks.length : 0;
   const passing = Array.isArray(s.passing_checks) ? s.passing_checks.length : 0;
-  k.appendChild(kpiBox("Passing", passing));
-  k.appendChild(kpiBox("Failing", failing));
-  root.appendChild(k);
-  if (Array.isArray(s.failing_checks) && s.failing_checks.length) {
-    const failWrap = el("div", "", "");
-    s.failing_checks.forEach((c) => failWrap.appendChild(pill(c, "fail")));
-    root.appendChild(failWrap);
-  }
-  if (Array.isArray(s.passing_checks) && s.passing_checks.length) {
-    const passWrap = el("div", "", "");
-    s.passing_checks.forEach((c) => passWrap.appendChild(pill(c)));
-    root.appendChild(passWrap);
-  }
-  return root;
+  return html`
+    <div class="card wn11">
+      ${renderHeader("Windows 11 Compatibility", res.status)}
+      <div class="kpi-row">
+        ${kpiBox("Hostname", s.hostname || "-")}
+        ${kpiBox("Ready", s.ready ? "Yes" : "No")}
+        ${kpiBox("Verdict", (hr.verdict || "").toString())}
+        ${kpiBox("Passing", passing)}
+        ${kpiBox("Failing", failing)}
+      </div>
+      ${failing > 0 ? html`<div class="pill-row">${map(s.failing_checks, (c) => pill(c, "fail"))}</div>` : ""}
+      ${passing > 0 ? html`<div class="pill-row">${map(s.passing_checks, (c) => pill(c))}</div>` : ""}
+    </div>
+  `;
 }
 function renderWindowsUpdate(res) { return renderGeneric(res); }
 
@@ -361,22 +344,17 @@ function buildPrintableHtml(report, sectionsEl) {
 }
 
 // ---------- Helpers ----------
-function kpiBox(label, value) {
-  const box = el("div", "kpi");
-  box.appendChild(el("span", "lab", label));
-  box.appendChild(el("span", "val", value == null ? "-" : String(value)));
-  return box;
-}
-function pill(text, variant) {
-  const p = el("span", `pill${variant ? " " + variant : ""}`, text);
-  return p;
-}
-function addKv(container, k, v) {
-  const wrapK = el("div", "k", k);
-  const wrapV = el("div", "v", v == null ? "-" : String(v));
-  container.appendChild(wrapK);
-  container.appendChild(wrapV);
-}
+const kpiBox = (label, value) => html`
+  <div class="kpi">
+    <span class="lab">${label}</span>
+    <span class="val">${value == null ? "-" : String(value)}</span>
+  </div>
+`;
+
+const pill = (text, variant) => html`
+  <span class="pill${variant ? " " + variant : ""}">${text}</span>
+`;
+
 function fmtMs(ms) {
   if (ms == null || !isFinite(ms)) return "-";
   return `${Math.round(ms)} ms`;
