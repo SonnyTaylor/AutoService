@@ -57,7 +57,10 @@ export async function initPage() {
   }
 
   if (!report || !Array.isArray(report.results)) {
-    render(html`<div class="muted">No report found. Run a service first.</div>`, summaryEl);
+    render(
+      html`<div class="muted">No report found. Run a service first.</div>`,
+      summaryEl
+    );
     container.hidden = false;
     return;
   }
@@ -67,7 +70,10 @@ export async function initPage() {
   const summaryTemplate = html`
     <div class="summary-head ${overall === "success" ? "ok" : "warn"}">
       <div class="left">
-        <div class="title">Overall: ${overall === "success" ? "Success" : "Completed with errors"}</div>
+        <div class="title">
+          Overall:
+          ${overall === "success" ? "Success" : "Completed with errors"}
+        </div>
         <div class="muted small">${report.results.length} task(s)</div>
       </div>
     </div>
@@ -90,7 +96,6 @@ export async function initPage() {
     })}
   `;
   render(sectionsTemplate, sectionsEl);
-
 
   // Prepare printable HTML content
   try {
@@ -127,7 +132,9 @@ export async function initPage() {
 const renderHeader = (label, status) => html`
   <div class="result-header">
     <h3>${label || "Task"}</h3>
-    <span class="status ${String(status || "").toLowerCase()}">${status || "unknown"}</span>
+    <span class="status ${String(status || "").toLowerCase()}"
+      >${status || "unknown"}</span
+    >
   </div>
 `;
 
@@ -138,10 +145,13 @@ const renderHeader = (label, status) => html`
  */
 const renderList = (obj) => html`
   <dl class="kv">
-    ${map(Object.entries(obj || {}), ([k, v]) => html`
-      <dt>${prettifyKey(k)}</dt>
-      <dd>${formatValue(v)}</dd>
-    `)}
+    ${map(
+      Object.entries(obj || {}),
+      ([k, v]) => html`
+        <dt>${prettifyKey(k)}</dt>
+        <dd>${formatValue(v)}</dd>
+      `
+    )}
   </dl>
 `;
 
@@ -165,7 +175,8 @@ function formatValue(v) {
   if (v == null) return "-";
   if (Array.isArray(v)) {
     if (v.length === 0) return "-";
-    if (typeof v[0] === "string" || typeof v[0] === "number") return v.join(", ");
+    if (typeof v[0] === "string" || typeof v[0] === "number")
+      return v.join(", ");
     return `${v.length} item(s)`;
   }
   if (typeof v === "object") return JSON.stringify(v);
@@ -226,7 +237,10 @@ function renderBatteryHealth(res) {
       ${renderHeader("Battery Health", res.status)}
       <div class="kpi-row">
         ${kpiBox("Batteries", info.Batteries ?? "-")}
-        ${kpiBox("Avg SOH", info["Average SOH %"] != null ? `${info["Average SOH %"]}%` : "-")}
+        ${kpiBox(
+          "Avg SOH",
+          info["Average SOH %"] != null ? `${info["Average SOH %"]}%` : "-"
+        )}
         ${kpiBox("Low Health", info["Low‑health batteries"] ?? "-")}
         ${kpiBox("Verdict", (info.Verdict || "").toString())}
       </div>
@@ -235,9 +249,13 @@ function renderBatteryHealth(res) {
 }
 
 /** @param {object} res @returns {import("lit-html").TemplateResult} */
-function renderSfc(res) { return renderGeneric(res); }
+function renderSfc(res) {
+  return renderGeneric(res);
+}
 /** @param {object} res @returns {import("lit-html").TemplateResult} */
-function renderDism(res) { return renderGeneric(res); }
+function renderDism(res) {
+  return renderGeneric(res);
+}
 /**
  * Renders the result for a drive health (smartctl) check.
  * @param {object} res The result object for the task.
@@ -251,30 +269,50 @@ function renderSmartctl(res) {
       ${renderHeader("Drive Health (smartctl)", res.status)}
       <div class="drive-list">
         ${drives.length > 0
-          ? map(drives, (d) => html`
-            <div class="drive-card">
-              <div class="drive-head">
-                <div class="drive-model">${d.model_name || d.name || "Drive"}</div>
-                <span class="badge ${d.health_passed ? "ok" : "fail"}">${d.health_passed ? "PASSED" : "FAILED"}</span>
-              </div>
-              <div class="kpi-row">
-                ${kpiBox("Temp", d.temperature || "-")}
-                ${kpiBox("Power On Hrs", d.power_on_hours != null ? String(d.power_on_hours) : "-")}
-                ${kpiBox("Power Cycles", d.power_cycles != null ? String(d.power_cycles) : "-")}
-                ${d.wear_level_percent_used != null ? kpiBox("Wear Used", `${d.wear_level_percent_used}%`) : ""}
-                ${d.media_errors != null ? kpiBox("Media Errors", String(d.media_errors)) : ""}
-              </div>
-              ${d.friendly ? html`<div class="muted small">${d.friendly}</div>` : ""}
-            </div>
-          `)
-          : html`<div class="muted">No drive data</div>`
-        }
+          ? map(
+              drives,
+              (d) => html`
+                <div class="drive-card">
+                  <div class="drive-head">
+                    <div class="drive-model">
+                      ${d.model_name || d.name || "Drive"}
+                    </div>
+                    <span class="badge ${d.health_passed ? "ok" : "fail"}"
+                      >${d.health_passed ? "PASSED" : "FAILED"}</span
+                    >
+                  </div>
+                  <div class="kpi-row">
+                    ${kpiBox("Temp", d.temperature || "-")}
+                    ${kpiBox(
+                      "Power On Hrs",
+                      d.power_on_hours != null ? String(d.power_on_hours) : "-"
+                    )}
+                    ${kpiBox(
+                      "Power Cycles",
+                      d.power_cycles != null ? String(d.power_cycles) : "-"
+                    )}
+                    ${d.wear_level_percent_used != null
+                      ? kpiBox("Wear Used", `${d.wear_level_percent_used}%`)
+                      : ""}
+                    ${d.media_errors != null
+                      ? kpiBox("Media Errors", String(d.media_errors))
+                      : ""}
+                  </div>
+                  ${d.friendly
+                    ? html`<div class="muted small">${d.friendly}</div>`
+                    : ""}
+                </div>
+              `
+            )
+          : html`<div class="muted">No drive data</div>`}
       </div>
     </div>
   `;
 }
 /** @param {object} res @returns {import("lit-html").TemplateResult} */
-function renderKvrt(res) { return renderGeneric(res); }
+function renderKvrt(res) {
+  return renderGeneric(res);
+}
 /**
  * Renders the result for an AdwCleaner scan.
  * @param {object} res The result object for the task.
@@ -283,20 +321,36 @@ function renderKvrt(res) { return renderGeneric(res); }
 function renderAdwCleaner(res) {
   const s = res.summary || {};
   const getLen = (a) => (Array.isArray(a) ? a.length : 0);
-  const browserHits = Object.values(s.browsers || {}).reduce((sum, v) => sum + (Array.isArray(v) ? v.length : 0), 0);
+  const browserHits = Object.values(s.browsers || {}).reduce(
+    (sum, v) => sum + (Array.isArray(v) ? v.length : 0),
+    0
+  );
   const lines = [
-    ...(s.registry || []), ...(s.files || []), ...(s.folders || []),
-    ...(s.services || []), ...(s.tasks || []), ...(s.shortcuts || []),
-    ...(s.dlls || []), ...(s.wmi || []), ...(s.preinstalled || []),
+    ...(s.registry || []),
+    ...(s.files || []),
+    ...(s.folders || []),
+    ...(s.services || []),
+    ...(s.tasks || []),
+    ...(s.shortcuts || []),
+    ...(s.dlls || []),
+    ...(s.wmi || []),
+    ...(s.preinstalled || []),
   ].map(String);
   const needsReboot = lines.some((t) => /reboot/i.test(t));
-  const problems = (s.failed || 0) > 0 || lines.some((t) => /not deleted|failed/i.test(t));
+  const problems =
+    (s.failed || 0) > 0 || lines.some((t) => /not deleted|failed/i.test(t));
 
   const categories = {
-    Registry: getLen(s.registry), Files: getLen(s.files), Folders: getLen(s.folders),
-    Services: getLen(s.services), Tasks: getLen(s.tasks), Shortcuts: getLen(s.shortcuts),
-    DLLs: getLen(s.dlls), WMI: getLen(s.wmi), "Browser Items": browserHits,
-    Preinstalled: { count: getLen(s.preinstalled), variant: "warn" }
+    Registry: getLen(s.registry),
+    Files: getLen(s.files),
+    Folders: getLen(s.folders),
+    Services: getLen(s.services),
+    Tasks: getLen(s.tasks),
+    Shortcuts: getLen(s.shortcuts),
+    DLLs: getLen(s.dlls),
+    WMI: getLen(s.wmi),
+    "Browser Items": browserHits,
+    Preinstalled: { count: getLen(s.preinstalled), variant: "warn" },
   };
 
   return html`
@@ -306,20 +360,24 @@ function renderAdwCleaner(res) {
         ${kpiBox("Cleaned", s.cleaned != null ? String(s.cleaned) : "-")}
         ${kpiBox("Failed", s.failed != null ? String(s.failed) : "-")}
         ${kpiBox("Browser Items", browserHits)}
-        ${getLen(s.preinstalled) ? kpiBox("Preinstalled", getLen(s.preinstalled)) : ""}
+        ${getLen(s.preinstalled)
+          ? kpiBox("Preinstalled", getLen(s.preinstalled))
+          : ""}
       </div>
 
-      ${(needsReboot || problems) ? html`
-        <div class="pill-row">
-          ${needsReboot ? pill("Reboot Required", "warn") : ""}
-          ${(s.failed || 0) > 0 ? pill(`Failed ${s.failed}`, "fail") : ""}
-        </div>
-      ` : ""}
+      ${needsReboot || problems
+        ? html`
+            <div class="pill-row">
+              ${needsReboot ? pill("Reboot Required", "warn") : ""}
+              ${(s.failed || 0) > 0 ? pill(`Failed ${s.failed}`, "fail") : ""}
+            </div>
+          `
+        : ""}
 
       <div class="tag-grid">
         ${map(Object.entries(categories), ([label, data]) => {
-          const count = typeof data === 'object' ? data.count : data;
-          const variant = typeof data === 'object' ? data.variant : undefined;
+          const count = typeof data === "object" ? data.count : data;
+          const variant = typeof data === "object" ? data.variant : undefined;
           return count > 0 ? pill(`${label} ${count}`, variant) : "";
         })}
       </div>
@@ -341,7 +399,10 @@ function renderPing(res) {
         ${kpiBox("Average", fmtMs(s.average_latency_ms))}
         ${kpiBox("Min", fmtMs(s.latency_ms?.min))}
         ${kpiBox("Max", fmtMs(s.latency_ms?.max))}
-        ${kpiBox("Loss", s.packet_loss_percent != null ? `${s.packet_loss_percent}%` : "-")}
+        ${kpiBox(
+          "Loss",
+          s.packet_loss_percent != null ? `${s.packet_loss_percent}%` : "-"
+        )}
         ${kpiBox("Verdict", hr.verdict || "-")}
       </div>
       ${Array.isArray(hr.notes) && hr.notes.length
@@ -351,11 +412,17 @@ function renderPing(res) {
   `;
 }
 /** @param {object} res @returns {import("lit-html").TemplateResult} */
-function renderChkdsk(res) { return renderGeneric(res); }
+function renderChkdsk(res) {
+  return renderGeneric(res);
+}
 /** @param {object} res @returns {import("lit-html").TemplateResult} */
-function renderBleachBit(res) { return renderGeneric(res); }
+function renderBleachBit(res) {
+  return renderGeneric(res);
+}
 /** @param {object} res @returns {import("lit-html").TemplateResult} */
-function renderFurmark(res) { return renderGeneric(res); }
+function renderFurmark(res) {
+  return renderGeneric(res);
+}
 /**
  * Renders the result for a HeavyLoad stress test.
  * @param {object} res The result object for the task.
@@ -363,22 +430,30 @@ function renderFurmark(res) { return renderGeneric(res); }
  */
 function renderHeavyload(res) {
   const s = res.summary || {};
-  const label = s.stress_cpu ? "CPU Stress (HeavyLoad)"
-              : s.stress_memory ? "RAM Stress (HeavyLoad)"
-              : s.stress_gpu ? "GPU Stress (HeavyLoad)"
-              : "HeavyLoad Stress";
+  const label = s.stress_cpu
+    ? "CPU Stress (HeavyLoad)"
+    : s.stress_memory
+    ? "RAM Stress (HeavyLoad)"
+    : s.stress_gpu
+    ? "GPU Stress (HeavyLoad)"
+    : "HeavyLoad Stress";
   return html`
     <div class="card heavyload">
       ${renderHeader(label, res.status)}
       <div class="kpi-row">
-        ${kpiBox("Duration", s.duration_minutes != null ? `${s.duration_minutes} min` : "-")}
+        ${kpiBox(
+          "Duration",
+          s.duration_minutes != null ? `${s.duration_minutes} min` : "-"
+        )}
         ${kpiBox("Exit Code", s.exit_code != null ? String(s.exit_code) : "-")}
       </div>
     </div>
   `;
 }
 /** @param {object} res @returns {import("lit-html").TemplateResult} */
-function renderIperf(res) { return renderGeneric(res); }
+function renderIperf(res) {
+  return renderGeneric(res);
+}
 /**
  * Renders the result for a Windows 11 compatibility check.
  * @param {object} res The result object for the task.
@@ -396,16 +471,25 @@ function renderWhyNotWin11(res) {
         ${kpiBox("Hostname", s.hostname || "-")}
         ${kpiBox("Ready", s.ready ? "Yes" : "No")}
         ${kpiBox("Verdict", (hr.verdict || "").toString())}
-        ${kpiBox("Passing", passing)}
-        ${kpiBox("Failing", failing)}
+        ${kpiBox("Passing", passing)} ${kpiBox("Failing", failing)}
       </div>
-      ${failing > 0 ? html`<div class="pill-row">${map(s.failing_checks, (c) => pill(c, "fail"))}</div>` : ""}
-      ${passing > 0 ? html`<div class="pill-row">${map(s.passing_checks, (c) => pill(c))}</div>` : ""}
+      ${failing > 0
+        ? html`<div class="pill-row">
+            ${map(s.failing_checks, (c) => pill(c, "fail"))}
+          </div>`
+        : ""}
+      ${passing > 0
+        ? html`<div class="pill-row">
+            ${map(s.passing_checks, (c) => pill(c))}
+          </div>`
+        : ""}
     </div>
   `;
 }
 /** @param {object} res @returns {import("lit-html").TemplateResult} */
-function renderWindowsUpdate(res) { return renderGeneric(res); }
+function renderWindowsUpdate(res) {
+  return renderGeneric(res);
+}
 
 // ---------- Printable ----------
 /**
@@ -421,7 +505,9 @@ function buildPrintableHtml(report, sectionsEl) {
   const body = `
     <div class="summary-head ${overall === "success" ? "ok" : "warn"}">
       <div>
-        <h2 class="title">Overall: ${overall === "success" ? "Success" : "Completed with errors"}</h2>
+        <h2 class="title">Overall: ${
+          overall === "success" ? "Success" : "Completed with errors"
+        }</h2>
         <div class="muted">${report.results.length} task(s)</div>
       </div>
     </div>
@@ -472,5 +558,3 @@ function fmtMbps(n) {
   if (n == null || !isFinite(n)) return "-";
   return `${Math.round(n * 10) / 10} Mbps`;
 }
-
-
