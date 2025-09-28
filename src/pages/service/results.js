@@ -276,6 +276,10 @@ function renderSmartctl(res) {
                   <div class="drive-head">
                     <div class="drive-model">
                       ${d.model_name || d.name || "Drive"}
+                      <span class="muted small">
+                        (SN: ${d.serial_number || "?"}, FW:
+                        ${d.firmware_version || "?"})
+                      </span>
                     </div>
                     <span class="badge ${d.health_passed ? "ok" : "fail"}"
                       >${d.health_passed ? "PASSED" : "FAILED"}</span
@@ -294,13 +298,22 @@ function renderSmartctl(res) {
                     ${d.wear_level_percent_used != null
                       ? kpiBox("Wear Used", `${d.wear_level_percent_used}%`)
                       : ""}
+                    ${d.data_written_human
+                      ? kpiBox("Data Written", d.data_written_human)
+                      : ""}
+                    ${d.data_read_human
+                      ? kpiBox("Data Read", d.data_read_human)
+                      : ""}
                     ${d.media_errors != null
                       ? kpiBox("Media Errors", String(d.media_errors))
                       : ""}
+                    ${d.unsafe_shutdowns != null
+                      ? kpiBox("Unsafe Shutdowns", String(d.unsafe_shutdowns))
+                      : ""}
+                    ${d.error_log_entries != null
+                      ? kpiBox("Error Log", String(d.error_log_entries))
+                      : ""}
                   </div>
-                  ${d.friendly
-                    ? html`<div class="muted small">${d.friendly}</div>`
-                    : ""}
                 </div>
               `
             )
@@ -469,20 +482,13 @@ function renderWhyNotWin11(res) {
       ${renderHeader("Windows 11 Compatibility", res.status)}
       <div class="kpi-row">
         ${kpiBox("Hostname", s.hostname || "-")}
-        ${kpiBox("Ready", s.ready ? "Yes" : "No")}
-        ${kpiBox("Verdict", (hr.verdict || "").toString())}
-        ${kpiBox("Passing", passing)} ${kpiBox("Failing", failing)}
+        ${kpiBox("Ready", s.ready ? "Yes" : "No")} ${kpiBox("Passing", passing)}
+        ${kpiBox("Failing", failing)}
       </div>
-      ${failing > 0
-        ? html`<div class="pill-row">
-            ${map(s.failing_checks, (c) => pill(c, "fail"))}
-          </div>`
-        : ""}
-      ${passing > 0
-        ? html`<div class="pill-row">
-            ${map(s.passing_checks, (c) => pill(c))}
-          </div>`
-        : ""}
+      <div class="pill-row">
+        ${map(s.failing_checks || [], (c) => pill(c, "fail"))}
+        ${map(s.passing_checks || [], (c) => pill(c, "ok"))}
+      </div>
     </div>
   `;
 }
