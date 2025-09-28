@@ -2,6 +2,7 @@ import printJS from "print-js";
 import { html, render } from "lit-html";
 import { map } from "lit-html/directives/map.js";
 import prettyBytes from "pretty-bytes";
+import ApexCharts from "apexcharts";
 
 /**
  * @file Renders the service results page (#/service-results).
@@ -83,15 +84,15 @@ export async function initPage() {
 
   // Build sections modularly (fault-tolerant per task)
   const sectionsTemplate = html`
-    ${map(report.results, (res) => {
+    ${map(report.results, (res, index) => {
       const type = res?.task_type || res?.type || "unknown";
       const renderer = RENDERERS[type] || renderGeneric;
       let content;
       try {
-        content = renderer(res);
+        content = renderer(res, index);
       } catch (e) {
         console.error("Failed to render result section:", res, e);
-        content = renderGeneric(res);
+        content = renderGeneric(res, index);
       }
       return html`<section class="result-section">${content}</section>`;
     })}
@@ -190,7 +191,7 @@ function formatValue(v) {
  * @param {object} res The result object for the task.
  * @returns {import("lit-html").TemplateResult}
  */
-function renderGeneric(res) {
+function renderGeneric(res, index) {
   return html`
     <div class="result generic">
       ${renderHeader(res.ui_label || res.task_type, res.status)}
@@ -204,7 +205,7 @@ function renderGeneric(res) {
  * @param {object} res The result object for the task.
  * @returns {import("lit-html").TemplateResult}
  */
-function renderSpeedtest(res) {
+function renderSpeedtest(res, index) {
   const h = res.summary?.human_readable || {};
   return html`
     <div class="card speedtest">
@@ -225,7 +226,7 @@ function renderSpeedtest(res) {
  * @param {object} res The result object for the task.
  * @returns {import("lit-html").TemplateResult}
  */
-function renderBatteryHealth(res) {
+function renderBatteryHealth(res, index) {
   const s = res.summary || {};
   const info = {
     Batteries: s.count_batteries,
@@ -250,19 +251,19 @@ function renderBatteryHealth(res) {
 }
 
 /** @param {object} res @returns {import("lit-html").TemplateResult} */
-function renderSfc(res) {
-  return renderGeneric(res);
+function renderSfc(res, index) {
+  return renderGeneric(res, index);
 }
 /** @param {object} res @returns {import("lit-html").TemplateResult} */
-function renderDism(res) {
-  return renderGeneric(res);
+function renderDism(res, index) {
+  return renderGeneric(res, index);
 }
 /**
  * Renders the result for a drive health (smartctl) check.
  * @param {object} res The result object for the task.
  * @returns {import("lit-html").TemplateResult}
  */
-function renderSmartctl(res) {
+function renderSmartctl(res, index) {
   const s = res.summary || {};
   const drives = Array.isArray(s.drives) ? s.drives : [];
   return html`
@@ -327,15 +328,15 @@ function renderSmartctl(res) {
   `;
 }
 /** @param {object} res @returns {import("lit-html").TemplateResult} */
-function renderKvrt(res) {
-  return renderGeneric(res);
+function renderKvrt(res, index) {
+  return renderGeneric(res, index);
 }
 /**
  * Renders the result for an AdwCleaner scan.
  * @param {object} res The result object for the task.
  * @returns {import("lit-html").TemplateResult}
  */
-function renderAdwCleaner(res) {
+function renderAdwCleaner(res, index) {
   const s = res.summary || {};
   const getLen = (a) => (Array.isArray(a) ? a.length : 0);
   const browserHits = Object.values(s.browsers || {}).reduce(
@@ -406,7 +407,7 @@ function renderAdwCleaner(res) {
  * @param {object} res The result object for the task.
  * @returns {import("lit-html").TemplateResult}
  */
-function renderPing(res) {
+function renderPing(res, index) {
   const s = res.summary || {};
   const hr = s.human_readable || {};
   return html`
@@ -429,15 +430,15 @@ function renderPing(res) {
   `;
 }
 /** @param {object} res @returns {import("lit-html").TemplateResult} */
-function renderChkdsk(res) {
-  return renderGeneric(res);
+function renderChkdsk(res, index) {
+  return renderGeneric(res, index);
 }
 /**
  * Renders the result for a BleachBit disk cleanup.
  * @param {object} res The result object for the task.
  * @returns {import("lit-html").TemplateResult}
  */
-function renderBleachBit(res) {
+function renderBleachBit(res, index) {
   const s = res.summary || {};
   const recovered = s.space_recovered_bytes;
   return html`
@@ -458,15 +459,15 @@ function renderBleachBit(res) {
   `;
 }
 /** @param {object} res @returns {import("lit-html").TemplateResult} */
-function renderFurmark(res) {
-  return renderGeneric(res);
+function renderFurmark(res, index) {
+  return renderGeneric(res, index);
 }
 /**
  * Renders the result for a HeavyLoad stress test.
  * @param {object} res The result object for the task.
  * @returns {import("lit-html").TemplateResult}
  */
-function renderHeavyload(res) {
+function renderHeavyload(res, index) {
   const s = res.summary || {};
   const label = s.stress_cpu
     ? "CPU Stress (HeavyLoad)"
@@ -488,16 +489,107 @@ function renderHeavyload(res) {
     </div>
   `;
 }
-/** @param {object} res @returns {import("lit-html").TemplateResult} */
-function renderIperf(res) {
-  return renderGeneric(res);
+/**
+ * Renders the result for an iPerf network throughput test.
+ * @param {object} res The result object for the task.
+ * @returns {import("lit-html").TemplateResult}
+ */
+function renderIperf(res, index) {
+  const s = res.summary || {};
+  const hr = s.human_readable || {};
+  const throughput = hr.throughput || {};
+  const throughput_over_time = s.throughput_over_time_mbps || [];
+
+  // Schedule the chart to be rendered after the DOM is updated
+  setTimeout(() => {
+    const chartEl = document.getElementById(`iperf-chart-${index}`);
+    if (chartEl && throughput_over_time.length > 0) {
+      const options = {
+        chart: {
+          type: "area",
+          height: 200,
+          toolbar: { show: false },
+          animations: { enabled: false },
+        },
+        series: [
+          {
+            name: "Throughput",
+            data: throughput_over_time.map((d) => d?.toFixed(1) ?? 0),
+          },
+        ],
+        colors: ["#4f8cff"],
+        xaxis: {
+          type: "numeric",
+          tickAmount: 10,
+          labels: {
+            style: { colors: "#a3adbf", fontFamily: "Inter, sans-serif" },
+            formatter: (val) => `${val}s`,
+          },
+          axisBorder: { show: false },
+        },
+        yaxis: {
+          min: 0,
+          labels: {
+            style: { colors: "#a3adbf", fontFamily: "Inter, sans-serif" },
+            formatter: (val) => `${val} Mbps`,
+          },
+        },
+        grid: { borderColor: "#2a3140" },
+        dataLabels: { enabled: false },
+        tooltip: {
+          theme: "dark",
+          x: { formatter: (val) => `Interval: ${val}s` },
+        },
+        stroke: { curve: "smooth", width: 2 },
+        fill: {
+          type: "gradient",
+          gradient: {
+            shadeIntensity: 1,
+            opacityFrom: 0.4,
+            opacityTo: 0.1,
+            stops: [0, 90, 100],
+          },
+        },
+      };
+      const chart = new ApexCharts(chartEl, options);
+      chart.render();
+    }
+  }, 0);
+
+  return html`
+    <div class="card iperf">
+      ${renderHeader("Network Throughput (iPerf)", res.status)}
+      <div class="kpi-row">
+        ${kpiBox(
+          "Avg Throughput",
+          `${throughput.mean?.toFixed(1) || "?"} Mbps`
+        )}
+        ${kpiBox("Verdict", hr.verdict || "-")}
+        ${kpiBox("Stability", `${hr.stability_score || "?"}/100`)}
+        ${kpiBox("Direction", hr.direction || "-")}
+        ${kpiBox("Protocol", hr.protocol || "-")}
+      </div>
+      ${Array.isArray(hr.notes) && hr.notes.length
+        ? html`<div class="pill-row">
+            ${map(hr.notes, (n) => pill(n, "warn"))}
+          </div>`
+        : ""}
+      <div class="chart-container">
+        ${throughput_over_time.length > 0
+          ? html`<div id="iperf-chart-${index}"></div>`
+          : html`<div class="muted">
+              No interval data available for chart.
+            </div>`}
+      </div>
+    </div>
+  `;
 }
 /**
  * Renders the result for a Windows 11 compatibility check.
  * @param {object} res The result object for the task.
  * @returns {import("lit-html").TemplateResult}
  */
-function renderWhyNotWin11(res) {
+function renderWhyNotWin11(res, index) {
   const s = res.summary || {};
   const hr = s.human_readable || {};
   const failing = Array.isArray(s.failing_checks) ? s.failing_checks.length : 0;
@@ -518,8 +610,8 @@ function renderWhyNotWin11(res) {
   `;
 }
 /** @param {object} res @returns {import("lit-html").TemplateResult} */
-function renderWindowsUpdate(res) {
-  return renderGeneric(res);
+function renderWindowsUpdate(res, index) {
+  return renderGeneric(res, index);
 }
 
 // ---------- Printable ----------

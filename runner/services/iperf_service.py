@@ -416,6 +416,8 @@ def _summarize_iperf_json(
                 stats["below_threshold_intervals"] = below_threshold
 
         summary["interval_stats"] = stats
+        if bps_values:
+            summary["throughput_over_time_mbps"] = [_to_mbps(v) for v in bps_values]
         if include_intervals:
             summary["intervals"] = trimmed_intervals
     except Exception as e:  # noqa: BLE001
