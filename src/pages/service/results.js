@@ -556,6 +556,10 @@ function renderIperf(res, index) {
     }
   }, 0);
 
+  const durationMin = s.duration_seconds
+    ? Math.round(s.duration_seconds / 60)
+    : null;
+
   return html`
     <div class="card iperf">
       ${renderHeader("Network Throughput (iPerf)", res.status)}
@@ -564,10 +568,21 @@ function renderIperf(res, index) {
           "Avg Throughput",
           `${throughput.mean?.toFixed(1) || "?"} Mbps`
         )}
-        ${kpiBox("Verdict", hr.verdict || "-")}
+        ${kpiBox(
+          "Verdict",
+          hr.verdict
+            ? hr.verdict.charAt(0).toUpperCase() + hr.verdict.slice(1)
+            : "-"
+        )}
         ${kpiBox("Stability", `${hr.stability_score || "?"}/100`)}
-        ${kpiBox("Direction", hr.direction || "-")}
-        ${kpiBox("Protocol", hr.protocol || "-")}
+        ${kpiBox(
+          "Direction",
+          hr.direction
+            ? hr.direction.charAt(0).toUpperCase() + hr.direction.slice(1)
+            : "-"
+        )}
+        ${kpiBox("Protocol", hr.protocol ? hr.protocol.toUpperCase() : "-")}
+        ${kpiBox("Time", durationMin ? `${durationMin} min` : "-")}
       </div>
       ${Array.isArray(hr.notes) && hr.notes.length
         ? html`<div class="pill-row">
