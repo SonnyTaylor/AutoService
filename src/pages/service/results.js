@@ -222,7 +222,66 @@ function renderSmartctl(res) {
   return root;
 }
 function renderKvrt(res) { return renderGeneric(res); }
-function renderAdwCleaner(res) { return renderGeneric(res); }
+function renderAdwCleaner(res) {
+  const root = el("div", "card adwcleaner");
+  root.appendChild(renderHeader("AdwCleaner Cleanup", res.status));
+  const s = res.summary || {};
+
+  const getLen = (a) => (Array.isArray(a) ? a.length : 0);
+  const browserHits = Object.values(s.browsers || {}).reduce((sum, v) => {
+    return sum + (Array.isArray(v) ? v.length : 0);
+  }, 0);
+
+  const k = document.createElement("div");
+  k.className = "kpi-row";
+  k.appendChild(kpiBox("Cleaned", s.cleaned != null ? String(s.cleaned) : "-"));
+  k.appendChild(kpiBox("Failed", s.failed != null ? String(s.failed) : "-"));
+  k.appendChild(kpiBox("Browser Items", browserHits));
+  const pre = getLen(s.preinstalled);
+  if (pre) k.appendChild(kpiBox("Preinstalled", pre));
+  root.appendChild(k);
+
+  // Badges line
+  const lines = [
+    ...(s.registry || []),
+    ...(s.files || []),
+    ...(s.folders || []),
+    ...(s.services || []),
+    ...(s.tasks || []),
+    ...(s.shortcuts || []),
+    ...(s.dlls || []),
+    ...(s.wmi || []),
+    ...(s.preinstalled || []),
+  ].map(String);
+  const needsReboot = lines.some((t) => /reboot/i.test(t));
+  const problems = (s.failed || 0) > 0 || lines.some((t) => /not deleted|failed/i.test(t));
+  if (needsReboot || problems) {
+    const wrap = el("div", "", "");
+    if (needsReboot) wrap.appendChild(pill("Reboot Required", "warn"));
+    if ((s.failed || 0) > 0) wrap.appendChild(pill(`Failed ${s.failed}`, "fail"));
+    root.appendChild(wrap);
+  }
+
+  // Affected categories list (only non-empty ones)
+  const meta = el("div", "list");
+  const addCount = (label, arr) => {
+    const n = getLen(arr);
+    if (n) addKv(meta, label, String(n));
+  };
+  addCount("Registry", s.registry);
+  addCount("Files", s.files);
+  addCount("Folders", s.folders);
+  addCount("Services", s.services);
+  addCount("Tasks", s.tasks);
+  addCount("Shortcuts", s.shortcuts);
+  addCount("DLLs", s.dlls);
+  addCount("WMI", s.wmi);
+  if (browserHits) addKv(meta, "Browser Items", String(browserHits));
+  if (getLen(s.preinstalled)) addKv(meta, "Preinstalled", String(getLen(s.preinstalled)));
+  if (meta.children.length) root.appendChild(meta);
+
+  return root;
+}
 function renderPing(res) {
   const root = el("div", "card ping");
   root.appendChild(renderHeader("Ping Test", res.status));
