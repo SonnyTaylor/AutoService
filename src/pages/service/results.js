@@ -296,7 +296,10 @@ function renderSmartctl(res) {
                       d.power_cycles != null ? String(d.power_cycles) : "-"
                     )}
                     ${d.wear_level_percent_used != null
-                      ? kpiBox("Wear Used", `${d.wear_level_percent_used}%`)
+                      ? kpiBox(
+                          "Drive Health",
+                          `${100 - d.wear_level_percent_used}%`
+                        )
                       : ""}
                     ${d.data_written_human
                       ? kpiBox("Data Written", d.data_written_human)
