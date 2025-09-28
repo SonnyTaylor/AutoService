@@ -684,7 +684,28 @@ function renderIperf(res, index) {
       </div>
       ${Array.isArray(hr.notes) && hr.notes.length
         ? html`<div class="pill-row">
-            ${map(hr.notes, (n) => pill(n, "warn"))}
+            ${map(hr.notes, (n) => {
+              const note = String(n || "").toLowerCase();
+              let variant = "warn";
+              if (
+                note.includes("low variability") ||
+                note.includes("low variation")
+              ) {
+                variant = "ok";
+              } else if (
+                note.includes("high variability") ||
+                note.includes("high variation") ||
+                note.includes("unstable")
+              ) {
+                variant = "fail";
+              } else if (
+                note.includes("medium variability") ||
+                note.includes("moderate variability")
+              ) {
+                variant = "warn";
+              }
+              return pill(n, variant);
+            })}
           </div>`
         : ""}
       <div class="chart-container">
