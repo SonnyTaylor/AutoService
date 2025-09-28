@@ -2,14 +2,41 @@
   <h1>Shortcuts</h1>
   <p class="muted">Quick actions for Windows system and utility tools.</p>
 
-  <div class="shortcut-toolbar">
+  <div class="card shortcuts-hero" aria-hidden="true">
+    <div class="shortcuts-hero-icon" aria-hidden="true">
+      <span class="ph ph-lightning"></span>
+    </div>
+    <div class="shortcuts-hero-copy">
+      <h2>Instant Tools</h2>
+      <p>
+        Launch frequently used diagnostics, management consoles, and system
+        utilities without hunting through menus.
+      </p>
+    </div>
+    <div class="shortcuts-hero-stats">
+      <div class="shortcuts-stat">
+        <span class="label">Categories</span>
+        <span class="value" id="shortcuts-cat-count">0</span>
+      </div>
+      <div class="shortcuts-stat">
+        <span class="label">Shortcuts</span>
+        <span class="value" id="shortcuts-total">0</span>
+      </div>
+      <div class="shortcuts-stat">
+        <span class="label">Recent Launch</span>
+        <span class="value" id="shortcuts-last-launch">—</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card shortcuts-toolbar">
     <input
       id="shortcut-search"
       class="shortcut-search"
       type="search"
-      placeholder="Search tools... (e.g., device, disk, powershell)"
+      placeholder="Search tools… (e.g. Device Manager, PowerShell)"
     />
-    <button id="clear-search" title="Clear search">Clear</button>
+    <button id="clear-search" class="ghost" title="Clear search">Clear</button>
   </div>
 
   <div id="shortcut-list" class="shortcut-list"></div>

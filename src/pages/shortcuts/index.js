@@ -22,6 +22,13 @@ export async function initPage() {
   const shortcutsContainer = document.getElementById("shortcut-list");
   const searchInput = document.getElementById("shortcut-search");
   const clearSearchButton = document.getElementById("clear-search");
+  const totalCountEl = document.getElementById("shortcuts-total");
+  const categoryCountEl = document.getElementById("shortcuts-cat-count");
+  const lastLaunchEl = document.getElementById("shortcuts-last-launch");
+
+  const state = {
+    lastLaunch: null,
+  };
 
   /**
    * Handles the click event for a shortcut button.
@@ -36,6 +43,8 @@ export async function initPage() {
     button.disabled = true; // Disable button during invocation
     try {
       await invoke("launch_shortcut", { id: item.id });
+      state.lastLaunch = item.label;
+      currentCategories = renderShortcutsWithHandlers(CATEGORIES);
     } catch (error) {
       console.error("Error launching shortcut:", error);
       alert(`Failed to launch: ${item.label}`);
@@ -51,9 +60,13 @@ export async function initPage() {
    * @param {Array} categoriesList - The list of categories to render.
    */
   const renderShortcutsWithHandlers = (categoriesList) => {
+    const filteredCategories = categoriesList.filter(
+      (category) => category.items.length
+    );
+
     shortcutsContainer.innerHTML = ""; // Clear existing content
 
-    categoriesList.forEach((category) => {
+    filteredCategories.forEach((category) => {
       const section = document.createElement("section");
       section.className = "category";
       section.innerHTML = `
@@ -71,10 +84,21 @@ export async function initPage() {
 
       shortcutsContainer.appendChild(section);
     });
+
+    const totalShortcuts = filteredCategories.reduce(
+      (sum, category) => sum + category.items.length,
+      0
+    );
+    if (totalCountEl) totalCountEl.textContent = String(totalShortcuts);
+    if (categoryCountEl)
+      categoryCountEl.textContent = String(filteredCategories.length);
+    if (lastLaunchEl) lastLaunchEl.textContent = state.lastLaunch ?? "—";
+
+    return filteredCategories;
   };
 
   // Initial render of all categories
-  renderShortcutsWithHandlers(CATEGORIES);
+  let currentCategories = renderShortcutsWithHandlers(CATEGORIES);
 
   // Set up search handlers
   setupSearchHandlers(
