@@ -83,6 +83,26 @@ export const SERVICES = {
       return task;
     },
   },
+  battery_health: {
+    id: "battery_health",
+    label: "Battery Health",
+    group: "Diagnostics",
+    category: "Diagnostics",
+    defaultParams: {
+      source: "auto" // auto | cache | live
+    },
+    toolKeys: [],
+    async build({ params }) {
+      const source = (params?.source || "auto").toString();
+      // Build a virtual task that will be executed client-side (no Python)
+      return {
+        type: "battery_health",
+        source,
+        ui_label: "Battery Health",
+        _client_only: true,
+      };
+    },
+  },
   whynotwin11_check: {
     id: "whynotwin11_check",
     label: "Windows 11 Upgrade Check",
