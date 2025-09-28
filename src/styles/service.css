@@ -949,6 +949,28 @@
   border-radius: 6px;
   min-width: 140px;
 }
+[data-page="service-results"] .kpi.verdict {
+  background: transparent;
+}
+[data-page="service-results"] .kpi.verdict .val {
+  color: inherit;
+}
+[data-page="service-results"] .kpi.info {
+  border-color: #33507a;
+  color: #7aa8ff;
+}
+[data-page="service-results"] .kpi.ok {
+  border-color: #2d4a33;
+  color: #8bd17c;
+}
+[data-page="service-results"] .kpi.warn {
+  border-color: #6b422b;
+  color: #e8b27c;
+}
+[data-page="service-results"] .kpi.fail {
+  border-color: #522a2a;
+  color: #f29a9a;
+}
 [data-page="service-results"] .kpi .lab {
   display: block;
   font-size: 12px;

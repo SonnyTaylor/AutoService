@@ -662,15 +662,25 @@ function renderIperf(res, index) {
     <div class="card iperf">
       ${renderHeader("Network Throughput (iPerf)", res.status)}
       <div class="kpi-row">
+        ${(() => {
+          const verdictRaw = hr.verdict ? String(hr.verdict) : "";
+          const verdict = verdictRaw
+            ? verdictRaw.charAt(0).toUpperCase() + verdictRaw.slice(1)
+            : "-";
+          const lower = verdictRaw.toLowerCase();
+          let variant = "";
+          if (lower.includes("excellent")) variant = "info";
+          else if (lower.includes("good")) variant = "ok";
+          else if (lower.includes("fair")) variant = "warn";
+          else if (lower.includes("poor")) variant = "fail";
+          return html`<div class="kpi verdict${variant ? ` ${variant}` : ""}">
+            <span class="lab">Verdict</span>
+            <span class="val">${verdict}</span>
+          </div>`;
+        })()}
         ${kpiBox(
           "Avg Throughput",
           `${throughput.mean?.toFixed(1) || "?"} Mbps`
-        )}
-        ${kpiBox(
-          "Verdict",
-          hr.verdict
-            ? hr.verdict.charAt(0).toUpperCase() + hr.verdict.slice(1)
-            : "-"
         )}
         ${kpiBox("Stability", `${hr.stability_score || "?"}/100`)}
         ${kpiBox(
