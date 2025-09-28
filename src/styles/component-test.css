@@ -14,6 +14,10 @@
   padding: 0;
 }
 
+[data-page="component-test"] .subtab-panel > h2 {
+  margin-top: 0;
+}
+
 [data-page="component-test"] .row.wrap {
   flex-wrap: wrap;
 }
