@@ -2,6 +2,13 @@ import printJS from "print-js";
 import { html, render } from "lit-html";
 import { map } from "lit-html/directives/map.js";
 
+/**
+ * @file Renders the service results page (#/service-results).
+ * This module is responsible for parsing a service report from session/local storage,
+ * rendering a summary and detailed sections for each task, and providing a printable
+ * version of the report. It uses lit-html for efficient and declarative rendering.
+ */
+
 // Modular renderers per task type. Extend incrementally here.
 const RENDERERS = {
   speedtest: renderSpeedtest,
@@ -21,6 +28,10 @@ const RENDERERS = {
   windows_update: renderWindowsUpdate,
 };
 
+/**
+ * Initializes the results page, loads the report, and renders all content.
+ * @returns {Promise<void>}
+ */
 export async function initPage() {
   const container = document.getElementById("svc-results");
   const backBtn = document.getElementById("svc-results-back");
@@ -107,6 +118,12 @@ export async function initPage() {
 
 // ---------- Renderers ----------
 
+/**
+ * Renders a standard header for a result section.
+ * @param {string} label The title of the section.
+ * @param {string} status The status of the task (e.g., "success", "warn", "fail").
+ * @returns {import("lit-html").TemplateResult}
+ */
 const renderHeader = (label, status) => html`
   <div class="result-header">
     <h3>${label || "Task"}</h3>
@@ -114,6 +131,11 @@ const renderHeader = (label, status) => html`
   </div>
 `;
 
+/**
+ * Renders a key-value list from an object.
+ * @param {Record<string, any>} obj The object to render.
+ * @returns {import("lit-html").TemplateResult}
+ */
 const renderList = (obj) => html`
   <dl class="kv">
     ${map(Object.entries(obj || {}), ([k, v]) => html`
@@ -123,12 +145,22 @@ const renderList = (obj) => html`
   </dl>
 `;
 
+/**
+ * Prettifies an object key for display (e.g., "cpu_speed" -> "Cpu Speed").
+ * @param {string} k The key to prettify.
+ * @returns {string} The formatted key.
+ */
 function prettifyKey(k) {
   return String(k)
     .replace(/_/g, " ")
     .replace(/\b\w/g, (m) => m.toUpperCase());
 }
 
+/**
+ * Formats a value for display, handling null, arrays, and objects.
+ * @param {any} v The value to format.
+ * @returns {string} The formatted value.
+ */
 function formatValue(v) {
   if (v == null) return "-";
   if (Array.isArray(v)) {
@@ -140,6 +172,12 @@ function formatValue(v) {
   return String(v);
 }
 
+/**
+ * Generic renderer for tasks that don't have a custom one.
+ * Displays the task type as a title and the summary as a key-value list.
+ * @param {object} res The result object for the task.
+ * @returns {import("lit-html").TemplateResult}
+ */
 function renderGeneric(res) {
   return html`
     <div class="result generic">
@@ -149,6 +187,11 @@ function renderGeneric(res) {
   `;
 }
 
+/**
+ * Renders the result for an internet speed test.
+ * @param {object} res The result object for the task.
+ * @returns {import("lit-html").TemplateResult}
+ */
 function renderSpeedtest(res) {
   const h = res.summary?.human_readable || {};
   return html`
@@ -165,6 +208,11 @@ function renderSpeedtest(res) {
   `;
 }
 
+/**
+ * Renders the result for a battery health check.
+ * @param {object} res The result object for the task.
+ * @returns {import("lit-html").TemplateResult}
+ */
 function renderBatteryHealth(res) {
   const s = res.summary || {};
   const info = {
@@ -186,8 +234,15 @@ function renderBatteryHealth(res) {
   `;
 }
 
+/** @param {object} res @returns {import("lit-html").TemplateResult} */
 function renderSfc(res) { return renderGeneric(res); }
+/** @param {object} res @returns {import("lit-html").TemplateResult} */
 function renderDism(res) { return renderGeneric(res); }
+/**
+ * Renders the result for a drive health (smartctl) check.
+ * @param {object} res The result object for the task.
+ * @returns {import("lit-html").TemplateResult}
+ */
 function renderSmartctl(res) {
   const s = res.summary || {};
   const drives = Array.isArray(s.drives) ? s.drives : [];
@@ -218,7 +273,13 @@ function renderSmartctl(res) {
     </div>
   `;
 }
+/** @param {object} res @returns {import("lit-html").TemplateResult} */
 function renderKvrt(res) { return renderGeneric(res); }
+/**
+ * Renders the result for an AdwCleaner scan.
+ * @param {object} res The result object for the task.
+ * @returns {import("lit-html").TemplateResult}
+ */
 function renderAdwCleaner(res) {
   const s = res.summary || {};
   const getLen = (a) => (Array.isArray(a) ? a.length : 0);
@@ -265,6 +326,11 @@ function renderAdwCleaner(res) {
     </div>
   `;
 }
+/**
+ * Renders the result for a ping test.
+ * @param {object} res The result object for the task.
+ * @returns {import("lit-html").TemplateResult}
+ */
 function renderPing(res) {
   const s = res.summary || {};
   const hr = s.human_readable || {};
@@ -284,9 +350,17 @@ function renderPing(res) {
     </div>
   `;
 }
+/** @param {object} res @returns {import("lit-html").TemplateResult} */
 function renderChkdsk(res) { return renderGeneric(res); }
+/** @param {object} res @returns {import("lit-html").TemplateResult} */
 function renderBleachBit(res) { return renderGeneric(res); }
+/** @param {object} res @returns {import("lit-html").TemplateResult} */
 function renderFurmark(res) { return renderGeneric(res); }
+/**
+ * Renders the result for a HeavyLoad stress test.
+ * @param {object} res The result object for the task.
+ * @returns {import("lit-html").TemplateResult}
+ */
 function renderHeavyload(res) {
   const s = res.summary || {};
   const label = s.stress_cpu ? "CPU Stress (HeavyLoad)"
@@ -303,7 +377,13 @@ function renderHeavyload(res) {
     </div>
   `;
 }
+/** @param {object} res @returns {import("lit-html").TemplateResult} */
 function renderIperf(res) { return renderGeneric(res); }
+/**
+ * Renders the result for a Windows 11 compatibility check.
+ * @param {object} res The result object for the task.
+ * @returns {import("lit-html").TemplateResult}
+ */
 function renderWhyNotWin11(res) {
   const s = res.summary || {};
   const hr = s.human_readable || {};
@@ -324,9 +404,16 @@ function renderWhyNotWin11(res) {
     </div>
   `;
 }
+/** @param {object} res @returns {import("lit-html").TemplateResult} */
 function renderWindowsUpdate(res) { return renderGeneric(res); }
 
 // ---------- Printable ----------
+/**
+ * Constructs the HTML content for the printable version of the report.
+ * @param {object} report The full report object.
+ * @param {HTMLElement} sectionsEl The element containing the rendered result sections.
+ * @returns {string} The complete HTML string for printing.
+ */
 function buildPrintableHtml(report, sectionsEl) {
   const title = "AutoService – Service Results";
   const overall = String(report.overall_status || "").toLowerCase();
@@ -344,6 +431,12 @@ function buildPrintableHtml(report, sectionsEl) {
 }
 
 // ---------- Helpers ----------
+/**
+ * Renders a "Key Performance Indicator" box.
+ * @param {string} label The label for the KPI.
+ * @param {string|number} value The value of the KPI.
+ * @returns {import("lit-html").TemplateResult}
+ */
 const kpiBox = (label, value) => html`
   <div class="kpi">
     <span class="lab">${label}</span>
@@ -351,14 +444,30 @@ const kpiBox = (label, value) => html`
   </div>
 `;
 
+/**
+ * Renders a styled pill/badge element.
+ * @param {string} text The text content of the pill.
+ * @param {string} [variant] An optional style variant (e.g., "warn", "fail").
+ * @returns {import("lit-html").TemplateResult}
+ */
 const pill = (text, variant) => html`
   <span class="pill${variant ? " " + variant : ""}">${text}</span>
 `;
 
+/**
+ * Formats a millisecond value for display.
+ * @param {number} ms Milliseconds.
+ * @returns {string} Formatted string (e.g., "123 ms").
+ */
 function fmtMs(ms) {
   if (ms == null || !isFinite(ms)) return "-";
   return `${Math.round(ms)} ms`;
 }
+/**
+ * Formats a Mbps value for display.
+ * @param {number} n Megabits per second.
+ * @returns {string} Formatted string (e.g., "100.5 Mbps").
+ */
 function fmtMbps(n) {
   if (n == null || !isFinite(n)) return "-";
   return `${Math.round(n * 10) / 10} Mbps`;
