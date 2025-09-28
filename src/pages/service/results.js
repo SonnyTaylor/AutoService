@@ -298,7 +298,61 @@ function renderSfc(res, index) {
 }
 /** @param {object} res @returns {import("lit-html").TemplateResult} */
 function renderDism(res, index) {
-  return renderGeneric(res, index);
+  const s = res.summary || {};
+  const steps = Array.isArray(s.steps) ? s.steps : [];
+  const getStep = (action) =>
+    steps.find((step) => step.action === action)?.parsed;
+
+  const checkHealth = getStep("checkhealth");
+  const scanHealth = getStep("scanhealth");
+  const restoreHealth = getStep("restorehealth");
+
+  const isHealthy =
+    checkHealth?.health_state === "healthy" &&
+    scanHealth?.health_state === "healthy";
+  const isRepairable =
+    checkHealth?.health_state === "repairable" ||
+    scanHealth?.health_state === "repairable";
+
+  let verdict = "Unknown";
+  if (isHealthy) {
+    verdict = "Healthy";
+  } else if (isRepairable) {
+    const repaired = restoreHealth?.message
+      ?.toLowerCase()
+      .includes("operation completed successfully");
+    verdict = repaired ? "Repaired" : "Corruption Found";
+  } else if (res.status === "fail") {
+    verdict = "Scan Failed";
+  }
+
+  const fmtHealth = (h) => {
+    if (!h) return "N/A";
+    if (h.health_state === "healthy") return "Healthy";
+    if (h.health_state === "repairable") return "Corrupt";
+    return "Unknown";
+  };
+
+  const fmtRestore = (h) => {
+    if (!h) return "N/A";
+    if (h.message?.toLowerCase().includes("operation completed successfully")) {
+      return isRepairable ? "Repaired" : "Success";
+    }
+    if (h.repair_success === false) return "Failed";
+    return "Unknown";
+  };
+
+  return html`
+    <div class="card dism">
+      ${renderHeader("Windows Image Health (DISM)", res.status)}
+      <div class="kpi-row">
+        ${kpiBox("Verdict", verdict)}
+        ${kpiBox("CheckHealth", fmtHealth(checkHealth))}
+        ${kpiBox("ScanHealth", fmtHealth(scanHealth))}
+        ${kpiBox("RestoreHealth", fmtRestore(restoreHealth))}
+      </div>
+    </div>
+  `;
 }
 /**
  * Renders the result for a drive health (smartctl) check.
