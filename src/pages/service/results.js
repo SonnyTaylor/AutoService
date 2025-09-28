@@ -857,14 +857,7 @@ function buildPrintableHtml(report, sectionsEl) {
   const overall = String(report.overall_status || "").toLowerCase();
   const head = ``;
   const body = `
-    <div class="summary-head ${overall === "success" ? "ok" : "warn"}">
-      <div>
-        <h2 class="title">Overall: ${
-          overall === "success" ? "Success" : "Completed with errors"
-        }</h2>
-        <div class="muted">${report.results.length} task(s)</div>
-      </div>
-    </div>
+    ${buildPrintHeader(title, overall, report)}
     ${sectionsEl.innerHTML}
   `;
   return `<div>${head}${body}</div>`;
@@ -892,6 +885,33 @@ function buildPrintableDocumentHtml(report, sectionsEl) {
 }
 
 // ---------- Helpers ----------
+/**
+ * Builds a top-of-page header with title and meta.
+ * @param {string} title
+ * @param {string} overall
+ * @param {any} report
+ */
+function buildPrintHeader(title, overall, report) {
+  const dt = new Date();
+  const date = dt.toLocaleDateString();
+  const time = dt.toLocaleTimeString();
+  const tasks = Array.isArray(report?.results) ? report.results.length : 0;
+  const statusText =
+    overall === "success" ? "Success" : "Completed with errors";
+  const hostname = report?.summary?.hostname || report?.hostname || "";
+  return `
+    <div class="print-header">
+      <div>
+        <h1 class="title">${title}</h1>
+        <div class="sub">Overall: ${statusText} · ${tasks} task(s)</div>
+      </div>
+      <div class="meta">
+        <div>${date} ${time}</div>
+        ${hostname ? `<div>Host: ${hostname}</div>` : ""}
+      </div>
+    </div>
+  `;
+}
 /**
  * Waits until ApexCharts (if any) have rendered and the DOM has been stable
  * for a short duration, or until timeout.
@@ -954,13 +974,19 @@ async function waitForChartsRendered(root, timeoutMs = 3000) {
 
 // Minimal, self-contained, white light print theme (no reliance on app CSS)
 const PRINT_LIGHT_CSS = `
-  @page { size: A4; margin: 14mm; }
+  @page { size: A4; margin: 8mm; }
   * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact; }
   html, body {
     background: #fff !important; color: #0f172a !important;
     font-family: 'Segoe UI Variable', 'Segoe UI', 'Inter', Roboto, Helvetica, Arial, 'Noto Sans', system-ui, sans-serif;
     font-size: 11pt; line-height: 1.35;
   }
+  body { margin: 0; }
+  .print-header { display: grid; grid-template-columns: 1fr max-content; gap: 12px; align-items: end; padding: 6px 2px 10px 2px; border-bottom: 2px solid #0f172a; margin-bottom: 12px; }
+  .print-header .title { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: 0.2px; color: #0f172a; }
+  .print-header .sub { margin: 3px 0 0; font-size: 11pt; color: #0f172a; }
+  .print-header .meta { font-size: 10pt; color: #334155; text-align: right; }
+  .print-header .meta div { margin: 2px 0; }
   .summary-head { display: flex; align-items: center; justify-content: space-between; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 16px; margin: 0 0 16px 0; background: #fff; }
   .summary-head.ok .title { color: #166534; }
   .summary-head.warn .title { color: #92400e; }
@@ -975,14 +1001,14 @@ const PRINT_LIGHT_CSS = `
   .status.warn, .status.warning { color: #92400e; border-color: #fed7aa; background: #fffbeb; }
   .status.fail, .status.failure, .status.error { color: #7f1d1d; border-color: #fecaca; background: #fef2f2; }
 
-  .card, .result, .drive-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; }
+  .card, .result, .drive-card { background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; }
   .kpi-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
-  .kpi { min-width: 120px; border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px 10px; background: #fff; }
+  .kpi { min-width: 120px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 10px; background: #fff; }
   .kpi .lab { display: block; font-size: 9.5pt; color: #64748b; }
   .kpi .val { display: block; font-weight: 600; font-size: 12pt; color: #0f172a; }
 
   .pill-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-  .pill { display: inline-block; font-size: 12px; padding: 4px 8px; border-radius: 999px; background: #eef2ff; color: #1e3a8a; border: 1px solid #c7d2fe; }
+  .pill { display: inline-block; font-size: 12px; padding: 4px 8px; border-radius: 999px; background: #eef2ff; color: #1e3a8a; border: 1px solid #94a3b8; }
   .pill.warn { background: #fffbeb; color: #92400e; border-color: #fed7aa; }
   .pill.fail { background: #fef2f2; color: #7f1d1d; border-color: #fecaca; }
   .pill.ok { background: #f0fdf4; color: #166534; border-color: #bbf7d0; }
@@ -1026,7 +1052,7 @@ function renderPreviewIntoIframe(previewEl, docHtml) {
       iframe = document.createElement("iframe");
       iframe.setAttribute("title", "Print Preview");
       iframe.style.width = "100%";
-      iframe.style.height = "520px";
+      iframe.style.height = "100%";
       iframe.style.border = "1px solid rgba(148, 163, 184, 0.3)";
       iframe.style.background = "#fff";
       previewEl.innerHTML = "";
