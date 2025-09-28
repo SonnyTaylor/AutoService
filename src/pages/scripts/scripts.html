@@ -5,29 +5,39 @@
     data/settings/scripts.json.
   </p>
 
-  <div class="card programs-hero" aria-hidden="true">
-    <div class="programs-hero-icon" aria-hidden="true">
+  <div class="card scripts-hero" aria-hidden="true">
+    <div class="scripts-hero-icon" aria-hidden="true">
       <span class="ph ph-terminal-window"></span>
     </div>
-    <div class="programs-hero-copy">
+    <div class="scripts-hero-copy">
       <h2>Automation Deck</h2>
       <p>
         Collect scripts you can trigger on demand. Toggle runners, choose the
         source, and keep diagnostics workflows at the ready.
       </p>
     </div>
-    <div class="programs-hero-meta">
-      <span class="badge info">Profiles sync</span>
-      <span class="programs-hero-hint">Stored in settings/scripts.json</span>
+    <div class="scripts-hero-stats">
+      <div class="scripts-stat">
+        <span class="label">Scripts</span>
+        <span class="value" id="scripts-total">0</span>
+      </div>
+      <div class="scripts-stat">
+        <span class="label">Runnable</span>
+        <span class="value ok" id="scripts-runnable">0</span>
+      </div>
+      <div class="scripts-stat">
+        <span class="label">Needs Attention</span>
+        <span class="value warn" id="scripts-missing">0</span>
+      </div>
     </div>
   </div>
 
-  <div class="toolbar programs-toolbar">
+  <div class="card scripts-toolbar">
     <input
       id="script-search"
       class="shortcut-search"
       type="search"
-      placeholder="Search scripts..."
+      placeholder="Search scripts, runners, descriptions..."
     />
     <select id="script-sort" title="Sort scripts">
       <option value="name-asc">Name (A-Z)</option>
@@ -35,7 +45,7 @@
       <option value="used-desc">Most run</option>
       <option value="used-asc">Least run</option>
     </select>
-    <button id="script-add-btn">Add</button>
+    <button id="script-add-btn">New script</button>
   </div>
 
   <div class="scripts-list"></div>

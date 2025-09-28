@@ -20,6 +20,7 @@ export const state = {
   filtered: [],
   query: "",
   sort: "name-asc",
+  filter: "all",
   editing: null,
 };
 
@@ -27,7 +28,11 @@ export const state = {
  * Loads all scripts from the backend and applies the current filter.
  */
 export async function loadScripts() {
-  state.all = await invoke("list_scripts");
+  const scripts = await invoke("list_scripts");
+  state.all = scripts.map((script) => ({
+    ...script,
+    exists: script.source === "file" ? !!script.path_exists : true,
+  }));
   buildFuseIndex();
   applyFilter();
 }
@@ -66,14 +71,11 @@ export function applyFilter() {
     }
   });
 
-  // Determine existence for file-based scripts
-  filteredScripts.forEach((script) => {
-    if (script.source === "file") {
-      script.exists = !!script.path_exists;
-    } else {
-      script.exists = true;
-    }
-  });
+  if (state.filter && state.filter !== "all") {
+    filteredScripts = filteredScripts.filter(
+      (script) => (script.source || "file") === state.filter
+    );
+  }
 
   state.filtered = filteredScripts;
 }
@@ -105,6 +107,9 @@ function buildFuseIndex() {
   // Map Fuse items back to current state.all by id in case the array mutates
   fuse.search = ((origSearch) => (query) => {
     const res = origSearch.call(fuse, query);
-    return res.map((r) => ({ ...r, item: state.all.find((s) => s.id === r.item.id) || r.item.raw }));
+    return res.map((r) => ({
+      ...r,
+      item: state.all.find((s) => s.id === r.item.id) || r.item.raw,
+    }));
   })(fuse.search);
 }

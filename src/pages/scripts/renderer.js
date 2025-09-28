@@ -17,6 +17,7 @@ export function renderList() {
   if (!scripts.length) {
     listElement.innerHTML =
       '<div class="muted">No scripts yet. Click "Add" to create one.</div>';
+    updateSummaryCounters();
     return;
   }
 
@@ -24,7 +25,6 @@ export function renderList() {
     .map(
       (script) => `
     <div class="program-row" data-id="${script.id}">
-      <div class="program-logo-wrap"></div>
       <div class="program-main">
         <div class="program-title" title="${escapeHtml(script.name)}${
         script.version ? ` — ${escapeHtml(script.version)}` : ""
@@ -53,4 +53,37 @@ export function renderList() {
   `
     )
     .join("");
+
+  updateSummaryCounters();
+}
+
+function updateSummaryCounters() {
+  const root = document.querySelector('[data-page="scripts"]');
+  if (!root) return;
+  const total = state.all.length;
+  const runnable = state.all.filter((s) => s.exists).length;
+  const missing = state.all.filter(
+    (s) => !s.exists && s.source === "file"
+  ).length;
+
+  const setText = (id, value) => {
+    const el = root.querySelector(`#${id}`);
+    if (el) el.textContent = String(value);
+  };
+
+  setText("scripts-total", total);
+  setText("scripts-runnable", runnable);
+  setText("scripts-missing", missing);
+
+  const filters = {
+    all: total,
+    file: state.all.filter((s) => (s.source || "file") === "file").length,
+    link: state.all.filter((s) => s.source === "link").length,
+    inline: state.all.filter((s) => s.source === "inline").length,
+  };
+
+  Object.entries(filters).forEach(([key, value]) => {
+    const chip = root.querySelector(`#filter-count-${key}`);
+    if (chip) chip.textContent = String(value);
+  });
 }
