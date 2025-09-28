@@ -410,22 +410,131 @@ function renderAdwCleaner(res, index) {
 function renderPing(res, index) {
   const s = res.summary || {};
   const hr = s.human_readable || {};
+  const lat = s.latency_ms || {};
+  const stats = s.interval_stats || {};
+  const loss = s.packets?.loss_percent;
+
+  setTimeout(() => {
+    const chartEl = document.getElementById(`ping-chart-${index}`);
+    if (chartEl && lat.avg != null) {
+      const getPingColor = (ping) => {
+        if (ping == null) return "#4f8cff";
+        if (ping < 30) return "#2f6b4a";
+        if (ping < 60) return "#4f8cff";
+        if (ping < 100) return "#6b422b";
+        return "#7a3333";
+      };
+
+      const options = {
+        chart: { type: "bar", height: 120, toolbar: { show: false } },
+        series: [{ name: "Average", data: [lat.avg.toFixed(1)] }],
+        plotOptions: {
+          bar: { horizontal: true, barHeight: "35%", distributed: false },
+        },
+        colors: [getPingColor(lat.avg)],
+        xaxis: {
+          categories: [""],
+          max: Math.max(120, Math.ceil((lat.max || 0) / 20) * 20),
+          labels: {
+            style: { colors: "#a3adbf", fontFamily: "Inter, sans-serif" },
+            formatter: (val) => `${val} ms`,
+          },
+        },
+        yaxis: { labels: { show: false } },
+        grid: { borderColor: "#2a3140", padding: { left: 20, right: 20 } },
+        tooltip: {
+          theme: "dark",
+          y: { title: { formatter: () => "Average Ping" } },
+        },
+        annotations: {
+          xaxis: [
+            {
+              x: 0,
+              x2: 30,
+              fillColor: "#2f6b4a",
+              opacity: 0.1,
+              label: {
+                text: "Excellent",
+                position: "top",
+                style: {
+                  background: "transparent",
+                  color: "#fff",
+                  fontSize: "10px",
+                },
+              },
+            },
+            {
+              x: 30,
+              x2: 60,
+              fillColor: "#4f8cff",
+              opacity: 0.1,
+              label: {
+                text: "Good",
+                position: "top",
+                style: {
+                  background: "transparent",
+                  color: "#fff",
+                  fontSize: "10px",
+                },
+              },
+            },
+            {
+              x: 60,
+              x2: 100,
+              fillColor: "#6b422b",
+              opacity: 0.1,
+              label: {
+                text: "Fair",
+                position: "top",
+                style: {
+                  background: "transparent",
+                  color: "#fff",
+                  fontSize: "10px",
+                },
+              },
+            },
+            {
+              x: 100,
+              x2: 999,
+              fillColor: "#7a3333",
+              opacity: 0.1,
+              label: {
+                text: "Poor",
+                position: "top",
+                style: {
+                  background: "transparent",
+                  color: "#fff",
+                  fontSize: "10px",
+                },
+              },
+            },
+          ],
+        },
+      };
+      const chart = new ApexCharts(chartEl, options);
+      chart.render();
+    }
+  }, 0);
+
   return html`
     <div class="card ping">
-      ${renderHeader("Ping Test", res.status)}
-      <div class="kpi-row">
-        ${kpiBox("Average", fmtMs(s.average_latency_ms))}
-        ${kpiBox("Min", fmtMs(s.latency_ms?.min))}
-        ${kpiBox("Max", fmtMs(s.latency_ms?.max))}
-        ${kpiBox(
-          "Loss",
-          s.packet_loss_percent != null ? `${s.packet_loss_percent}%` : "-"
-        )}
-        ${kpiBox("Verdict", hr.verdict || "-")}
+      ${renderHeader(`Ping Test: ${s.host || ""}`, res.status)}
+      <div class="ping-layout">
+        <div class="ping-kpis">
+          ${kpiBox("Average Latency", fmtMs(lat.avg))}
+          ${kpiBox("Packet Loss", loss != null ? `${loss}%` : "-")}
+          ${kpiBox("Stability", `${hr.stability_score || "?"}/100`)}
+          ${kpiBox(
+            "Jitter (StDev)",
+            stats.stdev != null ? fmtMs(stats.stdev) : "-"
+          )}
+        </div>
+        <div class="ping-chart">
+          ${lat.avg != null
+            ? html`<div id="ping-chart-${index}"></div>`
+            : html`<div class="muted">No latency data for chart.</div>`}
+        </div>
       </div>
-      ${Array.isArray(hr.notes) && hr.notes.length
-        ? html`<div class="pill-row">${map(hr.notes, (n) => pill(n))}</div>`
-        : ""}
     </div>
   `;
 }

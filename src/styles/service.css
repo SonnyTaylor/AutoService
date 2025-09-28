@@ -1074,6 +1074,29 @@
 [data-page="service-results"] .drive-model {
   font-weight: 600;
 }
+[data-page="service-results"] .card.ping .ping-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: center;
+}
+[data-page="service-results"] .card.ping .ping-kpis {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+[data-page="service-results"] .card.ping .ping-chart {
+  min-height: 120px;
+}
+@media (max-width: 720px) {
+  [data-page="service-results"] .card.ping .ping-layout {
+    grid-template-columns: 1fr;
+  }
+}
+[data-page="service-results"] .card.speedtest .speedtest-layout {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+}
 [data-page="service-results"] .card.iperf .chart-container {
   margin-top: 16px;
 }
