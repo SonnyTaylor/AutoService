@@ -987,6 +987,18 @@
   border-color: #6b422b;
   color: #e8b27c;
 }
+[data-page="service-results"] .pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+[data-page="service-results"] .tag-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
 [data-page="service-results"] .section-title {
   margin: 0 0 6px;
   font-size: 12px;

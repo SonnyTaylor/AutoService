@@ -256,29 +256,28 @@ function renderAdwCleaner(res) {
   const needsReboot = lines.some((t) => /reboot/i.test(t));
   const problems = (s.failed || 0) > 0 || lines.some((t) => /not deleted|failed/i.test(t));
   if (needsReboot || problems) {
-    const wrap = el("div", "", "");
+    const wrap = el("div", "pill-row", "");
     if (needsReboot) wrap.appendChild(pill("Reboot Required", "warn"));
     if ((s.failed || 0) > 0) wrap.appendChild(pill(`Failed ${s.failed}`, "fail"));
     root.appendChild(wrap);
   }
 
-  // Affected categories list (only non-empty ones)
-  const meta = el("div", "list");
-  const addCount = (label, arr) => {
-    const n = getLen(arr);
-    if (n) addKv(meta, label, String(n));
+  // Compact tag grid of affected categories (only show non-empty)
+  const tagGrid = el("div", "tag-grid", "");
+  const addTag = (label, count, variant) => {
+    if (count > 0) tagGrid.appendChild(pill(`${label} ${count}`, variant));
   };
-  addCount("Registry", s.registry);
-  addCount("Files", s.files);
-  addCount("Folders", s.folders);
-  addCount("Services", s.services);
-  addCount("Tasks", s.tasks);
-  addCount("Shortcuts", s.shortcuts);
-  addCount("DLLs", s.dlls);
-  addCount("WMI", s.wmi);
-  if (browserHits) addKv(meta, "Browser Items", String(browserHits));
-  if (getLen(s.preinstalled)) addKv(meta, "Preinstalled", String(getLen(s.preinstalled)));
-  if (meta.children.length) root.appendChild(meta);
+  addTag("Registry", getLen(s.registry));
+  addTag("Files", getLen(s.files));
+  addTag("Folders", getLen(s.folders));
+  addTag("Services", getLen(s.services));
+  addTag("Tasks", getLen(s.tasks));
+  addTag("Shortcuts", getLen(s.shortcuts));
+  addTag("DLLs", getLen(s.dlls));
+  addTag("WMI", getLen(s.wmi));
+  addTag("Browser Items", browserHits);
+  addTag("Preinstalled", getLen(s.preinstalled), "warn");
+  if (tagGrid.children.length) root.appendChild(tagGrid);
 
   return root;
 }
