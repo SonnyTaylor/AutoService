@@ -35,7 +35,10 @@ export async function initPage() {
 
   let report = null;
   try {
-    const raw = sessionStorage.getItem("service.finalReport") || "{}";
+    const raw =
+      sessionStorage.getItem("service.finalReport") ||
+      localStorage.getItem("service.finalReport") ||
+      "{}";
     report = JSON.parse(raw);
   } catch {
     report = null;

@@ -37,6 +37,11 @@ export async function initPage() {
   const summaryProgBar = document.getElementById("svc-summary-progress-bar");
   // Keep raw JSON for copy-to-clipboard while showing highlighted HTML
   let lastFinalJsonString = "{}";
+  // Helper: persist final report to both session and local storage
+  function persistFinalReport(jsonString) {
+    try { sessionStorage.setItem("service.finalReport", jsonString); } catch {}
+    try { localStorage.setItem("service.finalReport", jsonString); } catch {}
+  }
 
   // Ensure the log overlay is hidden on initial load
   const forceHideOverlay = () => {
@@ -89,6 +94,25 @@ export async function initPage() {
   renderTaskList();
 
   container.hidden = false;
+
+  // Try to rehydrate from cached final report so navigation back preserves results
+  try {
+    const cachedRaw =
+      sessionStorage.getItem("service.finalReport") ||
+      localStorage.getItem("service.finalReport");
+    if (cachedRaw && cachedRaw.length > 2) {
+      lastFinalJsonString = cachedRaw;
+      try {
+        const obj = JSON.parse(cachedRaw);
+        const highlighted = hljs.highlight(cachedRaw, { language: "json" }).value;
+        finalJsonEl.innerHTML = `<code class="hljs language-json">${highlighted}</code>`;
+        try { applyFinalStatusesFromReport(obj); } catch {}
+        const ok = obj?.overall_status === "success";
+        showSummary(ok);
+        try { if (viewResultsBtn) { viewResultsBtn.removeAttribute("disabled"); } } catch {}
+      } catch {}
+    }
+  } catch {}
 
   // Initialize task status tracking
   let taskStatuses = {};
@@ -280,7 +304,7 @@ export async function initPage() {
         applyFinalStatusesFromReport(finalReport);
         const ok = finalReport?.overall_status === "success";
         showSummary(ok);
-        try { sessionStorage.setItem("service.finalReport", lastFinalJsonString); } catch {}
+        persistFinalReport(lastFinalJsonString);
         try { if (viewResultsBtn) { viewResultsBtn.removeAttribute("disabled"); } } catch {}
       } catch (e) {
         finalJsonEl.textContent = String(e);
@@ -306,6 +330,7 @@ export async function initPage() {
       applyFinalStatusesFromReport(obj);
       const ok = obj?.overall_status === "success";
       showSummary(ok);
+      persistFinalReport(lastFinalJsonString);
     } catch {
       finalJsonEl.textContent = String(result || "");
       showSummary(false);
@@ -447,7 +472,7 @@ export async function initPage() {
   // Navigate to results page with stored final report
   viewResultsBtn?.addEventListener("click", () => {
     if (lastFinalJsonString && lastFinalJsonString.length > 2) {
-      try { sessionStorage.setItem("service.finalReport", lastFinalJsonString); } catch {}
+      persistFinalReport(lastFinalJsonString);
     }
     window.location.hash = "#/service-results";
   });
