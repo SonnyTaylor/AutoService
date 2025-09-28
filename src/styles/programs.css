@@ -1,62 +1,175 @@
 /* Programs and Scripts pages: lists, editors, and responsive adjustments */
-/* Programs page */
-.programs-toolbar {
-  display: flex;
-  gap: 10px;
+
+[data-page="programs"] .programs-hero {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 20px;
   align-items: center;
-  margin: 8px 0 14px;
-  flex-wrap: wrap; /* keep Add visible on small widths */
+  padding: 20px 22px;
+  margin: 18px 0 20px;
+  border-radius: 18px;
+  background: linear-gradient(
+      135deg,
+      rgba(96, 206, 255, 0.2),
+      rgba(34, 48, 70, 0.7)
+    ),
+    var(--panel-2);
+  border: 1px solid rgba(96, 206, 255, 0.26);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 18px 32px rgba(8, 14, 22, 0.55);
 }
-/* Match sort <select> with the search/input styling */
+[data-page="programs"] .programs-hero-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 18px;
+  background: rgba(96, 206, 255, 0.2);
+  color: #c8ecff;
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+}
+[data-page="programs"] .programs-hero-copy h2 {
+  margin: 0;
+  font-size: 1.24rem;
+  letter-spacing: 0.25px;
+}
+[data-page="programs"] .programs-hero-copy p {
+  margin: 6px 0 0;
+  color: rgba(230, 234, 242, 0.85);
+  line-height: 1.55;
+  max-width: 520px;
+}
+[data-page="programs"] .programs-hero-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+[data-page="programs"] .programs-hero-hint {
+  font-size: 0.75rem;
+  color: rgba(230, 234, 242, 0.72);
+}
+
+.programs-toolbar {
+  display: grid;
+  grid-template-columns: minmax(380px, 1fr) minmax(220px, 260px) auto;
+  column-gap: 18px;
+  align-items: center;
+  padding: 18px 22px;
+  margin: 0 0 22px;
+  border-radius: 16px;
+  background: linear-gradient(
+      120deg,
+      rgba(76, 130, 255, 0.22),
+      rgba(20, 25, 40, 0.78)
+    ),
+    var(--panel-2);
+  border: 1px solid rgba(76, 130, 255, 0.18);
+  box-shadow: 0 16px 28px rgba(8, 12, 20, 0.5);
+}
+.programs-toolbar label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: rgba(230, 234, 242, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.programs-toolbar #program-search,
+.programs-toolbar #program-sort {
+  background: rgba(11, 14, 24, 0.55);
+  border: 1px solid rgba(110, 150, 255, 0.22);
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: var(--text);
+  height: 44px;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease,
+    background-color 0.18s ease;
+}
+.programs-toolbar #program-search {
+  width: 100%;
+}
+.programs-toolbar #program-search:focus,
+.programs-toolbar #program-sort:focus {
+  border-color: rgba(121, 170, 255, 0.75);
+  box-shadow: 0 0 0 1px rgba(121, 170, 255, 0.55);
+}
+.programs-toolbar #program-search::placeholder {
+  color: rgba(200, 210, 230, 0.55);
+}
 .programs-toolbar #program-sort {
   appearance: none;
   -webkit-appearance: none;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--panel-2);
-  color: var(--text);
-  height: 40px; /* align with buttons */
-  line-height: 1.2;
-  /* custom chevron */
-  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
-    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
-  background-position: right 12px center, right 6px center;
+  background-image: linear-gradient(
+      45deg,
+      transparent 50%,
+      rgba(204, 214, 255, 0.85) 50%
+    ),
+    linear-gradient(135deg, rgba(204, 214, 255, 0.85) 50%, transparent 50%);
+  background-position: right 14px center, right 8px center;
   background-size: 6px 6px, 6px 6px;
   background-repeat: no-repeat;
   padding-right: 28px;
-}
-.programs-toolbar #program-sort:hover {
-  background: #222a3a;
+  width: 100%;
 }
 .programs-toolbar #program-sort:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
 }
-/* Keep Add button to the right when space allows */
 .programs-toolbar #program-add-btn {
-  margin-left: auto;
+  min-width: 150px;
+  justify-self: end;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-weight: 600;
+  box-shadow: 0 14px 26px rgba(76, 130, 255, 0.38);
 }
-.programs-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.scripts-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.program-row {
+
+[data-page="programs"] .programs-list,
+[data-page="scripts"] .programs-list,
+[data-page="scripts"] .scripts-list {
   display: grid;
-  grid-template-columns: 56px 1fr auto;
-  grid-template-areas: "logo main actions";
-  gap: 12px;
-  align-items: center;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--panel-2);
-  transition: background-color 0.15s, border-color 0.15s; /* smooth hover */
+  gap: 18px;
+}
+[data-page="programs"] .programs-list,
+[data-page="scripts"] .programs-list {
+  grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+}
+[data-page="scripts"] .scripts-list {
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+}
+[data-page="programs"] .program-row,
+[data-page="scripts"] .program-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  grid-template-areas:
+    "logo main"
+    "actions actions";
+  column-gap: 18px;
+  row-gap: 16px;
+  padding: 18px 24px 20px;
+  border-radius: 18px;
+  border: 1px solid rgba(90, 134, 255, 0.18);
+  background: linear-gradient(
+      145deg,
+      rgba(30, 42, 66, 0.92),
+      rgba(14, 18, 28, 0.94)
+    ),
+    var(--panel-2);
+  box-shadow: 0 18px 34px rgba(7, 10, 18, 0.55);
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  min-height: 152px;
+}
+[data-page="programs"] .program-row::after,
+[data-page="scripts"] .program-row::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 1px solid transparent;
+  transition: border-color 0.2s ease;
 }
 .program-logo-wrap {
   grid-area: logo;
@@ -111,14 +224,16 @@
   grid-area: main;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
   min-width: 0;
 }
 .program-title {
   font-weight: 600;
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
 }
 .program-title .name {
@@ -156,9 +271,10 @@
 .program-actions {
   grid-area: actions;
   display: flex;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: flex-start;
 }
 .program-actions .secondary {
   background: #2a3753;
@@ -177,8 +293,8 @@
 
 /* Better hover to distinguish rows */
 .program-row:hover {
-  background: var(--panel-hover);
-  border-color: #2e3b55;
+  transform: translateY(-4px);
+  box-shadow: 0 24px 44px rgba(6, 10, 18, 0.55);
 }
 
 /* Add subtle labels on tighter layouts so sections don't blend */
