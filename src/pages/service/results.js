@@ -250,9 +250,51 @@ function renderBatteryHealth(res, index) {
   `;
 }
 
-/** @param {object} res @returns {import("lit-html").TemplateResult} */
+/**
+ * Renders the result for a System File Checker (SFC) scan.
+ * @param {object} res The result object for the task.
+ * @returns {import("lit-html").TemplateResult}
+ */
 function renderSfc(res, index) {
-  return renderGeneric(res, index);
+  const s = res.summary || {};
+  const violations = s.integrity_violations;
+  const repairs = s.repairs_attempted;
+  const success = s.repairs_successful;
+
+  let icon, message;
+  if (violations === false) {
+    icon = html`<i class="ph-fill ph-check-circle ok"></i>`;
+    message = "No integrity violations found.";
+  } else if (violations === true) {
+    icon = html`<i class="ph-fill ph-warning-circle fail"></i>`;
+    message = "System file integrity violations were found.";
+  } else {
+    icon = html`<i class="ph-fill ph-question"></i>`;
+    message = "Scan result could not be determined.";
+  }
+
+  return html`
+    <div class="card sfc">
+      ${renderHeader("System File Checker (SFC)", res.status)}
+      <div class="sfc-layout">
+        <div class="sfc-icon">${icon}</div>
+        <div class="sfc-details">
+          <div class="sfc-verdict">${message}</div>
+          ${violations
+            ? html`
+                <div class="sfc-repair muted">
+                  ${repairs
+                    ? `Repairs were attempted. Result: ${
+                        success ? "Success" : "Failed"
+                      }`
+                    : "Repairs were not attempted."}
+                </div>
+              `
+            : ""}
+        </div>
+      </div>
+    </div>
+  `;
 }
 /** @param {object} res @returns {import("lit-html").TemplateResult} */
 function renderDism(res, index) {
