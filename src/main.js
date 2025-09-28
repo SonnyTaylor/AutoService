@@ -57,9 +57,9 @@ const scriptMap = {
 
 /** Map logical routes to foldered page files (fallback when not in htmlMap). */
 const pathMap = {
-  service: "service/index",
-  "service-run": "service/run",
-  "service-report": "service/report",
+  service: "service/presets",
+  "service-run": "service/builder",
+  "service-report": "service/runner",
   programs: "programs/index",
   reports: "reports/index",
   "component-test": "component-test/index",

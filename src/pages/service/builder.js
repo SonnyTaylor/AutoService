@@ -34,7 +34,7 @@ import {
   listServiceIds,
   getServiceById,
   toolKeysForService,
-} from "./services.js";
+} from "./catalog.js";
 
 /**
  * @typedef {Object} ToolStatus

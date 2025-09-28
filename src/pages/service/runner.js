@@ -5,7 +5,7 @@ import "highlight.js/styles/github-dark.css";
 hljs.registerLanguage("json", jsonLang);
 
 /**
- * Service Runner report controller.
+ * Service Runner controller.
  *
  * Spawns the Python sidecar (service_runner.exe) via PowerShell, streams live
  * logs into the UI, tracks per-task status markers, and renders the final JSON.
