@@ -28,6 +28,7 @@ export async function initPage() {
   const logOverlay = document.getElementById("svc-log-overlay");
   const finalJsonEl = document.getElementById("svc-final-json");
   const copyFinalBtn = document.getElementById("svc-copy-final");
+  const viewResultsBtn = document.getElementById("svc-view-results");
   const summaryEl = document.getElementById("svc-summary");
   const summaryTitleEl = document.getElementById("svc-summary-title");
   const summaryIconEl = document.getElementById("svc-summary-icon");
@@ -279,6 +280,8 @@ export async function initPage() {
         applyFinalStatusesFromReport(finalReport);
         const ok = finalReport?.overall_status === "success";
         showSummary(ok);
+        try { sessionStorage.setItem("service.finalReport", lastFinalJsonString); } catch {}
+        try { if (viewResultsBtn) { viewResultsBtn.removeAttribute("disabled"); } } catch {}
       } catch (e) {
         finalJsonEl.textContent = String(e);
         showSummary(false);
@@ -439,7 +442,15 @@ export async function initPage() {
     }
     // Hide progress once finished
     if (summaryProgWrap) summaryProgWrap.setAttribute("aria-hidden", "true");
+    try { if (viewResultsBtn && lastFinalJsonString && lastFinalJsonString.length > 2) { viewResultsBtn.removeAttribute("disabled"); } } catch {}
   }
+  // Navigate to results page with stored final report
+  viewResultsBtn?.addEventListener("click", () => {
+    if (lastFinalJsonString && lastFinalJsonString.length > 2) {
+      try { sessionStorage.setItem("service.finalReport", lastFinalJsonString); } catch {}
+    }
+    window.location.hash = "#/service-results";
+  });
 
   // ---- Client-only task execution ----------------------------------------
   async function executeClientTask(task) {

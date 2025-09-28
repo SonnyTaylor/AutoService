@@ -1,0 +1,22 @@
+<section class="page" data-page="service-results">
+  <div class="run-header">
+    <div class="titles">
+      <h1 id="svc-results-title">Service Results</h1>
+      <p class="muted" id="svc-results-desc">
+        Printable summary of the completed run.
+      </p>
+    </div>
+    <div class="run-actions">
+      <button id="svc-results-back" class="ghost">Back to Runner</button>
+      <button id="svc-results-print">Print</button>
+    </div>
+  </div>
+
+  <div class="results-layout" id="svc-results" hidden>
+    <div class="results-summary" id="svc-results-summary"></div>
+    <div class="results-sections" id="svc-results-sections"></div>
+    <!-- Hidden printable container -->
+    <div id="svc-print-container" style="display: none"></div>
+  </div>
+</section>
+<script type="module" src="./results.js"></script>
