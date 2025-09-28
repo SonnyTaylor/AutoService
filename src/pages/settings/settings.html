@@ -2,79 +2,108 @@
   <h1>Settings</h1>
   <p class="muted">Configure AutoService behavior.</p>
 
-  <div
-    style="
-      display: grid;
-      grid-template-columns: 220px 1fr;
-      gap: 16px;
-      align-items: start;
-      margin-top: 12px;
-    "
-  >
+  <div class="card settings-hero" aria-hidden="true">
+    <div class="settings-hero-icon" aria-hidden="true">
+      <span class="ph ph-sliders-horizontal"></span>
+    </div>
+    <div class="settings-hero-copy">
+      <h2>Workspace Controls</h2>
+      <p>
+        Personalize automation defaults, technician shortcuts, and diagnostics
+        targets in one place. Changes save instantly and sync with the service
+        runner.
+      </p>
+    </div>
+    <div class="settings-hero-meta">
+      <span class="badge info">Live profile</span>
+      <span class="settings-hero-hint">Applies across all sessions</span>
+    </div>
+  </div>
+
+  <div class="settings-layout">
     <!-- Left sidebar navigation -->
-    <aside class="card" style="position: sticky; top: 10px; padding: 8px">
+    <aside class="card settings-sidebar">
       <div class="card-title">Sections</div>
-      <nav class="list" id="settings-nav">
+      <nav class="list settings-nav" id="settings-nav">
         <button
-          class="shortcut-btn active"
+          class="shortcut-btn settings-nav-btn active"
           data-target="programs"
-          style="justify-content: flex-start"
         >
-          Programs
+          <span class="settings-nav-icon" aria-hidden="true">
+            <span class="ph ph-app-window"></span>
+          </span>
+          <span class="settings-nav-text">
+            <span class="settings-nav-label">Programs</span>
+            <span class="settings-nav-desc">Required tool roster</span>
+          </span>
         </button>
-        <button
-          class="shortcut-btn"
-          data-target="technician"
-          style="justify-content: flex-start"
-        >
-          Technician
+        <button class="shortcut-btn settings-nav-btn" data-target="technician">
+          <span class="settings-nav-icon" aria-hidden="true">
+            <span class="ph ph-user-gear"></span>
+          </span>
+          <span class="settings-nav-text">
+            <span class="settings-nav-label">Technician</span>
+            <span class="settings-nav-desc">Custom quick links</span>
+          </span>
         </button>
-        <button
-          class="shortcut-btn"
-          data-target="network"
-          style="justify-content: flex-start"
-        >
-          Network
+        <button class="shortcut-btn settings-nav-btn" data-target="network">
+          <span class="settings-nav-icon" aria-hidden="true">
+            <span class="ph ph-wifi-high"></span>
+          </span>
+          <span class="settings-nav-text">
+            <span class="settings-nav-label">Network</span>
+            <span class="settings-nav-desc">Diagnostics targets</span>
+          </span>
         </button>
       </nav>
     </aside>
 
     <!-- Right content area -->
-    <div id="settings-content">
+    <div id="settings-content" class="settings-content">
       <!-- Programs pane -->
-      <div class="card" data-pane="programs">
-        <div class="card-title">
+      <div class="card settings-pane" data-pane="programs">
+        <div class="card-title settings-pane-title">
+          <span
+            class="settings-pane-icon ph ph-app-window"
+            aria-hidden="true"
+          ></span>
           <span>Programs</span>
         </div>
-        <div class="card-body" style="gap: 10px">
-          <p class="muted" style="margin-top: 0; margin-bottom: 5px">
+        <div class="card-body settings-pane-body">
+          <p class="muted settings-pane-intro">
             Programs that are required by the automated service runner will show
             here. Add them in the programs section for them to be available in
             the service runner.
           </p>
-          <div class="list" id="req-programs-list" aria-live="polite"></div>
+          <div
+            class="list settings-data-list"
+            id="req-programs-list"
+            aria-live="polite"
+          ></div>
         </div>
       </div>
       <!-- Technician pane -->
-      <div class="card" data-pane="technician" style="display: none">
-        <div class="card-title"><span>Technician Links</span></div>
-        <div class="card-body" style="gap: 12px">
-          <p class="muted" style="margin-top: 0">
+      <div
+        class="card settings-pane"
+        data-pane="technician"
+        style="display: none"
+      >
+        <div class="card-title settings-pane-title">
+          <span
+            class="settings-pane-icon ph ph-user-gear"
+            aria-hidden="true"
+          ></span>
+          <span>Technician Links</span>
+        </div>
+        <div class="card-body settings-pane-body">
+          <p class="muted settings-pane-intro">
             Add web tools you use frequently. They appear as tabs on the top
             bar. Data (cookies, localStorage) will persist on the USB via the
             app webview profile.
           </p>
-          <form id="tech-link-form" class="tech-input-row">
-            <label
-              style="
-                display: flex;
-                flex-direction: column;
-                gap: 4px;
-                flex: 1;
-                min-width: 180px;
-              "
-            >
-              <span class="muted" style="font-size: 12px">Title</span>
+          <form id="tech-link-form" class="tech-input-row settings-form">
+            <label class="settings-field settings-field--title">
+              <span class="settings-field-label muted">Title</span>
               <input
                 type="text"
                 name="title"
@@ -82,16 +111,8 @@
                 required
               />
             </label>
-            <label
-              style="
-                display: flex;
-                flex-direction: column;
-                gap: 4px;
-                flex: 2;
-                min-width: 260px;
-              "
-            >
-              <span class="muted" style="font-size: 12px">URL</span>
+            <label class="settings-field settings-field--url">
+              <span class="settings-field-label muted">URL</span>
               <input
                 type="url"
                 name="url"
@@ -101,27 +122,27 @@
             </label>
             <button type="submit" class="primary">Add</button>
           </form>
-          <div class="list" id="tech-links-list" aria-live="polite"></div>
-          <dialog
-            id="tech-link-editor"
-            class="program-editor"
-            style="width: min(520px, 92vw)"
-          >
+          <div
+            class="list settings-data-list"
+            id="tech-links-list"
+            aria-live="polite"
+          ></div>
+          <dialog id="tech-link-editor" class="program-editor settings-dialog">
             <form
               method="dialog"
               id="tech-link-edit-form"
-              style="display: flex; flex-direction: column; gap: 14px"
+              class="settings-dialog-form"
             >
-              <h3 style="margin: 0; font-size: 1rem">Edit Link</h3>
-              <label style="display: flex; flex-direction: column; gap: 6px">
-                <span class="muted" style="font-size: 12px">Title</span>
+              <h3 class="settings-dialog-title">Edit Link</h3>
+              <label class="settings-field">
+                <span class="settings-field-label muted">Title</span>
                 <input id="t-edit-title" type="text" required />
               </label>
-              <label style="display: flex; flex-direction: column; gap: 6px">
-                <span class="muted" style="font-size: 12px">URL</span>
+              <label class="settings-field">
+                <span class="settings-field-label muted">URL</span>
                 <input id="t-edit-url" type="url" required />
               </label>
-              <div style="display: flex; justify-content: flex-end; gap: 10px">
+              <div class="settings-dialog-actions">
                 <button type="button" id="t-edit-cancel" class="ghost">
                   Cancel
                 </button>
@@ -133,23 +154,21 @@
       </div>
 
       <!-- Network pane (iperf, ping) -->
-      <div class="card" data-pane="network" style="display: none">
-        <div class="card-title"><span>Network</span></div>
-        <div class="card-body" style="gap: 12px">
-          <p class="muted" style="margin-top: 0">
+      <div class="card settings-pane" data-pane="network" style="display: none">
+        <div class="card-title settings-pane-title">
+          <span
+            class="settings-pane-icon ph ph-wifi-high"
+            aria-hidden="true"
+          ></span>
+          <span>Network</span>
+        </div>
+        <div class="card-body settings-pane-body">
+          <p class="muted settings-pane-intro">
             Configure network test options used by diagnostics.
           </p>
-          <form id="iperf-settings-form" class="tech-input-row">
-            <label
-              style="
-                display: flex;
-                flex-direction: column;
-                gap: 4px;
-                flex: 2;
-                min-width: 260px;
-              "
-            >
-              <span class="muted" style="font-size: 12px"
+          <form id="iperf-settings-form" class="tech-input-row settings-form">
+            <label class="settings-field settings-field--wide">
+              <span class="settings-field-label muted"
                 >iPerf Server IP/Host</span
               >
               <input
@@ -162,25 +181,13 @@
             </label>
             <button type="submit" class="primary">Save</button>
           </form>
-          <div
-            id="iperf-settings-status"
-            class="muted"
-            style="font-size: 12px"
-          ></div>
+          <div id="iperf-settings-status" class="muted settings-status"></div>
 
-          <hr style="margin: 14px 0; opacity: 0.25" />
+          <hr class="settings-divider" />
 
-          <form id="ping-settings-form" class="tech-input-row">
-            <label
-              style="
-                display: flex;
-                flex-direction: column;
-                gap: 4px;
-                flex: 2;
-                min-width: 260px;
-              "
-            >
-              <span class="muted" style="font-size: 12px">Ping Host</span>
+          <form id="ping-settings-form" class="tech-input-row settings-form">
+            <label class="settings-field settings-field--wide">
+              <span class="settings-field-label muted">Ping Host</span>
               <input
                 type="text"
                 name="ping_host"
@@ -191,11 +198,7 @@
             </label>
             <button type="submit" class="primary">Save</button>
           </form>
-          <div
-            id="ping-settings-status"
-            class="muted"
-            style="font-size: 12px"
-          ></div>
+          <div id="ping-settings-status" class="muted settings-status"></div>
         </div>
       </div>
     </div>

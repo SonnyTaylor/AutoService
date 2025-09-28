@@ -1,0 +1,288 @@
+/* Settings page layout and spacing refinements */
+
+[data-page="settings"] .settings-hero {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 20px;
+  padding: 18px 20px;
+  margin: 18px 0 12px;
+  border-radius: 16px;
+  background: linear-gradient(
+      135deg,
+      rgba(79, 140, 255, 0.14),
+      rgba(34, 45, 70, 0.65)
+    ),
+    var(--panel-2);
+  border: 1px solid rgba(79, 140, 255, 0.2);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+[data-page="settings"] .settings-hero-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: rgba(79, 140, 255, 0.15);
+  color: #b9cbff;
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+}
+[data-page="settings"] .settings-hero-copy h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  letter-spacing: 0.2px;
+}
+[data-page="settings"] .settings-hero-copy p {
+  margin: 6px 0 0;
+  color: rgba(230, 234, 242, 0.85);
+  line-height: 1.45;
+  max-width: 540px;
+}
+[data-page="settings"] .settings-hero-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+[data-page="settings"] .settings-hero-hint {
+  font-size: 0.75rem;
+  color: rgba(230, 234, 242, 0.75);
+}
+[data-page="settings"] .settings-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 256px) 1fr;
+  gap: 22px;
+  align-items: start;
+}
+
+[data-page="settings"] .settings-sidebar {
+  position: sticky;
+  top: calc(var(--chrome-offset) + 16px);
+  padding: 14px 12px;
+  display: grid;
+  gap: 18px;
+  background: linear-gradient(
+    180deg,
+    rgba(34, 45, 70, 0.4),
+    rgba(23, 26, 33, 0.9)
+  );
+  border: 1px solid rgba(79, 140, 255, 0.12);
+  border-radius: 14px;
+  box-shadow: 0 12px 26px rgba(9, 12, 18, 0.45);
+}
+
+[data-page="settings"] .settings-nav {
+  display: grid;
+  gap: 10px;
+}
+
+[data-page="settings"] .settings-nav-btn {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(79, 140, 255, 0.05);
+  background: rgba(15, 17, 23, 0.35);
+  color: var(--muted);
+  text-align: left;
+  transition: transform 0.18s ease, background-color 0.18s ease,
+    border-color 0.18s ease, box-shadow 0.2s ease;
+}
+[data-page="settings"] .settings-nav-btn:hover {
+  transform: translateX(4px);
+  background: rgba(79, 140, 255, 0.18);
+  border-color: rgba(79, 140, 255, 0.35);
+  color: var(--text);
+  box-shadow: 0 6px 16px rgba(9, 12, 18, 0.35);
+}
+[data-page="settings"] .settings-nav-btn.active {
+  background: linear-gradient(
+    135deg,
+    rgba(79, 140, 255, 0.35),
+    rgba(22, 26, 38, 0.6)
+  );
+  border-color: rgba(79, 140, 255, 0.6);
+  color: var(--text);
+  box-shadow: 0 8px 22px rgba(9, 12, 18, 0.45),
+    0 0 0 1px rgba(79, 140, 255, 0.45);
+  transform: translateX(6px);
+}
+
+[data-page="settings"] .settings-nav-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(79, 140, 255, 0.16);
+  color: #aec5ff;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+}
+[data-page="settings"] .settings-nav-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+[data-page="settings"] .settings-nav-label {
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+[data-page="settings"] .settings-nav-desc {
+  font-size: 0.75rem;
+  color: rgba(230, 234, 242, 0.65);
+}
+
+[data-page="settings"] .settings-content {
+  display: grid;
+  gap: 20px;
+}
+
+[data-page="settings"] .settings-pane {
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(79, 140, 255, 0.12);
+  box-shadow: 0 18px 38px rgba(9, 12, 18, 0.45);
+  backdrop-filter: blur(2px);
+}
+
+[data-page="settings"] .settings-pane-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+[data-page="settings"] .settings-pane-icon {
+  font-size: 20px;
+  color: #a9c2ff;
+  background: rgba(79, 140, 255, 0.2);
+  border-radius: 10px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+}
+
+[data-page="settings"] .settings-pane-body {
+  display: grid;
+  gap: 16px;
+}
+
+[data-page="settings"] .settings-pane-intro {
+  margin: 0;
+  color: rgba(230, 234, 242, 0.78);
+  line-height: 1.55;
+}
+
+[data-page="settings"] .settings-data-list {
+  gap: 12px;
+}
+
+[data-page="settings"] .settings-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+  align-items: end;
+}
+[data-page="settings"] .settings-form .primary {
+  min-width: 140px;
+  justify-self: start;
+  box-shadow: 0 10px 24px rgba(79, 140, 255, 0.35);
+}
+
+[data-page="settings"] .settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+[data-page="settings"] .settings-field-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: rgba(230, 234, 242, 0.6);
+}
+
+[data-page="settings"] .settings-field--title {
+  min-width: 180px;
+}
+[data-page="settings"] .settings-field--url,
+[data-page="settings"] .settings-field--wide {
+  min-width: 260px;
+}
+
+[data-page="settings"] .settings-status {
+  font-size: 0.75rem;
+  min-height: 18px;
+  color: rgba(230, 234, 242, 0.65);
+}
+
+[data-page="settings"] .settings-divider {
+  margin: 10px 0 14px;
+  border: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(79, 140, 255, 0.4),
+    transparent
+  );
+}
+
+[data-page="settings"] .settings-dialog {
+  width: min(520px, 92vw);
+  border-radius: 16px;
+  border: 1px solid rgba(79, 140, 255, 0.2);
+}
+
+[data-page="settings"] .settings-dialog-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+[data-page="settings"] .settings-dialog-title {
+  margin: 0;
+  font-size: 1rem;
+}
+
+[data-page="settings"] .settings-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+@media (max-width: 920px) {
+  [data-page="settings"] .settings-layout {
+    grid-template-columns: 1fr;
+  }
+
+  [data-page="settings"] .settings-sidebar {
+    position: static;
+    order: 2;
+  }
+
+  [data-page="settings"] .settings-content {
+    gap: 18px;
+  }
+}
+
+@media (max-width: 640px) {
+  [data-page="settings"] .settings-hero {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+  [data-page="settings"] .settings-hero-meta {
+    align-items: center;
+  }
+
+  [data-page="settings"] .settings-form {
+    grid-template-columns: 1fr;
+  }
+
+  [data-page="settings"] .settings-form .primary {
+    width: 100%;
+    justify-self: stretch;
+  }
+}
