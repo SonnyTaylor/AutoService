@@ -163,17 +163,7 @@ function renderSpeedtest(res) {
   kpi.appendChild(kpiBox("Jitter", h.jitter_ms == null ? "-" : fmtMs(h.jitter_ms)));
   kpi.appendChild(kpiBox("Rating", h.rating_stars != null ? `${h.rating_stars}★` : "-"));
   root.appendChild(kpi);
-  const notes = Array.isArray(h.notes) ? h.notes : [];
-  if (notes.length) {
-    const line = el("div", "", "");
-    notes.forEach(n => line.appendChild(pill(n)));
-    root.appendChild(line);
-  }
-  const srv = res.summary?.results?.server || {};
-  const meta = el("div", "list");
-  addKv(meta, "Server", srv.name ? `${srv.name}, ${srv.country}` : h.server_description || "");
-  addKv(meta, "ISP", h.isp || res.summary?.results?.client?.isp || "");
-  root.appendChild(meta);
+  // Intentionally omit heuristic notes and server/ISP details for a cleaner summary
   return root;
 }
 
