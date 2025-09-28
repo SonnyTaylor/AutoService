@@ -42,6 +42,11 @@ export async function initPage() {
     try { sessionStorage.setItem("service.finalReport", jsonString); } catch {}
     try { localStorage.setItem("service.finalReport", jsonString); } catch {}
   }
+  // Helper: clear any cached final report (used when starting a new run)
+  function clearFinalReportCache() {
+    try { sessionStorage.removeItem("service.finalReport"); } catch {}
+    try { localStorage.removeItem("service.finalReport"); } catch {}
+  }
 
   // Ensure the log overlay is hidden on initial load
   const forceHideOverlay = () => {
@@ -135,6 +140,12 @@ export async function initPage() {
     runBtn.setAttribute("aria-disabled", "true");
     backBtn.disabled = true;
     backBtn.setAttribute("disabled", "");
+    // New service: clear any previously cached results so navigating back won't show stale data
+    clearFinalReportCache();
+    lastFinalJsonString = "{}";
+    if (viewResultsBtn) {
+      try { viewResultsBtn.setAttribute("disabled", ""); } catch {}
+    }
     // Show reactive running summary for this new session
     resetSummaryForNewRun();
     finalJsonEl.textContent = "";
