@@ -45,7 +45,6 @@ import {
   $,
 } from "./ui.js";
 import { formatBytes, formatDuration, escapeHtml } from "./formatters.js";
-import printJS from "print-js";
 import {
   renderOS,
   renderUsers,
@@ -300,6 +299,74 @@ function generatePrintHtml(info) {
 }
 
 /**
+ * Print provided HTML by loading it into an offscreen iframe and invoking print.
+ * More reliable in WebView environments than third-party helpers.
+ * @param {string} html - Complete HTML document string
+ * @param {string} title - Document title shown in the print dialog
+ */
+function printHtml(html, title) {
+  try {
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    iframe.setAttribute("aria-hidden", "true");
+
+    const cleanup = () => {
+      try {
+        if (iframe && iframe.parentNode) iframe.parentNode.removeChild(iframe);
+      } catch {}
+    };
+
+    iframe.addEventListener("load", () => {
+      try {
+        const w = iframe.contentWindow;
+        if (!w) {
+          cleanup();
+          return;
+        }
+        try {
+          w.document.title = title || w.document.title || document.title;
+        } catch {}
+
+        // In some engines a short delay improves reliability before print()
+        setTimeout(() => {
+          const onAfterPrint = () => {
+            w.removeEventListener("afterprint", onAfterPrint);
+            cleanup();
+          };
+          try {
+            w.addEventListener("afterprint", onAfterPrint);
+          } catch {}
+          try {
+            w.focus();
+          } catch {}
+          try {
+            w.print();
+          } catch {
+            // Fallback: close and cleanup even if print fails
+            cleanup();
+          }
+          // Safety cleanup in case afterprint never fires
+          setTimeout(cleanup, 30000);
+        }, 25);
+      } catch {
+        cleanup();
+      }
+    });
+
+    // Use srcdoc so we don't depend on external URLs/assets
+    iframe.srcdoc = html;
+    document.body.appendChild(iframe);
+  } catch (err) {
+    console.error("Print failed:", err);
+  }
+}
+
+/**
  * Main render function that builds the entire system info UI.
  * @param {Object} info - System info object from Tauri backend
  */
@@ -436,12 +503,7 @@ function render(info) {
           info.hostname || undefined,
           new Date().toLocaleDateString(),
         ].filter(Boolean);
-        printJS({
-          printable: html,
-          type: "raw-html",
-          scanStyles: false,
-          documentTitle: titleParts.join(" - "),
-        });
+        printHtml(html, titleParts.join(" - "));
       } catch (e) {
         console.error("Failed to print system info:", e);
       }
