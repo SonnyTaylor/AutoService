@@ -1,18 +1,18 @@
-import printJS from "print-js";
-import { html, render } from "lit-html";
+import { html } from "lit-html";
 import { map } from "lit-html/directives/map.js";
 import prettyBytes from "pretty-bytes";
 import ApexCharts from "apexcharts";
 
-/**
- * @file Renders the service results page (#/service-results).
- * This module is responsible for parsing a service report from session/local storage,
- * rendering a summary and detailed sections for each task, and providing a printable
- * version of the report. It uses lit-html for efficient and declarative rendering.
- */
+import {
+  renderHeader,
+  renderList,
+  kpiBox,
+  pill,
+  fmtMs,
+  fmtMbps,
+} from "./common.js";
 
-// Modular renderers per task type. Extend incrementally here.
-const RENDERERS = {
+export const RENDERERS = {
   speedtest: renderSpeedtest,
   battery_health: renderBatteryHealth,
   sfc_scan: renderSfc,
@@ -30,179 +30,7 @@ const RENDERERS = {
   windows_update: renderWindowsUpdate,
 };
 
-/**
- * Initializes the results page, loads the report, and renders all content.
- * @returns {Promise<void>}
- */
-export async function initPage() {
-  const container = document.getElementById("svc-results");
-  const backBtn = document.getElementById("svc-results-back");
-  const printSideBtn = document.getElementById("svc-results-print-side");
-  const summaryEl = document.getElementById("svc-results-summary");
-  const sectionsEl = document.getElementById("svc-results-sections");
-  const printContainer = document.getElementById("svc-print-container");
-  const printPreview = document.getElementById("svc-print-preview");
-
-  backBtn?.addEventListener("click", () => {
-    window.location.hash = "#/service-report";
-  });
-
-  let report = null;
-  try {
-    const raw =
-      sessionStorage.getItem("service.finalReport") ||
-      localStorage.getItem("service.finalReport") ||
-      "{}";
-    report = JSON.parse(raw);
-  } catch {
-    report = null;
-  }
-
-  if (!report || !Array.isArray(report.results)) {
-    render(
-      html`<div class="muted">No report found. Run a service first.</div>`,
-      summaryEl
-    );
-    container.hidden = false;
-    return;
-  }
-
-  // Summary header
-  const overall = String(report.overall_status || "").toLowerCase();
-  const summaryTemplate = html`
-    <div class="summary-head ${overall === "success" ? "ok" : "warn"}">
-      <div class="left">
-        <div class="title">
-          Overall:
-          ${overall === "success" ? "Success" : "Completed with errors"}
-        </div>
-        <div class="muted small">${report.results.length} task(s)</div>
-      </div>
-    </div>
-  `;
-  render(summaryTemplate, summaryEl);
-
-  // Build sections modularly (fault-tolerant per task)
-  const sectionsTemplate = html`
-    ${map(report.results, (res, index) => {
-      const type = res?.task_type || res?.type || "unknown";
-      const renderer = RENDERERS[type] || renderGeneric;
-      let content;
-      try {
-        content = renderer(res, index);
-      } catch (e) {
-        console.error("Failed to render result section:", res, e);
-        content = renderGeneric(res, index);
-      }
-      return html`<section class="result-section">${content}</section>`;
-    })}
-  `;
-  render(sectionsTemplate, sectionsEl);
-
-  // Prepare printable HTML content (wait for charts & DOM to settle)
-  try {
-    await waitForChartsRendered(sectionsEl);
-    const printableHtml = buildPrintableHtml(report, sectionsEl);
-    if (printContainer) printContainer.innerHTML = printableHtml;
-    if (printPreview)
-      renderPreviewIntoIframe(
-        printPreview,
-        buildPrintableDocumentHtml(report, sectionsEl)
-      );
-  } catch {}
-
-  const doPrint = async () => {
-    try {
-      // Rebuild printable HTML right before printing to capture any late-rendered charts
-      await waitForChartsRendered(sectionsEl);
-      const htmlNow = buildPrintableHtml(report, sectionsEl);
-      const docHtml = buildPrintableDocumentHtml(report, sectionsEl);
-      if (printContainer) printContainer.innerHTML = htmlNow;
-      // Use raw HTML so our inline print CSS is fully respected in the isolated frame
-      printJS({
-        type: "raw-html",
-        printable: docHtml,
-        scanStyles: false,
-        documentTitle: "AutoService – Service Results",
-        honorColor: true,
-      });
-    } catch {}
-  };
-
-  printSideBtn?.addEventListener("click", doPrint);
-
-  container.hidden = false;
-}
-
-// ---------- Renderers ----------
-
-/**
- * Renders a standard header for a result section.
- * @param {string} label The title of the section.
- * @param {string} status The status of the task (e.g., "success", "warn", "fail").
- * @returns {import("lit-html").TemplateResult}
- */
-const renderHeader = (label, status) => html`
-  <div class="result-header">
-    <h3>${label || "Task"}</h3>
-    <span class="status ${String(status || "").toLowerCase()}"
-      >${status || "unknown"}</span
-    >
-  </div>
-`;
-
-/**
- * Renders a key-value list from an object.
- * @param {Record<string, any>} obj The object to render.
- * @returns {import("lit-html").TemplateResult}
- */
-const renderList = (obj) => html`
-  <dl class="kv">
-    ${map(
-      Object.entries(obj || {}),
-      ([k, v]) => html`
-        <dt>${prettifyKey(k)}</dt>
-        <dd>${formatValue(v)}</dd>
-      `
-    )}
-  </dl>
-`;
-
-/**
- * Prettifies an object key for display (e.g., "cpu_speed" -> "Cpu Speed").
- * @param {string} k The key to prettify.
- * @returns {string} The formatted key.
- */
-function prettifyKey(k) {
-  return String(k)
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (m) => m.toUpperCase());
-}
-
-/**
- * Formats a value for display, handling null, arrays, and objects.
- * @param {any} v The value to format.
- * @returns {string} The formatted value.
- */
-function formatValue(v) {
-  if (v == null) return "-";
-  if (Array.isArray(v)) {
-    if (v.length === 0) return "-";
-    if (typeof v[0] === "string" || typeof v[0] === "number")
-      return v.join(", ");
-    return `${v.length} item(s)`;
-  }
-  if (typeof v === "object") return JSON.stringify(v);
-  return String(v);
-}
-
-/**
- * Generic renderer for tasks that don't have a custom one.
- * Displays the task type as a title and the summary as a key-value list.
- * @param {object} res The result object for the task.
- * @returns {import("lit-html").TemplateResult}
- */
-function renderGeneric(res, index) {
+export function renderGeneric(res, index) {
   return html`
     <div class="result generic">
       ${renderHeader(res.ui_label || res.task_type, res.status)}
@@ -211,11 +39,6 @@ function renderGeneric(res, index) {
   `;
 }
 
-/**
- * Renders the result for an internet speed test.
- * @param {object} res The result object for the task.
- * @returns {import("lit-html").TemplateResult}
- */
 function renderSpeedtest(res, index) {
   const h = res.summary?.human_readable || {};
   return html`
@@ -232,11 +55,6 @@ function renderSpeedtest(res, index) {
   `;
 }
 
-/**
- * Renders the result for a battery health check.
- * @param {object} res The result object for the task.
- * @returns {import("lit-html").TemplateResult}
- */
 function renderBatteryHealth(res, index) {
   const s = res.summary || {};
   const info = {
@@ -261,11 +79,6 @@ function renderBatteryHealth(res, index) {
   `;
 }
 
-/**
- * Renders the result for a System File Checker (SFC) scan.
- * @param {object} res The result object for the task.
- * @returns {import("lit-html").TemplateResult}
- */
 function renderSfc(res, index) {
   const s = res.summary || {};
   const violations = s.integrity_violations;
@@ -307,7 +120,7 @@ function renderSfc(res, index) {
     </div>
   `;
 }
-/** @param {object} res @returns {import("lit-html").TemplateResult} */
+
 function renderDism(res, index) {
   const s = res.summary || {};
   const steps = Array.isArray(s.steps) ? s.steps : [];
@@ -365,11 +178,7 @@ function renderDism(res, index) {
     </div>
   `;
 }
-/**
- * Renders the result for a drive health (smartctl) check.
- * @param {object} res The result object for the task.
- * @returns {import("lit-html").TemplateResult}
- */
+
 function renderSmartctl(res, index) {
   const s = res.summary || {};
   const drives = Array.isArray(s.drives) ? s.drives : [];
@@ -434,15 +243,11 @@ function renderSmartctl(res, index) {
     </div>
   `;
 }
-/** @param {object} res @returns {import("lit-html").TemplateResult} */
+
 function renderKvrt(res, index) {
   return renderGeneric(res, index);
 }
-/**
- * Renders the result for an AdwCleaner scan.
- * @param {object} res The result object for the task.
- * @returns {import("lit-html").TemplateResult}
- */
+
 function renderAdwCleaner(res, index) {
   const s = res.summary || {};
   const getLen = (a) => (Array.isArray(a) ? a.length : 0);
@@ -509,11 +314,7 @@ function renderAdwCleaner(res, index) {
     </div>
   `;
 }
-/**
- * Renders the result for a ping test.
- * @param {object} res The result object for the task.
- * @returns {import("lit-html").TemplateResult}
- */
+
 function renderPing(res, index) {
   const s = res.summary || {};
   const hr = s.human_readable || {};
@@ -645,15 +446,11 @@ function renderPing(res, index) {
     </div>
   `;
 }
-/** @param {object} res @returns {import("lit-html").TemplateResult} */
+
 function renderChkdsk(res, index) {
   return renderGeneric(res, index);
 }
-/**
- * Renders the result for a BleachBit disk cleanup.
- * @param {object} res The result object for the task.
- * @returns {import("lit-html").TemplateResult}
- */
+
 function renderBleachBit(res, index) {
   const s = res.summary || {};
   const recovered = s.space_recovered_bytes;
@@ -674,15 +471,11 @@ function renderBleachBit(res, index) {
     </div>
   `;
 }
-/** @param {object} res @returns {import("lit-html").TemplateResult} */
+
 function renderFurmark(res, index) {
   return renderGeneric(res, index);
 }
-/**
- * Renders the result for a HeavyLoad stress test.
- * @param {object} res The result object for the task.
- * @returns {import("lit-html").TemplateResult}
- */
+
 function renderHeavyload(res, index) {
   const s = res.summary || {};
   const label = s.stress_cpu
@@ -705,18 +498,13 @@ function renderHeavyload(res, index) {
     </div>
   `;
 }
-/**
- * Renders the result for an iPerf network throughput test.
- * @param {object} res The result object for the task.
- * @returns {import("lit-html").TemplateResult}
- */
+
 function renderIperf(res, index) {
   const s = res.summary || {};
   const hr = s.human_readable || {};
   const throughput = hr.throughput || {};
   const throughput_over_time = s.throughput_over_time_mbps || [];
 
-  // Schedule the chart to be rendered after the DOM is updated
   setTimeout(() => {
     const chartEl = document.getElementById(`iperf-chart-${index}`);
     if (chartEl && throughput_over_time.length > 0) {
@@ -815,11 +603,7 @@ function renderIperf(res, index) {
     </div>
   `;
 }
-/**
- * Renders the result for a Windows 11 compatibility check.
- * @param {object} res The result object for the task.
- * @returns {import("lit-html").TemplateResult}
- */
+
 function renderWhyNotWin11(res, index) {
   const s = res.summary || {};
   const hr = s.human_readable || {};
@@ -840,275 +624,7 @@ function renderWhyNotWin11(res, index) {
     </div>
   `;
 }
-/** @param {object} res @returns {import("lit-html").TemplateResult} */
+
 function renderWindowsUpdate(res, index) {
   return renderGeneric(res, index);
-}
-
-// ---------- Printable ----------
-/**
- * Constructs the HTML content for the printable version of the report.
- * @param {object} report The full report object.
- * @param {HTMLElement} sectionsEl The element containing the rendered result sections.
- * @returns {string} The complete HTML string for printing.
- */
-function buildPrintableHtml(report, sectionsEl) {
-  const title = "AutoService – Service Results";
-  const overall = String(report.overall_status || "").toLowerCase();
-  const head = ``;
-  const body = `
-    ${buildPrintHeader(title, overall, report)}
-    ${sectionsEl.innerHTML}
-  `;
-  return `<div>${head}${body}</div>`;
-}
-
-/**
- * Builds a full HTML document with light styles for print-js raw-html mode.
- * Ensures the content is self-contained and not impacted by app styles.
- * @param {object} report
- * @param {HTMLElement} sectionsEl
- */
-function buildPrintableDocumentHtml(report, sectionsEl) {
-  const inner = buildPrintableHtml(report, sectionsEl);
-  return `<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="color-scheme" content="light">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>AutoService – Service Results</title>
-    <style>${PRINT_LIGHT_CSS}</style>
-  </head>
-  <body>${inner}</body>
-</html>`;
-}
-
-// ---------- Helpers ----------
-/**
- * Builds a top-of-page header with title and meta.
- * @param {string} title
- * @param {string} overall
- * @param {any} report
- */
-function buildPrintHeader(title, overall, report) {
-  const dt = new Date();
-  const date = dt.toLocaleDateString();
-  const time = dt.toLocaleTimeString();
-  const tasks = Array.isArray(report?.results) ? report.results.length : 0;
-  const statusText =
-    overall === "success" ? "Success" : "Completed with errors";
-  const hostname = report?.summary?.hostname || report?.hostname || "";
-  return `
-    <div class="print-header">
-      <div>
-        <h1 class="title">${title}</h1>
-        <div class="sub">Overall: ${statusText} · ${tasks} task(s)</div>
-      </div>
-      <div class="meta">
-        <div>${date} ${time}</div>
-        ${hostname ? `<div>Host: ${hostname}</div>` : ""}
-      </div>
-    </div>
-  `;
-}
-/**
- * Waits until ApexCharts (if any) have rendered and the DOM has been stable
- * for a short duration, or until timeout.
- * @param {HTMLElement} root
- * @param {number} timeoutMs
- */
-async function waitForChartsRendered(root, timeoutMs = 3000) {
-  const hasChartContainers =
-    !!root.querySelector('[id^="ping-chart-"]') ||
-    !!root.querySelector('[id^="iperf-chart-"]');
-  // If no chart containers, nothing to wait for
-  if (!hasChartContainers) return;
-
-  const start = Date.now();
-  let stableSince = 0;
-  let observer;
-  await new Promise((resolve) => {
-    const checkDone = () => {
-      const haveRendered = !!root.querySelector(
-        ".apexcharts-canvas, .apexcharts-svg"
-      );
-      const now = Date.now();
-      // Consider DOM stable if no mutations for 250ms after at least one chart exists
-      if (haveRendered && stableSince && now - stableSince > 250) {
-        cleanup();
-        resolve();
-        return;
-      }
-      if (now - start > timeoutMs) {
-        cleanup();
-        resolve();
-      }
-    };
-    const cleanup = () => {
-      try {
-        observer && observer.disconnect();
-      } catch {}
-    };
-    observer = new MutationObserver(() => {
-      // Each mutation resets the stability timer
-      stableSince = Date.now();
-    });
-    try {
-      observer.observe(root, {
-        childList: true,
-        subtree: true,
-        attributes: false,
-      });
-      // Kick off initial timers
-      stableSince = Date.now();
-    } catch {}
-    const interval = setInterval(() => {
-      checkDone();
-      if (Date.now() - start > timeoutMs + 300) {
-        clearInterval(interval);
-      }
-    }, 100);
-  });
-}
-
-// Minimal, self-contained, white light print theme (no reliance on app CSS)
-const PRINT_LIGHT_CSS = `
-  @page { size: A4; margin: 8mm; }
-  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact; }
-  html, body {
-    background: #fff !important; color: #0f172a !important;
-    font-family: 'Segoe UI Variable', 'Segoe UI', 'Inter', Roboto, Helvetica, Arial, 'Noto Sans', system-ui, sans-serif;
-    font-size: 11pt; line-height: 1.35;
-  }
-  body { margin: 0; }
-  .print-header { display: grid; grid-template-columns: 1fr max-content; gap: 12px; align-items: end; padding: 6px 2px 10px 2px; border-bottom: 2px solid #0f172a; margin-bottom: 12px; }
-  .print-header .title { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: 0.2px; color: #0f172a; }
-  .print-header .sub { margin: 3px 0 0; font-size: 11pt; color: #0f172a; }
-  .print-header .meta { font-size: 10pt; color: #334155; text-align: right; }
-  .print-header .meta div { margin: 2px 0; }
-  .summary-head { display: flex; align-items: center; justify-content: space-between; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 16px; margin: 0 0 16px 0; background: #fff; }
-  .summary-head.ok .title { color: #166534; }
-  .summary-head.warn .title { color: #92400e; }
-  .summary-head .title { margin: 0; font-size: 18px; letter-spacing: 0.2px; }
-  .muted { color: #475569; }
-  .small { font-size: 10pt; }
-  .result-section { page-break-inside: avoid; break-inside: avoid; margin: 0 0 14px 0; }
-  .result-header { display: flex; align-items: center; justify-content: space-between; margin: 0 0 8px 0; }
-  .result-header h3 { margin: 0; font-size: 15px; color: #0f172a; font-weight: 700; }
-  .status { font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background: #f9fafb; text-transform: capitalize; }
-  .status.success, .status.ok { color: #166534; border-color: #bbf7d0; background: #f0fdf4; }
-  .status.warn, .status.warning { color: #92400e; border-color: #fed7aa; background: #fffbeb; }
-  .status.fail, .status.failure, .status.error { color: #7f1d1d; border-color: #fecaca; background: #fef2f2; }
-
-  .card, .result, .drive-card { background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; }
-  .kpi-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
-  .kpi { min-width: 120px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 10px; background: #fff; }
-  .kpi .lab { display: block; font-size: 9.5pt; color: #64748b; }
-  .kpi .val { display: block; font-weight: 600; font-size: 12pt; color: #0f172a; }
-
-  .pill-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-  .pill { display: inline-block; font-size: 12px; padding: 4px 8px; border-radius: 999px; background: #eef2ff; color: #1e3a8a; border: 1px solid #94a3b8; }
-  .pill.warn { background: #fffbeb; color: #92400e; border-color: #fed7aa; }
-  .pill.fail { background: #fef2f2; color: #7f1d1d; border-color: #fecaca; }
-  .pill.ok { background: #f0fdf4; color: #166534; border-color: #bbf7d0; }
-
-  .tag-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-  .drive-list { display: grid; grid-template-columns: 1fr; gap: 8px; }
-  .drive-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-  .badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background: #f9fafb; }
-  .badge.ok { color: #166534; border-color: #bbf7d0; background: #f0fdf4; }
-  .badge.fail { color: #7f1d1d; border-color: #fecaca; background: #fef2f2; }
-
-  /* SFC layout */
-  .sfc-layout { display: grid; grid-template-columns: 40px 1fr; gap: 10px; align-items: start; }
-  .sfc-icon { font-size: 24px; }
-  .sfc-verdict { font-weight: 600; }
-  .sfc-repair { margin-top: 4px; }
-
-  /* Ping & iPerf charts */
-  .ping-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .chart-container, .ping-chart { min-height: 160px; }
-  .apexcharts-canvas, .apexcharts-svg { background: #fff !important; }
-  .apexcharts-tooltip, .apexcharts-toolbar { display: none !important; }
-  svg, img, canvas { page-break-inside: avoid; break-inside: avoid; }
-
-  /* Avoid orphan headings */
-  h2, h3 { page-break-after: avoid; }
-  p, dl, ul { margin: 0.2rem 0; }
-  dt { color: #334155; font-weight: 600; }
-  dd { margin: 0 0 4px 0; color: #0f172a; }
-`;
-/**
- * Renders HTML into an isolated preview iframe to avoid dark theme leakage.
- * If the provided element is not an iframe, falls back to innerHTML.
- * @param {HTMLElement} previewEl
- * @param {string} docHtml A full HTML document string
- */
-function renderPreviewIntoIframe(previewEl, docHtml) {
-  try {
-    let iframe = previewEl.querySelector("iframe");
-    if (!iframe) {
-      iframe = document.createElement("iframe");
-      iframe.setAttribute("title", "Print Preview");
-      iframe.style.width = "100%";
-      iframe.style.height = "100%";
-      iframe.style.border = "1px solid rgba(148, 163, 184, 0.3)";
-      iframe.style.background = "#fff";
-      previewEl.innerHTML = "";
-      previewEl.appendChild(iframe);
-    }
-    const doc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (!doc) {
-      previewEl.innerHTML = docHtml;
-      return;
-    }
-    doc.open();
-    doc.write(docHtml);
-    doc.close();
-  } catch {
-    // Fallback to inline render
-    previewEl.innerHTML = docHtml;
-  }
-}
-/**
- * Renders a "Key Performance Indicator" box.
- * @param {string} label The label for the KPI.
- * @param {string|number} value The value of the KPI.
- * @returns {import("lit-html").TemplateResult}
- */
-const kpiBox = (label, value) => html`
-  <div class="kpi">
-    <span class="lab">${label}</span>
-    <span class="val">${value == null ? "-" : String(value)}</span>
-  </div>
-`;
-
-/**
- * Renders a styled pill/badge element.
- * @param {string} text The text content of the pill.
- * @param {string} [variant] An optional style variant (e.g., "warn", "fail").
- * @returns {import("lit-html").TemplateResult}
- */
-const pill = (text, variant) => html`
-  <span class="pill${variant ? " " + variant : ""}">${text}</span>
-`;
-
-/**
- * Formats a millisecond value for display.
- * @param {number} ms Milliseconds.
- * @returns {string} Formatted string (e.g., "123 ms").
- */
-function fmtMs(ms) {
-  if (ms == null || !isFinite(ms)) return "-";
-  return `${Math.round(ms)} ms`;
-}
-/**
- * Formats a Mbps value for display.
- * @param {number} n Megabits per second.
- * @returns {string} Formatted string (e.g., "100.5 Mbps").
- */
-function fmtMbps(n) {
-  if (n == null || !isFinite(n)) return "-";
-  return `${Math.round(n * 10) / 10} Mbps`;
 }

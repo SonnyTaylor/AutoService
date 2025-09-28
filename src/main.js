@@ -61,7 +61,7 @@ const pathMap = {
   service: "service/presets",
   "service-run": "service/builder",
   "service-report": "service/runner",
-  "service-results": "service/results",
+  "service-results": "service/results/index",
   programs: "programs/index",
   reports: "reports/index",
   "component-test": "component-test/index",
