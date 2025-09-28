@@ -894,3 +894,174 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Service results page */
+[data-page="service-results"] .results-two-pane {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: 16px;
+  align-items: start;
+}
+[data-page="service-results"] .pane-left {
+  min-width: 0;
+}
+[data-page="service-results"] .pane-right {
+  position: sticky;
+  top: 64px;
+  align-self: start;
+}
+[data-page="service-results"] .results-summary {
+  margin-bottom: 12px;
+}
+[data-page="service-results"] .summary-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-2);
+}
+[data-page="service-results"] .summary-head.ok .title {
+  color: #8bd17c;
+}
+[data-page="service-results"] .summary-head.warn .title {
+  color: #e8b27c;
+}
+[data-page="service-results"] .summary-head.fail .title {
+  color: #f29a9a;
+}
+[data-page="service-results"] .results-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+[data-page="service-results"] .kpi-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+[data-page="service-results"] .kpi {
+  background: var(--panel-accent);
+  border: 1px solid var(--border);
+  padding: 8px 10px;
+  border-radius: 6px;
+  min-width: 120px;
+}
+[data-page="service-results"] .kpi .lab {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+}
+[data-page="service-results"] .kpi .val {
+  font-size: 14px;
+  font-weight: 600;
+}
+[data-page="service-results"] .list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 12px;
+}
+[data-page="service-results"] .list .k {
+  color: var(--muted);
+}
+[data-page="service-results"] .pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  margin: 2px 4px 0 0;
+  font-size: 12px;
+  color: var(--text);
+}
+[data-page="service-results"] .pill.fail {
+  border-color: #522a2a;
+  color: #f29a9a;
+}
+[data-page="service-results"] .pill.warn {
+  border-color: #6b422b;
+  color: #e8b27c;
+}
+[data-page="service-results"] .section-title {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+[data-page="service-results"] .preview-card {
+  border: 1px dashed #3a3a3a;
+  border-radius: 8px;
+  padding: 10px;
+  background: var(--panel-accent);
+}
+[data-page="service-results"] .preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+[data-page="service-results"] .preview-window {
+  height: calc(100vh - 210px);
+  overflow: auto;
+  background: #fff;
+  color: #000;
+  border-radius: 6px;
+  padding: 12px;
+}
+[data-page="service-results"] .result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+[data-page="service-results"] .status {
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  font-size: 12px;
+}
+[data-page="service-results"] .status.success,
+[data-page="service-results"] .status.ok {
+  background: #16221a;
+  color: #8bd17c;
+  border-color: #2d4a33;
+}
+[data-page="service-results"] .status.failure,
+[data-page="service-results"] .status.error,
+[data-page="service-results"] .status.failed {
+  background: #221616;
+  color: #f29a9a;
+  border-color: #522a2a;
+}
+[data-page="service-results"] .status.skipped {
+  background: #221a16;
+  color: #e8b27c;
+  border-color: #4a3a2d;
+}
+/* smartctl cards */
+[data-page="service-results"] .drive-list {
+  display: grid;
+  gap: 10px;
+}
+[data-page="service-results"] .drive-card {
+  background: var(--panel-accent);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+}
+[data-page="service-results"] .drive-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+[data-page="service-results"] .drive-model {
+  font-weight: 600;
+}
+@media (max-width: 1100px) {
+  [data-page="service-results"] .results-two-pane {
+    grid-template-columns: 1fr;
+  }
+  [data-page="service-results"] .pane-right {
+    position: static;
+  }
+}

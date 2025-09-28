@@ -92,7 +92,7 @@ export async function initPage() {
         type: "html",
         printable: "svc-print-container",
         targetStyles: ["*"],
-        scanStyles: false,
+        scanStyles: true,
         css: [],
       });
     } catch {}
@@ -305,30 +305,7 @@ function renderWindowsUpdate(res) { return renderGeneric(res); }
 function buildPrintableHtml(report, sectionsEl) {
   const title = "AutoService – Service Results";
   const overall = String(report.overall_status || "").toLowerCase();
-  const head = `
-    <style>
-      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color: #e6e6e6; background: #1a1a1a; }
-      h1, h2, h3 { margin: 0 0 6px; }
-      .muted { color: #aaa; }
-      .summary-head { display:flex; align-items:center; justify-content:space-between; padding: 8px 0; border-bottom:1px solid #333; }
-      .summary-head.ok .title { color:#58d68d; }
-      .summary-head.warn .title { color:#f5b041; }
-      .result-section { padding: 10px 0; border-bottom: 1px solid #333; }
-      .result-header { display:flex; align-items:center; justify-content:space-between; margin-bottom: 6px; }
-      .status { padding:2px 6px; border-radius:4px; border:1px solid #444; font-size: 12px; }
-      .status.success, .status.ok { background:#1e3d2a; color:#58d68d; border-color:#2e7d32; }
-      .status.failure, .status.error, .status.failed { background:#3d1e1e; color:#ec7063; border-color:#943126; }
-      .status.skipped { background:#2a2a2a; color:#bbb; border-color:#555; }
-      .badge { padding:2px 6px; border-radius:4px; border:1px solid #444; font-size: 12px; }
-      .badge.ok { background:#1e3d2a; color:#58d68d; border-color:#2e7d32; }
-      .badge.fail { background:#3d1e1e; color:#ec7063; border-color:#943126; }
-      .pill { display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid #2b2b2b; margin:2px 4px 0 0; font-size:12px; color:#c9c9c9; }
-      .pill.fail { border-color:#943126; color:#ec7063; }
-      dl.kv { display:grid; grid-template-columns: max-content 1fr; gap: 6px 12px; }
-      dl.kv dt { color:#bbb; }
-      dl.kv dd { margin:0; }
-    </style>
-  `;
+  const head = ``;
   const body = `
     <div class="summary-head ${overall === "success" ? "ok" : "warn"}">
       <div>
