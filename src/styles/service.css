@@ -921,6 +921,7 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--panel-2);
+  margin-top: 10px;
 }
 [data-page="service-results"] .summary-head.ok .title {
   color: #8bd17c;
