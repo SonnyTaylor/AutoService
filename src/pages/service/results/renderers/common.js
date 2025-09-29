@@ -40,8 +40,8 @@ export function formatValue(v) {
   return String(v);
 }
 
-export const kpiBox = (label, value) => html`
-  <div class="kpi">
+export const kpiBox = (label, value, variant) => html`
+  <div class="kpi${variant ? " " + variant : ""}">
     <span class="lab">${label}</span>
     <span class="val">${value == null ? "-" : String(value)}</span>
   </div>

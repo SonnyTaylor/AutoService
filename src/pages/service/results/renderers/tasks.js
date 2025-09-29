@@ -73,7 +73,11 @@ function renderBatteryHealth(res, index) {
           info["Average SOH %"] != null ? `${info["Average SOH %"]}%` : "-"
         )}
         ${kpiBox("Low Health", info["Low‑health batteries"] ?? "-")}
-        ${kpiBox("Verdict", (info.Verdict || "").toString())}
+        ${kpiBox(
+          "Verdict",
+          (info.Verdict || "").toString(),
+          info.Verdict?.toLowerCase().includes("fail") ? "fail" : undefined
+        )}
       </div>
     </div>
   `;
@@ -702,23 +706,64 @@ function renderFurmark(res, index) {
 
 function renderHeavyload(res, index) {
   const s = res.summary || {};
-  const label = s.stress_cpu
-    ? "CPU Stress (HeavyLoad)"
-    : s.stress_memory
-    ? "RAM Stress (HeavyLoad)"
-    : s.stress_gpu
-    ? "GPU Stress (HeavyLoad)"
+  const modes = [
+    s.stress_cpu ? "CPU" : "",
+    s.stress_memory ? "RAM" : "",
+    s.stress_gpu ? "GPU" : "",
+    s.stress_disk ? "Disk" : "",
+  ].filter(Boolean);
+  const label = modes.length
+    ? `${modes.join(" + ")} Stress (HeavyLoad)`
     : "HeavyLoad Stress";
+
+  const exitCode = s.exit_code;
+  const durationMinutes = s.duration_minutes;
+  const durationStr = (() => {
+    if (durationMinutes == null) return "-";
+    const minutes = Number(durationMinutes);
+    if (!Number.isFinite(minutes)) return String(durationMinutes);
+    if (minutes < 1) {
+      return `${Math.round(minutes * 60)} sec`;
+    }
+    const whole = Math.floor(minutes);
+    const remainder = minutes - whole;
+    const seconds = Math.round(remainder * 60);
+    return seconds > 0 ? `${whole}m ${seconds}s` : `${whole} min`;
+  })();
+
+  const verdictInfo = (() => {
+    if (res.status === "fail") {
+      return { label: "Failed", variant: "fail" };
+    }
+    if (exitCode == null) {
+      return { label: "Completed", variant: "ok" };
+    }
+    if (exitCode === 0) {
+      return { label: "Completed", variant: "ok" };
+    }
+    if (exitCode > 0) {
+      return { label: `Exited (${exitCode})`, variant: "warn" };
+    }
+    return { label: "Unknown", variant: "info" };
+  })();
+
   return html`
     <div class="card heavyload">
       ${renderHeader(label, res.status)}
       <div class="kpi-row">
-        ${kpiBox(
-          "Duration",
-          s.duration_minutes != null ? `${s.duration_minutes} min` : "-"
-        )}
-        ${kpiBox("Exit Code", s.exit_code != null ? String(s.exit_code) : "-")}
+        ${kpiBox("Verdict", verdictInfo.label, verdictInfo.variant)}
+        ${kpiBox("Duration", durationStr)}
+        ${kpiBox("Exit Code", exitCode != null ? String(exitCode) : "-")}
       </div>
+      ${s.stdout_excerpt || s.stderr_excerpt
+        ? html`
+            <details class="output">
+              <summary>View HeavyLoad output</summary>
+              ${s.stdout_excerpt ? html`<pre>${s.stdout_excerpt}</pre>` : ""}
+              ${s.stderr_excerpt ? html`<pre>${s.stderr_excerpt}</pre>` : ""}
+            </details>
+          `
+        : ""}
     </div>
   `;
 }
