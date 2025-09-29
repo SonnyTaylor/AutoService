@@ -180,15 +180,10 @@ function renderSpeedtest(res, index) {
       ${renderHeader("Internet Speed Test", res.status)}
       <div class="speedtest-layout">
         <div class="speedtest-kpis">
-          <div class="kpi-row">
+          <div class="speedtest-kpi-grid">
             ${kpiBox("Download", fmtMbps(h.download_mbps))}
             ${kpiBox("Upload", fmtMbps(h.upload_mbps))}
             ${kpiBox("Ping", fmtMs(h.ping_ms))}
-            ${kpiBox("Jitter", h.jitter_ms == null ? "-" : fmtMs(h.jitter_ms))}
-            ${kpiBox(
-              "Rating",
-              h.rating_stars != null ? `${h.rating_stars}★` : "-"
-            )}
             ${kpiBox("Verdict", verdictLabel, verdictVariant)}
           </div>
           ${metaRows.length

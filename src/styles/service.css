@@ -1130,14 +1130,17 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  align-self: stretch;
 }
-[data-page="service-results"] .card.speedtest .speedtest-kpis .kpi-row {
-  display: flex;
-  flex-wrap: wrap;
+[data-page="service-results"] .card.speedtest .speedtest-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 10px;
-}
-[data-page="service-results"] .card.speedtest .speedtest-kpis .kpi {
-  min-width: 130px;
+  padding: 8px 10px;
+  background: rgba(36, 48, 68, 0.55);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-sizing: border-box;
 }
 [data-page="service-results"] .card.speedtest .speedtest-meta {
   display: grid;
