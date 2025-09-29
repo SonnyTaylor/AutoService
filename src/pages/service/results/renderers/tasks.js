@@ -614,10 +614,32 @@ function renderPing(res, index) {
   const lat = s.latency_ms || {};
   const stats = s.interval_stats || {};
   const loss = s.packets?.loss_percent;
+  const toNumber = (val) => {
+    const num = Number(val);
+    return Number.isFinite(num) ? num : null;
+  };
+  const stabilityScore = toNumber(hr.stability_score);
+  const stabilityVariant = (() => {
+    if (stabilityScore == null) return undefined;
+    if (stabilityScore >= 85) return "ok";
+    if (stabilityScore >= 70) return "info";
+    if (stabilityScore >= 50) return "warn";
+    return "fail";
+  })();
+  const stabilityDisplay = (() => {
+    if (stabilityScore == null) return "-";
+    const score =
+      Number.isInteger(stabilityScore) || Math.abs(stabilityScore % 1) < 0.05
+        ? stabilityScore.toFixed(0)
+        : stabilityScore.toFixed(1);
+    return `${score}/100`;
+  })();
 
   setTimeout(() => {
     const chartEl = document.getElementById(`ping-chart-${index}`);
     if (chartEl && lat.avg != null) {
+      if (chartEl.dataset.rendered === "true") return;
+      chartEl.dataset.rendered = "true";
       const getPingColor = (ping) => {
         if (ping == null) return "#4f8cff";
         if (ping < 30) return "#2f6b4a";
@@ -627,7 +649,7 @@ function renderPing(res, index) {
       };
 
       const options = {
-        chart: { type: "bar", height: 120, toolbar: { show: false } },
+        chart: { type: "bar", height: 180, toolbar: { show: false } },
         series: [{ name: "Average", data: [lat.avg.toFixed(1)] }],
         plotOptions: {
           bar: { horizontal: true, barHeight: "35%", distributed: false },
@@ -724,7 +746,7 @@ function renderPing(res, index) {
         <div class="ping-kpis">
           ${kpiBox("Average Latency", fmtMs(lat.avg))}
           ${kpiBox("Packet Loss", loss != null ? `${loss}%` : "-")}
-          ${kpiBox("Stability", `${hr.stability_score || "?"}/100`)}
+          ${kpiBox("Stability", stabilityDisplay, stabilityVariant)}
           ${kpiBox(
             "Jitter (StDev)",
             stats.stdev != null ? fmtMs(stats.stdev) : "-"
@@ -732,7 +754,11 @@ function renderPing(res, index) {
         </div>
         <div class="ping-chart">
           ${lat.avg != null
-            ? html`<div id="ping-chart-${index}"></div>`
+            ? html`
+                <div class="ping-chart-shell">
+                  <div id="ping-chart-${index}"></div>
+                </div>
+              `
             : html`<div class="muted">No latency data for chart.</div>`}
         </div>
       </div>

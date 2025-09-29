@@ -1107,8 +1107,26 @@
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
+[data-page="service-results"] .card.ping .ping-kpis .kpi {
+  padding: 10px 12px;
+}
 [data-page="service-results"] .card.ping .ping-chart {
-  min-height: 120px;
+  display: flex;
+  align-items: stretch;
+}
+[data-page="service-results"] .card.ping .ping-chart-shell {
+  background: var(--panel-accent);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px 8px;
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+[data-page="service-results"] .card.ping .ping-chart-shell > div {
+  width: 100%;
 }
 @media (max-width: 720px) {
   [data-page="service-results"] .card.ping .ping-layout {
