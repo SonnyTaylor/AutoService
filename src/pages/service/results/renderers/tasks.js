@@ -41,16 +41,180 @@ export function renderGeneric(res, index) {
 
 function renderSpeedtest(res, index) {
   const h = res.summary?.human_readable || {};
+  const chartId = `speedtest-chart-${index}`;
+
+  const toNumber = (val) => {
+    const num = Number(val);
+    return Number.isFinite(num) ? num : null;
+  };
+
+  const download = toNumber(h.download_mbps);
+  const upload = toNumber(h.upload_mbps);
+
+  const speeds = [
+    { label: "Download", value: download, color: "#4f8cff" },
+    { label: "Upload", value: upload, color: "#8bd17c" },
+  ].filter((s) => s.value != null && s.value >= 0);
+
+  setTimeout(() => {
+    const chartEl = document.getElementById(chartId);
+    if (!chartEl || speeds.length === 0) return;
+    if (chartEl.dataset.rendered === "true") return;
+    chartEl.dataset.rendered = "true";
+
+    const seriesData = speeds.map((s) => Number(s.value.toFixed(2)));
+    const categories = speeds.map((s) => s.label);
+    const colors = speeds.map((s) => s.color);
+
+    const options = {
+      chart: {
+        type: "bar",
+        height: 240,
+        toolbar: { show: false },
+        animations: { enabled: false },
+      },
+      series: [
+        {
+          name: "Speed",
+          data: seriesData,
+        },
+      ],
+      plotOptions: {
+        bar: {
+          columnWidth: "50%",
+          borderRadius: 10,
+          distributed: true,
+          dataLabels: { position: "top" },
+        },
+      },
+      dataLabels: {
+        enabled: true,
+        offsetY: -18,
+        style: {
+          colors: ["#ffffff"],
+          fontSize: "12px",
+          fontFamily: "Inter, sans-serif",
+        },
+        formatter: (val) => `${Number(val ?? 0).toFixed(1)} Mbps`,
+      },
+      xaxis: {
+        categories,
+        axisBorder: { show: false },
+        axisTicks: { show: false },
+        labels: {
+          style: { colors: "#a3adbf", fontFamily: "Inter, sans-serif" },
+        },
+      },
+      yaxis: {
+        min: 0,
+        labels: {
+          style: { colors: "#a3adbf", fontFamily: "Inter, sans-serif" },
+          formatter: (val) => `${Number(val ?? 0).toFixed(0)} Mbps`,
+        },
+      },
+      grid: { borderColor: "#2a3140" },
+      tooltip: {
+        theme: "dark",
+        y: {
+          formatter: (val) => `${Number(val ?? 0).toFixed(2)} Mbps`,
+        },
+      },
+      colors,
+    };
+
+    const chart = new ApexCharts(chartEl, options);
+    chart.render();
+  }, 0);
+
+  const verdictRaw = typeof h.verdict === "string" ? h.verdict : "";
+  const verdictLabel = verdictRaw
+    ? verdictRaw.replace(/_/g, " ").replace(/\b\w/g, (m) => m.toUpperCase())
+    : "-";
+  const verdictVariant = (() => {
+    const lower = verdictRaw.toLowerCase();
+    if (!lower) return undefined;
+    if (lower.includes("excellent")) return "ok";
+    if (lower.includes("good")) return "info";
+    if (lower.includes("fair")) return "warn";
+    if (lower.includes("poor") || lower.includes("bad")) return "fail";
+    return undefined;
+  })();
+
+  const metaRows = [
+    h.isp ? { label: "ISP", value: h.isp } : null,
+    h.server_description
+      ? { label: "Server", value: h.server_description }
+      : null,
+    res.summary?.results?.timestamp
+      ? {
+          label: "Timestamp",
+          value: new Date(res.summary.results.timestamp).toLocaleString(),
+        }
+      : null,
+  ].filter(Boolean);
+
+  const notes = Array.isArray(h.notes) ? h.notes : [];
+  const notePills = notes
+    .map((note) => {
+      if (note == null) return null;
+      const text = String(note);
+      const lower = text.toLowerCase();
+      let variant = "info";
+      if (lower.includes("excellent") || lower.includes("great")) {
+        variant = "ok";
+      } else if (
+        lower.includes("unstable") ||
+        lower.includes("issue") ||
+        lower.includes("poor")
+      ) {
+        variant = "fail";
+      } else if (lower.includes("moderate") || lower.includes("average")) {
+        variant = "warn";
+      }
+      return pill(text, variant);
+    })
+    .filter(Boolean);
+
   return html`
     <div class="card speedtest">
       ${renderHeader("Internet Speed Test", res.status)}
-      <div class="kpi-row">
-        ${kpiBox("Download", fmtMbps(h.download_mbps))}
-        ${kpiBox("Upload", fmtMbps(h.upload_mbps))}
-        ${kpiBox("Ping", fmtMs(h.ping_ms))}
-        ${kpiBox("Jitter", h.jitter_ms == null ? "-" : fmtMs(h.jitter_ms))}
-        ${kpiBox("Rating", h.rating_stars != null ? `${h.rating_stars}★` : "-")}
+      <div class="speedtest-layout">
+        <div class="speedtest-kpis">
+          <div class="kpi-row">
+            ${kpiBox("Download", fmtMbps(h.download_mbps))}
+            ${kpiBox("Upload", fmtMbps(h.upload_mbps))}
+            ${kpiBox("Ping", fmtMs(h.ping_ms))}
+            ${kpiBox("Jitter", h.jitter_ms == null ? "-" : fmtMs(h.jitter_ms))}
+            ${kpiBox(
+              "Rating",
+              h.rating_stars != null ? `${h.rating_stars}★` : "-"
+            )}
+            ${kpiBox("Verdict", verdictLabel, verdictVariant)}
+          </div>
+          ${metaRows.length
+            ? html`
+                <div class="speedtest-meta muted small">
+                  ${metaRows.map(
+                    (row) => html`
+                      <div class="speedtest-meta-row">
+                        <span class="lab">${row.label}</span>
+                        <span class="val">${row.value}</span>
+                      </div>
+                    `
+                  )}
+                </div>
+              `
+            : ""}
+        </div>
+        <div class="speedtest-chart">
+          ${speeds.length
+            ? html`<div id=${chartId}></div>`
+            : html`<div class="muted small">
+                No download/upload data available for chart.
+              </div>`}
+        </div>
       </div>
+      ${notePills.length ? html`<div class="pill-row">${notePills}</div>` : ""}
     </div>
   `;
 }
