@@ -245,7 +245,137 @@ function renderSmartctl(res, index) {
 }
 
 function renderKvrt(res, index) {
-  return renderGeneric(res, index);
+  const s = res.summary || {};
+  const detections = Array.isArray(s.detections) ? s.detections : [];
+  const skipCount = detections.filter(
+    (d) => (d?.action || "").toLowerCase() === "skip"
+  ).length;
+
+  const flagPills = [
+    s.silent ? pill("Silent Mode", "info") : "",
+    s.details ? pill("Detailed Report", "info") : "",
+    s.dontencrypt ? pill("Don't Encrypt", "info") : "",
+    s.noads ? pill("No Ads", "info") : "",
+    s.fixednames ? pill("Fixed Names", "info") : "",
+  ];
+
+  if (s.processlevel != null) {
+    flagPills.push(pill(`Process Level ${s.processlevel}`, "info"));
+  }
+
+  if (s.quarantine_dir) {
+    flagPills.push(pill("Quarantine Enabled", "info"));
+  }
+
+  const actionVariant = (action) => {
+    const normalized = (action || "").toLowerCase();
+    if (
+      ["delete", "remove", "disinfect", "cure", "quarantine"].some((v) =>
+        normalized.includes(v)
+      )
+    ) {
+      return "ok";
+    }
+    if (["skip", "ignore", "postpone"].some((v) => normalized.includes(v))) {
+      return "warn";
+    }
+    if (["fail", "error"].some((v) => normalized.includes(v))) {
+      return "fail";
+    }
+    return "info";
+  };
+
+  return html`
+    <div class="card kvrt">
+      ${renderHeader("Kaspersky Virus Removal Tool", res.status)}
+      <div class="kpi-row">
+        ${kpiBox("Processed", s.processed != null ? String(s.processed) : "-")}
+        ${kpiBox(
+          "Detected",
+          s.detected != null
+            ? String(s.detected)
+            : detections.length > 0
+            ? String(detections.length)
+            : "-"
+        )}
+        ${kpiBox(
+          "Removed",
+          s.removed_count != null ? String(s.removed_count) : "-"
+        )}
+        ${kpiBox("Skipped", String(skipCount))}
+        ${kpiBox(
+          "Errors",
+          s.processing_errors != null ? String(s.processing_errors) : "-"
+        )}
+        ${kpiBox(
+          "Password Protected",
+          s.password_protected != null ? String(s.password_protected) : "-"
+        )}
+        ${kpiBox("Corrupted", s.corrupted != null ? String(s.corrupted) : "-")}
+        ${kpiBox("Exit Code", s.exit_code != null ? String(s.exit_code) : "-")}
+      </div>
+
+      ${flagPills.filter(Boolean).length
+        ? html`<div class="pill-row">${flagPills.filter(Boolean)}</div>`
+        : ""}
+      ${detections.length
+        ? html`
+            <div class="kvrt-detections">
+              <div class="section-title">Detections</div>
+              <div class="kvrt-detection-grid">
+                ${map(detections, (det, detIdx) => {
+                  const threat = det?.threat || "Unknown threat";
+                  const objectPath = det?.object_path || "(path not provided)";
+                  const actionRaw = det?.action || "Unknown";
+                  const actionDisplay = (() => {
+                    const normalized = String(actionRaw || "Unknown");
+                    return (
+                      normalized.charAt(0).toUpperCase() +
+                      normalized.slice(1).toLowerCase()
+                    );
+                  })();
+                  return html`
+                    <div class="kvrt-detection" data-index=${detIdx}>
+                      <div class="kvrt-detection-head">
+                        <span class="kvrt-threat" title=${threat}
+                          >${threat}</span
+                        >
+                        ${pill(
+                          `Action: ${actionDisplay}`,
+                          actionVariant(actionRaw)
+                        )}
+                      </div>
+                      <div class="kvrt-detection-body">
+                        <span class="kvrt-label muted small">Location</span>
+                        <div class="kvrt-object" title=${objectPath}>
+                          ${objectPath}
+                        </div>
+                      </div>
+                    </div>
+                  `;
+                })}
+              </div>
+            </div>
+          `
+        : html`<div class="kvrt-empty muted">No detections reported.</div>`}
+      ${s.quarantine_dir
+        ? html`
+            <div class="kvrt-meta muted small">
+              Quarantine directory: ${s.quarantine_dir}
+            </div>
+          `
+        : ""}
+      ${s.stdout_excerpt || s.stderr_excerpt
+        ? html`
+            <details class="output">
+              <summary>View KVRT output details</summary>
+              ${s.stdout_excerpt ? html`<pre>${s.stdout_excerpt}</pre>` : ""}
+              ${s.stderr_excerpt ? html`<pre>${s.stderr_excerpt}</pre>` : ""}
+            </details>
+          `
+        : ""}
+    </div>
+  `;
 }
 
 function renderAdwCleaner(res, index) {
