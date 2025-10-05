@@ -350,9 +350,20 @@ function renderSmartctl(res, index) {
       ${renderHeader("Drive Health (smartctl)", res.status)}
       <div class="drive-list">
         ${drives.length > 0
-          ? map(
-              drives,
-              (d) => html`
+          ? map(drives, (d) => {
+              // Calculate health percentage and variant
+              const healthPercent =
+                d.wear_level_percent_used != null
+                  ? 100 - d.wear_level_percent_used
+                  : null;
+              const healthVariant = (() => {
+                if (healthPercent == null) return undefined;
+                if (healthPercent >= 90) return "ok";
+                if (healthPercent >= 70) return "warn";
+                return "fail";
+              })();
+
+              return html`
                 <div class="drive-card">
                   <div class="drive-head">
                     <div class="drive-model">
@@ -367,7 +378,35 @@ function renderSmartctl(res, index) {
                     >
                   </div>
                   <div class="kpi-row">
+                    ${healthPercent != null
+                      ? kpiBox(
+                          "Drive Health",
+                          `${healthPercent}%`,
+                          healthVariant
+                        )
+                      : ""}
                     ${kpiBox("Temp", d.temperature || "-")}
+                    ${d.media_errors != null
+                      ? kpiBox(
+                          "Media Errors",
+                          String(d.media_errors),
+                          d.media_errors > 0 ? "fail" : undefined
+                        )
+                      : ""}
+                    ${d.error_log_entries != null
+                      ? kpiBox(
+                          "Error Log",
+                          String(d.error_log_entries),
+                          d.error_log_entries > 0 ? "warn" : undefined
+                        )
+                      : ""}
+                    ${d.unsafe_shutdowns != null
+                      ? kpiBox(
+                          "Unsafe Shutdowns",
+                          String(d.unsafe_shutdowns),
+                          d.unsafe_shutdowns > 0 ? "warn" : undefined
+                        )
+                      : ""}
                     ${kpiBox(
                       "Power On Hrs",
                       d.power_on_hours != null ? String(d.power_on_hours) : "-"
@@ -376,31 +415,16 @@ function renderSmartctl(res, index) {
                       "Power Cycles",
                       d.power_cycles != null ? String(d.power_cycles) : "-"
                     )}
-                    ${d.wear_level_percent_used != null
-                      ? kpiBox(
-                          "Drive Health",
-                          `${100 - d.wear_level_percent_used}%`
-                        )
-                      : ""}
                     ${d.data_written_human
                       ? kpiBox("Data Written", d.data_written_human)
                       : ""}
                     ${d.data_read_human
                       ? kpiBox("Data Read", d.data_read_human)
                       : ""}
-                    ${d.media_errors != null
-                      ? kpiBox("Media Errors", String(d.media_errors))
-                      : ""}
-                    ${d.unsafe_shutdowns != null
-                      ? kpiBox("Unsafe Shutdowns", String(d.unsafe_shutdowns))
-                      : ""}
-                    ${d.error_log_entries != null
-                      ? kpiBox("Error Log", String(d.error_log_entries))
-                      : ""}
                   </div>
                 </div>
-              `
-            )
+              `;
+            })
           : html`<div class="muted">No drive data</div>`}
       </div>
     </div>
