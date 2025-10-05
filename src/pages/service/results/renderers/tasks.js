@@ -69,7 +69,8 @@ function renderSpeedtest(res, index) {
     const options = {
       chart: {
         type: "bar",
-        height: 240,
+        height: 220,
+        width: "100%",
         toolbar: { show: false },
         animations: { enabled: false },
       },
@@ -120,6 +121,16 @@ function renderSpeedtest(res, index) {
         },
       },
       colors,
+      responsive: [
+        {
+          breakpoint: 1000,
+          options: {
+            chart: {
+              height: 200,
+            },
+          },
+        },
+      ],
     };
 
     const chart = new ApexCharts(chartEl, options);
@@ -673,7 +684,13 @@ function renderPing(res, index) {
       };
 
       const options = {
-        chart: { type: "bar", height: 180, toolbar: { show: false } },
+        chart: { 
+          type: "bar", 
+          height: 180, 
+          width: "100%",
+          toolbar: { show: false },
+          animations: { enabled: false },
+        },
         series: [{ name: "Average", data: [lat.avg.toFixed(1)] }],
         plotOptions: {
           bar: { horizontal: true, barHeight: "35%", distributed: false },
@@ -990,6 +1007,7 @@ function renderIperf(res, index) {
         chart: {
           type: "area",
           height: 200,
+          width: "100%",
           toolbar: { show: false },
           animations: { enabled: false },
         },
@@ -1032,6 +1050,16 @@ function renderIperf(res, index) {
             stops: [0, 90, 100],
           },
         },
+        responsive: [
+          {
+            breakpoint: 1000,
+            options: {
+              chart: {
+                height: 180,
+              },
+            },
+          },
+        ],
       };
       const chart = new ApexCharts(chartEl, options);
       chart.render();

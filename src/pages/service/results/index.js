@@ -80,33 +80,81 @@ export async function initPage() {
   render(sectionsTemplate, sectionsEl);
 
   // Prepare printable HTML content (wait for charts & DOM to settle)
-  try {
-    await waitForChartsRendered(sectionsEl);
-    const printableHtml = buildPrintableHtml(report, sectionsEl);
-    if (printContainer) printContainer.innerHTML = printableHtml;
-    if (printPreview)
-      renderPreviewIntoIframeFallback(
-        printPreview,
-        buildPrintableDocumentHtml(report, sectionsEl)
-      );
-  } catch {}
+  if (printPreview) {
+    printPreview.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#64748b;"><div style="text-align:center;"><div class="spinner" style="width:24px;height:24px;border:3px solid #cbd5e1;border-top-color:#475569;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px;"></div><div style="font-size:14px;">Preparing preview...</div></div></div>';
+  }
+
+  // Build preview asynchronously to avoid blocking page load
+  setTimeout(async () => {
+    try {
+      await waitForChartsRendered(sectionsEl, 300);
+      const printableHtml = buildPrintableHtml(report, sectionsEl);
+      if (printContainer) printContainer.innerHTML = printableHtml;
+      if (printPreview) {
+        renderPreviewIntoIframeFallback(
+          printPreview,
+          buildPrintableDocumentHtml(report, sectionsEl)
+        );
+      }
+    } catch (error) {
+      console.error("Preview generation error:", error);
+      if (printPreview) {
+        printPreview.innerHTML =
+          '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:14px;text-align:center;padding:20px;">Preview unavailable. Use Print button to generate report.</div>';
+      }
+    }
+  }, 0);
 
   const doPrint = async () => {
+    if (!printSideBtn) return;
+
+    // Disable button and show loading state
+    const originalText = printSideBtn.textContent;
+    printSideBtn.disabled = true;
+    printSideBtn.innerHTML =
+      '<span class="spinner" style="display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.6s linear infinite;margin-right:6px;"></span>Preparing...';
+
     try {
-      // Rebuild printable HTML right before printing to capture any late-rendered charts
-      await waitForChartsRendered(sectionsEl);
+      // Brief wait for DOM to settle (charts are hidden in print)
+      await waitForChartsRendered(sectionsEl, 200);
+
+      // Rebuild printable HTML
       const htmlNow = buildPrintableHtml(report, sectionsEl);
       const docHtml = buildPrintableDocumentHtml(report, sectionsEl);
       if (printContainer) printContainer.innerHTML = htmlNow;
-      // Use raw HTML so our inline print CSS is fully respected in the isolated frame
+
+      // Brief delay to ensure DOM is settled
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Trigger print dialog
       printJS({
         type: "raw-html",
         printable: docHtml,
         scanStyles: false,
         documentTitle: "AutoService – Service Results",
         honorColor: true,
+        onPrintDialogClose: () => {
+          // Reset button after print dialog closes
+          if (printSideBtn) {
+            printSideBtn.disabled = false;
+            printSideBtn.textContent = originalText;
+          }
+        },
       });
-    } catch {}
+    } catch (error) {
+      console.error("Print error:", error);
+      // Show error state briefly
+      printSideBtn.textContent = "Print Failed";
+      printSideBtn.style.background = "#7a2e2e";
+      setTimeout(() => {
+        if (printSideBtn) {
+          printSideBtn.disabled = false;
+          printSideBtn.textContent = originalText;
+          printSideBtn.style.background = "";
+        }
+      }, 2000);
+    }
   };
 
   printSideBtn?.addEventListener("click", doPrint);
