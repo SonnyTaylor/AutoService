@@ -39,13 +39,21 @@ export async function initPage() {
   let lastFinalJsonString = "{}";
   // Helper: persist final report to both session and local storage
   function persistFinalReport(jsonString) {
-    try { sessionStorage.setItem("service.finalReport", jsonString); } catch {}
-    try { localStorage.setItem("service.finalReport", jsonString); } catch {}
+    try {
+      sessionStorage.setItem("service.finalReport", jsonString);
+    } catch {}
+    try {
+      localStorage.setItem("service.finalReport", jsonString);
+    } catch {}
   }
   // Helper: clear any cached final report (used when starting a new run)
   function clearFinalReportCache() {
-    try { sessionStorage.removeItem("service.finalReport"); } catch {}
-    try { localStorage.removeItem("service.finalReport"); } catch {}
+    try {
+      sessionStorage.removeItem("service.finalReport");
+    } catch {}
+    try {
+      localStorage.removeItem("service.finalReport");
+    } catch {}
   }
 
   // Ensure the log overlay is hidden on initial load
@@ -109,12 +117,20 @@ export async function initPage() {
       lastFinalJsonString = cachedRaw;
       try {
         const obj = JSON.parse(cachedRaw);
-        const highlighted = hljs.highlight(cachedRaw, { language: "json" }).value;
+        const highlighted = hljs.highlight(cachedRaw, {
+          language: "json",
+        }).value;
         finalJsonEl.innerHTML = `<code class="hljs language-json">${highlighted}</code>`;
-        try { applyFinalStatusesFromReport(obj); } catch {}
+        try {
+          applyFinalStatusesFromReport(obj);
+        } catch {}
         const ok = obj?.overall_status === "success";
         showSummary(ok);
-        try { if (viewResultsBtn) { viewResultsBtn.removeAttribute("disabled"); } } catch {}
+        try {
+          if (viewResultsBtn) {
+            viewResultsBtn.removeAttribute("disabled");
+          }
+        } catch {}
       } catch {}
     }
   } catch {}
@@ -144,22 +160,34 @@ export async function initPage() {
     clearFinalReportCache();
     lastFinalJsonString = "{}";
     if (viewResultsBtn) {
-      try { viewResultsBtn.setAttribute("disabled", ""); } catch {}
+      try {
+        viewResultsBtn.setAttribute("disabled", "");
+      } catch {}
     }
+    // Reset ALL task states to pending for fresh run
+    taskState.forEach((task) => {
+      task.status = "pending";
+    });
+    taskStatuses = {};
+    tasks.forEach((task, index) => {
+      taskStatuses[index] = "pending";
+    });
+    renderTaskList();
     // Show reactive running summary for this new session
     resetSummaryForNewRun();
     finalJsonEl.textContent = "";
     clearLog();
     showOverlay(true);
-    // Fallback: mark the first pending task as running so the UI shows progress even if no markers are emitted
-    const firstPendingIdx = taskState.findIndex((t) => t.status === "pending");
-    if (firstPendingIdx >= 0) updateTaskStatus(firstPendingIdx, "running");
+
+    // Give the UI a moment to render the reset state
+    await new Promise((resolve) => setTimeout(resolve, 50));
     try {
       // Split tasks into client-only and runner-bound
       const clientIdx = [];
       const runnerTasks = [];
       tasks.forEach((t, idx) => {
-        if (t && (t._client_only || t.type === "battery_health")) clientIdx.push(idx);
+        if (t && (t._client_only || t.type === "battery_health"))
+          clientIdx.push(idx);
         else runnerTasks.push(t);
       });
 
@@ -171,7 +199,14 @@ export async function initPage() {
         const res = await executeClientTask(task);
         _clientResults.push(res);
         const ok = String(res.status || "").toLowerCase();
-        updateTaskStatus(idx, ok === "failure" ? "failure" : ok === "skipped" ? "skipped" : "success");
+        updateTaskStatus(
+          idx,
+          ok === "failure"
+            ? "failure"
+            : ok === "skipped"
+            ? "skipped"
+            : "success"
+        );
         appendLog(`[CLIENT] ${task.ui_label || task.type} -> ${res.status}`);
       }
 
@@ -310,13 +345,19 @@ export async function initPage() {
       const finalReport = payload.final_report || payload.finalReport || {};
       try {
         lastFinalJsonString = JSON.stringify(finalReport, null, 2);
-        const highlighted = hljs.highlight(lastFinalJsonString, { language: "json" }).value;
+        const highlighted = hljs.highlight(lastFinalJsonString, {
+          language: "json",
+        }).value;
         finalJsonEl.innerHTML = `<code class="hljs language-json">${highlighted}</code>`;
         applyFinalStatusesFromReport(finalReport);
         const ok = finalReport?.overall_status === "success";
         showSummary(ok);
         persistFinalReport(lastFinalJsonString);
-        try { if (viewResultsBtn) { viewResultsBtn.removeAttribute("disabled"); } } catch {}
+        try {
+          if (viewResultsBtn) {
+            viewResultsBtn.removeAttribute("disabled");
+          }
+        } catch {}
       } catch (e) {
         finalJsonEl.textContent = String(e);
         showSummary(false);
@@ -336,7 +377,9 @@ export async function initPage() {
     try {
       const obj = typeof result === "string" ? JSON.parse(result) : result;
       lastFinalJsonString = JSON.stringify(obj, null, 2);
-      const highlighted = hljs.highlight(lastFinalJsonString, { language: "json" }).value;
+      const highlighted = hljs.highlight(lastFinalJsonString, {
+        language: "json",
+      }).value;
       finalJsonEl.innerHTML = `<code class=\"hljs language-json\">${highlighted}</code>`;
       applyFinalStatusesFromReport(obj);
       const ok = obj?.overall_status === "success";
@@ -367,22 +410,47 @@ export async function initPage() {
   }
 
   function updateTaskStatus(i, status) {
-    console.log(`updateTaskStatus called with index ${i}, status ${status}`);
-    console.log(
-      `taskState length: ${taskState.length}, taskState[${i}]:`,
-      taskState[i]
-    );
+    const index = parseInt(i, 10);
 
-    if (!taskState[i]) {
-      console.error(`No taskState entry for index ${i}`);
+    if (!Number.isInteger(index) || index < 0 || index >= taskState.length) {
+      console.error(
+        `Invalid task index: ${i} (taskState length: ${taskState.length})`
+      );
       return;
     }
 
-    taskState[i].status = status;
-    taskStatuses[i] = status; // Also update the tracking object
+    if (!taskState[index]) {
+      console.error(`No taskState entry for index ${index}`);
+      return;
+    }
 
-    console.log(`Updated task ${i} to status ${status}`);
+    const validStatuses = [
+      "pending",
+      "running",
+      "success",
+      "failure",
+      "skipped",
+    ];
+    if (!validStatuses.includes(status)) {
+      console.warn(
+        `Invalid status "${status}" for task ${index}, defaulting to "pending"`
+      );
+      status = "pending";
+    }
+
+    const prevStatus = taskState[index].status;
+    taskState[index].status = status;
+    taskStatuses[index] = status;
+
+    console.log(
+      `Task ${index} (${taskState[index].label}): ${prevStatus} → ${status}`
+    );
     renderTaskList();
+
+    // Update summary whenever a task status changes
+    if (_isRunning) {
+      updateSummaryDuringRun();
+    }
   }
 
   function statusBadge(s) {
@@ -398,34 +466,55 @@ export async function initPage() {
     try {
       summaryEl.hidden = false;
       summaryEl.classList.remove("ok", "fail");
-      summaryIconEl.innerHTML = '<span class="spinner" aria-hidden="true"></span>';
-      summaryTitleEl.textContent = "Running…";
-      if (summarySubEl) summarySubEl.textContent = "Live progress appears below.";
+      summaryIconEl.innerHTML =
+        '<span class="spinner" aria-hidden="true"></span>';
+      summaryTitleEl.textContent = "Initializing…";
+      if (summarySubEl)
+        summarySubEl.textContent = "Preparing to start service run…";
       if (summaryProgWrap) summaryProgWrap.removeAttribute("aria-hidden");
       if (summaryProgBar) summaryProgBar.style.width = "0%";
-    } catch {}
+    } catch (err) {
+      console.error("resetSummaryForNewRun error:", err);
+    }
   }
 
   function updateSummaryDuringRun() {
     try {
       const total = taskState.length;
-      const completed = taskState.filter((t) => ["success", "failure", "skipped"].includes(t.status)).length;
+      const completed = taskState.filter((t) =>
+        ["success", "failure", "skipped"].includes(t.status)
+      ).length;
+      const runningTasks = taskState.filter((t) => t.status === "running");
       const runningIdx = taskState.findIndex((t) => t.status === "running");
       const runningName = runningIdx >= 0 ? taskState[runningIdx].label : null;
+
       summaryEl.hidden = false;
       summaryEl.classList.remove("ok", "fail");
+
       // Keep spinner visible while running
-      summaryIconEl.innerHTML = '<span class="spinner" aria-hidden="true"></span>';
+      summaryIconEl.innerHTML =
+        '<span class="spinner" aria-hidden="true"></span>';
+
       if (runningName) {
-        summaryTitleEl.textContent = `Running… ${completed}/${total}`;
-        if (summarySubEl) summarySubEl.textContent = `Current: ${runningName}`;
-      } else {
-        summaryTitleEl.textContent = `Running… ${completed}/${total}`;
+        const taskNum = runningIdx + 1;
+        summaryTitleEl.textContent = `Running Task ${taskNum}/${total}`;
+        if (summarySubEl) {
+          summarySubEl.textContent = `${runningName}`;
+        }
+      } else if (completed > 0 && completed < total) {
+        summaryTitleEl.textContent = `Progress: ${completed}/${total} completed`;
         if (summarySubEl) summarySubEl.textContent = "Preparing next task…";
+      } else {
+        summaryTitleEl.textContent = "Starting…";
+        if (summarySubEl)
+          summarySubEl.textContent = "Initializing service run…";
       }
+
       const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
       if (summaryProgBar) summaryProgBar.style.width = `${pct}%`;
-    } catch {}
+    } catch (err) {
+      console.error("updateSummaryDuringRun error:", err);
+    }
   }
 
   function applyFinalStatusesFromReport(obj) {
@@ -478,7 +567,15 @@ export async function initPage() {
     }
     // Hide progress once finished
     if (summaryProgWrap) summaryProgWrap.setAttribute("aria-hidden", "true");
-    try { if (viewResultsBtn && lastFinalJsonString && lastFinalJsonString.length > 2) { viewResultsBtn.removeAttribute("disabled"); } } catch {}
+    try {
+      if (
+        viewResultsBtn &&
+        lastFinalJsonString &&
+        lastFinalJsonString.length > 2
+      ) {
+        viewResultsBtn.removeAttribute("disabled");
+      }
+    } catch {}
   }
   // Navigate to results page with stored final report
   viewResultsBtn?.addEventListener("click", () => {
@@ -490,11 +587,20 @@ export async function initPage() {
 
   // ---- Client-only task execution ----------------------------------------
   async function executeClientTask(task) {
-    if (!task || !task.type) return { task_type: String(task?.type || "unknown"), status: "failure", summary: { error: "Invalid task" } };
+    if (!task || !task.type)
+      return {
+        task_type: String(task?.type || "unknown"),
+        status: "failure",
+        summary: { error: "Invalid task" },
+      };
     if (task.type === "battery_health") {
       return await runBatteryHealthTask(task);
     }
-    return { task_type: task.type, status: "skipped", summary: { reason: "Client handler not implemented" } };
+    return {
+      task_type: task.type,
+      status: "skipped",
+      summary: { reason: "Client handler not implemented" },
+    };
   }
 
   async function runBatteryHealthTask(task) {
@@ -507,7 +613,10 @@ export async function initPage() {
         } catch {}
         info = cacheApi?.getCache ? cacheApi.getCache() : null;
       }
-      if ((!info || !info.batteries) && (source === "live" || source === "auto")) {
+      if (
+        (!info || !info.batteries) &&
+        (source === "live" || source === "auto")
+      ) {
         info = await invoke?.("get_system_info");
       }
     } catch {}
@@ -516,15 +625,24 @@ export async function initPage() {
     const summaries = batteries.map(normalizeBattery);
     const count = summaries.length;
     const avgSoh = (() => {
-      const vals = summaries.map((b) => b.state_of_health_pct).filter((v) => typeof v === "number");
+      const vals = summaries
+        .map((b) => b.state_of_health_pct)
+        .filter((v) => typeof v === "number");
       if (!vals.length) return null;
-      return Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10;
+      return (
+        Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10
+      );
     })();
-    const lowHealth = summaries.filter((b) => typeof b.state_of_health_pct === "number" && b.state_of_health_pct < 70).length;
+    const lowHealth = summaries.filter(
+      (b) =>
+        typeof b.state_of_health_pct === "number" && b.state_of_health_pct < 70
+    ).length;
     const anyPoor = summaries.some((b) => b.verdict === "poor");
     const anyFair = summaries.some((b) => b.verdict === "fair");
-    const status = count === 0 ? "success" : anyPoor ? "completed_with_errors" : "success";
-    const overallVerdict = count === 0 ? "no_battery" : anyPoor ? "poor" : anyFair ? "fair" : "good";
+    const status =
+      count === 0 ? "success" : anyPoor ? "completed_with_errors" : "success";
+    const overallVerdict =
+      count === 0 ? "no_battery" : anyPoor ? "poor" : anyFair ? "fair" : "good";
 
     const human = {
       batteries: count,
@@ -551,21 +669,47 @@ export async function initPage() {
     const soh = numOrNull(b?.state_of_health_pct);
     const energyFull = numOrNull(b?.energy_full_wh);
     const energyDesign = numOrNull(b?.energy_full_design_wh);
-    const estSoh = !soh && energyFull && energyDesign && energyDesign > 0 ? Math.round((energyFull / energyDesign) * 1000) / 10 : soh;
+    const estSoh =
+      !soh && energyFull && energyDesign && energyDesign > 0
+        ? Math.round((energyFull / energyDesign) * 1000) / 10
+        : soh;
     const cycle = numOrNull(b?.cycle_count);
     const temp = numOrNull(b?.temperature_c);
     const pct = numOrNull(b?.percentage);
     let score = 100.0;
     const notes = [];
     if (typeof estSoh === "number") {
-      if (estSoh < 70) { score -= 40; notes.push(`low SOH ${estSoh}%`); }
-      else if (estSoh < 80) { score -= 20; notes.push(`SOH ${estSoh}%`); }
+      if (estSoh < 70) {
+        score -= 40;
+        notes.push(`low SOH ${estSoh}%`);
+      } else if (estSoh < 80) {
+        score -= 20;
+        notes.push(`SOH ${estSoh}%`);
+      }
     } else {
-      score -= 10; notes.push("SOH unknown");
+      score -= 10;
+      notes.push("SOH unknown");
     }
-    if (typeof cycle === "number" && cycle > 800) { score -= 20; notes.push(`cycles ${cycle}`); }
-    if (typeof pct === "number" && pct < 20 && (b?.state || "").toLowerCase() !== "charging") { score -= 5; notes.push(`low charge ${pct}%`); }
-    const verdict = score >= 85 ? "excellent" : score >= 70 ? "good" : score >= 50 ? "fair" : "poor";
+    if (typeof cycle === "number" && cycle > 800) {
+      score -= 20;
+      notes.push(`cycles ${cycle}`);
+    }
+    if (
+      typeof pct === "number" &&
+      pct < 20 &&
+      (b?.state || "").toLowerCase() !== "charging"
+    ) {
+      score -= 5;
+      notes.push(`low charge ${pct}%`);
+    }
+    const verdict =
+      score >= 85
+        ? "excellent"
+        : score >= 70
+        ? "good"
+        : score >= 50
+        ? "fair"
+        : "poor";
 
     return {
       vendor: b?.vendor || null,
@@ -595,17 +739,26 @@ export async function initPage() {
   }
 
   function buildFinalReportFromClient(results) {
-    const ok = results.every((r) => r && r.status && String(r.status).toLowerCase() === "success");
-    const overall = ok ? "success" : results.some((r) => String(r.status).toLowerCase().includes("failure")) ? "completed_with_errors" : "success";
+    const ok = results.every(
+      (r) => r && r.status && String(r.status).toLowerCase() === "success"
+    );
+    const overall = ok
+      ? "success"
+      : results.some((r) => String(r.status).toLowerCase().includes("failure"))
+      ? "completed_with_errors"
+      : "success";
     return { overall_status: overall, results };
   }
 
   function mergeClientWithRunner(clientResults, runnerObj) {
     try {
-      const obj = typeof runnerObj === "string" ? JSON.parse(runnerObj) : runnerObj || {};
+      const obj =
+        typeof runnerObj === "string" ? JSON.parse(runnerObj) : runnerObj || {};
       const r = Array.isArray(obj.results) ? obj.results : [];
       const all = [...clientResults, ...r];
-      const overall = all.some((x) => String(x.status || "").toLowerCase() === "failure")
+      const overall = all.some(
+        (x) => String(x.status || "").toLowerCase() === "failure"
+      )
         ? "completed_with_errors"
         : obj.overall_status || "success";
       return { overall_status: overall, results: all };
@@ -623,7 +776,6 @@ export async function initPage() {
       const taskType = startMatch[2];
       updateTaskStatus(taskIndex, "running");
       appendLog(`[INFO] Started: ${taskType}`);
-      updateSummaryDuringRun();
       return;
     }
     const okMatch = s.match(/^TASK_OK:(\d+):(.+)$/);
@@ -632,7 +784,6 @@ export async function initPage() {
       const taskType = okMatch[2];
       updateTaskStatus(taskIndex, "success");
       appendLog(`[SUCCESS] Completed: ${taskType}`);
-      updateSummaryDuringRun();
       return;
     }
     const failMatch = s.match(/^TASK_FAIL:(\d+):(.+?)(?:\s*-\s*(.+))?$/);
@@ -642,7 +793,6 @@ export async function initPage() {
       const reason = failMatch[3] || "Failed";
       updateTaskStatus(taskIndex, "failure");
       appendLog(`[ERROR] Failed: ${taskType} - ${reason}`);
-      updateSummaryDuringRun();
       return;
     }
     const skipMatch = s.match(/^TASK_SKIP:(\d+):(.+?)(?:\s*-\s*(.+))?$/);
@@ -652,7 +802,6 @@ export async function initPage() {
       const reason = skipMatch[3] || "Skipped";
       updateTaskStatus(taskIndex, "skipped");
       appendLog(`[WARNING] Skipped: ${taskType} - ${reason}`);
-      updateSummaryDuringRun();
       return;
     }
 
@@ -662,7 +811,7 @@ export async function initPage() {
       try {
         const obj = JSON.parse(jsonPart);
         renderProgressJson(obj);
-        updateSummaryDuringRun();
+        if (_isRunning) updateSummaryDuringRun();
       } catch (e) {
         // Ignore parse failures silently
       }
