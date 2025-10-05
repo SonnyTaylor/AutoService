@@ -790,7 +790,10 @@
   animation: spin 0.9s linear infinite;
 }
 @keyframes spin {
-  to {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
     transform: rotate(360deg);
   }
 }
@@ -892,5 +895,406 @@
 @media (max-width: 980px) {
   [data-page="service-report"] .runner-layout {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Service results page */
+[data-page="service-results"] .results-two-pane {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: 16px;
+  align-items: start;
+}
+[data-page="service-results"] .pane-left {
+  min-width: 0;
+}
+[data-page="service-results"] .pane-right {
+  position: sticky;
+  top: 64px;
+  align-self: start;
+}
+[data-page="service-results"] .results-summary {
+  margin-bottom: 12px;
+}
+[data-page="service-results"] .summary-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-2);
+  margin-top: 10px;
+}
+[data-page="service-results"] .summary-head.ok .title {
+  color: #8bd17c;
+}
+[data-page="service-results"] .summary-head.warn .title {
+  color: #e8b27c;
+}
+[data-page="service-results"] .summary-head.fail .title {
+  color: #f29a9a;
+}
+[data-page="service-results"] .results-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+[data-page="service-results"] .kpi-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+[data-page="service-results"] .kpi {
+  background: var(--panel-accent);
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  border-radius: 6px;
+  min-width: 140px;
+}
+[data-page="service-results"] .kpi.verdict {
+  background: transparent;
+}
+[data-page="service-results"] .kpi.verdict .val {
+  color: inherit;
+}
+[data-page="service-results"] .kpi.info {
+  border-color: #33507a;
+  color: #7aa8ff;
+}
+[data-page="service-results"] .kpi.ok {
+  border-color: #2d4a33;
+  color: #8bd17c;
+}
+[data-page="service-results"] .kpi.warn {
+  border-color: #6b422b;
+  color: #e8b27c;
+}
+[data-page="service-results"] .kpi.fail {
+  border-color: #522a2a;
+  color: #f29a9a;
+}
+[data-page="service-results"] .kpi .lab {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+}
+[data-page="service-results"] .kpi .val {
+  font-size: 16px;
+  font-weight: 600;
+}
+[data-page="service-results"] .list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 12px;
+}
+[data-page="service-results"] .list .k {
+  color: var(--muted);
+}
+[data-page="service-results"] .pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  margin: 2px 4px 0 0;
+  font-size: 12px;
+  color: var(--text);
+}
+[data-page="service-results"] .pill.ok {
+  border-color: #2d4a33;
+  color: #8bd17c;
+}
+[data-page="service-results"] .pill.fail {
+  border-color: #522a2a;
+  color: #f29a9a;
+}
+[data-page="service-results"] .pill.warn {
+  border-color: #6b422b;
+  color: #e8b27c;
+}
+[data-page="service-results"] .pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+[data-page="service-results"] .tag-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+[data-page="service-results"] .section-title {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+[data-page="service-results"] .preview-card {
+  border: 1px dashed #3a3a3a;
+  border-radius: 8px;
+  padding: 10px;
+  background: var(--panel-accent);
+}
+[data-page="service-results"] .preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+[data-page="service-results"] .preview-head button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+[data-page="service-results"] .preview-head button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+[data-page="service-results"] .preview-window {
+  height: calc(100vh - 210px);
+  overflow: auto;
+  background: #fff;
+  color: #000;
+  border-radius: 6px;
+  padding: 12px;
+}
+[data-page="service-results"] .result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+[data-page="service-results"] .status {
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  font-size: 12px;
+}
+[data-page="service-results"] .status.success,
+[data-page="service-results"] .status.ok {
+  background: #16221a;
+  color: #8bd17c;
+  border-color: #2d4a33;
+}
+[data-page="service-results"] .status.failure,
+[data-page="service-results"] .status.error,
+[data-page="service-results"] .status.failed {
+  background: #221616;
+  color: #f29a9a;
+  border-color: #522a2a;
+}
+[data-page="service-results"] .status.skipped {
+  background: #221a16;
+  color: #e8b27c;
+  border-color: #4a3a2d;
+}
+/* smartctl cards */
+[data-page="service-results"] .drive-list {
+  display: grid;
+  gap: 10px;
+}
+[data-page="service-results"] .drive-card {
+  background: var(--panel-accent);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+}
+[data-page="service-results"] .drive-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+[data-page="service-results"] .drive-model {
+  font-weight: 600;
+}
+[data-page="service-results"] .card.ping .ping-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: center;
+}
+[data-page="service-results"] .card.ping .ping-kpis {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+[data-page="service-results"] .card.ping .ping-kpis .kpi {
+  padding: 10px 12px;
+}
+[data-page="service-results"] .card.ping .ping-chart {
+  display: flex;
+  align-items: stretch;
+}
+[data-page="service-results"] .card.ping .ping-chart-shell {
+  background: var(--panel-accent);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px 8px;
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+[data-page="service-results"] .card.ping .ping-chart-shell > div {
+  width: 100%;
+}
+@media (max-width: 720px) {
+  [data-page="service-results"] .card.ping .ping-layout {
+    grid-template-columns: 1fr;
+  }
+}
+[data-page="service-results"] .card.speedtest {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+[data-page="service-results"] .card.speedtest .speedtest-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.65fr) 1fr;
+  gap: 20px;
+  align-items: stretch;
+}
+[data-page="service-results"] .card.speedtest .speedtest-kpis {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-self: stretch;
+}
+[data-page="service-results"] .card.speedtest .speedtest-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  padding: 8px 10px;
+  background: rgba(36, 48, 68, 0.55);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+[data-page="service-results"] .card.speedtest .speedtest-meta {
+  display: grid;
+  gap: 6px;
+  padding: 8px 10px;
+  background: rgba(36, 48, 68, 0.55);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+[data-page="service-results"] .card.speedtest .speedtest-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+[data-page="service-results"] .card.speedtest .speedtest-meta-row .lab {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+[data-page="service-results"] .card.speedtest .speedtest-chart {
+  background: var(--panel-accent);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px 8px;
+  min-height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+[data-page="service-results"] .card.speedtest .speedtest-chart > div {
+  width: 100%;
+}
+[data-page="service-results"] .card.speedtest .pill-row {
+  margin-top: 0;
+}
+@media (max-width: 900px) {
+  [data-page="service-results"] .card.speedtest .speedtest-layout {
+    grid-template-columns: 1fr;
+  }
+  [data-page="service-results"] .card.speedtest .speedtest-chart {
+    min-height: 200px;
+  }
+}
+[data-page="service-results"] .card.iperf .chart-container {
+  margin-top: 16px;
+}
+/* AdwCleaner tweaks */
+[data-page="service-results"] .card.adwcleaner .kpi .val {
+  font-variant-numeric: tabular-nums;
+}
+[data-page="service-results"] .card.kvrt {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+[data-page="service-results"] .card.kvrt .kvrt-detections {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+[data-page="service-results"] .card.kvrt .kvrt-detection-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 16px;
+}
+[data-page="service-results"] .card.kvrt .kvrt-detection {
+  background: var(--panel-accent);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+[data-page="service-results"] .card.kvrt .kvrt-detection:hover {
+  border-color: #4f8cff;
+  transform: translateY(-1px);
+}
+[data-page="service-results"] .card.kvrt .kvrt-detection-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+[data-page="service-results"] .card.kvrt .kvrt-threat {
+  font-weight: 600;
+  color: #f6d8a5;
+  word-break: break-word;
+}
+[data-page="service-results"] .card.kvrt .kvrt-detection-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+[data-page="service-results"] .card.kvrt .pill-row {
+  margin-top: 2px;
+}
+[data-page="service-results"] .card.kvrt .kvrt-label {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+[data-page="service-results"] .card.kvrt .kvrt-object {
+  font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #e3e9f8;
+  word-break: break-all;
+}
+[data-page="service-results"] .card.kvrt .kvrt-meta {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+  font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+  font-size: 12px;
+  opacity: 0.8;
+}
+[data-page="service-results"] .card.kvrt .kvrt-empty {
+  margin-top: 4px;
+}
+@media (max-width: 1100px) {
+  [data-page="service-results"] .results-two-pane {
+    grid-template-columns: 1fr;
+  }
+  [data-page="service-results"] .pane-right {
+    position: static;
   }
 }
