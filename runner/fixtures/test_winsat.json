@@ -1,0 +1,9 @@
+{
+  "tasks": [
+    {
+      "type": "winsat_disk",
+      "drive": "C:",
+      "test_mode": "full"
+    }
+  ]
+}
