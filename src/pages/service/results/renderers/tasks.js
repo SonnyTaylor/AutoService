@@ -1307,11 +1307,32 @@ function renderWinSAT(res, index) {
       flush: "Flush Test",
     }[s.test_mode] || s.test_mode;
 
+  // Helper functions with performance-based color variants
   const formatMBps = (val) => {
     if (val == null) return "-";
     const num = Number(val);
     if (!Number.isFinite(num)) return "-";
     return `${num.toFixed(1)} MB/s`;
+  };
+
+  const getSpeedVariant = (mbps, type = "sequential") => {
+    if (mbps == null) return undefined;
+    const speed = Number(mbps);
+    if (!Number.isFinite(speed)) return undefined;
+
+    if (type === "sequential") {
+      // Sequential thresholds for repair technicians
+      if (speed >= 3000) return "ok"; // NVMe Gen3+ (3000+ MB/s)
+      if (speed >= 500) return "info"; // SATA SSD (500-3000 MB/s)
+      if (speed >= 250) return "warn"; // Slow SSD or fast HDD (250-500 MB/s)
+      return "fail"; // HDD or failing drive (< 250 MB/s)
+    } else {
+      // Random read thresholds
+      if (speed >= 500) return "ok"; // Excellent random performance
+      if (speed >= 100) return "info"; // Good SSD performance
+      if (speed >= 50) return "warn"; // Marginal performance
+      return "fail"; // Poor/HDD-like performance
+    }
   };
 
   const formatLatency = (val) => {
@@ -1321,11 +1342,35 @@ function renderWinSAT(res, index) {
     return `${num.toFixed(3)} ms`;
   };
 
+  const getLatencyVariant = (latency) => {
+    if (latency == null) return undefined;
+    const ms = Number(latency);
+    if (!Number.isFinite(ms)) return undefined;
+
+    // Latency thresholds (lower is better)
+    if (ms <= 0.5) return "ok"; // Excellent (NVMe)
+    if (ms <= 2.0) return "info"; // Good (SATA SSD)
+    if (ms <= 10.0) return "warn"; // Marginal (slow SSD)
+    return "fail"; // Poor (HDD or failing drive)
+  };
+
   const formatScore = (val) => {
     if (val == null) return "-";
     const num = Number(val);
     if (!Number.isFinite(num)) return "-";
     return num.toFixed(1);
+  };
+
+  const getOverallScoreVariant = (score) => {
+    if (score == null) return undefined;
+    const s = Number(score);
+    if (!Number.isFinite(s)) return undefined;
+
+    // Overall score thresholds (0-100 scale)
+    if (s >= 85) return "ok"; // Excellent
+    if (s >= 70) return "info"; // Good
+    if (s >= 50) return "warn"; // Fair/concerning
+    return "fail"; // Poor/needs attention
   };
 
   const notes = Array.isArray(hr.notes) ? hr.notes : [];
@@ -1372,17 +1417,30 @@ function renderWinSAT(res, index) {
           <div class="winsat-kpi-grid">
             ${kpiBox(
               "Overall Score",
-              hr.score != null ? `${hr.score}/100` : "-"
+              hr.score != null ? `${hr.score}/100` : "-",
+              getOverallScoreVariant(hr.score)
             )}
             ${kpiBox("Verdict", verdictLabel, verdictVariant)}
             ${r.random_read_mbps != null
-              ? kpiBox("Random Read", formatMBps(r.random_read_mbps))
+              ? kpiBox(
+                  "Random Read",
+                  formatMBps(r.random_read_mbps),
+                  getSpeedVariant(r.random_read_mbps, "random")
+                )
               : ""}
             ${r.sequential_read_mbps != null
-              ? kpiBox("Sequential Read", formatMBps(r.sequential_read_mbps))
+              ? kpiBox(
+                  "Sequential Read",
+                  formatMBps(r.sequential_read_mbps),
+                  getSpeedVariant(r.sequential_read_mbps, "sequential")
+                )
               : ""}
             ${r.sequential_write_mbps != null
-              ? kpiBox("Sequential Write", formatMBps(r.sequential_write_mbps))
+              ? kpiBox(
+                  "Sequential Write",
+                  formatMBps(r.sequential_write_mbps),
+                  getSpeedVariant(r.sequential_write_mbps, "sequential")
+                )
               : ""}
           </div>
         </div>
@@ -1407,26 +1465,28 @@ function renderWinSAT(res, index) {
                   ? kpiBox(
                       "95th Percentile",
                       formatLatency(r.latency_95th_percentile_ms),
-                      r.latency_95th_percentile_ms > 10 ? "warn" : undefined
+                      getLatencyVariant(r.latency_95th_percentile_ms)
                     )
                   : ""}
                 ${r.latency_max_ms != null
                   ? kpiBox(
                       "Max Latency",
                       formatLatency(r.latency_max_ms),
-                      r.latency_max_ms > 20 ? "fail" : undefined
+                      getLatencyVariant(r.latency_max_ms)
                     )
                   : ""}
                 ${r.avg_read_time_seq_writes_ms != null
                   ? kpiBox(
                       "Avg Read (Seq Writes)",
-                      formatLatency(r.avg_read_time_seq_writes_ms)
+                      formatLatency(r.avg_read_time_seq_writes_ms),
+                      getLatencyVariant(r.avg_read_time_seq_writes_ms)
                     )
                   : ""}
                 ${r.avg_read_time_random_writes_ms != null
                   ? kpiBox(
                       "Avg Read (Random Writes)",
-                      formatLatency(r.avg_read_time_random_writes_ms)
+                      formatLatency(r.avg_read_time_random_writes_ms),
+                      getLatencyVariant(r.avg_read_time_random_writes_ms)
                     )
                   : ""}
               </div>
