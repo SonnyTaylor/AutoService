@@ -89,7 +89,7 @@ export const SERVICES = {
     group: "Diagnostics",
     category: "Diagnostics",
     defaultParams: {
-      source: "auto" // auto | cache | live
+      source: "auto", // auto | cache | live
     },
     toolKeys: [],
     async build({ params }) {
@@ -155,7 +155,9 @@ export const SERVICES = {
     async build({ params, resolveToolPath, getDataDirs }) {
       const p = await resolveToolPath(["kvrt"]);
       const dirs = (await getDataDirs()) || {};
-      const dataRoot = (dirs.data || "..\\data").toString().replace(/[\\/]+$/, "");
+      const dataRoot = (dirs.data || "..\\data")
+        .toString()
+        .replace(/[\\/]+$/, "");
       const quarantineDir = `${dataRoot}\\logs\\KVRT`;
       const allVolumes = !!params?.allVolumes;
       const processLevel = Number.isFinite(params?.processLevel)
@@ -199,7 +201,7 @@ export const SERVICES = {
     label: "Ping Test",
     group: "Network",
     category: "Network",
-    defaultParams: { host: "" , count: 4 },
+    defaultParams: { host: "", count: 4 },
     toolKeys: [],
     async build({ params }) {
       // Load default ping host from app settings if not provided
@@ -252,28 +254,28 @@ export const SERVICES = {
         type: "bleachbit_clean",
         executable_path: await resolveToolPath("bleachbit"),
         options: [
-          "system.tmp",                 // Windows temporary files
-          "system.recycle_bin",         // Recycle Bin
-          "system.prefetch",            // Prefetch (can grow large)
-          "system.logs",                // System logs
-          "system.memory_dump",         // Memory/crash dumps (often GBs)
-          "system.updates",             // Windows Update leftovers
-          "google_chrome.cache",        // Chrome browser cache
-          "microsoft_edge.cache",       // Edge browser cache
-          "firefox.cache",              // Firefox cache
-          "brave.cache",                // Brave cache
-          "opera.cache",                // Opera cache
-          "librewolf.cache",            // LibreWolf cache
-          "palemoon.cache",             // Pale Moon cache
-          "waterfox.cache",             // Waterfox cache
-          "discord.cache",              // Discord cache
-          "slack.cache",                // Slack cache
-          "zoom.cache",                 // Zoom cache
-          "zoom.recordings",            // Zoom local recordings (can be very large if unused)
-          "windows_defender.temp",      // Defender temp files
-          "winrar.temp",                // WinRAR temp
-          "vuze.cache",                 // Vuze cache
-          "vuze.temp"                   // Vuze temp
+          "system.tmp", // Windows temporary files
+          "system.recycle_bin", // Recycle Bin
+          "system.prefetch", // Prefetch (can grow large)
+          "system.logs", // System logs
+          "system.memory_dump", // Memory/crash dumps (often GBs)
+          "system.updates", // Windows Update leftovers
+          "google_chrome.cache", // Chrome browser cache
+          "microsoft_edge.cache", // Edge browser cache
+          "firefox.cache", // Firefox cache
+          "brave.cache", // Brave cache
+          "opera.cache", // Opera cache
+          "librewolf.cache", // LibreWolf cache
+          "palemoon.cache", // Pale Moon cache
+          "waterfox.cache", // Waterfox cache
+          "discord.cache", // Discord cache
+          "slack.cache", // Slack cache
+          "zoom.cache", // Zoom cache
+          "zoom.recordings", // Zoom local recordings (can be very large if unused)
+          "windows_defender.temp", // Defender temp files
+          "winrar.temp", // WinRAR temp
+          "vuze.cache", // Vuze cache
+          "vuze.temp", // Vuze temp
         ],
         ui_label: "Junk Cleanup (BleachBit)",
       };
@@ -442,6 +444,32 @@ export const SERVICES = {
         ui_label: `Network Stability (iPerf3)${
           server ? ` – ${server}` : " (server not set)"
         }`,
+      };
+    },
+  },
+  winsat_disk: {
+    id: "winsat_disk",
+    label: "Disk Benchmark (WinSAT)",
+    group: "Diagnostics",
+    category: "Diagnostics",
+    defaultParams: { drive: "C:", test_mode: "full" },
+    toolKeys: [],
+    async build({ params }) {
+      const drive = (params?.drive || "C:").toString().toUpperCase();
+      const test_mode = params?.test_mode || "full";
+      const modeLabel =
+        {
+          full: "Full",
+          random_read: "Random Read",
+          sequential_read: "Sequential Read",
+          sequential_write: "Sequential Write",
+          flush: "Flush",
+        }[test_mode] || "Full";
+      return {
+        type: "winsat_disk",
+        drive,
+        test_mode,
+        ui_label: `Disk Benchmark (WinSAT) - ${drive} (${modeLabel})`,
       };
     },
   },

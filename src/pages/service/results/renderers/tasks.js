@@ -28,6 +28,7 @@ export const RENDERERS = {
   iperf_test: renderIperf,
   whynotwin11_check: renderWhyNotWin11,
   windows_update: renderWindowsUpdate,
+  winsat_disk: renderWinSAT,
 };
 
 export function renderGeneric(res, index) {
@@ -684,9 +685,9 @@ function renderPing(res, index) {
       };
 
       const options = {
-        chart: { 
-          type: "bar", 
-          height: 180, 
+        chart: {
+          type: "bar",
+          height: 180,
           width: "100%",
           toolbar: { show: false },
           animations: { enabled: false },
@@ -1164,4 +1165,330 @@ function renderWhyNotWin11(res, index) {
 
 function renderWindowsUpdate(res, index) {
   return renderGeneric(res, index);
+}
+
+function renderWinSAT(res, index) {
+  const s = res.summary || {};
+  const r = s.results || {};
+  const hr = s.human_readable || {};
+  const chartId = `winsat-chart-${index}`;
+
+  const toNumber = (val) => {
+    const num = Number(val);
+    return Number.isFinite(num) ? num : null;
+  };
+
+  // Prepare chart data - showing throughput metrics
+  const metrics = [
+    {
+      label: "Random Read",
+      value: toNumber(r.random_read_mbps),
+      score: toNumber(r.random_read_score),
+      color: "#4f8cff",
+    },
+    {
+      label: "Sequential Read",
+      value: toNumber(r.sequential_read_mbps),
+      score: toNumber(r.sequential_read_score),
+      color: "#8bd17c",
+    },
+    {
+      label: "Sequential Write",
+      value: toNumber(r.sequential_write_mbps),
+      score: toNumber(r.sequential_write_score),
+      color: "#f4a261",
+    },
+  ].filter((m) => m.value != null && m.value >= 0);
+
+  // Render chart after DOM update
+  setTimeout(() => {
+    const chartEl = document.getElementById(chartId);
+    if (!chartEl || metrics.length === 0) return;
+    if (chartEl.dataset.rendered === "true") return;
+    chartEl.dataset.rendered = "true";
+
+    const seriesData = metrics.map((m) => Number(m.value.toFixed(2)));
+    const categories = metrics.map((m) => m.label);
+    const colors = metrics.map((m) => m.color);
+
+    const options = {
+      chart: {
+        type: "bar",
+        height: 240,
+        width: "100%",
+        toolbar: { show: false },
+        animations: { enabled: false },
+      },
+      series: [
+        {
+          name: "Throughput",
+          data: seriesData,
+        },
+      ],
+      plotOptions: {
+        bar: {
+          columnWidth: "60%",
+          borderRadius: 8,
+          distributed: true,
+          dataLabels: { position: "top" },
+        },
+      },
+      dataLabels: {
+        enabled: true,
+        offsetY: -20,
+        style: {
+          colors: ["#ffffff"],
+          fontSize: "12px",
+          fontFamily: "Inter, sans-serif",
+          fontWeight: "600",
+        },
+        formatter: (val) => `${Number(val ?? 0).toFixed(1)} MB/s`,
+      },
+      xaxis: {
+        categories,
+        axisBorder: { show: false },
+        axisTicks: { show: false },
+        labels: {
+          style: { colors: "#a3adbf", fontFamily: "Inter, sans-serif" },
+        },
+      },
+      yaxis: {
+        min: 0,
+        labels: {
+          style: { colors: "#a3adbf", fontFamily: "Inter, sans-serif" },
+          formatter: (val) => `${Number(val ?? 0).toFixed(0)} MB/s`,
+        },
+      },
+      grid: { borderColor: "#2a3140" },
+      tooltip: {
+        theme: "dark",
+        y: {
+          formatter: (val) => `${Number(val ?? 0).toFixed(2)} MB/s`,
+        },
+      },
+      colors,
+      legend: { show: false },
+      responsive: [
+        {
+          breakpoint: 1000,
+          options: {
+            chart: {
+              height: 220,
+            },
+          },
+        },
+      ],
+    };
+
+    const chart = new ApexCharts(chartEl, options);
+    chart.render();
+  }, 0);
+
+  const verdictRaw = typeof hr.verdict === "string" ? hr.verdict : "";
+  const verdictLabel = verdictRaw
+    ? verdictRaw.replace(/_/g, " ").replace(/\b\w/g, (m) => m.toUpperCase())
+    : "-";
+  const verdictVariant = (() => {
+    const lower = verdictRaw.toLowerCase();
+    if (!lower) return undefined;
+    if (lower.includes("excellent")) return "ok";
+    if (lower.includes("good")) return "info";
+    if (lower.includes("fair")) return "warn";
+    if (lower.includes("poor") || lower.includes("bad")) return "fail";
+    return undefined;
+  })();
+
+  const testModeLabel =
+    {
+      full: "Full Benchmark",
+      random_read: "Random Read Only",
+      sequential_read: "Sequential Read Only",
+      sequential_write: "Sequential Write Only",
+      flush: "Flush Test",
+    }[s.test_mode] || s.test_mode;
+
+  const formatMBps = (val) => {
+    if (val == null) return "-";
+    const num = Number(val);
+    if (!Number.isFinite(num)) return "-";
+    return `${num.toFixed(1)} MB/s`;
+  };
+
+  const formatLatency = (val) => {
+    if (val == null) return "-";
+    const num = Number(val);
+    if (!Number.isFinite(num)) return "-";
+    return `${num.toFixed(3)} ms`;
+  };
+
+  const formatScore = (val) => {
+    if (val == null) return "-";
+    const num = Number(val);
+    if (!Number.isFinite(num)) return "-";
+    return num.toFixed(1);
+  };
+
+  const notes = Array.isArray(hr.notes) ? hr.notes : [];
+  const notePills = notes
+    .map((note) => {
+      if (note == null) return null;
+      const text = String(note);
+      const lower = text.toLowerCase();
+      let variant = "info";
+      if (lower.includes("excellent") || lower.includes("great")) {
+        variant = "ok";
+      } else if (
+        lower.includes("slow") ||
+        lower.includes("poor") ||
+        lower.includes("high latency")
+      ) {
+        variant = "fail";
+      } else if (lower.includes("hdd")) {
+        variant = "warn";
+      }
+      return pill(text, variant);
+    })
+    .filter(Boolean);
+
+  return html`
+    <div class="card winsat">
+      ${renderHeader(`Disk Benchmark (WinSAT) - ${s.drive || ""}`, res.status)}
+      <div class="winsat-layout">
+        <div class="winsat-kpis">
+          <div class="winsat-meta muted small">
+            <div class="winsat-meta-row">
+              <span class="lab">Test Mode</span>
+              <span class="val">${testModeLabel}</span>
+            </div>
+            <div class="winsat-meta-row">
+              <span class="lab">Duration</span>
+              <span class="val"
+                >${s.duration_seconds != null
+                  ? `${s.duration_seconds}s`
+                  : "-"}</span
+              >
+            </div>
+          </div>
+          <div class="winsat-kpi-grid">
+            ${kpiBox(
+              "Overall Score",
+              hr.score != null ? `${hr.score}/100` : "-"
+            )}
+            ${kpiBox("Verdict", verdictLabel, verdictVariant)}
+            ${r.random_read_mbps != null
+              ? kpiBox("Random Read", formatMBps(r.random_read_mbps))
+              : ""}
+            ${r.sequential_read_mbps != null
+              ? kpiBox("Sequential Read", formatMBps(r.sequential_read_mbps))
+              : ""}
+            ${r.sequential_write_mbps != null
+              ? kpiBox("Sequential Write", formatMBps(r.sequential_write_mbps))
+              : ""}
+          </div>
+        </div>
+        <div class="winsat-chart">
+          ${metrics.length
+            ? html`<div id=${chartId}></div>`
+            : html`<div class="muted small">
+                No throughput data available for chart.
+              </div>`}
+        </div>
+      </div>
+
+      ${notePills.length ? html`<div class="pill-row">${notePills}</div>` : ""}
+      ${r.latency_95th_percentile_ms != null ||
+      r.latency_max_ms != null ||
+      r.avg_read_time_seq_writes_ms != null
+        ? html`
+            <div class="winsat-latency">
+              <div class="section-title small">Latency Metrics</div>
+              <div class="kpi-row">
+                ${r.latency_95th_percentile_ms != null
+                  ? kpiBox(
+                      "95th Percentile",
+                      formatLatency(r.latency_95th_percentile_ms),
+                      r.latency_95th_percentile_ms > 10 ? "warn" : undefined
+                    )
+                  : ""}
+                ${r.latency_max_ms != null
+                  ? kpiBox(
+                      "Max Latency",
+                      formatLatency(r.latency_max_ms),
+                      r.latency_max_ms > 20 ? "fail" : undefined
+                    )
+                  : ""}
+                ${r.avg_read_time_seq_writes_ms != null
+                  ? kpiBox(
+                      "Avg Read (Seq Writes)",
+                      formatLatency(r.avg_read_time_seq_writes_ms)
+                    )
+                  : ""}
+                ${r.avg_read_time_random_writes_ms != null
+                  ? kpiBox(
+                      "Avg Read (Random Writes)",
+                      formatLatency(r.avg_read_time_random_writes_ms)
+                    )
+                  : ""}
+              </div>
+            </div>
+          `
+        : ""}
+      ${r.random_read_score != null ||
+      r.sequential_read_score != null ||
+      r.sequential_write_score != null
+        ? html`
+            <div class="winsat-scores">
+              <div class="section-title small">WinSAT Scores</div>
+              <div class="kpi-row">
+                ${r.random_read_score != null
+                  ? kpiBox("Random Read", formatScore(r.random_read_score))
+                  : ""}
+                ${r.sequential_read_score != null
+                  ? kpiBox(
+                      "Sequential Read",
+                      formatScore(r.sequential_read_score)
+                    )
+                  : ""}
+                ${r.sequential_write_score != null
+                  ? kpiBox(
+                      "Sequential Write",
+                      formatScore(r.sequential_write_score)
+                    )
+                  : ""}
+                ${r.avg_read_time_seq_writes_score != null
+                  ? kpiBox(
+                      "Seq Writes",
+                      formatScore(r.avg_read_time_seq_writes_score)
+                    )
+                  : ""}
+                ${r.latency_95th_percentile_score != null
+                  ? kpiBox(
+                      "95th %ile",
+                      formatScore(r.latency_95th_percentile_score)
+                    )
+                  : ""}
+                ${r.latency_max_score != null
+                  ? kpiBox("Max Latency", formatScore(r.latency_max_score))
+                  : ""}
+                ${r.avg_read_time_random_writes_score != null
+                  ? kpiBox(
+                      "Random Writes",
+                      formatScore(r.avg_read_time_random_writes_score)
+                    )
+                  : ""}
+              </div>
+            </div>
+          `
+        : ""}
+      ${s.stdout_excerpt || s.stderr_excerpt
+        ? html`
+            <details class="output">
+              <summary>View WinSAT raw output</summary>
+              ${s.stdout_excerpt ? html`<pre>${s.stdout_excerpt}</pre>` : ""}
+              ${s.stderr_excerpt ? html`<pre>${s.stderr_excerpt}</pre>` : ""}
+            </details>
+          `
+        : ""}
+    </div>
+  `;
 }
