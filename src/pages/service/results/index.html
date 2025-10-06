@@ -13,7 +13,7 @@
 
   <!-- Tab Navigation -->
   <nav
-    class="results-tabs"
+    class="subtabs"
     role="tablist"
     aria-label="Results sections"
     id="svc-results-tabs"
@@ -25,7 +25,7 @@
       data-tab="results"
       aria-selected="true"
       aria-controls="panel-results"
-      class="results-tab active"
+      tabindex="0"
     >
       <i
         class="ph ph-list-checks"
@@ -39,7 +39,7 @@
       data-tab="tech-print"
       aria-selected="false"
       aria-controls="panel-tech-print"
-      class="results-tab"
+      tabindex="-1"
     >
       <i
         class="ph ph-file-text"
@@ -53,7 +53,7 @@
       data-tab="customer-print"
       aria-selected="false"
       aria-controls="panel-customer-print"
-      class="results-tab"
+      tabindex="-1"
     >
       <i
         class="ph ph-newspaper"
@@ -66,20 +66,20 @@
   <!-- Tab Panels -->
   <div id="svc-results-container" hidden>
     <!-- Results Tab Panel -->
-    <div
+    <section
       id="panel-results"
-      class="results-panel"
+      class="card subtab-panel"
       role="tabpanel"
       aria-labelledby="tab-results"
     >
       <div class="results-summary" id="svc-results-summary"></div>
       <div class="results-sections" id="svc-results-sections"></div>
-    </div>
+    </section>
 
     <!-- Technician Print Tab Panel -->
-    <div
+    <section
       id="panel-tech-print"
-      class="results-panel"
+      class="card subtab-panel"
       role="tabpanel"
       aria-labelledby="tab-tech-print"
       hidden
@@ -98,12 +98,12 @@
         <div id="svc-print-tech-preview" class="preview-window"></div>
       </div>
       <div id="svc-print-tech-container" style="display: none"></div>
-    </div>
+    </section>
 
     <!-- Customer Print Tab Panel -->
-    <div
+    <section
       id="panel-customer-print"
-      class="results-panel"
+      class="card subtab-panel"
       role="tabpanel"
       aria-labelledby="tab-customer-print"
       hidden
@@ -122,7 +122,7 @@
         <div id="svc-print-customer-preview" class="preview-window"></div>
       </div>
       <div id="svc-print-customer-container" style="display: none"></div>
-    </div>
+    </section>
   </div>
 </section>
 <script type="module" src="./index.js"></script>

@@ -101,11 +101,11 @@ function setupTabs() {
     button.addEventListener("click", () => {
       const targetTab = button.dataset.tab;
 
-      // Update aria-selected and classes
+      // Update aria-selected and tabindex for accessibility
       tabButtons.forEach((btn) => {
         const isSelected = btn.dataset.tab === targetTab;
         btn.setAttribute("aria-selected", isSelected);
-        btn.classList.toggle("active", isSelected);
+        btn.setAttribute("tabindex", isSelected ? "0" : "-1");
       });
 
       // Show/hide panels
