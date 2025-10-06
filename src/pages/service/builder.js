@@ -867,6 +867,78 @@ class BuilderUI {
       return wrapper;
     }
 
+    // WinSAT Disk Benchmark options
+    if (id === "winsat_disk") {
+      const driveVal = (params?.drive ?? "C:").toString().toUpperCase();
+      const testModeVal = params?.test_mode ?? "full";
+
+      wrapper.innerHTML = `
+        <label class="tiny-lab" style="margin-right:12px;" title="Drive to benchmark">
+          <span class="lab">Drive</span>
+          <input type="text" class="text-input" data-param="drive" value="${driveVal}" size="4" aria-label="Drive letter (e.g., C:)" placeholder="C:" />
+        </label>
+        <label class="tiny-lab" style="margin-right:12px;" title="Select test mode to run">
+          <span class="lab">Test Mode</span>
+          <select data-param="test_mode" aria-label="WinSAT test mode">
+            <option value="full" ${
+              testModeVal === "full" ? "selected" : ""
+            }>Full Benchmark</option>
+            <option value="random_read" ${
+              testModeVal === "random_read" ? "selected" : ""
+            }>Random Read Only</option>
+            <option value="sequential_read" ${
+              testModeVal === "sequential_read" ? "selected" : ""
+            }>Sequential Read Only</option>
+            <option value="sequential_write" ${
+              testModeVal === "sequential_write" ? "selected" : ""
+            }>Sequential Write Only</option>
+            <option value="flush" ${
+              testModeVal === "flush" ? "selected" : ""
+            }>Flush Test</option>
+          </select>
+        </label>
+      `;
+
+      wrapper.style.display = "flex";
+      wrapper.style.flexWrap = "wrap";
+      wrapper.style.alignItems = "center";
+      wrapper.style.columnGap = "12px";
+      wrapper.style.rowGap = "6px";
+
+      wrapper.querySelectorAll("input, select").forEach((el) => {
+        ["mousedown", "pointerdown", "click"].forEach((evt) => {
+          el.addEventListener(evt, (e) => e.stopPropagation());
+        });
+      });
+
+      if (!this.builder.taskParams[id]) {
+        this.builder.taskParams[id] = { params: {} };
+      }
+      this.builder.taskParams[id].params.drive = driveVal;
+      this.builder.taskParams[id].params.test_mode = testModeVal;
+
+      const driveInput = wrapper.querySelector('input[data-param="drive"]');
+      const testModeSelect = wrapper.querySelector(
+        'select[data-param="test_mode"]'
+      );
+
+      driveInput?.addEventListener("change", () => {
+        const val = (driveInput.value || "C:").trim().toUpperCase();
+        // Normalize to just letter or letter with colon
+        const normalized = val.length === 1 ? val + ":" : val.substring(0, 2);
+        driveInput.value = normalized;
+        this.builder.updateTaskParam(id, "drive", normalized);
+        this.updateJson();
+      });
+
+      testModeSelect?.addEventListener("change", () => {
+        this.builder.updateTaskParam(id, "test_mode", testModeSelect.value);
+        this.updateJson();
+      });
+
+      return wrapper;
+    }
+
     // Generic duration controls
     Object.entries(params).forEach(([key, value]) => {
       if (key === "seconds") {
@@ -1000,7 +1072,8 @@ class BuilderUI {
         Object.prototype.hasOwnProperty.call(p, "minutes") ||
         Object.prototype.hasOwnProperty.call(p, "seconds") ||
         id === "chkdsk_scan" ||
-        id === "kvrt_scan";
+        id === "kvrt_scan" ||
+        id === "winsat_disk";
       if (hasGenericParams) {
         row.appendChild(this.renderParamControls(id, p));
       }
@@ -1030,7 +1103,8 @@ class BuilderUI {
     if (
       id === "sfc_scan" ||
       id === "dism_health_check" ||
-      id === "chkdsk_scan"
+      id === "chkdsk_scan" ||
+      id === "winsat_disk"
     ) {
       return '<span class="badge ok" title="Built-in Windows tool">Built-in</span>';
     }
