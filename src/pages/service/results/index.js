@@ -279,7 +279,197 @@ function renderPreviewIntoIframeFallback(previewEl, docHtml) {
     doc.open();
     doc.write(docHtml);
     doc.close();
+
+    const initializePagedPreview = () => {
+      try {
+        enhancePrintPreviewDocument(doc);
+      } catch (err) {
+        console.error("Preview pagination failed:", err);
+      }
+    };
+
+    if (iframe.contentWindow?.document?.readyState === "complete") {
+      initializePagedPreview();
+    } else {
+      iframe.addEventListener("load", initializePagedPreview, { once: true });
+      doc.addEventListener(
+        "readystatechange",
+        () => {
+          if (doc.readyState === "complete") {
+            initializePagedPreview();
+          }
+        },
+        { once: true }
+      );
+    }
   } catch {
     previewEl.innerHTML = docHtml;
   }
+}
+
+function enhancePrintPreviewDocument(doc) {
+  if (!doc?.body || doc.body.dataset.previewInitialized === "true") {
+    return;
+  }
+
+  const previewStyleId = "autoservice-preview-style";
+  if (!doc.getElementById(previewStyleId)) {
+    const style = doc.createElement("style");
+    style.id = previewStyleId;
+    style.textContent = `
+      body.print-preview-mode {
+        margin: 0;
+        background: #e2e8f0;
+        font-family: inherit;
+      }
+
+      .preview-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 18px;
+        padding: 24px 0 48px;
+      }
+
+      .preview-page {
+        position: relative;
+        width: 210mm;
+        min-height: 297mm;
+        box-sizing: border-box;
+        padding: 14mm;
+        background: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 12px 36px rgba(15, 23, 42, 0.22);
+        overflow: hidden;
+      }
+
+      .preview-page::after {
+        content: attr(data-page-number);
+        position: absolute;
+        right: 12mm;
+        bottom: 8mm;
+        font-size: 10pt;
+        color: #94a3b8;
+        letter-spacing: 0.2px;
+      }
+
+      .preview-page--overflow::before {
+        content: "Content truncated";
+        position: absolute;
+        top: 6mm;
+        right: 12mm;
+        background: rgba(239, 68, 68, 0.9);
+        color: #fff;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 8pt;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+      }
+
+      @media screen and (max-width: 900px) {
+        .preview-page {
+          transform: scale(0.85);
+          transform-origin: top center;
+        }
+      }
+
+      @media print {
+        body.print-preview-mode {
+          background: #ffffff;
+        }
+
+        .preview-container {
+          padding: 0;
+        }
+
+        .preview-page {
+          width: auto;
+          min-height: auto;
+          margin: 0;
+          border-radius: 0;
+          box-shadow: none;
+          page-break-after: always;
+        }
+
+        .preview-page:last-of-type {
+          page-break-after: auto;
+        }
+
+        .preview-page::after,
+        .preview-page--overflow::before {
+          display: none;
+        }
+      }
+    `;
+    doc.head.appendChild(style);
+  }
+
+  const originalRoot = doc.body.firstElementChild;
+  if (!originalRoot) {
+    return;
+  }
+
+  const nodes = Array.from(originalRoot.childNodes);
+  const container = doc.createElement("div");
+  container.className = "preview-container";
+
+  doc.body.innerHTML = "";
+  doc.body.appendChild(container);
+  doc.body.classList.add("print-preview-mode");
+
+  const pages = [];
+  const createPage = () => {
+    const page = doc.createElement("section");
+    page.className = "preview-page";
+    pages.push(page);
+    container.appendChild(page);
+    return page;
+  };
+
+  const DPI = 96;
+  const PAGE_HEIGHT = Math.round((297 / 25.4) * DPI);
+  const HEIGHT_TOLERANCE = 8; // px buffer to reduce overflows from rounding
+  let currentPage = createPage();
+
+  nodes.forEach((node) => {
+    if (!node) return;
+    if (
+      node.nodeType === doc.defaultView.Node.TEXT_NODE &&
+      !node.textContent?.trim()
+    ) {
+      return;
+    }
+
+    let target = node;
+    if (node.nodeType === doc.defaultView.Node.TEXT_NODE) {
+      const wrapper = doc.createElement("p");
+      wrapper.textContent = node.textContent || "";
+      target = wrapper;
+    }
+
+    currentPage.appendChild(target);
+
+    const pageRect = currentPage.getBoundingClientRect();
+    if (
+      pageRect.height > PAGE_HEIGHT + HEIGHT_TOLERANCE &&
+      currentPage.childNodes.length > 1
+    ) {
+      currentPage.removeChild(target);
+      currentPage = createPage();
+      currentPage.appendChild(target);
+      const overflowRect = currentPage.getBoundingClientRect();
+      if (overflowRect.height > PAGE_HEIGHT + HEIGHT_TOLERANCE) {
+        currentPage.classList.add("preview-page--overflow");
+      }
+    } else if (pageRect.height > PAGE_HEIGHT + HEIGHT_TOLERANCE) {
+      currentPage.classList.add("preview-page--overflow");
+    }
+  });
+
+  pages.forEach((page, index) => {
+    page.setAttribute("data-page-number", `Page ${index + 1}`);
+  });
+
+  doc.body.dataset.previewInitialized = "true";
 }
