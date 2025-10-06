@@ -1,0 +1,106 @@
+import {
+  extractCustomerMetrics,
+  buildCustomerTaskList,
+  generateRecommendations,
+} from "./metrics.js";
+
+/**
+ * @typedef {import('./types').ServiceReport} ServiceReport
+ */
+
+/**
+ * Build customer-friendly header markup.
+ * @param {string} title
+ * @param {string} overall
+ * @param {ServiceReport} report
+ */
+export function buildCustomerHeader(title, overall, report) {
+  const dt = new Date();
+  const date = dt.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  const statusText =
+    overall === "success"
+      ? "Service Completed Successfully"
+      : "Service Completed";
+  const hostname =
+    report?.summary?.hostname || report?.hostname || "Your Computer";
+
+  return `
+    <div class="customer-header">
+      <div class="company-info">
+        <h1 class="company-name">AutoService</h1>
+        <div class="tagline">Professional Computer Maintenance</div>
+      </div>
+      <div class="service-title">
+        <h2>${title}</h2>
+        <div class="service-meta">
+          <div class="status-badge ${
+            overall === "success" ? "success" : "info"
+          }">${statusText}</div>
+          <div class="date-info">${date}</div>
+        </div>
+      </div>
+      <div class="customer-info">
+        <strong>Computer:</strong> ${hostname}
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Build the customer-facing summary content.
+ * @param {ServiceReport} report
+ */
+export function buildCustomerSummary(report) {
+  const results = report?.results || [];
+  const metrics = extractCustomerMetrics(results);
+
+  return `
+    <div class="customer-summary">
+      <h3 class="section-heading">Service Summary</h3>
+      <p class="intro-text">
+        Your computer has been serviced and the following maintenance tasks have been completed:
+      </p>
+      
+      <div class="metrics-grid">
+        ${metrics
+          .map(
+            (m) => `
+          <div class="metric-card ${m.variant}">
+            <div class="metric-icon">${m.icon}</div>
+            <div class="metric-content">
+              <div class="metric-label">${m.label}</div>
+              <div class="metric-value">${m.value}</div>
+              ${m.detail ? `<div class="metric-detail">${m.detail}</div>` : ""}
+            </div>
+          </div>
+        `
+          )
+          .join("")}
+      </div>
+      
+      <div class="tasks-completed">
+        <h4 class="subsection-heading">Tasks Performed</h4>
+        <ul class="task-list">
+          ${buildCustomerTaskList(results)}
+        </ul>
+      </div>
+      
+      <div class="recommendations">
+        <h4 class="subsection-heading">Recommendations</h4>
+        <div class="recommendation-box">
+          ${generateRecommendations(results)}
+        </div>
+      </div>
+      
+      <div class="footer-note">
+        <p><strong>Thank you for choosing AutoService!</strong></p>
+        <p class="small-print">This report provides a summary of maintenance performed on your computer. 
+        For technical details, please refer to the detailed technician report.</p>
+      </div>
+    </div>
+  `;
+}

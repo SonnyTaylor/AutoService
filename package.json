@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "test": "node --test",
+    "test:print": "node --test src/pages/service/results/print/__tests__/metrics.test.js"
   },
   "devDependencies": {
     "@tauri-apps/api": "^2.7.0",
