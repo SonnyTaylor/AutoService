@@ -1299,7 +1299,7 @@
 }
 [data-page="service-results"] .card.winsat .winsat-layout {
   display: grid;
-  grid-template-columns: minmax(280px, 0.6fr) 1fr;
+  grid-template-columns: minmax(280px, 400px) 1fr;
   gap: 20px;
   align-items: stretch;
 }
