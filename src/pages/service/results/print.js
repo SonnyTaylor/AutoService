@@ -9,6 +9,19 @@ export function buildPrintableHtml(report, sectionsEl) {
   return `<div>${head}${body}</div>`;
 }
 
+/**
+ * Build customer-friendly print HTML (high-level summary only)
+ */
+export function buildCustomerPrintHtml(report) {
+  const title = "Service Summary";
+  const overall = String(report.overall_status || "").toLowerCase();
+  const body = `
+    ${buildCustomerHeader(title, overall, report)}
+    ${buildCustomerSummary(report)}
+  `;
+  return `<div>${body}</div>`;
+}
+
 export function buildPrintableDocumentHtml(report, sectionsEl) {
   const inner = buildPrintableHtml(report, sectionsEl);
   return `<!DOCTYPE html>
@@ -22,6 +35,312 @@ export function buildPrintableDocumentHtml(report, sectionsEl) {
   </head>
   <body>${inner}</body>
 </html>`;
+}
+
+/**
+ * Build customer-friendly document HTML
+ */
+export function buildCustomerPrintDocumentHtml(report) {
+  const inner = buildCustomerPrintHtml(report);
+  return `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="color-scheme" content="light">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AutoService – Service Summary</title>
+    <style>${CUSTOMER_PRINT_CSS}</style>
+  </head>
+  <body>${inner}</body>
+</html>`;
+}
+
+/**
+ * Build customer-friendly header
+ */
+function buildCustomerHeader(title, overall, report) {
+  const dt = new Date();
+  const date = dt.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  const statusText =
+    overall === "success"
+      ? "Service Completed Successfully"
+      : "Service Completed";
+  const hostname =
+    report?.summary?.hostname || report?.hostname || "Your Computer";
+
+  return `
+    <div class="customer-header">
+      <div class="company-info">
+        <h1 class="company-name">AutoService</h1>
+        <div class="tagline">Professional Computer Maintenance</div>
+      </div>
+      <div class="service-title">
+        <h2>${title}</h2>
+        <div class="service-meta">
+          <div class="status-badge ${
+            overall === "success" ? "success" : "info"
+          }">${statusText}</div>
+          <div class="date-info">${date}</div>
+        </div>
+      </div>
+      <div class="customer-info">
+        <strong>Computer:</strong> ${hostname}
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Build customer summary with high-level metrics
+ */
+function buildCustomerSummary(report) {
+  const results = report?.results || [];
+
+  // Extract high-level metrics from various task types
+  const metrics = extractCustomerMetrics(results);
+
+  return `
+    <div class="customer-summary">
+      <h3 class="section-heading">Service Summary</h3>
+      <p class="intro-text">
+        Your computer has been serviced and the following maintenance tasks have been completed:
+      </p>
+      
+      <div class="metrics-grid">
+        ${metrics
+          .map(
+            (m) => `
+          <div class="metric-card ${m.variant}">
+            <div class="metric-icon">${m.icon}</div>
+            <div class="metric-content">
+              <div class="metric-label">${m.label}</div>
+              <div class="metric-value">${m.value}</div>
+              ${m.detail ? `<div class="metric-detail">${m.detail}</div>` : ""}
+            </div>
+          </div>
+        `
+          )
+          .join("")}
+      </div>
+      
+      <div class="tasks-completed">
+        <h4 class="subsection-heading">Tasks Performed</h4>
+        <ul class="task-list">
+          ${buildCustomerTaskList(results)}
+        </ul>
+      </div>
+      
+      <div class="recommendations">
+        <h4 class="subsection-heading">Recommendations</h4>
+        <div class="recommendation-box">
+          ${generateRecommendations(results)}
+        </div>
+      </div>
+      
+      <div class="footer-note">
+        <p><strong>Thank you for choosing AutoService!</strong></p>
+        <p class="small-print">This report provides a summary of maintenance performed on your computer. 
+        For technical details, please refer to the detailed technician report.</p>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Extract customer-friendly metrics from task results
+ */
+function extractCustomerMetrics(results) {
+  const metrics = [];
+
+  let totalThreatsRemoved = 0;
+  let spaceRecovered = 0;
+  let filesDeleted = 0;
+  let systemHealthChecked = false;
+  let driveHealthChecked = false;
+  let performanceTest = false;
+
+  results.forEach((result) => {
+    const type = result?.task_type || result?.type || "";
+    const summary = result?.summary || {};
+    const status = result?.status || "";
+
+    // Count threats from various security scanners
+    if (type === "kvrt_scan" && summary.detections) {
+      totalThreatsRemoved += Array.isArray(summary.detections)
+        ? summary.detections.length
+        : 0;
+    }
+    if (type === "adwcleaner_clean" && summary.quarantined) {
+      totalThreatsRemoved += summary.quarantined || 0;
+    }
+
+    // Track space recovered from cleanup tools
+    if (type === "bleachbit_clean" && summary.space_recovered_bytes) {
+      spaceRecovered += summary.space_recovered_bytes || 0;
+      filesDeleted += summary.files_deleted || 0;
+    }
+
+    // System health checks
+    if (
+      (type === "sfc_scan" || type === "dism_health_check") &&
+      status === "success"
+    ) {
+      systemHealthChecked = true;
+    }
+
+    // Drive health
+    if (type === "smartctl_report" && status === "success") {
+      driveHealthChecked = true;
+    }
+
+    // Performance testing
+    if (
+      (type === "winsat_disk" ||
+        type === "heavyload_stress_test" ||
+        type === "furmark_stress_test") &&
+      status === "success"
+    ) {
+      performanceTest = true;
+    }
+  });
+
+  // Build metrics cards
+  if (totalThreatsRemoved > 0) {
+    metrics.push({
+      icon: "🛡️",
+      label: "Threats Removed",
+      value: totalThreatsRemoved.toString(),
+      detail: "Viruses, malware, and unwanted software",
+      variant: "success",
+    });
+  }
+
+  if (spaceRecovered > 0) {
+    const gb = (spaceRecovered / 1024 ** 3).toFixed(2);
+    metrics.push({
+      icon: "🧹",
+      label: "Space Recovered",
+      value: `${gb} GB`,
+      detail: `${filesDeleted.toLocaleString()} junk files removed`,
+      variant: "success",
+    });
+  }
+
+  if (systemHealthChecked) {
+    metrics.push({
+      icon: "✅",
+      label: "System Health",
+      value: "Verified",
+      detail: "System files checked and repaired",
+      variant: "info",
+    });
+  }
+
+  if (driveHealthChecked) {
+    metrics.push({
+      icon: "💾",
+      label: "Drive Health",
+      value: "Checked",
+      detail: "Storage drives analyzed",
+      variant: "info",
+    });
+  }
+
+  if (performanceTest) {
+    metrics.push({
+      icon: "⚡",
+      label: "Performance",
+      value: "Tested",
+      detail: "System performance verified",
+      variant: "info",
+    });
+  }
+
+  // If no specific metrics, show general service completion
+  if (metrics.length === 0) {
+    metrics.push({
+      icon: "✓",
+      label: "Service Completed",
+      value: `${results.length} tasks`,
+      detail: "Maintenance tasks performed",
+      variant: "info",
+    });
+  }
+
+  return metrics;
+}
+
+/**
+ * Build customer-friendly task list
+ */
+function buildCustomerTaskList(results) {
+  const taskNames = {
+    bleachbit_clean: "System Cleanup & Junk File Removal",
+    adwcleaner_clean: "Adware & Malware Removal",
+    kvrt_scan: "Virus Scan & Removal",
+    sfc_scan: "System File Integrity Check",
+    dism_health_check: "System Health Verification",
+    smartctl_report: "Hard Drive Health Analysis",
+    chkdsk_scan: "Disk Error Check & Repair",
+    heavyload_stress_test: "CPU & RAM Stress Test",
+    furmark_stress_test: "Graphics Card Stress Test",
+    winsat_disk: "Disk Performance Test",
+    speedtest: "Internet Speed Test",
+    ping_test: "Network Connectivity Test",
+    windows_update: "Windows Updates",
+    whynotwin11_check: "Windows 11 Compatibility Check",
+    ai_startup_disable: "Startup Optimization",
+  };
+
+  return results
+    .filter((r) => r.status !== "skipped")
+    .map((result) => {
+      const type = result?.task_type || result?.type || "unknown";
+      const name =
+        taskNames[type] ||
+        type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+      const status = result?.status || "";
+      const icon =
+        status === "success" ? "✓" : status === "failure" ? "⚠" : "•";
+      return `<li><span class="task-icon ${status}">${icon}</span> ${name}</li>`;
+    })
+    .join("");
+}
+
+/**
+ * Generate recommendations based on results
+ */
+function generateRecommendations(results) {
+  const recommendations = [];
+
+  const hasFailures = results.some((r) => r.status === "failure");
+  const hasThreats = results.some(
+    (r) =>
+      (r.task_type === "kvrt_scan" && r.summary?.detections?.length > 0) ||
+      (r.task_type === "adwcleaner_clean" && r.summary?.quarantined > 0)
+  );
+
+  if (hasThreats) {
+    recommendations.push(
+      "• Run a full system scan regularly to maintain security"
+    );
+  }
+
+  recommendations.push("• Keep Windows and your applications up to date");
+  recommendations.push("• Perform regular maintenance every 3-6 months");
+  recommendations.push("• Back up important files regularly");
+
+  if (hasFailures) {
+    recommendations.push(
+      "• Some tasks encountered issues - contact support if problems persist"
+    );
+  }
+
+  return recommendations.map((r) => `<p>${r}</p>`).join("");
 }
 
 export function buildPrintHeader(title, overall, report) {
@@ -344,5 +663,299 @@ const PRINT_LIGHT_CSS = `
     margin: 8px 0 0; font-size: 8.5pt; 
     white-space: pre-wrap; color: #334155; 
     font-family: 'Consolas', 'Monaco', monospace;
+  }
+`;
+
+const CUSTOMER_PRINT_CSS = `
+  @page { size: A4; margin: 12mm; }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact; }
+  
+  html, body {
+    background: #fff !important;
+    color: #1e293b !important;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    font-size: 11pt;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+  }
+  
+  body { margin: 0; padding: 20px; }
+  
+  /* Customer Header */
+  .customer-header {
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 3px solid #0f172a;
+  }
+  
+  .company-info {
+    margin-bottom: 20px;
+  }
+  
+  .company-name {
+    margin: 0;
+    font-size: 32px;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: -0.5px;
+  }
+  
+  .tagline {
+    margin: 4px 0 0;
+    font-size: 12pt;
+    color: #64748b;
+    font-weight: 500;
+  }
+  
+  .service-title h2 {
+    margin: 0 0 12px;
+    font-size: 24px;
+    font-weight: 600;
+    color: #1e293b;
+  }
+  
+  .service-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  
+  .status-badge {
+    display: inline-block;
+    padding: 6px 16px;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 10pt;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .status-badge.success {
+    background: #dcfce7;
+    color: #166534;
+    border: 2px solid #86efac;
+  }
+  
+  .status-badge.info {
+    background: #dbeafe;
+    color: #1e40af;
+    border: 2px solid #93c5fd;
+  }
+  
+  .date-info {
+    font-size: 11pt;
+    color: #475569;
+    font-weight: 500;
+  }
+  
+  .customer-info {
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: #f8fafc;
+    border-left: 4px solid #3b82f6;
+    border-radius: 4px;
+    font-size: 11pt;
+  }
+  
+  .customer-info strong {
+    color: #0f172a;
+  }
+  
+  /* Customer Summary */
+  .customer-summary {
+    max-width: 100%;
+  }
+  
+  .section-heading {
+    margin: 0 0 16px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: -0.3px;
+  }
+  
+  .intro-text {
+    margin: 0 0 24px;
+    font-size: 11pt;
+    color: #475569;
+    line-height: 1.7;
+  }
+  
+  /* Metrics Grid */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  
+  .metric-card {
+    display: flex;
+    align-items: start;
+    gap: 14px;
+    padding: 18px;
+    border-radius: 12px;
+    border: 2px solid;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  
+  .metric-card.success {
+    background: #f0fdf4;
+    border-color: #86efac;
+  }
+  
+  .metric-card.info {
+    background: #eff6ff;
+    border-color: #93c5fd;
+  }
+  
+  .metric-icon {
+    font-size: 32px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  
+  .metric-content {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .metric-label {
+    font-size: 10pt;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #64748b;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  
+  .metric-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 2px;
+  }
+  
+  .metric-card.success .metric-value {
+    color: #166534;
+  }
+  
+  .metric-card.info .metric-value {
+    color: #1e40af;
+  }
+  
+  .metric-detail {
+    font-size: 9.5pt;
+    color: #64748b;
+    margin-top: 4px;
+  }
+  
+  /* Tasks Completed */
+  .tasks-completed {
+    margin-bottom: 32px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  
+  .subsection-heading {
+    margin: 0 0 14px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #0f172a;
+    letter-spacing: -0.2px;
+  }
+  
+  .task-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px 20px;
+  }
+  
+  .task-list li {
+    margin: 8px 0;
+    padding-left: 28px;
+    position: relative;
+    font-size: 10.5pt;
+    color: #334155;
+  }
+  
+  .task-icon {
+    position: absolute;
+    left: 0;
+    top: 0;
+    font-weight: 700;
+    font-size: 12pt;
+  }
+  
+  .task-icon.success {
+    color: #16a34a;
+  }
+  
+  .task-icon.failure {
+    color: #dc2626;
+  }
+  
+  /* Recommendations */
+  .recommendations {
+    margin-bottom: 32px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  
+  .recommendation-box {
+    background: #fef3c7;
+    border: 2px solid #fbbf24;
+    border-radius: 8px;
+    padding: 16px 20px;
+  }
+  
+  .recommendation-box p {
+    margin: 6px 0;
+    font-size: 10.5pt;
+    color: #78350f;
+    line-height: 1.6;
+  }
+  
+  /* Footer */
+  .footer-note {
+    margin-top: 40px;
+    padding-top: 24px;
+    border-top: 2px solid #e2e8f0;
+  }
+  
+  .footer-note p {
+    margin: 8px 0;
+    font-size: 10.5pt;
+    color: #475569;
+  }
+  
+  .footer-note strong {
+    color: #0f172a;
+    font-size: 11.5pt;
+  }
+  
+  .small-print {
+    font-size: 9pt !important;
+    color: #94a3b8 !important;
+    font-style: italic;
+    line-height: 1.5;
+  }
+  
+  /* Typography */
+  h1, h2, h3, h4 {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+  
+  p {
+    orphans: 3;
+    widows: 3;
   }
 `;

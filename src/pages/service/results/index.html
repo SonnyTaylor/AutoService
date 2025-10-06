@@ -3,7 +3,7 @@
     <div class="titles">
       <h1 id="svc-results-title">Service Results</h1>
       <p class="muted" id="svc-results-desc">
-        Printable summary of the completed run.
+        View results and generate printable reports.
       </p>
     </div>
     <div class="run-actions">
@@ -11,20 +11,117 @@
     </div>
   </div>
 
-  <div class="results-two-pane" id="svc-results" hidden>
-    <div class="pane-left">
+  <!-- Tab Navigation -->
+  <nav
+    class="results-tabs"
+    role="tablist"
+    aria-label="Results sections"
+    id="svc-results-tabs"
+    hidden
+  >
+    <button
+      role="tab"
+      id="tab-results"
+      data-tab="results"
+      aria-selected="true"
+      aria-controls="panel-results"
+      class="results-tab active"
+    >
+      <i
+        class="ph ph-list-checks"
+        style="margin-right: 6px; vertical-align: -2px"
+      ></i>
+      Results
+    </button>
+    <button
+      role="tab"
+      id="tab-tech-print"
+      data-tab="tech-print"
+      aria-selected="false"
+      aria-controls="panel-tech-print"
+      class="results-tab"
+    >
+      <i
+        class="ph ph-file-text"
+        style="margin-right: 6px; vertical-align: -2px"
+      ></i>
+      Technician Print
+    </button>
+    <button
+      role="tab"
+      id="tab-customer-print"
+      data-tab="customer-print"
+      aria-selected="false"
+      aria-controls="panel-customer-print"
+      class="results-tab"
+    >
+      <i
+        class="ph ph-newspaper"
+        style="margin-right: 6px; vertical-align: -2px"
+      ></i>
+      Customer Print
+    </button>
+  </nav>
+
+  <!-- Tab Panels -->
+  <div id="svc-results-container" hidden>
+    <!-- Results Tab Panel -->
+    <div
+      id="panel-results"
+      class="results-panel"
+      role="tabpanel"
+      aria-labelledby="tab-results"
+    >
       <div class="results-summary" id="svc-results-summary"></div>
       <div class="results-sections" id="svc-results-sections"></div>
     </div>
-    <div class="pane-right">
+
+    <!-- Technician Print Tab Panel -->
+    <div
+      id="panel-tech-print"
+      class="results-panel"
+      role="tabpanel"
+      aria-labelledby="tab-tech-print"
+      hidden
+    >
       <div class="preview-card">
         <div class="preview-head">
-          <div class="section-title">Print Preview</div>
-          <button id="svc-results-print-side" class="ghost small">Print</button>
+          <div class="section-title">Technician Print Preview</div>
+          <button id="svc-print-tech" class="ghost small">
+            <i
+              class="ph ph-printer"
+              style="margin-right: 4px; vertical-align: -1px"
+            ></i>
+            Print
+          </button>
         </div>
-        <div id="svc-print-preview" class="preview-window"></div>
+        <div id="svc-print-tech-preview" class="preview-window"></div>
       </div>
-      <div id="svc-print-container" style="display: none"></div>
+      <div id="svc-print-tech-container" style="display: none"></div>
+    </div>
+
+    <!-- Customer Print Tab Panel -->
+    <div
+      id="panel-customer-print"
+      class="results-panel"
+      role="tabpanel"
+      aria-labelledby="tab-customer-print"
+      hidden
+    >
+      <div class="preview-card">
+        <div class="preview-head">
+          <div class="section-title">Customer Print Preview</div>
+          <button id="svc-print-customer" class="ghost small">
+            <i
+              class="ph ph-printer"
+              style="margin-right: 4px; vertical-align: -1px"
+            ></i>
+            Print
+          </button>
+        </div>
+        <div id="svc-print-customer-preview" class="preview-window"></div>
+      </div>
+      <div id="svc-print-customer-container" style="display: none"></div>
     </div>
   </div>
 </section>
