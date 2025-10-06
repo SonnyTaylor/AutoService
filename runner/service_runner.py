@@ -60,6 +60,7 @@ from services.kvrt_service import run_kvrt_scan  # type: ignore
 from services.speedtest_service import run_speedtest  # type: ignore
 from services.windows_update_service import run_windows_update  # type: ignore
 from services.whynotwin11_service import run_whynotwin11_check  # type: ignore
+from services.winsat_service import run_winsat_disk  # type: ignore
 
 """NOTE ON REAL-TIME LOG STREAMING
 
@@ -153,6 +154,7 @@ TASK_HANDLERS: Dict[str, TaskHandler] = {
     "speedtest": run_speedtest,
     "windows_update": run_windows_update,
     "whynotwin11_check": run_whynotwin11_check,
+    "winsat_disk": run_winsat_disk,
     # "windows_defender_scan": run_windows_defender_scan, # Example for the future
 }
 
