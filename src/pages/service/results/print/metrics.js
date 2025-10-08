@@ -276,12 +276,12 @@ function processIPerfTest(summary, status) {
   if (status !== "success") return null;
 
   const hr = summary.human_readable || {};
-  const throughput = hr.throughput || {};
+  const throughputData = hr.throughput || {};
 
   return {
     server: summary.server,
     protocol: summary.protocol,
-    throughput: throughput.mean,
+    throughput: throughputData.mean || null,
     stability: hr.stability_score,
     verdict: hr.verdict,
   };
@@ -525,7 +525,7 @@ function buildNetworkThroughputMetric(throughputTest) {
   const items = [];
 
   if (throughputTest.throughput != null) {
-    const mbps = (throughputTest.throughput / 1_000_000).toFixed(1);
+    const mbps = throughputTest.throughput.toFixed(1);
     items.push(`Throughput: ${mbps} Mbps`);
   }
 
@@ -542,7 +542,7 @@ function buildNetworkThroughputMetric(throughputTest) {
     label: "Network Throughput",
     value:
       throughputTest.throughput != null
-        ? `${(throughputTest.throughput / 1_000_000).toFixed(1)} Mbps`
+        ? `${throughputTest.throughput.toFixed(1)} Mbps`
         : "Tested",
     detail: `${throughputTest.protocol?.toUpperCase() || "Network"} to ${
       throughputTest.server || "server"
