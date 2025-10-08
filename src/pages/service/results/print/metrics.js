@@ -39,18 +39,61 @@ function processKVRTScan(summary) {
  * @returns {{count: number, detail: object|null}} Threat count and details
  */
 function processAdwCleanerScan(summary) {
-  const quarantined = summary.quarantined || 0;
+  const cleaned = summary.cleaned || 0;
+  const failed = summary.failed || 0;
 
-  if (quarantined === 0) {
+  // Count items from each category
+  const getLen = (arr) => (Array.isArray(arr) ? arr.length : 0);
+  const browserHits = summary.browsers
+    ? Object.values(summary.browsers).reduce(
+        (sum, v) => sum + (Array.isArray(v) ? v.length : 0),
+        0
+      )
+    : 0;
+
+  const categoryCount =
+    getLen(summary.registry) +
+    getLen(summary.files) +
+    getLen(summary.folders) +
+    getLen(summary.services) +
+    getLen(summary.tasks) +
+    getLen(summary.shortcuts) +
+    getLen(summary.dlls) +
+    getLen(summary.wmi) +
+    browserHits;
+
+  // Total items is the cleaned count
+  const totalItems = cleaned;
+
+  if (totalItems === 0) {
     return { count: 0, detail: null };
   }
 
+  // Build category breakdown for details
+  const categories = [];
+  if (getLen(summary.registry) > 0)
+    categories.push(`Registry: ${getLen(summary.registry)}`);
+  if (getLen(summary.files) > 0)
+    categories.push(`Files: ${getLen(summary.files)}`);
+  if (getLen(summary.folders) > 0)
+    categories.push(`Folders: ${getLen(summary.folders)}`);
+  if (getLen(summary.services) > 0)
+    categories.push(`Services: ${getLen(summary.services)}`);
+  if (browserHits > 0) categories.push(`Browser Items: ${browserHits}`);
+  if (getLen(summary.preinstalled) > 0)
+    categories.push(`Preinstalled Apps: ${getLen(summary.preinstalled)}`);
+
   return {
-    count: quarantined,
+    count: totalItems,
     detail: {
       source: "AdwCleaner",
-      count: quarantined,
-      types: ["Adware", "PUPs", "Browser hijackers"],
+      count: totalItems,
+      failed: failed,
+      categories: categories,
+      needsReboot:
+        getLen(summary.preinstalled) > 0 ||
+        (Array.isArray(summary.folders) &&
+          summary.folders.some((f) => /reboot/i.test(String(f)))),
     },
   };
 }
@@ -327,20 +370,54 @@ function processWhyNotWin11Check(summary, status) {
 function buildThreatMetric(totalThreats, threatDetails) {
   if (totalThreats === 0) return null;
 
-  const items = threatDetails.map((td) => {
+  const items = [];
+
+  threatDetails.forEach((td) => {
     if (td.threats) {
-      return `${td.source}: ${td.threats.join(", ")}${
-        td.count > 5 ? ` (+${td.count - 5} more)` : ""
-      }`;
+      // Kaspersky-style threats - list individual threats
+      items.push(
+        `${td.source}: ${td.threats.join(", ")}${
+          td.count > 5 ? ` (+${td.count - 5} more)` : ""
+        }`
+      );
+    } else if (td.categories) {
+      // AdwCleaner-style categories - break down by type
+      if (td.categories.length > 0) {
+        td.categories.forEach((cat) => items.push(cat));
+      }
+
+      // Add warnings as separate items if present
+      if (td.failed > 0) {
+        items.push(`⚠️ ${td.failed} items could not be removed`);
+      }
+      if (td.needsReboot) {
+        items.push(`🔄 System restart required to complete cleanup`);
+      }
+    } else if (td.types) {
+      // Generic types
+      items.push(`${td.source}: ${td.count} items (${td.types.join(", ")})`);
+    } else {
+      items.push(`${td.source}: ${td.count} items removed`);
     }
-    return `${td.source}: ${td.count} items (${td.types?.join(", ")})`;
+  });
+
+  // Create a more descriptive detail line
+  const detailParts = [];
+  threatDetails.forEach((td) => {
+    if (td.threats) {
+      detailParts.push(`${td.count} viruses detected`);
+    } else if (td.categories) {
+      detailParts.push(`${td.count} unwanted items cleaned`);
+    } else {
+      detailParts.push(`${td.count} items removed`);
+    }
   });
 
   return {
     icon: "🛡️",
-    label: "Viruses Removed",
+    label: "Threats Removed",
     value: totalThreats.toString(),
-    detail: threatDetails.map((t) => t.source).join(", "),
+    detail: detailParts.join(", "),
     variant: "success",
     items: items.length > 0 ? items : undefined,
   };
