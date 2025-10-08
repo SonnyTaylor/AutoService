@@ -479,6 +479,36 @@ export const CUSTOMER_PRINT_CSS = `
     margin-top: 4px;
   }
   
+  .metric-items {
+    list-style: none;
+    padding: 0;
+    margin: 8px 0 0;
+    font-size: 9pt;
+    color: #475569;
+    line-height: 1.6;
+  }
+  
+  .metric-items li {
+    padding: 3px 0 3px 16px;
+    position: relative;
+  }
+  
+  .metric-items li::before {
+    content: "•";
+    position: absolute;
+    left: 0;
+    color: #94a3b8;
+    font-weight: bold;
+  }
+  
+  .metric-card.success .metric-items li::before {
+    color: #16a34a;
+  }
+  
+  .metric-card.info .metric-items li::before {
+    color: #3b82f6;
+  }
+  
   /* Tasks Completed */
   .tasks-completed {
     margin-bottom: 32px;

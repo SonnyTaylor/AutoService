@@ -13,3 +13,13 @@
  * @property {{ hostname?: string }} [summary]
  * @property {ServiceTaskResult[]} [results]
  */
+
+/**
+ * @typedef {Object} CustomerMetric
+ * @property {string} icon - Emoji icon for the metric
+ * @property {string} label - Human-readable label
+ * @property {string} value - Primary value to display
+ * @property {string} [detail] - Additional context
+ * @property {'success' | 'info'} variant - Color variant
+ * @property {string[]} [items] - Detailed breakdown items (optional list)
+ */

@@ -75,6 +75,15 @@ export function buildCustomerSummary(report) {
               <div class="metric-label">${m.label}</div>
               <div class="metric-value">${m.value}</div>
               ${m.detail ? `<div class="metric-detail">${m.detail}</div>` : ""}
+              ${
+                m.items && m.items.length > 0
+                  ? `
+                <ul class="metric-items">
+                  ${m.items.map((item) => `<li>${item}</li>`).join("")}
+                </ul>
+              `
+                  : ""
+              }
             </div>
           </div>
         `
