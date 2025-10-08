@@ -265,6 +265,54 @@ function processPingTest(summary, status) {
   };
 }
 
+/**
+ * Process iPerf network throughput test results.
+ * @private
+ * @param {object} summary - Task summary containing throughput data
+ * @param {string} status - Task execution status
+ * @returns {object|null} Network throughput results
+ */
+function processIPerfTest(summary, status) {
+  if (status !== "success") return null;
+
+  const hr = summary.human_readable || {};
+  const throughput = hr.throughput || {};
+
+  return {
+    server: summary.server,
+    protocol: summary.protocol,
+    throughput: throughput.mean,
+    stability: hr.stability_score,
+    verdict: hr.verdict,
+  };
+}
+
+// =============================================================================
+// COMPATIBILITY & UPGRADE PROCESSING
+// =============================================================================
+
+/**
+ * Process WhyNotWin11 compatibility check results.
+ * @private
+ * @param {object} summary - Task summary containing compatibility data
+ * @param {string} status - Task execution status
+ * @returns {object|null} Compatibility check results
+ */
+function processWhyNotWin11Check(summary, status) {
+  if (status !== "success") return null;
+
+  const checks = summary.checks || {};
+  const passingCount = Object.values(checks).filter((v) => v === true).length;
+  const totalCount = Object.keys(checks).length;
+
+  return {
+    ready: summary.ready,
+    passingCount,
+    totalCount,
+    failingChecks: summary.failing_checks || [],
+  };
+}
+
 // =============================================================================
 // METRIC BUILDERS
 // =============================================================================
@@ -466,6 +514,70 @@ function buildNetworkLatencyMetric(networkLatency) {
 }
 
 /**
+ * Build network throughput metric card.
+ * @private
+ * @param {object|null} throughputTest - Network throughput data
+ * @returns {CustomerMetric|null} Metric object or null if no test
+ */
+function buildNetworkThroughputMetric(throughputTest) {
+  if (!throughputTest) return null;
+
+  const items = [];
+
+  if (throughputTest.throughput != null) {
+    const mbps = (throughputTest.throughput / 1_000_000).toFixed(1);
+    items.push(`Throughput: ${mbps} Mbps`);
+  }
+
+  if (throughputTest.stability != null) {
+    items.push(`Stability: ${throughputTest.stability.toFixed(1)}%`);
+  }
+
+  if (throughputTest.verdict) {
+    items.push(`Quality: ${throughputTest.verdict}`);
+  }
+
+  return {
+    icon: "🔄",
+    label: "Network Throughput",
+    value:
+      throughputTest.throughput != null
+        ? `${(throughputTest.throughput / 1_000_000).toFixed(1)} Mbps`
+        : "Tested",
+    detail: `${throughputTest.protocol?.toUpperCase() || "Network"} to ${
+      throughputTest.server || "server"
+    }`,
+    variant: "info",
+    items: items.length > 0 ? items : undefined,
+  };
+}
+
+/**
+ * Build Windows 11 compatibility metric card.
+ * @private
+ * @param {object|null} compatCheck - Compatibility check data
+ * @returns {CustomerMetric|null} Metric object or null if no check
+ */
+function buildWin11CompatibilityMetric(compatCheck) {
+  if (!compatCheck) return null;
+
+  const items = [];
+
+  if (compatCheck.failingChecks && compatCheck.failingChecks.length > 0) {
+    items.push(`Failing: ${compatCheck.failingChecks.join(", ")}`);
+  }
+
+  return {
+    icon: compatCheck.ready ? "✅" : "⚠️",
+    label: "Windows 11 Ready",
+    value: compatCheck.ready ? "Yes" : "Not Yet",
+    detail: `${compatCheck.passingCount}/${compatCheck.totalCount} requirements met`,
+    variant: compatCheck.ready ? "success" : "info",
+    items: items.length > 0 ? items : undefined,
+  };
+}
+
+/**
  * Build default fallback metric when no specific metrics are available.
  * @private
  * @param {number} taskCount - Total number of tasks performed
@@ -500,6 +612,8 @@ function aggregateTaskData(results) {
     performance: [],
     speedTest: null,
     networkLatency: null,
+    networkThroughput: null,
+    win11Compatibility: null,
   };
 
   results.forEach((result) => {
@@ -557,6 +671,13 @@ function aggregateTaskData(results) {
       data.speedTest = processSpeedTest(summary, status);
     } else if (type === "ping_test") {
       data.networkLatency = processPingTest(summary, status);
+    } else if (type === "iperf_test") {
+      data.networkThroughput = processIPerfTest(summary, status);
+    }
+
+    // Process compatibility check tasks
+    else if (type === "whynotwin11_check") {
+      data.win11Compatibility = processWhyNotWin11Check(summary, status);
     }
   });
 
@@ -600,6 +721,12 @@ function buildMetricsFromData(data, totalTasks) {
 
   const latencyMetric = buildNetworkLatencyMetric(data.networkLatency);
   if (latencyMetric) metrics.push(latencyMetric);
+
+  const throughputMetric = buildNetworkThroughputMetric(data.networkThroughput);
+  if (throughputMetric) metrics.push(throughputMetric);
+
+  const win11Metric = buildWin11CompatibilityMetric(data.win11Compatibility);
+  if (win11Metric) metrics.push(win11Metric);
 
   // Add fallback metric if no specific metrics were generated
   if (metrics.length === 0) {
@@ -658,6 +785,7 @@ const TASK_DISPLAY_NAMES = {
   winsat_disk: "Disk Performance Test",
   speedtest: "Internet Speed Test",
   ping_test: "Network Connectivity Test",
+  iperf_test: "Network Throughput Test",
   windows_update: "Windows Updates",
   whynotwin11_check: "Windows 11 Compatibility Check",
   ai_startup_disable: "Startup Optimization",
