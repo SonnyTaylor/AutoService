@@ -85,7 +85,7 @@ export function buildCustomerSummary(report) {
       
       <div class="footer-note">
         <p><strong>Thank you for choosing AutoService!</strong></p>
-        <p class="small-print">For technical details, please refer to the detailed technician report.</p>
+        <p class="small-print">For technical details, please refer to the detailed technician report or ask your technician.</p>
       </div>
     </div>
   `;
