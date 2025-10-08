@@ -25,8 +25,6 @@ export function buildCustomerHeader(title, overall, report) {
     overall === "success"
       ? "Service Completed Successfully"
       : "Service Completed";
-  const hostname =
-    report?.summary?.hostname || report?.hostname || "Your Computer";
 
   return `
     <div class="customer-header">
@@ -34,17 +32,11 @@ export function buildCustomerHeader(title, overall, report) {
         <h1 class="company-name">AutoService</h1>
         <div class="tagline">Professional Computer Maintenance</div>
       </div>
-      <div class="service-title">
-        <h2>${title}</h2>
-        <div class="service-meta">
-          <div class="status-badge ${
-            overall === "success" ? "success" : "info"
-          }">${statusText}</div>
-          <div class="date-info">${date}</div>
-        </div>
-      </div>
-      <div class="customer-info">
-        <strong>Computer:</strong> ${hostname}
+      <div class="service-meta">
+        <div class="status-badge ${
+          overall === "success" ? "success" : "info"
+        }">${statusText}</div>
+        <div class="date-info">${date}</div>
       </div>
     </div>
   `;
@@ -60,12 +52,12 @@ export function buildCustomerSummary(report) {
 
   return `
     <div class="customer-summary">
-      <h3 class="section-heading">Service Summary</h3>
+      <h3 class="section-heading">Results</h3>
       <p class="intro-text">
         Your computer has been serviced and the following maintenance tasks have been completed:
       </p>
       
-      <div class="metrics-grid">
+      <div class="metrics-list">
         ${metrics
           .map(
             (m) => `

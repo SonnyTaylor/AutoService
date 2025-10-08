@@ -310,13 +310,13 @@ export const CUSTOMER_PRINT_CSS = `
   
   /* Customer Header */
   .customer-header {
-    margin-bottom: 32px;
-    padding-bottom: 24px;
+    margin-bottom: 24px;
+    padding-bottom: 20px;
     border-bottom: 3px solid #0f172a;
   }
   
   .company-info {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
   }
   
   .company-name {
@@ -334,18 +334,12 @@ export const CUSTOMER_PRINT_CSS = `
     font-weight: 500;
   }
   
-  .service-title h2 {
-    margin: 0 0 12px;
-    font-size: 24px;
-    font-weight: 600;
-    color: #1e293b;
-  }
-  
   .service-meta {
     display: flex;
     align-items: center;
     gap: 16px;
     flex-wrap: wrap;
+    margin-top: 12px;
   }
   
   .status-badge {
@@ -376,19 +370,6 @@ export const CUSTOMER_PRINT_CSS = `
     font-weight: 500;
   }
   
-  .customer-info {
-    margin-top: 16px;
-    padding: 12px 16px;
-    background: #f8fafc;
-    border-left: 4px solid #3b82f6;
-    border-radius: 4px;
-    font-size: 11pt;
-  }
-  
-  .customer-info strong {
-    color: #0f172a;
-  }
-  
   /* Customer Summary */
   .customer-summary {
     max-width: 100%;
@@ -409,11 +390,11 @@ export const CUSTOMER_PRINT_CSS = `
     line-height: 1.7;
   }
   
-  /* Metrics Grid */
-  .metrics-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
+  /* Metrics List - Single Column */
+  .metrics-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
     margin-bottom: 32px;
   }
   
