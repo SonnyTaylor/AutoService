@@ -161,6 +161,10 @@ def run_adwcleaner_clean(task: Dict[str, Any]) -> Dict[str, Any]:
 
         # Locate the latest log file
         logs_dir = os.path.join(working_path, "AdwCleaner", "Logs")
+
+        # Create the logs directory if it doesn't exist
+        os.makedirs(logs_dir, exist_ok=True)
+
         latest_log = find_latest_log(logs_dir)
         if not latest_log:
             logger.error("No AdwCleaner log file found.")
