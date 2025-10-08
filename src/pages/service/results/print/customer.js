@@ -83,24 +83,9 @@ export function buildCustomerSummary(report) {
           .join("")}
       </div>
       
-      <div class="tasks-completed">
-        <h4 class="subsection-heading">Tasks Performed</h4>
-        <ul class="task-list">
-          ${buildCustomerTaskList(results)}
-        </ul>
-      </div>
-      
-      <div class="recommendations">
-        <h4 class="subsection-heading">Recommendations</h4>
-        <div class="recommendation-box">
-          ${generateRecommendations(results)}
-        </div>
-      </div>
-      
       <div class="footer-note">
         <p><strong>Thank you for choosing AutoService!</strong></p>
-        <p class="small-print">This report provides a summary of maintenance performed on your computer. 
-        For technical details, please refer to the detailed technician report.</p>
+        <p class="small-print">For technical details, please refer to the detailed technician report.</p>
       </div>
     </div>
   `;

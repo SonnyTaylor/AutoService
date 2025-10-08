@@ -376,35 +376,35 @@ export const CUSTOMER_PRINT_CSS = `
   }
   
   .section-heading {
-    margin: 0 0 16px;
-    font-size: 20px;
+    margin: 0 0 10px;
+    font-size: 18px;
     font-weight: 700;
     color: #0f172a;
     letter-spacing: -0.3px;
   }
   
   .intro-text {
-    margin: 0 0 24px;
-    font-size: 11pt;
+    margin: 0 0 16px;
+    font-size: 10pt;
     color: #475569;
-    line-height: 1.7;
+    line-height: 1.6;
   }
   
   /* Metrics List - Single Column */
   .metrics-list {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    margin-bottom: 32px;
+    gap: 8px;
+    margin-bottom: 20px;
   }
   
   .metric-card {
     display: flex;
     align-items: start;
-    gap: 14px;
-    padding: 18px;
-    border-radius: 12px;
-    border: 2px solid;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1.5px solid;
     page-break-inside: avoid;
     break-inside: avoid;
   }
@@ -420,9 +420,10 @@ export const CUSTOMER_PRINT_CSS = `
   }
   
   .metric-icon {
-    font-size: 32px;
+    font-size: 28px;
     line-height: 1;
     flex-shrink: 0;
+    margin-top: 2px;
   }
   
   .metric-content {
@@ -431,19 +432,20 @@ export const CUSTOMER_PRINT_CSS = `
   }
   
   .metric-label {
-    font-size: 10pt;
+    font-size: 9pt;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: #64748b;
     font-weight: 600;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
   }
   
   .metric-value {
-    font-size: 24px;
+    font-size: 18px;
     font-weight: 700;
     color: #0f172a;
     margin-bottom: 2px;
+    line-height: 1.2;
   }
   
   .metric-card.success .metric-value {
@@ -455,22 +457,22 @@ export const CUSTOMER_PRINT_CSS = `
   }
   
   .metric-detail {
-    font-size: 9.5pt;
+    font-size: 8.5pt;
     color: #64748b;
-    margin-top: 4px;
+    margin-top: 2px;
   }
   
   .metric-items {
     list-style: none;
     padding: 0;
-    margin: 8px 0 0;
-    font-size: 9pt;
+    margin: 6px 0 0;
+    font-size: 8.5pt;
     color: #475569;
-    line-height: 1.6;
+    line-height: 1.5;
   }
   
   .metric-items li {
-    padding: 3px 0 3px 16px;
+    padding: 2px 0 2px 14px;
     position: relative;
   }
   
@@ -490,99 +492,29 @@ export const CUSTOMER_PRINT_CSS = `
     color: #3b82f6;
   }
   
-  /* Tasks Completed */
-  .tasks-completed {
-    margin-bottom: 32px;
-    page-break-inside: avoid;
-    break-inside: avoid;
-  }
-  
-  .subsection-heading {
-    margin: 0 0 14px;
-    font-size: 16px;
-    font-weight: 600;
-    color: #0f172a;
-    letter-spacing: -0.2px;
-  }
-  
-  .task-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 16px 20px;
-  }
-  
-  .task-list li {
-    margin: 8px 0;
-    padding-left: 28px;
-    position: relative;
-    font-size: 10.5pt;
-    color: #334155;
-  }
-  
-  .task-icon {
-    position: absolute;
-    left: 0;
-    top: 0;
-    font-weight: 700;
-    font-size: 12pt;
-  }
-  
-  .task-icon.success {
-    color: #16a34a;
-  }
-  
-  .task-icon.failure {
-    color: #dc2626;
-  }
-  
-  /* Recommendations */
-  .recommendations {
-    margin-bottom: 32px;
-    page-break-inside: avoid;
-    break-inside: avoid;
-  }
-  
-  .recommendation-box {
-    background: #fef3c7;
-    border: 2px solid #fbbf24;
-    border-radius: 8px;
-    padding: 16px 20px;
-  }
-  
-  .recommendation-box p {
-    margin: 6px 0;
-    font-size: 10.5pt;
-    color: #78350f;
-    line-height: 1.6;
-  }
-  
   /* Footer */
   .footer-note {
-    margin-top: 40px;
-    padding-top: 24px;
-    border-top: 2px solid #e2e8f0;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1.5px solid #e2e8f0;
   }
   
   .footer-note p {
-    margin: 8px 0;
-    font-size: 10.5pt;
+    margin: 6px 0;
+    font-size: 10pt;
     color: #475569;
   }
   
   .footer-note strong {
     color: #0f172a;
-    font-size: 11.5pt;
+    font-size: 10.5pt;
   }
   
   .small-print {
-    font-size: 9pt !important;
+    font-size: 8.5pt !important;
     color: #94a3b8 !important;
     font-style: italic;
-    line-height: 1.5;
+    line-height: 1.4;
   }
   
   /* Typography */
