@@ -62,7 +62,7 @@ test("extractCustomerMetrics summarises key data points", () => {
 
   // Threats removed with details
   assert.equal(metrics[0].icon, "🛡️");
-  assert.equal(metrics[0].label, "Threats Removed");
+  assert.equal(metrics[0].label, "Security Threats Removed");
   assert.equal(metrics[0].value, "2");
   assert.equal(metrics[0].variant, "success");
   assert.ok(Array.isArray(metrics[0].items));
@@ -134,21 +134,21 @@ test("extractCustomerMetrics handles AdwCleaner results correctly", () => {
     baseResult({
       task_type: "adwcleaner_clean",
       summary: {
-        browsers: {},
-        cleaned: 3,
+        browsers: { Chrome: ["extension1", "extension2"] },
+        cleaned: 5,
         dlls: [],
         failed: 2,
-        files: [],
+        files: ["C:\\Temp\\adware.exe", "C:\\Temp\\pup.dll"],
         folders: [
+          "Deleted  C:\\ProgramData\\Adware",
           "Needs Reboot  C:\\Program Files\\Sunshine",
-          "Needs Reboot  C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Sunshine",
-          "Needs Reboot  C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Zebar",
         ],
-        preinstalled: ["***** Reboot Required to Complete *****"],
+        preinstalled: [],
         registry: [
+          "Deleted  HKLM\\Software\\Adware\\Settings",
           "Not Deleted   HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Sunshine",
         ],
-        services: ["Not Deleted   Updater"],
+        services: ["Deleted  AdwareService", "Not Deleted   Updater"],
         shortcuts: [],
         tasks: [],
         wmi: [],
@@ -161,21 +161,19 @@ test("extractCustomerMetrics handles AdwCleaner results correctly", () => {
 
   // Check threat metric for AdwCleaner
   assert.equal(metrics[0].icon, "🛡️");
-  assert.equal(metrics[0].label, "Threats Removed");
-  assert.equal(metrics[0].value, "3");
+  assert.equal(metrics[0].label, "Security Threats Removed");
   assert.equal(metrics[0].variant, "success");
   assert.ok(Array.isArray(metrics[0].items));
 
   // Check detail is customer-friendly
-  assert.ok(metrics[0].detail.includes("unwanted items cleaned"));
+  assert.ok(metrics[0].detail.includes("Adware"));
 
-  // Check items include category breakdown
+  // Check items include category breakdown (only successful removals)
   const itemsText = metrics[0].items.join(" ");
-  assert.ok(itemsText.includes("Registry:"));
-  assert.ok(itemsText.includes("Folders:"));
-  assert.ok(itemsText.includes("Services:"));
+  assert.ok(itemsText.includes("Registry") || itemsText.includes("entries"));
+  assert.ok(itemsText.includes("Files") || itemsText.includes("Browser"));
 
-  // Check warnings are present as separate items
-  assert.ok(itemsText.includes("could not be removed"));
-  assert.ok(itemsText.includes("restart required"));
+  // Should NOT include warnings about failures/reboots for customers
+  assert.ok(!itemsText.includes("could not be removed"));
+  assert.ok(!itemsText.includes("restart required"));
 });

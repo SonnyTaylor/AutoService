@@ -18,16 +18,28 @@ function processKVRTScan(summary) {
     ? summary.detections
     : [];
 
-  if (detections.length === 0) {
+  // Only count actually removed threats (exclude explicitly skipped ones)
+  // If no action is specified, assume it was handled
+  const removedDetections = detections.filter((d) => {
+    const action = d?.action;
+    // If action exists and is "Skip", exclude it
+    if (action && ["Skip", "skip", "SKIP"].includes(action)) {
+      return false;
+    }
+    // Otherwise include it (either has removal action or no action field means old format/removed)
+    return true;
+  });
+
+  if (removedDetections.length === 0) {
     return { count: 0, detail: null };
   }
 
   return {
-    count: detections.length,
+    count: removedDetections.length,
     detail: {
-      source: "Kaspersky Scan",
-      count: detections.length,
-      threats: detections.slice(0, 5).map((d) => d?.threat || "Unknown threat"),
+      source: "Virus Scan",
+      count: removedDetections.length,
+      detections: removedDetections,
     },
   };
 }
@@ -40,10 +52,15 @@ function processKVRTScan(summary) {
  */
 function processAdwCleanerScan(summary) {
   const cleaned = summary.cleaned || 0;
-  const failed = summary.failed || 0;
 
-  // Count items from each category
+  if (cleaned === 0) {
+    return { count: 0, detail: null };
+  }
+
+  // For customer view, trust the cleaned count and show high-level categories
+  // Count items in each category (including "Needs Reboot" since they WERE cleaned)
   const getLen = (arr) => (Array.isArray(arr) ? arr.length : 0);
+
   const browserHits = summary.browsers
     ? Object.values(summary.browsers).reduce(
         (sum, v) => sum + (Array.isArray(v) ? v.length : 0),
@@ -51,49 +68,45 @@ function processAdwCleanerScan(summary) {
       )
     : 0;
 
-  const categoryCount =
-    getLen(summary.registry) +
-    getLen(summary.files) +
-    getLen(summary.folders) +
-    getLen(summary.services) +
-    getLen(summary.tasks) +
-    getLen(summary.shortcuts) +
-    getLen(summary.dlls) +
-    getLen(summary.wmi) +
-    browserHits;
-
-  // Total items is the cleaned count
-  const totalItems = cleaned;
-
-  if (totalItems === 0) {
-    return { count: 0, detail: null };
-  }
-
-  // Build category breakdown for details
+  // Build category breakdown - show what was addressed
   const categories = [];
-  if (getLen(summary.registry) > 0)
-    categories.push(`Registry: ${getLen(summary.registry)}`);
-  if (getLen(summary.files) > 0)
-    categories.push(`Files: ${getLen(summary.files)}`);
-  if (getLen(summary.folders) > 0)
-    categories.push(`Folders: ${getLen(summary.folders)}`);
-  if (getLen(summary.services) > 0)
-    categories.push(`Services: ${getLen(summary.services)}`);
-  if (browserHits > 0) categories.push(`Browser Items: ${browserHits}`);
-  if (getLen(summary.preinstalled) > 0)
-    categories.push(`Preinstalled Apps: ${getLen(summary.preinstalled)}`);
+  const registryCount = getLen(summary.registry);
+  const filesCount = getLen(summary.files);
+  const foldersCount = getLen(summary.folders);
+  const servicesCount = getLen(summary.services);
+  const tasksCount = getLen(summary.tasks);
+  const shortcutsCount = getLen(summary.shortcuts);
+  const dllsCount = getLen(summary.dlls);
+  const wmiCount = getLen(summary.wmi);
+  const preinstalledCount = getLen(summary.preinstalled);
+
+  // Add categories with friendly names
+  if (registryCount > 0)
+    categories.push({ label: "Registry entries", count: registryCount });
+  if (filesCount > 0) categories.push({ label: "Files", count: filesCount });
+  if (foldersCount > 0)
+    categories.push({ label: "Programs/folders", count: foldersCount });
+  if (servicesCount > 0)
+    categories.push({ label: "Services", count: servicesCount });
+  if (tasksCount > 0)
+    categories.push({ label: "Scheduled tasks", count: tasksCount });
+  if (shortcutsCount > 0)
+    categories.push({ label: "Shortcuts", count: shortcutsCount });
+  if (dllsCount > 0)
+    categories.push({ label: "System files", count: dllsCount });
+  if (wmiCount > 0)
+    categories.push({ label: "System entries", count: wmiCount });
+  if (browserHits > 0)
+    categories.push({ label: "Browser extensions", count: browserHits });
+  if (preinstalledCount > 0)
+    categories.push({ label: "Unwanted apps", count: preinstalledCount });
 
   return {
-    count: totalItems,
+    count: cleaned,
     detail: {
-      source: "AdwCleaner",
-      count: totalItems,
-      failed: failed,
+      source: "Adware & PUP Removal",
+      count: cleaned,
       categories: categories,
-      needsReboot:
-        getLen(summary.preinstalled) > 0 ||
-        (Array.isArray(summary.folders) &&
-          summary.folders.some((f) => /reboot/i.test(String(f)))),
     },
   };
 }
@@ -373,51 +386,57 @@ function buildThreatMetric(totalThreats, threatDetails) {
   const items = [];
 
   threatDetails.forEach((td) => {
-    if (td.threats) {
-      // Kaspersky-style threats - list individual threats
-      items.push(
-        `${td.source}: ${td.threats.join(", ")}${
-          td.count > 5 ? ` (+${td.count - 5} more)` : ""
-        }`
-      );
+    if (td.detections) {
+      // KVRT-style detections - show count and types
+      const detectionTypes = new Set();
+      td.detections.forEach((d) => {
+        const threat = d?.threat || "";
+        // Extract type from threat name (e.g., "Trojan", "Backdoor", "Adware")
+        const match = threat.match(/^([^.:]+)/);
+        if (match) {
+          detectionTypes.add(match[1]);
+        }
+      });
+
+      if (detectionTypes.size > 0) {
+        items.push(
+          `${td.count} ${Array.from(detectionTypes).join(", ")} threat${
+            td.count !== 1 ? "s" : ""
+          }`
+        );
+      } else {
+        items.push(
+          `${td.count} threat${td.count !== 1 ? "s" : ""} detected and removed`
+        );
+      }
     } else if (td.categories) {
       // AdwCleaner-style categories - break down by type
       if (td.categories.length > 0) {
-        td.categories.forEach((cat) => items.push(cat));
-      }
-
-      // Add warnings as separate items if present
-      if (td.failed > 0) {
-        items.push(`⚠️ ${td.failed} items could not be removed`);
-      }
-      if (td.needsReboot) {
-        items.push(`🔄 System restart required to complete cleanup`);
+        td.categories.forEach((cat) => {
+          items.push(`${cat.count} ${cat.label}`);
+        });
       }
     } else if (td.types) {
       // Generic types
-      items.push(`${td.source}: ${td.count} items (${td.types.join(", ")})`);
+      items.push(`${td.count} items (${td.types.join(", ")})`);
     } else {
-      items.push(`${td.source}: ${td.count} items removed`);
+      items.push(`${td.count} items removed`);
     }
   });
 
-  // Create a more descriptive detail line
+  // Create a clean, customer-friendly summary
   const detailParts = [];
   threatDetails.forEach((td) => {
-    if (td.threats) {
-      detailParts.push(`${td.count} viruses detected`);
-    } else if (td.categories) {
-      detailParts.push(`${td.count} unwanted items cleaned`);
-    } else {
-      detailParts.push(`${td.count} items removed`);
+    if (td.source) {
+      detailParts.push(td.source);
     }
   });
 
   return {
     icon: "🛡️",
-    label: "Threats Removed",
+    label: "Security Threats Removed",
     value: totalThreats.toString(),
-    detail: detailParts.join(", "),
+    detail: detailParts.join(" • "),
     variant: "success",
     items: items.length > 0 ? items : undefined,
   };
