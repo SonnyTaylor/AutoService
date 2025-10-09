@@ -278,6 +278,7 @@
   position: sticky;
   top: calc(34px + 52px); /* titlebar (34px) + header (approx. 52px) */
   z-index: 2; /* keep under the top header (z-index:4) but above card content */
+  height: 10px;
 }
 
 [data-page="component-test"] .audio-card-header .title {
