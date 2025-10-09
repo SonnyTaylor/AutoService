@@ -48,7 +48,16 @@ export function buildCustomerPrintHtml(report, options = {}) {
  * @param {HTMLElement} sectionsEl
  */
 export function buildPrintableDocumentHtml(report, sectionsEl) {
-  const inner = buildPrintableHtml(report, sectionsEl);
+  // Clone the sections element to avoid modifying the live DOM
+  const clonedSections = sectionsEl.cloneNode(true);
+
+  // Open all <details> elements for print (can't interact with dropdowns on paper!)
+  const allDetails = clonedSections.querySelectorAll("details");
+  allDetails.forEach((details) => {
+    details.setAttribute("open", "");
+  });
+
+  const inner = buildPrintableHtml(report, clonedSections);
   return `<!DOCTYPE html>
 <html>
   <head>

@@ -214,35 +214,33 @@ export const PRINT_LIGHT_CSS = `
   .card.wn11 .wn11-passing-details {
     margin-top: 4px;
   }
+  /* Force details open for print - can't interact with dropdowns on paper! */
+  .card.wn11 .wn11-passing-details[open],
+  .card.wn11 .wn11-passing-details {
+    display: block;
+  }
   .card.wn11 .wn11-passing-details summary {
-    font-size: 9.5pt;
-    font-weight: 500;
-    color: #475569;
-    cursor: pointer;
-    user-select: none;
-    padding: 5px 8px;
-    background: #eff6ff;
-    border: 1px solid #93c5fd;
-    border-radius: 4px;
+    font-size: 9pt;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #64748b;
+    margin-bottom: 6px;
     list-style: none;
+    cursor: default;
+    padding: 0;
+    background: none;
+    border: none;
   }
   .card.wn11 .wn11-passing-details summary::-webkit-details-marker {
     display: none;
   }
+  /* Hide the dropdown arrow in print */
   .card.wn11 .wn11-passing-details summary::before {
-    content: "▸ ";
-    display: inline-block;
-    margin-right: 4px;
-    transition: transform 0.2s;
-  }
-  .card.wn11 .wn11-passing-details[open] summary::before {
-    transform: rotate(90deg);
-  }
-  .card.wn11 .wn11-passing-details[open] summary {
-    margin-bottom: 6px;
+    display: none;
   }
   .card.wn11 .wn11-passing-details .pill-row {
-    margin-top: 6px;
+    margin-top: 0;
   }
   .card.wn11 .wn11-recommendations {
     padding: 10px 12px;
