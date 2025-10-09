@@ -1,6 +1,7 @@
 """Disk space report service.
 
 Reports disk usage for all mounted drives using shutil.disk_usage.
+Excludes USB drives and network locations.
 
 Task schema (dict expected):
   type: "disk_space_report"
@@ -31,13 +32,32 @@ Return dict structure:
 import shutil
 import string
 import logging
+import ctypes
 from typing import Dict, Any, List
 
 logger = logging.getLogger(__name__)
 
 
+def _get_drive_type(drive: str) -> int:
+    """Get the drive type using Windows API.
+
+    Returns:
+        0: Unknown
+        1: No root directory
+        2: Removable (USB)
+        3: Fixed (HDD/SSD)
+        4: Remote (Network)
+        5: CD-ROM
+        6: RAM disk
+    """
+    try:
+        return ctypes.windll.kernel32.GetDriveTypeW(drive)
+    except Exception:
+        return 0  # Unknown
+
+
 def run_disk_space_report(task: Dict[str, Any]) -> Dict[str, Any]:
-    """Run disk space report for all drives."""
+    """Run disk space report for all drives, excluding USB and network drives."""
     try:
         drives = []
         warnings = []
@@ -46,6 +66,14 @@ def run_disk_space_report(task: Dict[str, Any]) -> Dict[str, Any]:
         for letter in string.ascii_uppercase:
             drive = f"{letter}:\\"
             try:
+                # Check drive type - skip USB (2) and network (4) drives
+                drive_type = _get_drive_type(drive)
+                if drive_type in (
+                    2,
+                    4,
+                ):  # DRIVE_REMOVABLE (USB) or DRIVE_REMOTE (Network)
+                    continue
+
                 usage = shutil.disk_usage(drive)
                 total_gb = usage.total / (1024**3)
                 used_gb = usage.used / (1024**3)
