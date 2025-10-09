@@ -132,7 +132,7 @@ function setupPrintHandlers(report, sectionsEl) {
   const customerLayoutSelect = document.getElementById(
     "svc-print-customer-layout"
   );
-  const customerLayouts = ["list", "two", "three", "masonry", "grouped"];
+  const customerLayouts = ["list", "two", "three", "masonry"];
   let currentCustomerLayout = customerLayouts.includes(
     customerLayoutSelect?.value || ""
   )

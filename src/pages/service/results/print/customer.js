@@ -1,21 +1,6 @@
-import {
-  extractCustomerMetrics,
-  buildCustomerTaskList,
-  generateRecommendations,
-} from "./metrics.js";
+import { extractCustomerMetrics } from "./metrics.js";
 
-const CUSTOMER_LAYOUTS = new Set([
-  "list",
-  "two",
-  "three",
-  "masonry",
-  "grouped",
-]);
-const GROUP_TITLES = {
-  success: "Everything Completed",
-  info: "System Updates",
-  warning: "Needs Attention",
-};
+const CUSTOMER_LAYOUTS = new Set(["list", "two", "three", "masonry"]);
 
 function normalizeLayout(layout) {
   return CUSTOMER_LAYOUTS.has(layout) ? layout : "list";
@@ -122,44 +107,9 @@ export function buildCustomerSummary(report, layout = "list") {
 
   const listClass = `layout-${resolvedLayout}`;
 
-  let metricsMarkup = trimmedMetrics
+  const metricsMarkup = trimmedMetrics
     .map((metric) => renderMetricCard(metric))
     .join("");
-
-  if (resolvedLayout === "grouped") {
-    const grouped = trimmedMetrics.reduce((acc, metric) => {
-      const variant = ["success", "warning", "info"].includes(metric.variant)
-        ? metric.variant
-        : "info";
-      if (!acc[variant]) acc[variant] = [];
-      acc[variant].push(metric);
-      return acc;
-    }, {});
-
-    const order = ["warning", "success", "info"];
-    metricsMarkup = order
-      .map((variant) => {
-        const groupMetrics = grouped[variant];
-        if (!groupMetrics || groupMetrics.length === 0) return "";
-        const title = GROUP_TITLES[variant] || "Additional Details";
-        return `
-          <section class="metrics-group metrics-group--${variant}">
-            <header class="metrics-group-title">${title}</header>
-            <div class="metrics-group-cards">
-              ${groupMetrics.map((metric) => renderMetricCard(metric)).join("")}
-            </div>
-          </section>
-        `;
-      })
-      .filter(Boolean)
-      .join("");
-
-    if (!metricsMarkup.trim()) {
-      metricsMarkup = trimmedMetrics
-        .map((metric) => renderMetricCard(metric))
-        .join("");
-    }
-  }
 
   return `
     <div class="customer-summary ${listClass}" data-layout="${resolvedLayout}">

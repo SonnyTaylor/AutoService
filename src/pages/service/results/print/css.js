@@ -435,62 +435,6 @@ export const CUSTOMER_PRINT_CSS = `
     }
   }
 
-  .metrics-list.layout-grouped {
-    display: grid;
-    gap: 14px;
-  }
-
-  .metrics-group {
-    border: 1px solid #cbd5e1;
-    border-radius: 8px;
-    padding: 10px 12px;
-    background: #f8fafc;
-    page-break-inside: avoid;
-    break-inside: avoid;
-  }
-
-  .metrics-group--success {
-    border-color: #86efac;
-    background: #f3fdf6;
-  }
-
-  .metrics-group--warning {
-    border-color: #facc15;
-    background: #fefce8;
-  }
-
-  .metrics-group--info {
-    border-color: #93c5fd;
-    background: #eef5ff;
-  }
-
-  .metrics-group-title {
-    margin: 0 0 8px;
-    font-size: 10pt;
-    font-weight: 700;
-    letter-spacing: 0.3px;
-    color: #0f172a;
-    text-transform: uppercase;
-  }
-
-  .metrics-group--success .metrics-group-title {
-    color: #166534;
-  }
-
-  .metrics-group--warning .metrics-group-title {
-    color: #92400e;
-  }
-
-  .metrics-group--info .metrics-group-title {
-    color: #1e3a8a;
-  }
-
-  .metrics-group-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 10px;
-  }
-  
   .metric-card {
     display: flex;
     align-items: start;

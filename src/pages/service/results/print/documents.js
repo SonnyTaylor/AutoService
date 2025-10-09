@@ -32,9 +32,7 @@ export function buildCustomerPrintHtml(report, options = {}) {
   const overall = String(report.overall_status || "").toLowerCase();
   const requestedLayout =
     typeof options.layout === "string" ? options.layout : "list";
-  const layout = ["list", "two", "three", "masonry", "grouped"].includes(
-    requestedLayout
-  )
+  const layout = ["list", "two", "three", "masonry"].includes(requestedLayout)
     ? requestedLayout
     : "list";
   const body = `

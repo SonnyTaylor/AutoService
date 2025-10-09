@@ -1081,7 +1081,8 @@
   outline-offset: 1px;
 }
 [data-page="service-results"] .layout-picker select option {
-  color: #0f172a;
+  color: #f8fafc;
+  background: #0f172a;
 }
 [data-page="service-results"] .preview-head button {
   display: flex;
