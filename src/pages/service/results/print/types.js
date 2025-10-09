@@ -22,4 +22,6 @@
  * @property {string} [detail] - Additional context
  * @property {'success' | 'info' | 'warning'} variant - Color variant
  * @property {string[]} [items] - Detailed breakdown items (optional list)
+ * @property {boolean} [keepAllItems] - If true, skip item truncation in customer summary
+ * @property {number} [itemDisplayLimit] - Optional override for truncation limit
  */

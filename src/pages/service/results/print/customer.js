@@ -90,7 +90,18 @@ export function buildCustomerSummary(report, layout = "list") {
       return metric;
     }
 
-    const limit = 3;
+    if (metric.keepAllItems) {
+      return metric;
+    }
+
+    const limit = Number.isFinite(metric.itemDisplayLimit)
+      ? Number(metric.itemDisplayLimit)
+      : 3;
+
+    if (metric.items.length <= limit) {
+      return metric;
+    }
+
     const displayed = metric.items.slice(0, limit);
     const remainder = metric.items.length - displayed.length;
     return {

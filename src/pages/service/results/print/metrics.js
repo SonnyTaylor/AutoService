@@ -638,6 +638,7 @@ function buildSpeedTestMetric(speedTestResults) {
     detail: "Download speed",
     variant: "info",
     items,
+    keepAllItems: true,
   };
 }
 
