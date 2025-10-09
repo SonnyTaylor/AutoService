@@ -1106,6 +1106,10 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 6px;
+  padding: 8px 0;
+}
+[data-page="service-results"] .result-header h3 {
+  margin: 0;
 }
 [data-page="service-results"] .status {
   padding: 2px 6px;
