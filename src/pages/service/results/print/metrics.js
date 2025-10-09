@@ -128,6 +128,39 @@ function processDiskCleanup(summary) {
   };
 }
 
+/**
+ * Process CHKDSK disk scan results.
+ * @private
+ * @param {object} summary - Task summary containing disk scan data
+ * @param {string} status - Task execution status
+ * @returns {string|null} Human-readable health status
+ */
+function processCHKDSKScan(summary, status) {
+  if (status !== "success") return null;
+
+  const drive = summary.drive || "Unknown drive";
+  const mode = summary.mode || "unknown";
+
+  if (summary.found_no_problems) {
+    return `${drive}: No problems found`;
+  }
+
+  if (summary.made_corrections) {
+    return `${drive}: Errors found and corrected`;
+  }
+
+  if (summary.scheduled) {
+    return `${drive}: Scan scheduled for next boot`;
+  }
+
+  // If we have bad sectors or other issues but no corrections made
+  if (summary.bad_sectors_kb && summary.bad_sectors_kb > 0) {
+    return `${drive}: Bad sectors detected`;
+  }
+
+  return null;
+}
+
 // =============================================================================
 // SYSTEM HEALTH PROCESSING
 // =============================================================================
@@ -366,6 +399,30 @@ function processWhyNotWin11Check(summary, status) {
     passingCount,
     totalCount,
     failingChecks: summary.failing_checks || [],
+  };
+}
+
+/**
+ * Process Windows Update results.
+ * @private
+ * @param {object} summary - Task summary containing update data
+ * @param {string} status - Task execution status
+ * @returns {object|null} Update installation results
+ */
+function processWindowsUpdate(summary, status) {
+  if (status !== "success" && status !== "completed_with_errors") return null;
+
+  const install = summary.install || {};
+  const preScan = summary.pre_scan || {};
+  const postScan = summary.post_scan || {};
+
+  return {
+    updatesAvailable: preScan.count_total || 0,
+    updatesInstalled: install.count_installed || 0,
+    updatesFailed: install.count_failed || 0,
+    rebootRequired: summary.reboot_required || false,
+    windowsUpdates: install.count_windows_installed || 0,
+    driverUpdates: install.count_driver_installed || 0,
   };
 }
 
@@ -674,6 +731,43 @@ function buildWin11CompatibilityMetric(compatCheck) {
 }
 
 /**
+ * Build Windows Update metric card.
+ * @private
+ * @param {object|null} updateResults - Windows Update data
+ * @returns {CustomerMetric|null} Metric object or null if no updates
+ */
+function buildWindowsUpdateMetric(updateResults) {
+  if (!updateResults || updateResults.updatesInstalled === 0) return null;
+
+  const items = [];
+
+  if (updateResults.windowsUpdates > 0) {
+    items.push(`${updateResults.windowsUpdates} Windows updates`);
+  }
+
+  if (updateResults.driverUpdates > 0) {
+    items.push(`${updateResults.driverUpdates} driver updates`);
+  }
+
+  if (updateResults.updatesFailed > 0) {
+    items.push(`${updateResults.updatesFailed} failed`);
+  }
+
+  if (updateResults.rebootRequired) {
+    items.push("Reboot required");
+  }
+
+  return {
+    icon: "🔄",
+    label: "Updates Installed",
+    value: `${updateResults.updatesInstalled}`,
+    detail: updateResults.rebootRequired ? "Reboot required" : "Ready to use",
+    variant: updateResults.updatesFailed > 0 ? "warning" : "success",
+    items: items.length > 0 ? items : undefined,
+  };
+}
+
+/**
  * Build default fallback metric when no specific metrics are available.
  * @private
  * @param {number} taskCount - Total number of tasks performed
@@ -710,6 +804,7 @@ function aggregateTaskData(results) {
     networkLatency: null,
     networkThroughput: null,
     win11Compatibility: null,
+    windowsUpdate: null,
   };
 
   results.forEach((result) => {
@@ -741,6 +836,9 @@ function aggregateTaskData(results) {
       if (health) data.systemHealth.push(health);
     } else if (type === "dism_health_check") {
       const health = processDISMHealthCheck(summary, status);
+      if (health) data.systemHealth.push(health);
+    } else if (type === "chkdsk_scan") {
+      const health = processCHKDSKScan(summary, status);
       if (health) data.systemHealth.push(health);
     }
 
@@ -774,6 +872,14 @@ function aggregateTaskData(results) {
     // Process compatibility check tasks
     else if (type === "whynotwin11_check") {
       data.win11Compatibility = processWhyNotWin11Check(summary, status);
+    }
+
+    // Process Windows Update tasks
+    else if (type === "windows_update") {
+      const updates = processWindowsUpdate(summary, status);
+      if (updates) {
+        data.windowsUpdate = updates;
+      }
     }
   });
 
@@ -823,6 +929,9 @@ function buildMetricsFromData(data, totalTasks) {
 
   const win11Metric = buildWin11CompatibilityMetric(data.win11Compatibility);
   if (win11Metric) metrics.push(win11Metric);
+
+  const updatesMetric = buildWindowsUpdateMetric(data.windowsUpdate);
+  if (updatesMetric) metrics.push(updatesMetric);
 
   // Add fallback metric if no specific metrics were generated
   if (metrics.length === 0) {

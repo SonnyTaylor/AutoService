@@ -177,3 +177,63 @@ test("extractCustomerMetrics handles AdwCleaner results correctly", () => {
   assert.ok(!itemsText.includes("could not be removed"));
   assert.ok(!itemsText.includes("restart required"));
 });
+
+test("extractCustomerMetrics handles CHKDSK scan results", () => {
+  const results = [
+    baseResult({
+      task_type: "chkdsk_scan",
+      summary: {
+        drive: "C:",
+        mode: "read_only",
+        found_no_problems: true,
+      },
+    }),
+    baseResult({
+      task_type: "chkdsk_scan",
+      summary: {
+        drive: "D:",
+        mode: "fix_errors",
+        made_corrections: true,
+      },
+    }),
+  ];
+
+  const metrics = extractCustomerMetrics(results);
+  assert.equal(metrics.length, 1);
+
+  // Check system health metric includes CHKDSK results
+  assert.equal(metrics[0].label, "System Health");
+  assert.ok(metrics[0].items.some((item) => item.includes("C:")));
+  assert.ok(metrics[0].items.some((item) => item.includes("D:")));
+});
+
+test("extractCustomerMetrics handles Windows Update results", () => {
+  const results = [
+    baseResult({
+      task_type: "windows_update",
+      summary: {
+        install: {
+          count_installed: 5,
+          count_windows_installed: 3,
+          count_driver_installed: 2,
+          count_failed: 0,
+        },
+        reboot_required: true,
+      },
+    }),
+  ];
+
+  const metrics = extractCustomerMetrics(results);
+  assert.equal(metrics.length, 1);
+
+  // Check Windows Update metric
+  assert.equal(metrics[0].icon, "🔄");
+  assert.equal(metrics[0].label, "Updates Installed");
+  assert.equal(metrics[0].value, "5");
+  assert.equal(metrics[0].detail, "Reboot required");
+  assert.equal(metrics[0].variant, "success");
+  assert.ok(Array.isArray(metrics[0].items));
+  assert.ok(metrics[0].items.some((item) => item.includes("Windows updates")));
+  assert.ok(metrics[0].items.some((item) => item.includes("driver updates")));
+  assert.ok(metrics[0].items.some((item) => item.includes("Reboot required")));
+});
