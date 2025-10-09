@@ -488,6 +488,7 @@
   align-items: center;
   gap: 12px;
   margin: 0;
+  margin-top: 12px;
 }
 /* Extra space between the buttons row and the "Overall" row */
 [data-page="component-test"] #panel-network .row + .row {
