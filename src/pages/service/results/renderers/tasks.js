@@ -29,6 +29,7 @@ export const RENDERERS = {
   whynotwin11_check: renderWhyNotWin11,
   windows_update: renderWindowsUpdate,
   winsat_disk: renderWinSAT,
+  disk_space_report: renderDiskSpace,
 };
 
 export function renderGeneric(res, index) {
@@ -1718,6 +1719,58 @@ function renderWinSAT(res, index) {
             </details>
           `
         : ""}
+    </div>
+  `;
+}
+
+function renderDiskSpace(res, index) {
+  const s = res.summary || {};
+  const drives = s.drives || [];
+  const hr = s.human_readable || {};
+  const warnings = hr.warnings || [];
+
+  return html`
+    <div class="card disk-space">
+      ${renderHeader("Disk Space Report", res.status)}
+      <div class="disk-space-content">
+        ${drives.length > 0
+          ? html`
+              <div class="disk-drives">
+                ${map(drives, (drive) => {
+                  const percent = drive.usage_percent || 0;
+                  const variant =
+                    percent > 90 ? "fail" : percent > 80 ? "warn" : "ok";
+                  return html`
+                    <div class="drive-item">
+                      <div class="drive-label">${drive.drive}</div>
+                      <div class="drive-bar">
+                        <div
+                          class="drive-bar-fill ${variant}"
+                          style="width: ${Math.min(percent, 100)}%"
+                        ></div>
+                      </div>
+                      <div class="drive-stats">
+                        ${drive.used_gb?.toFixed(1) || 0}GB used of
+                        ${drive.total_gb?.toFixed(1) || 0}GB
+                        (${percent?.toFixed(1) || 0}%)
+                      </div>
+                    </div>
+                  `;
+                })}
+              </div>
+            `
+          : html`<div class="no-data">No drive information available</div>`}
+        ${warnings.length > 0
+          ? html`
+              <div class="warnings">
+                <h4>⚠️ Warnings</h4>
+                <ul>
+                  ${map(warnings, (warning) => html`<li>${warning}</li>`)}
+                </ul>
+              </div>
+            `
+          : ""}
+      </div>
     </div>
   `;
 }

@@ -473,6 +473,20 @@ export const SERVICES = {
       };
     },
   },
+  disk_space_report: {
+    id: "disk_space_report",
+    label: "Disk Space Report",
+    group: "Diagnostics",
+    category: "Diagnostics",
+    defaultParams: {},
+    toolKeys: [],
+    async build({ params }) {
+      return {
+        type: "disk_space_report",
+        ui_label: "Disk Space Report",
+      };
+    },
+  },
 };
 
 /**
