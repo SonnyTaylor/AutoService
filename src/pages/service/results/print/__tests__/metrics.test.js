@@ -6,6 +6,7 @@ import {
   buildCustomerTaskList,
   generateRecommendations,
 } from "../metrics.js";
+import { buildCustomerSummary } from "../customer.js";
 
 const baseResult = (overrides = {}) => ({
   task_type: "sample_task",
@@ -236,4 +237,74 @@ test("extractCustomerMetrics handles Windows Update results", () => {
   assert.ok(metrics[0].items.some((item) => item.includes("Windows updates")));
   assert.ok(metrics[0].items.some((item) => item.includes("driver updates")));
   assert.ok(metrics[0].items.some((item) => item.includes("Reboot required")));
+});
+
+test("buildCustomerSummary renders compact three-column layout", () => {
+  const report = {
+    results: [
+      baseResult({
+        task_type: "bleachbit_clean",
+        summary: { space_recovered_bytes: 2 * 1024 ** 3, files_deleted: 20 },
+      }),
+      baseResult({
+        task_type: "speedtest",
+        summary: {
+          human_readable: {
+            download_mbps: 120.4,
+            upload_mbps: 12.3,
+            ping_ms: 22,
+          },
+          results: {},
+        },
+      }),
+    ],
+  };
+
+  const html = buildCustomerSummary(report, "three");
+  assert.ok(html.includes("customer-summary layout-three"));
+  assert.ok(html.includes("metrics-list layout-three"));
+  assert.ok((html.match(/metric-card/g) || []).length >= 2);
+});
+
+test("buildCustomerSummary groups metrics by status", () => {
+  const report = {
+    results: [
+      baseResult({
+        task_type: "kvrt_scan",
+        summary: { detections: [{ threat: "Trojan.Win32.Agent" }] },
+      }),
+      baseResult({
+        task_type: "windows_update",
+        status: "completed_with_errors",
+        summary: {
+          install: {
+            count_installed: 3,
+            count_windows_installed: 2,
+            count_driver_installed: 1,
+            count_failed: 1,
+          },
+          reboot_required: false,
+        },
+      }),
+      baseResult({
+        task_type: "speedtest",
+        summary: {
+          human_readable: {
+            download_mbps: 50.2,
+            upload_mbps: 10.1,
+            ping_ms: 18,
+            verdict: "Good",
+          },
+        },
+      }),
+    ],
+  };
+
+  const html = buildCustomerSummary(report, "grouped");
+  assert.ok(html.includes("metrics-group metrics-group--warning"));
+  assert.ok(html.includes("metrics-group metrics-group--success"));
+  assert.ok(html.includes("metrics-group metrics-group--info"));
+  assert.ok(html.includes("Needs Attention"));
+  assert.ok(html.includes("Everything Completed"));
+  assert.ok(html.includes("System Updates"));
 });

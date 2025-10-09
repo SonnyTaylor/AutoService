@@ -110,7 +110,19 @@
     >
       <div class="preview-card">
         <div class="preview-head">
-          <div class="section-title">Customer Print Preview</div>
+          <div class="preview-head-left">
+            <div class="section-title">Customer Print Preview</div>
+            <label class="layout-picker" for="svc-print-customer-layout">
+              <span class="lab">Layout</span>
+              <select id="svc-print-customer-layout">
+                <option value="list">List (single column)</option>
+                <option value="two">Two columns</option>
+                <option value="three">Three columns (compact)</option>
+                <option value="masonry">Masonry layout</option>
+                <option value="grouped">Grouped by category/status</option>
+              </select>
+            </label>
+          </div>
           <button id="svc-print-customer" class="ghost small">
             <i
               class="ph ph-printer"

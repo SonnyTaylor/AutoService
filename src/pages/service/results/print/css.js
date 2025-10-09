@@ -293,63 +293,76 @@ export const PRINT_LIGHT_CSS = `
 `;
 
 export const CUSTOMER_PRINT_CSS = `
-  @page { size: A4; margin: 12mm; }
+  @page { size: A4; margin: 10mm; }
   * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact; }
   
   html, body {
     background: #fff !important;
     color: #1e293b !important;
     font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
-    font-size: 11pt;
-    line-height: 1.6;
+  font-size: 10pt;
+  line-height: 1.45;
     margin: 0;
     padding: 0;
   }
   
-  body { margin: 0; padding: 20px; }
+  body { margin: 0; padding: 12px; }
   
   /* Customer Header */
   .customer-header {
-    margin-bottom: 24px;
-    padding-bottom: 20px;
-    border-bottom: 3px solid #0f172a;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #0f172a;
   }
   
-  .company-info {
-    margin-bottom: 16px;
+  .brand-block {
+    min-width: 0;
   }
   
   .company-name {
     margin: 0;
-    font-size: 32px;
+    font-size: 24px;
     font-weight: 700;
     color: #0f172a;
-    letter-spacing: -0.5px;
+    letter-spacing: -0.3px;
   }
   
   .tagline {
     margin: 4px 0 0;
-    font-size: 12pt;
+    font-size: 9pt;
     color: #64748b;
-    font-weight: 500;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
   }
   
-  .service-meta {
+  .header-meta {
     display: flex;
-    align-items: center;
-    gap: 16px;
-    flex-wrap: wrap;
-    margin-top: 12px;
+    align-items: flex-end;
+    flex-direction: column;
+    gap: 6px;
+    text-align: right;
+  }
+  
+  .meta-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 9pt;
+    color: #475569;
   }
   
   .status-badge {
     display: inline-block;
-    padding: 6px 16px;
+  padding: 4px 12px;
     border-radius: 999px;
     font-weight: 600;
-    font-size: 10pt;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+  font-size: 9pt;
+  letter-spacing: 0.4px;
   }
   
   .status-badge.success {
@@ -364,12 +377,6 @@ export const CUSTOMER_PRINT_CSS = `
     border: 2px solid #93c5fd;
   }
   
-  .date-info {
-    font-size: 11pt;
-    color: #475569;
-    font-weight: 500;
-  }
-  
   /* Customer Summary */
   .customer-summary {
     max-width: 100%;
@@ -377,36 +384,157 @@ export const CUSTOMER_PRINT_CSS = `
   
   .section-heading {
     margin: 0 0 10px;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 700;
     color: #0f172a;
     letter-spacing: -0.3px;
   }
   
   .intro-text {
-    margin: 0 0 16px;
-    font-size: 10pt;
+    margin: 0 0 12px;
+    font-size: 9.5pt;
     color: #475569;
-    line-height: 1.6;
+    line-height: 1.45;
   }
   
-  /* Metrics List - Single Column */
+  /* Metrics List Layouts */
   .metrics-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 20px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .metrics-list.layout-list {
+    grid-template-columns: 1fr;
+  }
+
+  .metrics-list.layout-two {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  }
+
+  .metrics-list.layout-three {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+
+  .metrics-list.layout-masonry {
+    display: block;
+    column-count: 3;
+    column-gap: 12px;
+  }
+
+  @media (max-width: 900px) {
+    .metrics-list.layout-masonry {
+      column-count: 2;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .metrics-list.layout-masonry {
+      column-count: 1;
+    }
+  }
+
+  .metrics-list.layout-grouped {
+    display: grid;
+    gap: 14px;
+  }
+
+  .metrics-group {
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 10px 12px;
+    background: #f8fafc;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .metrics-group--success {
+    border-color: #86efac;
+    background: #f3fdf6;
+  }
+
+  .metrics-group--warning {
+    border-color: #facc15;
+    background: #fefce8;
+  }
+
+  .metrics-group--info {
+    border-color: #93c5fd;
+    background: #eef5ff;
+  }
+
+  .metrics-group-title {
+    margin: 0 0 8px;
+    font-size: 10pt;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: #0f172a;
+    text-transform: uppercase;
+  }
+
+  .metrics-group--success .metrics-group-title {
+    color: #166534;
+  }
+
+  .metrics-group--warning .metrics-group-title {
+    color: #92400e;
+  }
+
+  .metrics-group--info .metrics-group-title {
+    color: #1e3a8a;
+  }
+
+  .metrics-group-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
   }
   
   .metric-card {
     display: flex;
     align-items: start;
-    gap: 12px;
-    padding: 12px 14px;
-    border-radius: 8px;
-    border: 1.5px solid;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid;
     page-break-inside: avoid;
     break-inside: avoid;
+    column-break-inside: avoid;
+    width: 100%;
+  }
+
+  .metrics-list.layout-masonry .metric-card {
+    display: inline-flex;
+    margin-bottom: 10px;
+  }
+
+  .customer-summary.layout-three .metric-card,
+  .customer-summary.layout-masonry .metric-card {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .customer-summary.layout-three .metric-icon,
+  .customer-summary.layout-masonry .metric-icon {
+    font-size: 18px;
+  }
+
+  .customer-summary.layout-three .metric-value,
+  .customer-summary.layout-masonry .metric-value {
+    font-size: 14px;
+  }
+
+  .customer-summary.layout-three .metric-detail,
+  .customer-summary.layout-masonry .metric-detail,
+  .customer-summary.layout-three .metric-items,
+  .customer-summary.layout-masonry .metric-items {
+    font-size: 7.5pt;
+  }
+
+  .customer-summary.layout-three .metric-label,
+  .customer-summary.layout-masonry .metric-label {
+    font-size: 7.5pt;
   }
   
   .metric-card.success {
@@ -419,11 +547,16 @@ export const CUSTOMER_PRINT_CSS = `
     border-color: #93c5fd;
   }
   
+  .metric-card.warning {
+    background: #fef9c3;
+    border-color: #facc15;
+  }
+  
   .metric-icon {
-    font-size: 28px;
+    font-size: 22px;
     line-height: 1;
     flex-shrink: 0;
-    margin-top: 2px;
+    margin-top: 1px;
   }
   
   .metric-content {
@@ -432,16 +565,16 @@ export const CUSTOMER_PRINT_CSS = `
   }
   
   .metric-label {
-    font-size: 9pt;
+    font-size: 8pt;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.4px;
     color: #64748b;
     font-weight: 600;
     margin-bottom: 2px;
   }
   
   .metric-value {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 700;
     color: #0f172a;
     margin-bottom: 2px;
@@ -456,8 +589,12 @@ export const CUSTOMER_PRINT_CSS = `
     color: #1e40af;
   }
   
+  .metric-card.warning .metric-value {
+    color: #92400e;
+  }
+  
   .metric-detail {
-    font-size: 8.5pt;
+    font-size: 8pt;
     color: #64748b;
     margin-top: 2px;
   }
@@ -466,9 +603,9 @@ export const CUSTOMER_PRINT_CSS = `
     list-style: none;
     padding: 0;
     margin: 6px 0 0;
-    font-size: 8.5pt;
+    font-size: 8pt;
     color: #475569;
-    line-height: 1.5;
+    line-height: 1.35;
   }
   
   .metric-items li {
@@ -492,29 +629,33 @@ export const CUSTOMER_PRINT_CSS = `
     color: #3b82f6;
   }
   
+  .metric-card.warning .metric-items li::before {
+    color: #f59e0b;
+  }
+  
   /* Footer */
   .footer-note {
-    margin-top: 24px;
-    padding-top: 16px;
-    border-top: 1.5px solid #e2e8f0;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid #e2e8f0;
   }
   
   .footer-note p {
-    margin: 6px 0;
-    font-size: 10pt;
+    margin: 4px 0;
+    font-size: 9pt;
     color: #475569;
   }
   
   .footer-note strong {
     color: #0f172a;
-    font-size: 10.5pt;
+    font-size: 9.5pt;
   }
   
   .small-print {
-    font-size: 8.5pt !important;
+    font-size: 8pt !important;
     color: #94a3b8 !important;
     font-style: italic;
-    line-height: 1.4;
+    line-height: 1.3;
   }
   
   /* Typography */

@@ -25,15 +25,23 @@ export function buildPrintableHtml(report, sectionsEl) {
 /**
  * Build customer summary markup.
  * @param {ServiceReport} report
+ * @param {{ layout?: string }} [options]
  */
-export function buildCustomerPrintHtml(report) {
+export function buildCustomerPrintHtml(report, options = {}) {
   const title = "Service Summary";
   const overall = String(report.overall_status || "").toLowerCase();
+  const requestedLayout =
+    typeof options.layout === "string" ? options.layout : "list";
+  const layout = ["list", "two", "three", "masonry", "grouped"].includes(
+    requestedLayout
+  )
+    ? requestedLayout
+    : "list";
   const body = `
     ${buildCustomerHeader(title, overall, report)}
-    ${buildCustomerSummary(report)}
+    ${buildCustomerSummary(report, layout)}
   `;
-  return `<div>${body}</div>`;
+  return `<div class="customer-print layout-${layout}" data-layout="${layout}">${body}</div>`;
 }
 
 /**
@@ -59,9 +67,10 @@ export function buildPrintableDocumentHtml(report, sectionsEl) {
 /**
  * Wrap customer summary markup in a standalone HTML document.
  * @param {ServiceReport} report
+ * @param {{ layout?: string }} [options]
  */
-export function buildCustomerPrintDocumentHtml(report) {
-  const inner = buildCustomerPrintHtml(report);
+export function buildCustomerPrintDocumentHtml(report, options = {}) {
+  const inner = buildCustomerPrintHtml(report, options);
   return `<!DOCTYPE html>
 <html>
   <head>

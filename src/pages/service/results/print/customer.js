@@ -4,6 +4,51 @@ import {
   generateRecommendations,
 } from "./metrics.js";
 
+const CUSTOMER_LAYOUTS = new Set([
+  "list",
+  "two",
+  "three",
+  "masonry",
+  "grouped",
+]);
+const GROUP_TITLES = {
+  success: "Everything Completed",
+  info: "System Updates",
+  warning: "Needs Attention",
+};
+
+function normalizeLayout(layout) {
+  return CUSTOMER_LAYOUTS.has(layout) ? layout : "list";
+}
+
+function renderMetricCard(metric) {
+  return `
+          <div class="metric-card ${metric.variant || "info"}" data-variant="${
+    metric.variant || "info"
+  }">
+            <div class="metric-icon">${metric.icon}</div>
+            <div class="metric-content">
+              <div class="metric-label">${metric.label}</div>
+              <div class="metric-value">${metric.value}</div>
+              ${
+                metric.detail
+                  ? `<div class="metric-detail">${metric.detail}</div>`
+                  : ""
+              }
+              ${
+                metric.items && metric.items.length > 0
+                  ? `
+                <ul class="metric-items">
+                  ${metric.items.map((item) => `<li>${item}</li>`).join("")}
+                </ul>
+              `
+                  : ""
+              }
+            </div>
+          </div>
+        `;
+}
+
 /**
  * @typedef {import('./types').ServiceReport} ServiceReport
  */
@@ -18,25 +63,30 @@ export function buildCustomerHeader(title, overall, report) {
   const dt = new Date();
   const date = dt.toLocaleDateString("en-US", {
     year: "numeric",
-    month: "long",
+    month: "short",
     day: "numeric",
   });
+  const tasks = Array.isArray(report?.results) ? report.results.length : 0;
+  const hostname = report?.summary?.hostname || report?.hostname || "";
   const statusText =
-    overall === "success"
-      ? "Service Completed Successfully"
-      : "Service Completed";
+    overall === "success" ? "All Tasks Successful" : "Service Completed";
+
+  const quickFacts = [`${tasks} task${tasks === 1 ? "" : "s"}`, date];
 
   return `
     <div class="customer-header">
-      <div class="company-info">
+      <div class="brand-block">
         <h1 class="company-name">AutoService</h1>
-        <div class="tagline">Professional Computer Maintenance</div>
+        <div class="tagline">Customer Service Summary</div>
       </div>
-      <div class="service-meta">
-        <div class="status-badge ${
+      <div class="header-meta">
+        <span class="status-badge ${
           overall === "success" ? "success" : "info"
-        }">${statusText}</div>
-        <div class="date-info">${date}</div>
+        }">${statusText}</span>
+        <div class="meta-lines">
+          <span>${quickFacts.join(" • ")}</span>
+          ${hostname ? `<span>Device: ${hostname}</span>` : ""}
+        </div>
       </div>
     </div>
   `;
@@ -46,46 +96,84 @@ export function buildCustomerHeader(title, overall, report) {
  * Build the customer-facing summary content.
  * @param {ServiceReport} report
  */
-export function buildCustomerSummary(report) {
+export function buildCustomerSummary(report, layout = "list") {
+  const resolvedLayout = normalizeLayout(layout);
   const results = report?.results || [];
   const metrics = extractCustomerMetrics(results);
+  const trimmedMetrics = metrics.map((metric) => {
+    if (!Array.isArray(metric.items) || metric.items.length === 0) {
+      return metric;
+    }
+
+    const limit = 3;
+    const displayed = metric.items.slice(0, limit);
+    const remainder = metric.items.length - displayed.length;
+    return {
+      ...metric,
+      items:
+        remainder > 0
+          ? [
+              ...displayed,
+              `+${remainder} more detail${remainder > 1 ? "s" : ""}`,
+            ]
+          : displayed,
+    };
+  });
+
+  const listClass = `layout-${resolvedLayout}`;
+
+  let metricsMarkup = trimmedMetrics
+    .map((metric) => renderMetricCard(metric))
+    .join("");
+
+  if (resolvedLayout === "grouped") {
+    const grouped = trimmedMetrics.reduce((acc, metric) => {
+      const variant = ["success", "warning", "info"].includes(metric.variant)
+        ? metric.variant
+        : "info";
+      if (!acc[variant]) acc[variant] = [];
+      acc[variant].push(metric);
+      return acc;
+    }, {});
+
+    const order = ["warning", "success", "info"];
+    metricsMarkup = order
+      .map((variant) => {
+        const groupMetrics = grouped[variant];
+        if (!groupMetrics || groupMetrics.length === 0) return "";
+        const title = GROUP_TITLES[variant] || "Additional Details";
+        return `
+          <section class="metrics-group metrics-group--${variant}">
+            <header class="metrics-group-title">${title}</header>
+            <div class="metrics-group-cards">
+              ${groupMetrics.map((metric) => renderMetricCard(metric)).join("")}
+            </div>
+          </section>
+        `;
+      })
+      .filter(Boolean)
+      .join("");
+
+    if (!metricsMarkup.trim()) {
+      metricsMarkup = trimmedMetrics
+        .map((metric) => renderMetricCard(metric))
+        .join("");
+    }
+  }
 
   return `
-    <div class="customer-summary">
-      <h3 class="section-heading">Results</h3>
+    <div class="customer-summary ${listClass}" data-layout="${resolvedLayout}">
+      <h3 class="section-heading">Service Highlights</h3>
       <p class="intro-text">
-        Your computer has been serviced and the following maintenance tasks have been completed:
+        Here's a concise overview of the maintenance completed during your visit.
       </p>
-      
-      <div class="metrics-list">
-        ${metrics
-          .map(
-            (m) => `
-          <div class="metric-card ${m.variant}">
-            <div class="metric-icon">${m.icon}</div>
-            <div class="metric-content">
-              <div class="metric-label">${m.label}</div>
-              <div class="metric-value">${m.value}</div>
-              ${m.detail ? `<div class="metric-detail">${m.detail}</div>` : ""}
-              ${
-                m.items && m.items.length > 0
-                  ? `
-                <ul class="metric-items">
-                  ${m.items.map((item) => `<li>${item}</li>`).join("")}
-                </ul>
-              `
-                  : ""
-              }
-            </div>
-          </div>
-        `
-          )
-          .join("")}
+
+      <div class="metrics-list ${listClass}">
+        ${metricsMarkup}
       </div>
-      
       <div class="footer-note">
-        <p><strong>Thank you for choosing AutoService!</strong></p>
-        <p class="small-print">For technical details, please refer to the detailed technician report or ask your technician.</p>
+        <p><strong>Thank you for choosing AutoService.</strong></p>
+        <p class="small-print">Need the technical breakdown? Your technician can provide the detailed report on request.</p>
       </div>
     </div>
   `;

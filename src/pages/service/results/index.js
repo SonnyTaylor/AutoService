@@ -129,6 +129,15 @@ function setupPrintHandlers(report, sectionsEl) {
   const customerContainer = document.getElementById(
     "svc-print-customer-container"
   );
+  const customerLayoutSelect = document.getElementById(
+    "svc-print-customer-layout"
+  );
+  const customerLayouts = ["list", "two", "three", "masonry", "grouped"];
+  let currentCustomerLayout = customerLayouts.includes(
+    customerLayoutSelect?.value || ""
+  )
+    ? customerLayoutSelect.value
+    : "list";
 
   // Prepare technician print preview
   if (techPreview) {
@@ -159,24 +168,35 @@ function setupPrintHandlers(report, sectionsEl) {
   if (customerPreview) {
     customerPreview.innerHTML =
       '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#64748b;"><div style="text-align:center;"><div class="spinner" style="width:24px;height:24px;border:3px solid #cbd5e1;border-top-color:#475569;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px;"></div><div style="font-size:14px;">Preparing preview...</div></div></div>';
-    setTimeout(async () => {
+    const renderCustomerPreview = async () => {
+      if (!customerPreview) return;
       try {
-        const customerHtml = buildCustomerPrintHtml(report);
+        const customerHtml = buildCustomerPrintHtml(report, {
+          layout: currentCustomerLayout,
+        });
         if (customerContainer) customerContainer.innerHTML = customerHtml;
-        if (customerPreview) {
-          renderPreviewIntoIframeFallback(
-            customerPreview,
-            buildCustomerPrintDocumentHtml(report)
-          );
-        }
+        renderPreviewIntoIframeFallback(
+          customerPreview,
+          buildCustomerPrintDocumentHtml(report, {
+            layout: currentCustomerLayout,
+          })
+        );
       } catch (error) {
         console.error("Customer preview generation error:", error);
-        if (customerPreview) {
-          customerPreview.innerHTML =
-            '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:14px;text-align:center;padding:20px;">Preview unavailable. Use Print button to generate report.</div>';
-        }
+        customerPreview.innerHTML =
+          '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:14px;text-align:center;padding:20px;">Preview unavailable. Use Print button to generate report.</div>';
       }
+    };
+    setTimeout(async () => {
+      await renderCustomerPreview();
     }, 0);
+
+    customerLayoutSelect?.addEventListener("change", (event) => {
+      const next = event.target.value;
+      if (!customerLayouts.includes(next)) return;
+      currentCustomerLayout = next;
+      renderCustomerPreview();
+    });
   }
 
   // Technician print handler
@@ -196,7 +216,10 @@ function setupPrintHandlers(report, sectionsEl) {
     await doPrint(
       customerPrintBtn,
       "AutoService – Service Summary",
-      () => buildCustomerPrintDocumentHtml(report),
+      () =>
+        buildCustomerPrintDocumentHtml(report, {
+          layout: currentCustomerLayout,
+        }),
       customerContainer,
       report
     );
