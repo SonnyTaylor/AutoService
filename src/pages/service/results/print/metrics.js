@@ -377,6 +377,46 @@ function processIPerfTest(summary, status) {
 }
 
 // =============================================================================
+// STORAGE USAGE PROCESSING
+// =============================================================================
+
+/**
+ * Process Disk Space Report results.
+ * Expects summary.drives: [{ drive, total_gb, used_gb, free_gb, usage_percent }]
+ * @private
+ * @param {object} summary
+ * @param {string} status
+ * @returns {object|null} { totalUsedGb, totalGb, avgUsage, critical:[], low:[], items:[] }
+ */
+function processDiskSpaceReport(summary, status) {
+  if (status !== "success") return null;
+  const drives = Array.isArray(summary?.drives) ? summary.drives : [];
+  if (drives.length === 0) return null;
+
+  let totalGb = 0;
+  let totalUsedGb = 0;
+  const critical = [];
+  const low = [];
+  const items = [];
+
+  drives.forEach((d) => {
+    const t = Number(d.total_gb) || 0;
+    const u = Number(d.used_gb) || 0;
+    const p = Number(d.usage_percent) || 0;
+    totalGb += t;
+    totalUsedGb += u;
+    if (p >= 90) critical.push(d.drive);
+    else if (p >= 80) low.push(d.drive);
+    items.push(
+      `${d.drive} ${u.toFixed(1)}GB / ${t.toFixed(1)}GB (${p.toFixed(1)}%)`
+    );
+  });
+
+  const avgUsage = totalGb > 0 ? (totalUsedGb / totalGb) * 100 : 0;
+  return { totalUsedGb, totalGb, avgUsage, critical, low, items };
+}
+
+// =============================================================================
 // COMPATIBILITY & UPGRADE PROCESSING
 // =============================================================================
 
@@ -769,6 +809,41 @@ function buildWindowsUpdateMetric(updateResults) {
 }
 
 /**
+ * Build storage usage metric card from Disk Space Report.
+ * @private
+ * @param {object|null} storage - Processed storage data
+ * @returns {CustomerMetric|null}
+ */
+function buildStorageUsageMetric(storage) {
+  if (!storage) return null;
+
+  const used = storage.totalUsedGb || 0;
+  const total = storage.totalGb || 0;
+  const avg = storage.avgUsage || 0;
+
+  const items = [];
+  if (Array.isArray(storage.items) && storage.items.length > 0) {
+    items.push(...storage.items);
+  }
+  if (storage.critical && storage.critical.length > 0) {
+    items.push(`Critical space: ${storage.critical.join(", ")}`);
+  }
+  if (storage.low && storage.low.length > 0) {
+    items.push(`Low space: ${storage.low.join(", ")}`);
+  }
+
+  return {
+    icon: "🗄️",
+    label: "Storage Usage",
+    value: `${used.toFixed(1)} / ${total.toFixed(1)} GB`,
+    detail: `Average utilization ${avg.toFixed(1)}%`,
+    variant:
+      storage.critical && storage.critical.length > 0 ? "warning" : "info",
+    items: items.length > 0 ? items : undefined,
+  };
+}
+
+/**
  * Build default fallback metric when no specific metrics are available.
  * @private
  * @param {number} taskCount - Total number of tasks performed
@@ -806,6 +881,7 @@ function aggregateTaskData(results) {
     networkThroughput: null,
     win11Compatibility: null,
     windowsUpdate: null,
+    storage: null,
   };
 
   results.forEach((result) => {
@@ -882,6 +958,12 @@ function aggregateTaskData(results) {
         data.windowsUpdate = updates;
       }
     }
+
+    // Process disk space report
+    else if (type === "disk_space_report") {
+      const storage = processDiskSpaceReport(summary, status);
+      if (storage) data.storage = storage;
+    }
   });
 
   return data;
@@ -933,6 +1015,9 @@ function buildMetricsFromData(data, totalTasks) {
 
   const updatesMetric = buildWindowsUpdateMetric(data.windowsUpdate);
   if (updatesMetric) metrics.push(updatesMetric);
+
+  const storageMetric = buildStorageUsageMetric(data.storage);
+  if (storageMetric) metrics.push(storageMetric);
 
   // Add fallback metric if no specific metrics were generated
   if (metrics.length === 0) {
@@ -995,6 +1080,7 @@ const TASK_DISPLAY_NAMES = {
   windows_update: "Windows Updates",
   whynotwin11_check: "Windows 11 Compatibility Check",
   ai_startup_disable: "Startup Optimization",
+  disk_space_report: "Disk Space Report",
 };
 
 /**
