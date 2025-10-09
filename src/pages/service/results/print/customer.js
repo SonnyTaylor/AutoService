@@ -85,40 +85,10 @@ export function buildCustomerSummary(report, layout = "list") {
   const resolvedLayout = normalizeLayout(layout);
   const results = report?.results || [];
   const metrics = extractCustomerMetrics(results);
-  const trimmedMetrics = metrics.map((metric) => {
-    if (!Array.isArray(metric.items) || metric.items.length === 0) {
-      return metric;
-    }
-
-    if (metric.keepAllItems) {
-      return metric;
-    }
-
-    const limit = Number.isFinite(metric.itemDisplayLimit)
-      ? Number(metric.itemDisplayLimit)
-      : 3;
-
-    if (metric.items.length <= limit) {
-      return metric;
-    }
-
-    const displayed = metric.items.slice(0, limit);
-    const remainder = metric.items.length - displayed.length;
-    return {
-      ...metric,
-      items:
-        remainder > 0
-          ? [
-              ...displayed,
-              `+${remainder} more detail${remainder > 1 ? "s" : ""}`,
-            ]
-          : displayed,
-    };
-  });
 
   const listClass = `layout-${resolvedLayout}`;
 
-  const metricsMarkup = trimmedMetrics
+  const metricsMarkup = metrics
     .map((metric) => renderMetricCard(metric))
     .join("");
 
