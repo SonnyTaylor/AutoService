@@ -1763,7 +1763,7 @@ function renderDiskSpace(res, index) {
         ${warnings.length > 0
           ? html`
               <div class="warnings">
-                <h4>⚠️ Warnings</h4>
+                <h4><i class="ph ph-warning"></i> Warnings</h4>
                 <ul>
                   ${map(warnings, (warning) => html`<li>${warning}</li>`)}
                 </ul>
