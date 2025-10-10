@@ -22,6 +22,12 @@ export const REQUIRED_TOOLS = [
     icon: "ph ph-shield-check",
   },
   {
+    key: "KVRT",
+    name: "Kaspersky Virus Removal Tool",
+    match: ["KVRT", "kaspersky virus removal tool"],
+    hint: "KVRT.exe",
+  },
+  {
     key: "bleachbit",
     name: "BleachBit",
     match: ["bleachbit"],
