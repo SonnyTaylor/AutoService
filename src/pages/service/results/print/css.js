@@ -469,7 +469,7 @@ export const CUSTOMER_PRINT_CSS = `
   .business-branding {
     display: flex;
     gap: 12px;
-    align-items: center;
+    align-items: stretch;
     margin-bottom: 12px;
     padding-bottom: 10px;
     border-bottom: 2px solid #e5e7eb;
@@ -479,11 +479,14 @@ export const CUSTOMER_PRINT_CSS = `
   
   .logo-container {
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
   }
   
   .company-logo {
     max-width: 100px;
-    max-height: 60px;
+    height: 100%;
+    max-height: 80px;
     object-fit: contain;
     display: block;
   }
