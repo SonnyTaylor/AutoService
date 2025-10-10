@@ -249,7 +249,7 @@ async function doPrint(
       await waitForChartsRendered(sectionsEl, 200);
     }
 
-    const docHtml = getDocHtml();
+    const docHtml = await getDocHtml();
 
     await new Promise((resolve) => setTimeout(resolve, 50));
 
