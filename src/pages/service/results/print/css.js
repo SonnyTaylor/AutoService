@@ -468,10 +468,10 @@ export const CUSTOMER_PRINT_CSS = `
   /* Business Branding Layout */
   .business-branding {
     display: flex;
-    gap: 20px;
-    align-items: flex-start;
-    margin-bottom: 20px;
-    padding-bottom: 16px;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
     border-bottom: 2px solid #e5e7eb;
     page-break-inside: avoid;
     break-inside: avoid;
@@ -482,8 +482,8 @@ export const CUSTOMER_PRINT_CSS = `
   }
   
   .company-logo {
-    max-width: 150px;
-    max-height: 80px;
+    max-width: 100px;
+    max-height: 60px;
     object-fit: contain;
     display: block;
   }
@@ -492,19 +492,19 @@ export const CUSTOMER_PRINT_CSS = `
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
     min-width: 0;
   }
   
   .info-line {
-    font-size: 9pt;
+    font-size: 8pt;
     color: #4b5563;
-    line-height: 1.4;
+    line-height: 1.3;
   }
   
   .default-branding {
-    margin-bottom: 20px;
-    padding-bottom: 16px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
     border-bottom: 2px solid #e5e7eb;
   }
   
@@ -513,16 +513,17 @@ export const CUSTOMER_PRINT_CSS = `
   }
   
   .company-name {
-    margin: 0;
-    font-size: 24px;
+    margin: 0 0 4px 0;
+    font-size: 18px;
     font-weight: 700;
     color: #0f172a;
     letter-spacing: -0.3px;
+    line-height: 1.1;
   }
   
   .tagline {
-    margin: 4px 0 0;
-    font-size: 9pt;
+    margin: 2px 0 0;
+    font-size: 8pt;
     color: #64748b;
     font-weight: 600;
     text-transform: uppercase;
@@ -533,8 +534,9 @@ export const CUSTOMER_PRINT_CSS = `
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
+    gap: 12px;
     flex-wrap: wrap;
+    margin-bottom: 12px;
   }
   
   .meta-lines {

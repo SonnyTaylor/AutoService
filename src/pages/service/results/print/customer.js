@@ -84,43 +84,40 @@ export async function buildCustomerHeader(title, overall, report) {
     if (taxInfo.length > 0) businessInfoLines.push(taxInfo.join(" | "));
   }
 
-  // Build the header layout - logo on left, info on right
+  // Build the header layout - logo on left, info on right (compact)
   const brandingMarkup = showBranding
     ? `
-      <div class="business-branding" style="display: flex; gap: 20px; align-items: flex-start; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid #e5e7eb;">
+      <div class="business-branding">
         ${
           logoUrl
-            ? `<div class="logo-container" style="flex-shrink: 0;">
-              <img src="${logoUrl}" alt="${companyName}" class="company-logo" style="max-width: 150px; max-height: 80px; object-fit: contain;" />
+            ? `<div class="logo-container">
+              <img src="${logoUrl}" alt="${companyName}" class="company-logo" />
             </div>`
             : ""
         }
-        <div class="business-info" style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
-          <h1 class="company-name" style="margin: 0 0 8px 0; font-size: 1.75rem; font-weight: 700; color: #1f2937;">${companyName}</h1>
+        <div class="business-info">
+          <h1 class="company-name">${companyName}</h1>
           ${businessInfoLines
-            .map(
-              (line) =>
-                `<div class="info-line" style="font-size: 0.875rem; color: #4b5563;">${line}</div>`
-            )
+            .map((line) => `<div class="info-line">${line}</div>`)
             .join("")}
         </div>
       </div>
     `
     : `
-      <div class="default-branding" style="margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid #e5e7eb;">
-        <h1 class="company-name" style="margin: 0 0 4px 0; font-size: 1.75rem; font-weight: 700; color: #1f2937;">${companyName}</h1>
-        <div class="tagline" style="font-size: 0.875rem; color: #6b7280;">Customer Service Summary</div>
+      <div class="default-branding">
+        <h1 class="company-name">${companyName}</h1>
+        <div class="tagline">Customer Service Summary</div>
       </div>
     `;
 
   return `
     <div class="customer-header">
       ${brandingMarkup}
-      <div class="header-meta" style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+      <div class="header-meta">
         <span class="status-badge ${
           overall === "success" ? "success" : "info"
-        }" style="padding: 6px 12px; border-radius: 6px; font-size: 0.875rem; font-weight: 600;">${statusText}</span>
-        <div class="meta-lines" style="display: flex; flex-direction: column; gap: 2px; text-align: right; font-size: 0.875rem; color: #6b7280;">
+        }">${statusText}</span>
+        <div class="meta-lines">
           <span>${quickFacts.join(" • ")}</span>
           ${hostname ? `<span>Device: ${hostname}</span>` : ""}
         </div>
