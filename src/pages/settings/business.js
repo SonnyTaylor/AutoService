@@ -14,10 +14,26 @@ export async function initializeBusinessSettings(root) {
   const techModeToggle = root.querySelector("#technician-mode-toggle");
   const logoInput = root.querySelector("#business-logo-input");
   const nameInput = root.querySelector("#business-name-input");
+  const addressInput = root.querySelector("#business-address-input");
+  const phoneInput = root.querySelector("#business-phone-input");
+  const emailInput = root.querySelector("#business-email-input");
+  const websiteInput = root.querySelector("#business-website-input");
+  const tfnInput = root.querySelector("#business-tfn-input");
+  const abnInput = root.querySelector("#business-abn-input");
   const saveBtn = root.querySelector("#business-settings-save");
   const statusEl = root.querySelector("#business-settings-status");
-  const logoLabel = root.querySelector("#business-logo-label");
-  const nameLabel = root.querySelector("#business-name-label");
+
+  // Get all label elements for opacity control
+  const labels = {
+    logo: root.querySelector("#business-logo-label"),
+    name: root.querySelector("#business-name-label"),
+    address: root.querySelector("#business-address-label"),
+    phone: root.querySelector("#business-phone-label"),
+    email: root.querySelector("#business-email-label"),
+    website: root.querySelector("#business-website-label"),
+    tfn: root.querySelector("#business-tfn-label"),
+    abn: root.querySelector("#business-abn-label"),
+  };
 
   if (!techModeToggle || !logoInput || !nameInput || !saveBtn) {
     console.warn("Business settings UI elements not found");
@@ -36,6 +52,12 @@ export async function initializeBusinessSettings(root) {
     // Set input values
     logoInput.value = business.logo || "";
     nameInput.value = business.name || "";
+    addressInput.value = business.address || "";
+    phoneInput.value = business.phone || "";
+    emailInput.value = business.email || "";
+    websiteInput.value = business.website || "";
+    tfnInput.value = business.tfn || "";
+    abnInput.value = business.abn || "";
 
     // Apply initial disabled state
     updateInputsDisabledState(techModeEnabled);
@@ -45,18 +67,26 @@ export async function initializeBusinessSettings(root) {
   }
 
   /**
-   * Update the disabled state of logo and name inputs based on technician mode.
+   * Update the disabled state of all inputs based on technician mode.
    * @param {boolean} enabled - Whether technician mode is enabled.
    */
   function updateInputsDisabledState(enabled) {
+    // Disable/enable all inputs
     logoInput.disabled = !enabled;
     nameInput.disabled = !enabled;
+    addressInput.disabled = !enabled;
+    phoneInput.disabled = !enabled;
+    emailInput.disabled = !enabled;
+    websiteInput.disabled = !enabled;
+    tfnInput.disabled = !enabled;
+    abnInput.disabled = !enabled;
     saveBtn.disabled = !enabled;
 
     // Visual styling for disabled state
     const opacity = enabled ? "1" : "0.5";
-    if (logoLabel) logoLabel.style.opacity = opacity;
-    if (nameLabel) nameLabel.style.opacity = opacity;
+    Object.values(labels).forEach((label) => {
+      if (label) label.style.opacity = opacity;
+    });
   }
 
   /**
@@ -105,8 +135,15 @@ export async function initializeBusinessSettings(root) {
       return;
     }
 
+    // Collect all field values
     const logo = logoInput.value.trim();
     const name = nameInput.value.trim();
+    const address = addressInput.value.trim();
+    const phone = phoneInput.value.trim();
+    const email = emailInput.value.trim();
+    const website = websiteInput.value.trim();
+    const tfn = tfnInput.value.trim();
+    const abn = abnInput.value.trim();
 
     try {
       const settings = await invoke("load_app_settings");
@@ -114,6 +151,12 @@ export async function initializeBusinessSettings(root) {
       settings.business.technician_mode = techModeToggle.checked;
       settings.business.logo = logo;
       settings.business.name = name;
+      settings.business.address = address;
+      settings.business.phone = phone;
+      settings.business.email = email;
+      settings.business.website = website;
+      settings.business.tfn = tfn;
+      settings.business.abn = abn;
 
       await invoke("save_app_settings", { data: settings });
       clearBusinessCache(); // Clear cache to force refresh elsewhere
@@ -125,7 +168,16 @@ export async function initializeBusinessSettings(root) {
   });
 
   // Allow Enter key in inputs to trigger save
-  [logoInput, nameInput].forEach((input) => {
+  [
+    logoInput,
+    nameInput,
+    addressInput,
+    phoneInput,
+    emailInput,
+    websiteInput,
+    tfnInput,
+    abnInput,
+  ].forEach((input) => {
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && techModeToggle.checked) {
         e.preventDefault();

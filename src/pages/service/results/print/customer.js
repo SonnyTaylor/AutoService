@@ -63,31 +63,61 @@ export async function buildCustomerHeader(title, overall, report) {
   const business = await getBusinessSettings();
   const showBranding = business.enabled && (business.name || business.logo);
 
-  // Build logo markup if provided
-  const logoMarkup = business.logo
-    ? `<img src="${business.logo}" alt="${
-        business.name || "Logo"
-      }" class="company-logo" style="max-width: 150px; max-height: 60px; object-fit: contain; margin-bottom: 8px;" />`
-    : "";
-
   // Use business name if provided, otherwise default to AutoService
   const companyName = business.name || "AutoService";
-  const tagline = showBranding
-    ? "Customer Service Summary"
-    : "Customer Service Summary";
+
+  // Build business info lines (only show if business mode enabled and field has value)
+  const businessInfoLines = [];
+  if (showBranding) {
+    if (business.address) businessInfoLines.push(business.address);
+    if (business.phone) businessInfoLines.push(business.phone);
+    if (business.email) businessInfoLines.push(business.email);
+    if (business.website) businessInfoLines.push(business.website);
+
+    // Tax identifiers on same line if both present
+    const taxInfo = [];
+    if (business.tfn) taxInfo.push(`TFN: ${business.tfn}`);
+    if (business.abn) taxInfo.push(`ABN: ${business.abn}`);
+    if (taxInfo.length > 0) businessInfoLines.push(taxInfo.join(" | "));
+  }
+
+  // Build the header layout - logo on left, info on right
+  const brandingMarkup = showBranding
+    ? `
+      <div class="business-branding" style="display: flex; gap: 20px; align-items: flex-start; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid #e5e7eb;">
+        ${
+          business.logo
+            ? `<div class="logo-container" style="flex-shrink: 0;">
+              <img src="${business.logo}" alt="${companyName}" class="company-logo" style="max-width: 150px; max-height: 80px; object-fit: contain;" />
+            </div>`
+            : ""
+        }
+        <div class="business-info" style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+          <h1 class="company-name" style="margin: 0 0 8px 0; font-size: 1.75rem; font-weight: 700; color: #1f2937;">${companyName}</h1>
+          ${businessInfoLines
+            .map(
+              (line) =>
+                `<div class="info-line" style="font-size: 0.875rem; color: #4b5563;">${line}</div>`
+            )
+            .join("")}
+        </div>
+      </div>
+    `
+    : `
+      <div class="default-branding" style="margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid #e5e7eb;">
+        <h1 class="company-name" style="margin: 0 0 4px 0; font-size: 1.75rem; font-weight: 700; color: #1f2937;">${companyName}</h1>
+        <div class="tagline" style="font-size: 0.875rem; color: #6b7280;">Customer Service Summary</div>
+      </div>
+    `;
 
   return `
     <div class="customer-header">
-      <div class="brand-block">
-        ${logoMarkup}
-        <h1 class="company-name">${companyName}</h1>
-        <div class="tagline">${tagline}</div>
-      </div>
-      <div class="header-meta">
+      ${brandingMarkup}
+      <div class="header-meta" style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
         <span class="status-badge ${
           overall === "success" ? "success" : "info"
-        }">${statusText}</span>
-        <div class="meta-lines">
+        }" style="padding: 6px 12px; border-radius: 6px; font-size: 0.875rem; font-weight: 600;">${statusText}</span>
+        <div class="meta-lines" style="display: flex; flex-direction: column; gap: 2px; text-align: right; font-size: 0.875rem; color: #6b7280;">
           <span>${quickFacts.join(" • ")}</span>
           ${hostname ? `<span>Device: ${hostname}</span>` : ""}
         </div>

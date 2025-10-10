@@ -29,6 +29,12 @@ const CACHE_DURATION = 60000; // 1 minute
  * @property {boolean} enabled - Whether technician/business mode is enabled.
  * @property {string} name - Business name (empty string if not set).
  * @property {string} logo - Business logo URL or file path (empty string if not set).
+ * @property {string} address - Business address (empty string if not set).
+ * @property {string} phone - Business phone number (empty string if not set).
+ * @property {string} email - Business email address (empty string if not set).
+ * @property {string} website - Business website (empty string if not set).
+ * @property {string} tfn - Tax File Number (empty string if not set).
+ * @property {string} abn - Australian Business Number (empty string if not set).
  */
 
 /**
@@ -95,6 +101,12 @@ export async function getBusinessSettings(force = false) {
       enabled: business.technician_mode === true,
       name: String(business.name || "").trim(),
       logo: String(business.logo || "").trim(),
+      address: String(business.address || "").trim(),
+      phone: String(business.phone || "").trim(),
+      email: String(business.email || "").trim(),
+      website: String(business.website || "").trim(),
+      tfn: String(business.tfn || "").trim(),
+      abn: String(business.abn || "").trim(),
     };
 
     cacheSettings(normalized);
@@ -105,6 +117,12 @@ export async function getBusinessSettings(force = false) {
       enabled: false,
       name: "",
       logo: "",
+      address: "",
+      phone: "",
+      email: "",
+      website: "",
+      tfn: "",
+      abn: "",
     };
   }
 }

@@ -462,13 +462,50 @@ export const CUSTOMER_PRINT_CSS = `
   
   /* Customer Header */
   .customer-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 16px;
     margin-bottom: 16px;
-    padding-bottom: 12px;
-    border-bottom: 2px solid #0f172a;
+  }
+  
+  /* Business Branding Layout */
+  .business-branding {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #e5e7eb;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  
+  .logo-container {
+    flex-shrink: 0;
+  }
+  
+  .company-logo {
+    max-width: 150px;
+    max-height: 80px;
+    object-fit: contain;
+    display: block;
+  }
+  
+  .business-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+  
+  .info-line {
+    font-size: 9pt;
+    color: #4b5563;
+    line-height: 1.4;
+  }
+  
+  .default-branding {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #e5e7eb;
   }
   
   .brand-block {
@@ -494,10 +531,10 @@ export const CUSTOMER_PRINT_CSS = `
   
   .header-meta {
     display: flex;
-    align-items: flex-end;
-    flex-direction: column;
-    gap: 6px;
-    text-align: right;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
   }
   
   .meta-lines {
