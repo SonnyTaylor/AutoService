@@ -31,6 +31,18 @@
             here. Add them in the programs section for them to be available in
             the service runner.
           </p>
+
+          <!-- Toolbar with search -->
+          <div class="settings-toolbar">
+            <input
+              id="req-tools-search"
+              class="shortcut-search"
+              type="search"
+              placeholder="Search required tools..."
+              autocomplete="off"
+            />
+          </div>
+
           <div class="list" id="req-programs-list" aria-live="polite"></div>
         </div>
       </div>
@@ -47,14 +59,17 @@
             bar. Data (cookies, localStorage) will persist on the USB via the
             app webview profile.
           </p>
-          <form id="tech-link-form" class="tech-input-row">
+
+          <!-- Toolbar-style form -->
+          <form id="tech-link-form" class="tech-links-toolbar">
             <label class="tech-input-title">
               <span class="muted">Title</span>
               <input
                 type="text"
                 name="title"
-                placeholder="e.g. HelpDesk"
+                placeholder="e.g., Password Reset"
                 required
+                autocomplete="off"
               />
             </label>
             <label class="tech-input-url">
@@ -62,12 +77,14 @@
               <input
                 type="url"
                 name="url"
-                placeholder="https://example.com"
+                placeholder="https://..."
                 required
+                autocomplete="off"
               />
             </label>
             <button type="submit" class="primary">Add</button>
           </form>
+
           <div class="list" id="tech-links-list" aria-live="polite"></div>
           <dialog id="tech-link-editor" class="program-editor">
             <form method="dialog" id="tech-link-edit-form">
@@ -98,37 +115,44 @@
           <p class="muted">
             Configure network test options used by diagnostics.
           </p>
-          <form id="iperf-settings-form">
-            <label>
-              <span class="muted">iPerf Server IP/Host</span>
-              <input
-                type="text"
-                name="iperf_server"
-                id="iperf-server-input"
-                placeholder="e.g. 192.168.0.34"
-                autocomplete="off"
-              />
-            </label>
-            <button type="submit" class="primary">Save</button>
-          </form>
-          <div id="iperf-settings-status" class="muted"></div>
+
+          <!-- iPerf Settings -->
+          <div class="network-form-group">
+            <form id="iperf-settings-form">
+              <label>
+                <span class="muted">iPerf Server IP/Host</span>
+                <input
+                  type="text"
+                  name="iperf_server"
+                  id="iperf-server-input"
+                  placeholder="e.g., 192.168.0.34"
+                  autocomplete="off"
+                />
+              </label>
+              <button type="submit" class="primary">Save</button>
+            </form>
+            <div id="iperf-settings-status"></div>
+          </div>
 
           <hr />
 
-          <form id="ping-settings-form">
-            <label>
-              <span class="muted">Ping Host</span>
-              <input
-                type="text"
-                name="ping_host"
-                id="ping-host-input"
-                placeholder="e.g. 8.8.8.8"
-                autocomplete="off"
-              />
-            </label>
-            <button type="submit" class="primary">Save</button>
-          </form>
-          <div id="ping-settings-status" class="muted"></div>
+          <!-- Ping Settings -->
+          <div class="network-form-group">
+            <form id="ping-settings-form">
+              <label>
+                <span class="muted">Ping Host</span>
+                <input
+                  type="text"
+                  name="ping_host"
+                  id="ping-host-input"
+                  placeholder="e.g., 8.8.8.8"
+                  autocomplete="off"
+                />
+              </label>
+              <button type="submit" class="primary">Save</button>
+            </form>
+            <div id="ping-settings-status"></div>
+          </div>
         </div>
       </div>
 

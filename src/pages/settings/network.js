@@ -50,14 +50,21 @@ export async function initializeNetworkSettings(root) {
     try {
       await saveSettings();
       if (status) {
+        status.className = "settings-status success";
         status.textContent = value
-          ? `Saved. Using ${value} as iPerf server.`
-          : "Saved. iPerf server cleared.";
-        setTimeout(() => (status.textContent = ""), 2500);
+          ? `✓ Saved. Using ${value} as iPerf server.`
+          : "✓ Saved. iPerf server cleared.";
+        setTimeout(() => {
+          status.textContent = "";
+          status.className = "";
+        }, 3000);
       }
       dispatchEvent(new Event("network-settings-updated"));
     } catch (e) {
-      if (status) status.textContent = "Failed to save.";
+      if (status) {
+        status.className = "settings-status error";
+        status.textContent = "✕ Failed to save settings.";
+      }
       console.error(e);
     }
   });
@@ -69,12 +76,19 @@ export async function initializeNetworkSettings(root) {
     try {
       await saveSettings();
       if (pingStatus) {
-        pingStatus.textContent = `Saved. Using ${value} as Ping host.`;
-        setTimeout(() => (pingStatus.textContent = ""), 2500);
+        pingStatus.className = "settings-status success";
+        pingStatus.textContent = `✓ Saved. Using ${value} as Ping host.`;
+        setTimeout(() => {
+          pingStatus.textContent = "";
+          pingStatus.className = "";
+        }, 3000);
       }
       dispatchEvent(new Event("network-settings-updated"));
     } catch (e) {
-      if (pingStatus) pingStatus.textContent = "Failed to save.";
+      if (pingStatus) {
+        pingStatus.className = "settings-status error";
+        pingStatus.textContent = "✕ Failed to save settings.";
+      }
       console.error(e);
     }
   });

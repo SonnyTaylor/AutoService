@@ -19,12 +19,14 @@ export const REQUIRED_TOOLS = [
     name: "AdwCleaner",
     match: ["adwcleaner"],
     hint: "adwcleaner.exe",
+    icon: "ph ph-shield-check",
   },
   {
     key: "bleachbit",
     name: "BleachBit",
     match: ["bleachbit"],
     hint: "bleachbit.exe",
+    icon: "ph ph-broom",
   },
   // Prefer the CLI smartctl.exe explicitly; avoid matching gsmartcontrol.exe
   {
@@ -32,12 +34,14 @@ export const REQUIRED_TOOLS = [
     name: "smartctl",
     match: ["smartctl.exe", " smartctl "],
     hint: "smartctl.exe",
+    icon: "ph ph-hard-drives",
   },
   {
     key: "heavyload",
     name: "HeavyLoad",
     match: ["heavyload", "heavyload.exe"],
     hint: "heavyload.exe",
+    icon: "ph ph-gauge",
   },
   // Prefer CLI furmark.exe; avoid FurMark_GUI.exe
   {
@@ -45,18 +49,21 @@ export const REQUIRED_TOOLS = [
     name: "FurMark",
     match: ["furmark.exe", " furmark "],
     hint: "furmark.exe",
+    icon: "ph ph-flame",
   },
   {
     key: "iperf3",
     name: "iPerf3",
     match: ["iperf3"],
     hint: "iperf3.exe",
+    icon: "ph ph-graph",
   },
   {
     key: "whynotwin11",
     name: "WhyNotWin11 Portable",
     match: ["whynotwin11portable.exe", "whynotwin11", "why not win 11"],
     hint: "WhyNotWin11Portable.exe",
+    icon: "ph ph-windows-logo",
   },
 ];
 
@@ -161,29 +168,37 @@ export async function findRequiredTools(programEntries) {
 }
 
 /**
- * Generates HTML for a tool status row.
+ * Generates HTML for a tool status row with icon.
  * @param {Object} tool - Tool configuration object.
  * @param {string} path - Path to the tool executable.
  * @returns {string} HTML string for the row.
  */
 export function generateToolRowHtml(tool, path) {
   const isFound = !!path;
-  const statusBadge = isFound
-    ? '<span class="badge ok">Found</span>'
-    : '<span class="badge error">Missing</span>';
+  const iconClass = tool.icon || "ph ph-wrench";
 
   const pathDisplay = path
     ? `<div class="muted" title="${escapeHtml(path)}">${escapeHtml(path)}</div>`
-    : `<div class="muted">${escapeHtml(tool.hint || "")}</div>`;
+    : `<div class="muted">Expected: ${escapeHtml(
+        tool.hint || "Not found"
+      )}</div>`;
 
   const locateButton = isFound
     ? ""
     : '<button class="secondary" data-action="locate">Locate</button>';
 
   return `
-    <div class="row" data-key="${tool.key}">
+    <div class="row" data-key="${tool.key}" data-name="${escapeHtml(
+    tool.name.toLowerCase()
+  )}">
+      <div class="tool-icon-wrap">
+        <i class="tool-icon ${iconClass}" aria-hidden="true"></i>
+        <span class="exe-status ${isFound ? "ok" : "missing"}" title="${
+    isFound ? "Executable found" : "Executable missing"
+  }">${isFound ? "✓" : "✕"}</span>
+      </div>
       <div class="main">
-        <div class="name">${escapeHtml(tool.name)} ${statusBadge}</div>
+        <div class="name">${escapeHtml(tool.name)}</div>
         ${pathDisplay}
       </div>
       <div class="meta">${locateButton}</div>
@@ -192,10 +207,46 @@ export function generateToolRowHtml(tool, path) {
 }
 
 /**
+ * Filters visible tool rows based on search query.
+ * @param {string} query - The search query.
+ */
+function filterToolRows(query) {
+  const listElement = document.getElementById("req-programs-list");
+  if (!listElement) return;
+
+  const normalizedQuery = query.toLowerCase().trim();
+  const rows = listElement.querySelectorAll(".row");
+
+  rows.forEach((row) => {
+    const toolName = row.getAttribute("data-name") || "";
+    const matches = toolName.includes(normalizedQuery);
+    row.style.display = matches ? "" : "none";
+  });
+
+  // Show empty state if no results
+  const visibleRows = Array.from(rows).filter(
+    (row) => row.style.display !== "none"
+  );
+  let emptyState = listElement.querySelector(".empty-search-state");
+
+  if (visibleRows.length === 0 && normalizedQuery) {
+    if (!emptyState) {
+      emptyState = document.createElement("div");
+      emptyState.className = "muted empty-search-state";
+      emptyState.textContent = `No tools found matching "${query}"`;
+      listElement.appendChild(emptyState);
+    }
+  } else if (emptyState) {
+    emptyState.remove();
+  }
+}
+
+/**
  * Renders the list of required programs in the UI.
  */
 export async function renderRequiredPrograms() {
   const listElement = document.getElementById("req-programs-list");
+  const searchInput = document.getElementById("req-tools-search");
   if (!listElement) return;
 
   listElement.innerHTML = '<div class="muted">Scanning programs.json…</div>';
@@ -223,6 +274,13 @@ export async function renderRequiredPrograms() {
       JSON.stringify(toolStatuses || [])
     );
   } catch {}
+
+  // Setup search functionality
+  if (searchInput) {
+    searchInput.addEventListener("input", (e) => {
+      filterToolRows(e.target.value);
+    });
+  }
 
   // Attach event listeners for locate buttons
   listElement.querySelectorAll(".row").forEach((row) => {

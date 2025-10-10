@@ -1,0 +1,136 @@
+<!-- Technician Mode Toggle -->
+<label class="business-settings-toggle">
+  <input type="checkbox" id="technician-mode-toggle" />
+  <div class="toggle-text">
+    <div class="toggle-title">Enable Technician Mode</div>
+    <div class="toggle-description">
+      Show business branding on customer reports and prints
+    </div>
+  </div>
+</label>
+
+<!-- Branding Category -->
+<div class="business-category" id="branding-category">
+  <div class="business-category-title">Branding</div>
+  <div class="fields-group">
+    <!-- Business Logo -->
+    <label id="business-logo-label" class="business-field business-logo-field">
+      <span class="muted">Business Logo</span>
+      <div class="business-logo-input-row">
+        <input
+          type="text"
+          id="business-logo-input"
+          name="business_logo"
+          placeholder="Click Browse to select an image file..."
+          autocomplete="off"
+          readonly
+        />
+        <button type="button" id="business-logo-browse-btn" class="ghost">
+          Browse...
+        </button>
+      </div>
+      <span class="muted field-hint">
+        Select any image file - it will be embedded in settings
+      </span>
+    </label>
+
+    <!-- Business Name -->
+    <label id="business-name-label" class="business-field">
+      <span class="muted">Business Name</span>
+      <input
+        type="text"
+        id="business-name-input"
+        name="business_name"
+        placeholder="e.g., Tech Solutions LLC"
+        autocomplete="off"
+      />
+      <span class="muted field-hint">
+        Your business name will appear on customer reports
+      </span>
+    </label>
+  </div>
+</div>
+
+<!-- Contact Information Category -->
+<div class="business-category" id="contact-category">
+  <div class="business-category-title">Contact Information</div>
+  <div class="fields-group">
+    <!-- Business Address -->
+    <label id="business-address-label" class="business-field">
+      <span class="muted">Business Address</span>
+      <input
+        type="text"
+        id="business-address-input"
+        name="business_address"
+        placeholder="e.g., 42 Test Avenue, Exampleville VIC 3000"
+        autocomplete="off"
+      />
+    </label>
+
+    <!-- Business Phone -->
+    <label id="business-phone-label" class="business-field">
+      <span class="muted">Phone Number</span>
+      <input
+        type="text"
+        id="business-phone-input"
+        name="business_phone"
+        placeholder="e.g., 03 9123 4567"
+        autocomplete="off"
+      />
+    </label>
+
+    <!-- Business Email -->
+    <label id="business-email-label" class="business-field">
+      <span class="muted">Email Address</span>
+      <input
+        type="email"
+        id="business-email-input"
+        name="business_email"
+        placeholder="e.g., admin@techrepairs.com.au"
+        autocomplete="off"
+      />
+    </label>
+
+    <!-- Business Website -->
+    <label id="business-website-label" class="business-field">
+      <span class="muted">Website</span>
+      <input
+        type="text"
+        id="business-website-input"
+        name="business_website"
+        placeholder="e.g., www.techrepairs.com.au"
+        autocomplete="off"
+      />
+    </label>
+  </div>
+</div>
+
+<!-- Business Identification Category -->
+<div class="business-category" id="identification-category">
+  <div class="business-category-title">Business Identification</div>
+  <div class="fields-group">
+    <!-- Business TFN -->
+    <label id="business-tfn-label" class="business-field">
+      <span class="muted">TFN (Tax File Number)</span>
+      <input
+        type="text"
+        id="business-tfn-input"
+        name="business_tfn"
+        placeholder="e.g., 123 456 789"
+        autocomplete="off"
+      />
+    </label>
+
+    <!-- Business ABN -->
+    <label id="business-abn-label" class="business-field">
+      <span class="muted">ABN (Australian Business Number)</span>
+      <input
+        type="text"
+        id="business-abn-input"
+        name="business_abn"
+        placeholder="e.g., 12 345 678 901"
+        autocomplete="off"
+      />
+    </label>
+  </div>
+</div>

@@ -24,17 +24,12 @@ export async function initializeBusinessSettings(root) {
   const saveBtn = root.querySelector("#business-settings-save");
   const statusEl = root.querySelector("#business-settings-status");
 
-  // Get all label elements for opacity control
-  const labels = {
-    logo: root.querySelector("#business-logo-label"),
-    name: root.querySelector("#business-name-label"),
-    address: root.querySelector("#business-address-label"),
-    phone: root.querySelector("#business-phone-label"),
-    email: root.querySelector("#business-email-label"),
-    website: root.querySelector("#business-website-label"),
-    tfn: root.querySelector("#business-tfn-label"),
-    abn: root.querySelector("#business-abn-label"),
-  };
+  // Get category containers for opacity control
+  const categories = [
+    root.querySelector("#branding-category"),
+    root.querySelector("#contact-category"),
+    root.querySelector("#identification-category"),
+  ].filter(Boolean);
 
   if (!techModeToggle || !logoInput || !nameInput || !saveBtn) {
     console.warn("Business settings UI elements not found");
@@ -84,10 +79,10 @@ export async function initializeBusinessSettings(root) {
     abnInput.disabled = !enabled;
     saveBtn.disabled = !enabled;
 
-    // Visual styling for disabled state
+    // Visual styling for disabled state - apply to category containers
     const opacity = enabled ? "1" : "0.5";
-    Object.values(labels).forEach((label) => {
-      if (label) label.style.opacity = opacity;
+    categories.forEach((category) => {
+      if (category) category.style.opacity = opacity;
     });
   }
 
@@ -98,10 +93,12 @@ export async function initializeBusinessSettings(root) {
    */
   function showStatus(message, type = "success") {
     if (!statusEl) return;
-    statusEl.textContent = message;
-    statusEl.style.color = type === "error" ? "#ff6b6b" : "#51cf66";
+    const icon = type === "success" ? "✓" : "✕";
+    statusEl.className = `settings-status ${type}`;
+    statusEl.textContent = `${icon} ${message}`;
     setTimeout(() => {
       statusEl.textContent = "";
+      statusEl.className = "";
     }, 3000);
   }
 
