@@ -9,7 +9,10 @@ import { getBusinessSettings } from "./business.js";
 
 /**
  * Show modal to prompt for service metadata (technician name, customer name)
- * @returns {Promise<{technicianName: string, customerName: string} | null>} Metadata object or null if cancelled
+ * @returns {Promise<{technicianName: string, customerName: string} | null | false>}
+ *   - Object with metadata if user completed the form
+ *   - null if business mode is disabled (no prompt needed)
+ *   - false if user cancelled the prompt
  */
 export async function promptServiceMetadata() {
   const business = await getBusinessSettings();
@@ -226,13 +229,13 @@ export async function promptServiceMetadata() {
 
     cancelBtn.addEventListener("click", () => {
       cleanup();
-      resolve(null);
+      resolve(false); // User cancelled
     });
 
     overlay.addEventListener("click", (e) => {
       if (e.target === overlay) {
         cleanup();
-        resolve(null);
+        resolve(false); // User cancelled
       }
     });
 
@@ -262,7 +265,7 @@ export async function promptServiceMetadata() {
     const handleEsc = (e) => {
       if (e.key === "Escape") {
         cleanup();
-        resolve(null);
+        resolve(false); // User cancelled
         document.removeEventListener("keydown", handleEsc);
       }
     };

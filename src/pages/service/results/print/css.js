@@ -497,15 +497,17 @@ export const CUSTOMER_PRINT_CSS = `
   .customer-header {
     margin-bottom: 16px;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: 1fr auto;
     gap: 16px;
     align-items: start;
     position: relative;
   }
   
-  /* Single column fallback when only one section */
-  .customer-header:has(:only-child) {
-    grid-template-columns: 1fr;
+  /* For narrow print, stack vertically */
+  @media print and (max-width: 600px) {
+    .customer-header {
+      grid-template-columns: 1fr;
+    }
   }
   
   /* Business Branding Layout (left side) */

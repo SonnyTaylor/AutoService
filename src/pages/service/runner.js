@@ -153,13 +153,18 @@ export async function initPage() {
 
     // Prompt for service metadata if business mode is enabled
     const serviceMetadata = await promptServiceMetadata();
-    if (serviceMetadata === null) {
+
+    // Handle three cases:
+    // - null: business mode disabled, no prompt shown, continue normally
+    // - false: user cancelled the prompt, abort
+    // - object: user filled in the form, continue with metadata
+    if (serviceMetadata === false) {
       // User cancelled - don't start the service
       return;
     }
 
-    // Store metadata in sessionStorage for use in results/print pages
-    if (serviceMetadata) {
+    // Store metadata in sessionStorage for use in results/print pages (if provided)
+    if (serviceMetadata && typeof serviceMetadata === "object") {
       try {
         sessionStorage.setItem(
           "service.metadata",
