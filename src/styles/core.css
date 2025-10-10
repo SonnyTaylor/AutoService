@@ -187,6 +187,8 @@ input[type="text"],
 input[type="url"],
 input[type="search"],
 input[type="number"],
+input[type="email"],
+input[type="tel"],
 select,
 textarea {
   background: var(--panel-accent);
@@ -201,6 +203,8 @@ input[type="text"]:focus,
 input[type="url"]:focus,
 input[type="search"]:focus,
 input[type="number"]:focus,
+input[type="email"]:focus,
+input[type="tel"]:focus,
 select:focus,
 textarea:focus {
   border-color: #335d9b;
@@ -208,7 +212,9 @@ textarea:focus {
   box-shadow: 0 0 0 1px #335d9b;
 }
 input[type="text"]::placeholder,
-input[type="url"]::placeholder {
+input[type="url"]::placeholder,
+input[type="email"]::placeholder,
+input[type="tel"]::placeholder {
   color: #5f6a7d;
 }
 
