@@ -508,7 +508,17 @@ export const CUSTOMER_PRINT_CSS = `
     grid-template-columns: 1fr;
   }
   
-  /* Service Info (left side) */
+  /* Business Branding Layout (left side) */
+  .business-branding {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+    padding-bottom: 10px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  
+  /* Service Info (right side) */
   .service-info {
     padding: 12px;
     background: #f8fafc;
@@ -531,16 +541,6 @@ export const CUSTOMER_PRINT_CSS = `
     color: #475569;
     line-height: 1.5;
     margin: 3px 0;
-  }
-  
-  /* Business Branding Layout (right side) */
-  .business-branding {
-    display: flex;
-    gap: 12px;
-    align-items: stretch;
-    padding-bottom: 10px;
-    page-break-inside: avoid;
-    break-inside: avoid;
   }
   
   .logo-container {

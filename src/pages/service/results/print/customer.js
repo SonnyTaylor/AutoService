@@ -91,7 +91,7 @@ export async function buildCustomerHeader(title, overall, report) {
   const technicianName = metadata.technician_name || "";
   const customerName = metadata.customer_name || "";
 
-  // Build service info section (left side, opposite from business branding)
+  // Build service info section (right side, opposite from business branding on left)
   const serviceInfoLines = [];
   if (technicianName) serviceInfoLines.push(`Technician: ${technicianName}`);
   if (customerName) serviceInfoLines.push(`Customer: ${customerName}`);
@@ -112,7 +112,7 @@ export async function buildCustomerHeader(title, overall, report) {
     `
     : "";
 
-  // Build the header layout - service info on left, business branding on right
+  // Build the header layout - business branding on left, service info on right
   const brandingMarkup = showBranding
     ? `
       <div class="business-branding">
@@ -140,8 +140,8 @@ export async function buildCustomerHeader(title, overall, report) {
 
   return `
     <div class="customer-header">
-      ${serviceInfoMarkup}
       ${brandingMarkup}
+      ${serviceInfoMarkup}
     </div>
     <div class="header-meta">
       <span class="status-badge ${
