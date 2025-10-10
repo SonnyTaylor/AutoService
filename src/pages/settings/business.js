@@ -13,6 +13,7 @@ const { invoke } = window.__TAURI__.core;
 export async function initializeBusinessSettings(root) {
   const techModeToggle = root.querySelector("#technician-mode-toggle");
   const logoInput = root.querySelector("#business-logo-input");
+  const logoBrowseBtn = root.querySelector("#business-logo-browse-btn");
   const nameInput = root.querySelector("#business-name-input");
   const addressInput = root.querySelector("#business-address-input");
   const phoneInput = root.querySelector("#business-phone-input");
@@ -73,6 +74,7 @@ export async function initializeBusinessSettings(root) {
   function updateInputsDisabledState(enabled) {
     // Disable/enable all inputs
     logoInput.disabled = !enabled;
+    logoBrowseBtn.disabled = !enabled;
     nameInput.disabled = !enabled;
     addressInput.disabled = !enabled;
     phoneInput.disabled = !enabled;
@@ -127,6 +129,57 @@ export async function initializeBusinessSettings(root) {
       updateInputsDisabledState(!enabled);
     }
   });
+
+  // Handle logo browse button
+  if (logoBrowseBtn) {
+    logoBrowseBtn.addEventListener("click", async () => {
+      if (!techModeToggle.checked) {
+        showStatus("Enable technician mode first", "error");
+        return;
+      }
+
+      try {
+        // Get data directory for default path
+        const dataDirs = await invoke("get_data_dirs");
+        const dataPath = dataDirs.data;
+
+        // Open file dialog to select image
+        const { open } = window.__TAURI__.dialog;
+        const selected = await open({
+          title: "Select Business Logo",
+          defaultPath: dataPath,
+          multiple: false,
+          filters: [
+            {
+              name: "Image Files",
+              extensions: ["png", "jpg", "jpeg", "gif", "bmp", "webp", "svg"],
+            },
+          ],
+        });
+
+        if (selected) {
+          // Convert absolute path to portable relative path
+          const portablePath = await invoke("make_portable_path", {
+            absolutePath: selected,
+          });
+          logoInput.value = portablePath;
+
+          // Show confirmation
+          if (portablePath.startsWith("data/")) {
+            showStatus("Logo selected (portable path)", "success");
+          } else {
+            showStatus(
+              "Logo selected (absolute path - not portable)",
+              "success"
+            );
+          }
+        }
+      } catch (err) {
+        console.error("Failed to browse for logo:", err);
+        showStatus("Failed to open file browser", "error");
+      }
+    });
+  }
 
   // Handle save button
   saveBtn.addEventListener("click", async () => {

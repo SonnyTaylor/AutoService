@@ -24,7 +24,9 @@ use crate::programs::{
     get_tool_statuses, launch_program, list_programs, remove_program, save_program,
 };
 use crate::scripts::{list_scripts, remove_script, run_script, save_script};
-use crate::settings::{load_app_settings, save_app_settings};
+use crate::settings::{
+    load_app_settings, make_portable_path, resolve_portable_path, save_app_settings,
+};
 use crate::shortcuts::launch_shortcut;
 use crate::state::AppState;
 use crate::system::get_system_info;
@@ -283,7 +285,9 @@ pub fn run() {
             read_image_as_data_url,
             get_system_info,
             load_app_settings,
-            save_app_settings
+            save_app_settings,
+            make_portable_path,
+            resolve_portable_path
         ])
         .setup(|app| {
             // Setup function called after the app is initialized

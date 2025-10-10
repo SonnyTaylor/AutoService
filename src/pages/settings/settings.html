@@ -252,16 +252,28 @@
             id="business-logo-label"
             style="display: flex; flex-direction: column; gap: 6px"
           >
-            <span class="muted" style="font-size: 12px">Business Logo URL</span>
-            <input
-              type="url"
-              id="business-logo-input"
-              name="business_logo"
-              placeholder="https://example.com/logo.png or file:///C:/path/to/logo.png"
-              autocomplete="off"
-            />
+            <span class="muted" style="font-size: 12px">Business Logo</span>
+            <div style="display: flex; gap: 8px; align-items: stretch">
+              <input
+                type="text"
+                id="business-logo-input"
+                name="business_logo"
+                placeholder="Select logo from data folder or enter URL..."
+                autocomplete="off"
+                style="flex: 1"
+              />
+              <button
+                type="button"
+                id="business-logo-browse-btn"
+                class="ghost"
+                style="padding: 8px 16px; white-space: nowrap"
+              >
+                Browse...
+              </button>
+            </div>
             <span class="muted" style="font-size: 11px; margin-top: -2px">
-              Enter a URL or local file path to your business logo image
+              Browse for an image in the data folder (recommended) or enter a
+              URL
             </span>
           </label>
 

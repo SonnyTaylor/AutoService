@@ -66,6 +66,27 @@ export async function buildCustomerHeader(title, overall, report) {
   // Use business name if provided, otherwise default to AutoService
   const companyName = business.name || "AutoService";
 
+  // Resolve logo path (convert portable paths to absolute if needed)
+  let logoUrl = business.logo;
+  if (logoUrl && logoUrl.startsWith("data/")) {
+    try {
+      const { invoke } = window.__TAURI__.core;
+      logoUrl = await invoke("resolve_portable_path", {
+        portablePath: logoUrl,
+      });
+      // Convert Windows paths to file:// URLs for use in img src
+      if (
+        logoUrl &&
+        !logoUrl.startsWith("http") &&
+        !logoUrl.startsWith("file://")
+      ) {
+        logoUrl = `file:///${logoUrl.replace(/\\/g, "/")}`;
+      }
+    } catch (err) {
+      console.error("Failed to resolve logo path:", err);
+    }
+  }
+
   // Build business info lines (only show if business mode enabled and field has value)
   const businessInfoLines = [];
   if (showBranding) {
@@ -86,9 +107,9 @@ export async function buildCustomerHeader(title, overall, report) {
     ? `
       <div class="business-branding" style="display: flex; gap: 20px; align-items: flex-start; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid #e5e7eb;">
         ${
-          business.logo
+          logoUrl
             ? `<div class="logo-container" style="flex-shrink: 0;">
-              <img src="${business.logo}" alt="${companyName}" class="company-logo" style="max-width: 150px; max-height: 80px; object-fit: contain;" />
+              <img src="${logoUrl}" alt="${companyName}" class="company-logo" style="max-width: 150px; max-height: 80px; object-fit: contain;" />
             </div>`
             : ""
         }
