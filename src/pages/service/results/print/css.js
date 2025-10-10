@@ -496,16 +496,49 @@ export const CUSTOMER_PRINT_CSS = `
   /* Customer Header */
   .customer-header {
     margin-bottom: 16px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    align-items: start;
+    position: relative;
   }
   
-  /* Business Branding Layout */
+  /* Single column fallback when only one section */
+  .customer-header:has(:only-child) {
+    grid-template-columns: 1fr;
+  }
+  
+  /* Service Info (left side) */
+  .service-info {
+    padding: 12px;
+    background: #f8fafc;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  
+  .service-info-heading {
+    margin: 0 0 8px 0;
+    font-size: 11pt;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: 0.2px;
+  }
+  
+  .service-info .info-line {
+    font-size: 9pt;
+    color: #475569;
+    line-height: 1.5;
+    margin: 3px 0;
+  }
+  
+  /* Business Branding Layout (right side) */
   .business-branding {
     display: flex;
     gap: 12px;
     align-items: stretch;
-    margin-bottom: 12px;
     padding-bottom: 10px;
-    border-bottom: 2px solid #e5e7eb;
     page-break-inside: avoid;
     break-inside: avoid;
   }
@@ -572,7 +605,10 @@ export const CUSTOMER_PRINT_CSS = `
     justify-content: space-between;
     gap: 12px;
     flex-wrap: wrap;
-    margin-bottom: 12px;
+    margin-top: 12px;
+    margin-bottom: 16px;
+    padding-top: 10px;
+    border-top: 2px solid #e5e7eb;
   }
   
   .meta-lines {

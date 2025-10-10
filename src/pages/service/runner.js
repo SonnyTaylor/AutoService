@@ -1,4 +1,5 @@
 import { getToolStatuses } from "../../utils/tools.js";
+import { promptServiceMetadata } from "../../utils/service-metadata-modal.js";
 import hljs from "highlight.js/lib/core";
 import jsonLang from "highlight.js/lib/languages/json";
 import "highlight.js/styles/github-dark.css";
@@ -149,6 +150,24 @@ export async function initPage() {
   runBtn?.addEventListener("click", async () => {
     if (!tasks.length) return;
     if (_isRunning) return; // guard against double clicks
+
+    // Prompt for service metadata if business mode is enabled
+    const serviceMetadata = await promptServiceMetadata();
+    if (serviceMetadata === null) {
+      // User cancelled - don't start the service
+      return;
+    }
+
+    // Store metadata in sessionStorage for use in results/print pages
+    if (serviceMetadata) {
+      try {
+        sessionStorage.setItem(
+          "service.metadata",
+          JSON.stringify(serviceMetadata)
+        );
+      } catch {}
+    }
+
     _isRunning = true;
     // Hard-disable UI controls
     runBtn.disabled = true;
@@ -225,7 +244,20 @@ export async function initPage() {
       }
 
       let startedNatively = false;
-      const jsonArg = JSON.stringify({ tasks: runnerTasks });
+      // Build run plan with metadata
+      const runPlanPayload = {
+        tasks: runnerTasks,
+      };
+
+      // Add metadata if available
+      if (serviceMetadata) {
+        runPlanPayload.metadata = {
+          technician_name: serviceMetadata.technicianName,
+          customer_name: serviceMetadata.customerName,
+        };
+      }
+
+      const jsonArg = JSON.stringify(runPlanPayload);
       // Try native streaming command first
       if (invoke) {
         try {

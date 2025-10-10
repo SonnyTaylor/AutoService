@@ -264,8 +264,8 @@ def main():
     overall_success = True
 
     for idx, task in enumerate(tasks):
-        task_type = task.get("type")
-        handler = TASK_HANDLERS.get(task_type)
+        task_type = task.get("type", "")
+        handler = TASK_HANDLERS.get(task_type) if task_type else None
 
         if handler:
             logging.info("TASK_START:%d:%s", idx, task_type)
@@ -387,9 +387,27 @@ def main():
             except Exception:
                 pass
 
+    # Collect system metadata
+    import platform
+    import getpass
+
+    system_metadata = {
+        "hostname": platform.node(),
+        "username": getpass.getuser(),
+        "os_name": platform.system(),
+        "os_version": platform.version(),
+    }
+
+    # Include metadata from input_data if provided (only if input_data is a dict)
+    if isinstance(input_data, dict):
+        metadata = input_data.get("metadata", {})
+        if metadata:
+            system_metadata.update(metadata)
+
     final_report = {
         "overall_status": "success" if overall_success else "completed_with_errors",
         "results": all_results,
+        "metadata": system_metadata,
     }
 
     # Print the final JSON report to stdout for the parent process (AutoService) to capture.

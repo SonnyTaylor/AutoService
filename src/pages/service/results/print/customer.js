@@ -53,7 +53,6 @@ export async function buildCustomerHeader(title, overall, report) {
     day: "numeric",
   });
   const tasks = Array.isArray(report?.results) ? report.results.length : 0;
-  const hostname = report?.summary?.hostname || report?.hostname || "";
   const statusText =
     overall === "success" ? "All Tasks Successful" : "Service Completed";
 
@@ -85,7 +84,35 @@ export async function buildCustomerHeader(title, overall, report) {
     if (taxInfo.length > 0) businessInfoLines.push(taxInfo.join(" | "));
   }
 
-  // Build the header layout - logo on left, info on right (compact)
+  // Extract service metadata (technician, customer, PC info)
+  const metadata = report?.metadata || {};
+  const hostname =
+    metadata.hostname || report?.summary?.hostname || report?.hostname || "";
+  const technicianName = metadata.technician_name || "";
+  const customerName = metadata.customer_name || "";
+
+  // Build service info section (left side, opposite from business branding)
+  const serviceInfoLines = [];
+  if (technicianName) serviceInfoLines.push(`Technician: ${technicianName}`);
+  if (customerName) serviceInfoLines.push(`Customer: ${customerName}`);
+  if (hostname) serviceInfoLines.push(`Device: ${hostname}`);
+
+  // Always show service info if we have any service details OR if business mode is enabled
+  // This ensures the layout is consistent
+  const showServiceInfo = serviceInfoLines.length > 0;
+
+  const serviceInfoMarkup = showServiceInfo
+    ? `
+      <div class="service-info">
+        <h3 class="service-info-heading">Service Details</h3>
+        ${serviceInfoLines
+          .map((line) => `<div class="info-line">${line}</div>`)
+          .join("")}
+      </div>
+    `
+    : "";
+
+  // Build the header layout - service info on left, business branding on right
   const brandingMarkup = showBranding
     ? `
       <div class="business-branding">
@@ -113,15 +140,15 @@ export async function buildCustomerHeader(title, overall, report) {
 
   return `
     <div class="customer-header">
+      ${serviceInfoMarkup}
       ${brandingMarkup}
-      <div class="header-meta">
-        <span class="status-badge ${
-          overall === "success" ? "success" : "info"
-        }">${statusText}</span>
-        <div class="meta-lines">
-          <span>${quickFacts.join(" • ")}</span>
-          ${hostname ? `<span>Device: ${hostname}</span>` : ""}
-        </div>
+    </div>
+    <div class="header-meta">
+      <span class="status-badge ${
+        overall === "success" ? "success" : "info"
+      }">${statusText}</span>
+      <div class="meta-lines">
+        <span>${quickFacts.join(" • ")}</span>
       </div>
     </div>
   `;
