@@ -27,7 +27,7 @@ export function buildPrintableHtml(report, sectionsEl) {
  * @param {ServiceReport} report
  * @param {{ layout?: string }} [options]
  */
-export function buildCustomerPrintHtml(report, options = {}) {
+export async function buildCustomerPrintHtml(report, options = {}) {
   const title = "Service Summary";
   const overall = String(report.overall_status || "").toLowerCase();
   const requestedLayout =
@@ -35,8 +35,9 @@ export function buildCustomerPrintHtml(report, options = {}) {
   const layout = ["list", "two", "three", "masonry"].includes(requestedLayout)
     ? requestedLayout
     : "list";
+  const customerHeader = await buildCustomerHeader(title, overall, report);
   const body = `
-    ${buildCustomerHeader(title, overall, report)}
+    ${customerHeader}
     ${buildCustomerSummary(report, layout)}
   `;
   return `<div class="customer-print layout-${layout}" data-layout="${layout}">${body}</div>`;
@@ -76,8 +77,8 @@ export function buildPrintableDocumentHtml(report, sectionsEl) {
  * @param {ServiceReport} report
  * @param {{ layout?: string }} [options]
  */
-export function buildCustomerPrintDocumentHtml(report, options = {}) {
-  const inner = buildCustomerPrintHtml(report, options);
+export async function buildCustomerPrintDocumentHtml(report, options = {}) {
+  const inner = await buildCustomerPrintHtml(report, options);
   return `<!DOCTYPE html>
 <html>
   <head>

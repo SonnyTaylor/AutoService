@@ -1,4 +1,5 @@
 import { extractCustomerMetrics } from "./metrics.js";
+import { getBusinessSettings } from "../../../../utils/business.js";
 
 const CUSTOMER_LAYOUTS = new Set(["list", "two", "three", "masonry"]);
 
@@ -44,7 +45,7 @@ function renderMetricCard(metric) {
  * @param {string} overall
  * @param {ServiceReport} report
  */
-export function buildCustomerHeader(title, overall, report) {
+export async function buildCustomerHeader(title, overall, report) {
   const dt = new Date();
   const date = dt.toLocaleDateString("en-US", {
     year: "numeric",
@@ -58,11 +59,29 @@ export function buildCustomerHeader(title, overall, report) {
 
   const quickFacts = [`${tasks} task${tasks === 1 ? "" : "s"}`, date];
 
+  // Get business settings for branding
+  const business = await getBusinessSettings();
+  const showBranding = business.enabled && (business.name || business.logo);
+
+  // Build logo markup if provided
+  const logoMarkup = business.logo
+    ? `<img src="${business.logo}" alt="${
+        business.name || "Logo"
+      }" class="company-logo" style="max-width: 150px; max-height: 60px; object-fit: contain; margin-bottom: 8px;" />`
+    : "";
+
+  // Use business name if provided, otherwise default to AutoService
+  const companyName = business.name || "AutoService";
+  const tagline = showBranding
+    ? "Customer Service Summary"
+    : "Customer Service Summary";
+
   return `
     <div class="customer-header">
       <div class="brand-block">
-        <h1 class="company-name">AutoService</h1>
-        <div class="tagline">Customer Service Summary</div>
+        ${logoMarkup}
+        <h1 class="company-name">${companyName}</h1>
+        <div class="tagline">${tagline}</div>
       </div>
       <div class="header-meta">
         <span class="status-badge ${

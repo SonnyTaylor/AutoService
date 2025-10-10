@@ -171,13 +171,13 @@ function setupPrintHandlers(report, sectionsEl) {
     const renderCustomerPreview = async () => {
       if (!customerPreview) return;
       try {
-        const customerHtml = buildCustomerPrintHtml(report, {
+        const customerHtml = await buildCustomerPrintHtml(report, {
           layout: currentCustomerLayout,
         });
         if (customerContainer) customerContainer.innerHTML = customerHtml;
         renderPreviewIntoIframeFallback(
           customerPreview,
-          buildCustomerPrintDocumentHtml(report, {
+          await buildCustomerPrintDocumentHtml(report, {
             layout: currentCustomerLayout,
           })
         );
@@ -216,8 +216,8 @@ function setupPrintHandlers(report, sectionsEl) {
     await doPrint(
       customerPrintBtn,
       "AutoService – Service Summary",
-      () =>
-        buildCustomerPrintDocumentHtml(report, {
+      async () =>
+        await buildCustomerPrintDocumentHtml(report, {
           layout: currentCustomerLayout,
         }),
       customerContainer,

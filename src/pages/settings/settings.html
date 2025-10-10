@@ -36,6 +36,13 @@
         >
           Network
         </button>
+        <button
+          class="shortcut-btn"
+          data-target="business"
+          style="justify-content: flex-start"
+        >
+          Business
+        </button>
       </nav>
     </aside>
 
@@ -196,6 +203,102 @@
             class="muted"
             style="font-size: 12px"
           ></div>
+        </div>
+      </div>
+
+      <!-- Business pane (technician mode, logo, business name) -->
+      <div class="card" data-pane="business" style="display: none">
+        <div class="card-title"><span>Business Information</span></div>
+        <div class="card-body" style="gap: 12px">
+          <p class="muted" style="margin-top: 0">
+            Configure business branding for customer-facing reports and prints.
+          </p>
+
+          <!-- Technician Mode Toggle -->
+          <label
+            style="
+              display: flex;
+              align-items: center;
+              gap: 10px;
+              padding: 12px;
+              background: var(--panel-accent);
+              border-radius: 8px;
+              cursor: pointer;
+              user-select: none;
+            "
+          >
+            <input
+              type="checkbox"
+              id="technician-mode-toggle"
+              style="
+                width: 18px;
+                height: 18px;
+                cursor: pointer;
+                accent-color: var(--primary);
+              "
+            />
+            <div style="flex: 1">
+              <div style="font-weight: 600">Enable Technician Mode</div>
+              <div class="muted" style="font-size: 12px; margin-top: 2px">
+                Show business branding on customer reports and prints
+              </div>
+            </div>
+          </label>
+
+          <hr style="margin: 14px 0; opacity: 0.25" />
+
+          <!-- Business Logo -->
+          <label
+            id="business-logo-label"
+            style="display: flex; flex-direction: column; gap: 6px"
+          >
+            <span class="muted" style="font-size: 12px">Business Logo URL</span>
+            <input
+              type="url"
+              id="business-logo-input"
+              name="business_logo"
+              placeholder="https://example.com/logo.png or file:///C:/path/to/logo.png"
+              autocomplete="off"
+            />
+            <span class="muted" style="font-size: 11px; margin-top: -2px">
+              Enter a URL or local file path to your business logo image
+            </span>
+          </label>
+
+          <!-- Business Name -->
+          <label
+            id="business-name-label"
+            style="display: flex; flex-direction: column; gap: 6px"
+          >
+            <span class="muted" style="font-size: 12px">Business Name</span>
+            <input
+              type="text"
+              id="business-name-input"
+              name="business_name"
+              placeholder="e.g. Tech Solutions LLC"
+              autocomplete="off"
+            />
+            <span class="muted" style="font-size: 11px; margin-top: -2px">
+              Your business name will appear on customer reports
+            </span>
+          </label>
+
+          <!-- Save Button -->
+          <div style="display: flex; gap: 10px; margin-top: 8px">
+            <button type="button" id="business-settings-save" class="primary">
+              Save Business Settings
+            </button>
+            <div
+              id="business-settings-status"
+              class="muted"
+              style="
+                font-size: 12px;
+                display: flex;
+                align-items: center;
+                padding-left: 4px;
+              "
+            ></div>
+          </div>
         </div>
       </div>
     </div>
