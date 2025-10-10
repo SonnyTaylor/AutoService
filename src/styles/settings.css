@@ -335,7 +335,7 @@
   margin: 0; /* Spacing handled by card-body gap */
   opacity: 0.25;
   border: none;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid #788bb5;
 }
 
 /* Business settings pane */
