@@ -1,0 +1,279 @@
+/* Settings page specific styles */
+
+/* Two-column layout: sidebar + content */
+.settings-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 16px;
+  align-items: start;
+  margin-top: 12px;
+}
+
+/* Left sidebar navigation */
+.settings-sidebar {
+  position: sticky;
+  top: 10px;
+  padding: 8px;
+}
+
+#settings-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Navigation buttons */
+#settings-nav .shortcut-btn {
+  justify-content: flex-start;
+  min-height: auto;
+  padding: 10px 12px;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+#settings-nav .shortcut-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+
+#settings-nav .shortcut-btn.active:hover {
+  background: var(--primary-700);
+  border-color: var(--primary-700);
+}
+
+/* Content panes */
+.settings-pane .card-body {
+  gap: 12px;
+}
+
+/* Programs pane specific */
+.settings-pane[data-pane="programs"] .card-body {
+  gap: 10px;
+}
+
+.settings-pane[data-pane="programs"] .muted {
+  margin-top: 0;
+  margin-bottom: 5px;
+}
+
+/* Technician links pane */
+#tech-link-form {
+  gap: 12px !important;
+}
+
+.tech-input-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.tech-input-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.tech-input-row input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Responsive title/url inputs */
+.tech-input-row .tech-input-title {
+  flex: 1 1 220px;
+  min-width: 160px;
+}
+
+.tech-input-row .tech-input-url {
+  flex: 2 1 360px;
+  min-width: 220px;
+}
+
+.tech-input-row .muted {
+  font-size: 12px;
+}
+
+/* Tech link editor dialog */
+#tech-link-editor {
+  width: min(520px, 92vw);
+}
+
+#tech-link-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+#tech-link-edit-form h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+#tech-link-edit-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#tech-link-edit-form .muted {
+  font-size: 12px;
+}
+
+#tech-link-edit-form .dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* Network settings forms */
+#iperf-settings-form,
+#ping-settings-form {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+#iperf-settings-form label,
+#ping-settings-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 2;
+  min-width: 260px;
+}
+
+#iperf-settings-form .muted,
+#ping-settings-form .muted {
+  font-size: 12px;
+}
+
+#iperf-settings-status,
+#ping-settings-status {
+  font-size: 12px;
+}
+
+/* Divider between network settings */
+.settings-pane hr {
+  margin: 14px 0;
+  opacity: 0.25;
+  border: none;
+  border-top: 1px solid var(--border);
+}
+
+/* Business settings pane */
+.business-settings-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: var(--panel-accent);
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.business-settings-toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--primary);
+}
+
+.business-settings-toggle .toggle-text {
+  flex: 1;
+}
+
+.business-settings-toggle .toggle-title {
+  font-weight: 600;
+}
+
+.business-settings-toggle .toggle-description {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* Business form fields */
+.business-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.business-field .muted {
+  font-size: 12px;
+}
+
+.business-field .field-hint {
+  font-size: 11px;
+  margin-top: -2px;
+}
+
+/* Business logo upload */
+.business-logo-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.business-logo-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.business-logo-input-row input {
+  flex: 1;
+}
+
+.business-logo-input-row button {
+  padding: 8px 16px;
+  white-space: nowrap;
+}
+
+/* Business settings actions */
+.business-settings-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+  align-items: center;
+}
+
+#business-settings-status {
+  padding-left: 4px;
+  font-size: 12px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .settings-layout {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .settings-sidebar {
+    position: static;
+  }
+
+  #settings-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  #settings-nav .shortcut-btn {
+    flex: 1 1 auto;
+    min-width: 120px;
+  }
+
+  .tech-input-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tech-input-row label {
+    flex: 1 1 auto;
+    min-width: 100%;
+  }
+}

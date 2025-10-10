@@ -2,59 +2,31 @@
   <h1>Settings</h1>
   <p class="muted">Configure AutoService behavior.</p>
 
-  <div
-    style="
-      display: grid;
-      grid-template-columns: 220px 1fr;
-      gap: 16px;
-      align-items: start;
-      margin-top: 12px;
-    "
-  >
+  <div class="settings-layout">
     <!-- Left sidebar navigation -->
-    <aside class="card" style="position: sticky; top: 10px; padding: 8px">
+    <aside class="card settings-sidebar">
       <div class="card-title">Sections</div>
-      <nav class="list" id="settings-nav">
-        <button
-          class="shortcut-btn active"
-          data-target="programs"
-          style="justify-content: flex-start"
-        >
+      <nav id="settings-nav">
+        <button class="shortcut-btn active" data-target="programs">
           Programs
         </button>
-        <button
-          class="shortcut-btn"
-          data-target="technician"
-          style="justify-content: flex-start"
-        >
+        <button class="shortcut-btn" data-target="technician">
           Technician
         </button>
-        <button
-          class="shortcut-btn"
-          data-target="network"
-          style="justify-content: flex-start"
-        >
-          Network
-        </button>
-        <button
-          class="shortcut-btn"
-          data-target="business"
-          style="justify-content: flex-start"
-        >
-          Business
-        </button>
+        <button class="shortcut-btn" data-target="network">Network</button>
+        <button class="shortcut-btn" data-target="business">Business</button>
       </nav>
     </aside>
 
     <!-- Right content area -->
     <div id="settings-content">
       <!-- Programs pane -->
-      <div class="card" data-pane="programs">
+      <div class="card settings-pane" data-pane="programs">
         <div class="card-title">
           <span>Programs</span>
         </div>
-        <div class="card-body" style="gap: 10px">
-          <p class="muted" style="margin-top: 0; margin-bottom: 5px">
+        <div class="card-body">
+          <p class="muted">
             Programs that are required by the automated service runner will show
             here. Add them in the programs section for them to be available in
             the service runner.
@@ -63,25 +35,21 @@
         </div>
       </div>
       <!-- Technician pane -->
-      <div class="card" data-pane="technician" style="display: none">
+      <div
+        class="card settings-pane"
+        data-pane="technician"
+        style="display: none"
+      >
         <div class="card-title"><span>Technician Links</span></div>
-        <div class="card-body" style="gap: 12px">
-          <p class="muted" style="margin-top: 0">
+        <div class="card-body">
+          <p class="muted">
             Add web tools you use frequently. They appear as tabs on the top
             bar. Data (cookies, localStorage) will persist on the USB via the
             app webview profile.
           </p>
           <form id="tech-link-form" class="tech-input-row">
-            <label
-              style="
-                display: flex;
-                flex-direction: column;
-                gap: 4px;
-                flex: 1;
-                min-width: 180px;
-              "
-            >
-              <span class="muted" style="font-size: 12px">Title</span>
+            <label class="tech-input-title">
+              <span class="muted">Title</span>
               <input
                 type="text"
                 name="title"
@@ -89,16 +57,8 @@
                 required
               />
             </label>
-            <label
-              style="
-                display: flex;
-                flex-direction: column;
-                gap: 4px;
-                flex: 2;
-                min-width: 260px;
-              "
-            >
-              <span class="muted" style="font-size: 12px">URL</span>
+            <label class="tech-input-url">
+              <span class="muted">URL</span>
               <input
                 type="url"
                 name="url"
@@ -109,26 +69,18 @@
             <button type="submit" class="primary">Add</button>
           </form>
           <div class="list" id="tech-links-list" aria-live="polite"></div>
-          <dialog
-            id="tech-link-editor"
-            class="program-editor"
-            style="width: min(520px, 92vw)"
-          >
-            <form
-              method="dialog"
-              id="tech-link-edit-form"
-              style="display: flex; flex-direction: column; gap: 14px"
-            >
-              <h3 style="margin: 0; font-size: 1rem">Edit Link</h3>
-              <label style="display: flex; flex-direction: column; gap: 6px">
-                <span class="muted" style="font-size: 12px">Title</span>
+          <dialog id="tech-link-editor" class="program-editor">
+            <form method="dialog" id="tech-link-edit-form">
+              <h3>Edit Link</h3>
+              <label>
+                <span class="muted">Title</span>
                 <input id="t-edit-title" type="text" required />
               </label>
-              <label style="display: flex; flex-direction: column; gap: 6px">
-                <span class="muted" style="font-size: 12px">URL</span>
+              <label>
+                <span class="muted">URL</span>
                 <input id="t-edit-url" type="url" required />
               </label>
-              <div style="display: flex; justify-content: flex-end; gap: 10px">
+              <div class="dialog-actions">
                 <button type="button" id="t-edit-cancel" class="ghost">
                   Cancel
                 </button>
@@ -140,25 +92,15 @@
       </div>
 
       <!-- Network pane (iperf, ping) -->
-      <div class="card" data-pane="network" style="display: none">
+      <div class="card settings-pane" data-pane="network" style="display: none">
         <div class="card-title"><span>Network</span></div>
-        <div class="card-body" style="gap: 12px">
-          <p class="muted" style="margin-top: 0">
+        <div class="card-body">
+          <p class="muted">
             Configure network test options used by diagnostics.
           </p>
-          <form id="iperf-settings-form" class="tech-input-row">
-            <label
-              style="
-                display: flex;
-                flex-direction: column;
-                gap: 4px;
-                flex: 2;
-                min-width: 260px;
-              "
-            >
-              <span class="muted" style="font-size: 12px"
-                >iPerf Server IP/Host</span
-              >
+          <form id="iperf-settings-form">
+            <label>
+              <span class="muted">iPerf Server IP/Host</span>
               <input
                 type="text"
                 name="iperf_server"
@@ -169,25 +111,13 @@
             </label>
             <button type="submit" class="primary">Save</button>
           </form>
-          <div
-            id="iperf-settings-status"
-            class="muted"
-            style="font-size: 12px"
-          ></div>
+          <div id="iperf-settings-status" class="muted"></div>
 
-          <hr style="margin: 14px 0; opacity: 0.25" />
+          <hr />
 
-          <form id="ping-settings-form" class="tech-input-row">
-            <label
-              style="
-                display: flex;
-                flex-direction: column;
-                gap: 4px;
-                flex: 2;
-                min-width: 260px;
-              "
-            >
-              <span class="muted" style="font-size: 12px">Ping Host</span>
+          <form id="ping-settings-form">
+            <label>
+              <span class="muted">Ping Host</span>
               <input
                 type="text"
                 name="ping_host"
@@ -198,92 +128,63 @@
             </label>
             <button type="submit" class="primary">Save</button>
           </form>
-          <div
-            id="ping-settings-status"
-            class="muted"
-            style="font-size: 12px"
-          ></div>
+          <div id="ping-settings-status" class="muted"></div>
         </div>
       </div>
 
       <!-- Business pane (technician mode, logo, business name) -->
-      <div class="card" data-pane="business" style="display: none">
+      <div
+        class="card settings-pane"
+        data-pane="business"
+        style="display: none"
+      >
         <div class="card-title"><span>Business Information</span></div>
-        <div class="card-body" style="gap: 12px">
-          <p class="muted" style="margin-top: 0">
+        <div class="card-body">
+          <p class="muted">
             Configure business branding for customer-facing reports and prints.
           </p>
 
           <!-- Technician Mode Toggle -->
-          <label
-            style="
-              display: flex;
-              align-items: center;
-              gap: 10px;
-              padding: 12px;
-              background: var(--panel-accent);
-              border-radius: 8px;
-              cursor: pointer;
-              user-select: none;
-            "
-          >
-            <input
-              type="checkbox"
-              id="technician-mode-toggle"
-              style="
-                width: 18px;
-                height: 18px;
-                cursor: pointer;
-                accent-color: var(--primary);
-              "
-            />
-            <div style="flex: 1">
-              <div style="font-weight: 600">Enable Technician Mode</div>
-              <div class="muted" style="font-size: 12px; margin-top: 2px">
+          <label class="business-settings-toggle">
+            <input type="checkbox" id="technician-mode-toggle" />
+            <div class="toggle-text">
+              <div class="toggle-title">Enable Technician Mode</div>
+              <div class="muted toggle-description">
                 Show business branding on customer reports and prints
               </div>
             </div>
           </label>
 
-          <hr style="margin: 14px 0; opacity: 0.25" />
+          <hr />
 
           <!-- Business Logo -->
           <label
             id="business-logo-label"
-            style="display: flex; flex-direction: column; gap: 6px"
+            class="business-field business-logo-field"
           >
-            <span class="muted" style="font-size: 12px">Business Logo</span>
-            <div style="display: flex; gap: 8px; align-items: stretch">
+            <span class="muted">Business Logo</span>
+            <div class="business-logo-input-row">
               <input
                 type="text"
                 id="business-logo-input"
                 name="business_logo"
                 placeholder="Click Browse to select an image file..."
                 autocomplete="off"
-                style="flex: 1"
                 readonly
               />
-              <button
-                type="button"
-                id="business-logo-browse-btn"
-                class="ghost"
-                style="padding: 8px 16px; white-space: nowrap"
-              >
+              <button type="button" id="business-logo-browse-btn" class="ghost">
                 Browse...
               </button>
             </div>
-            <span class="muted" style="font-size: 11px; margin-top: -2px">
+            <span class="muted field-hint">
               Select any image file from anywhere on your computer - it will be
               embedded in settings
             </span>
           </label>
 
           <!-- Business Name -->
-          <label
-            id="business-name-label"
-            style="display: flex; flex-direction: column; gap: 6px"
-          >
-            <span class="muted" style="font-size: 12px">Business Name</span>
+          <label id="business-name-label" class="business-field">
+            <span class="muted">Business Name</span>
             <input
               type="text"
               id="business-name-input"
@@ -291,17 +192,14 @@
               placeholder="e.g. Tech Solutions LLC"
               autocomplete="off"
             />
-            <span class="muted" style="font-size: 11px; margin-top: -2px">
+            <span class="muted field-hint">
               Your business name will appear on customer reports
             </span>
           </label>
 
           <!-- Business Address -->
-          <label
-            id="business-address-label"
-            style="display: flex; flex-direction: column; gap: 6px"
-          >
-            <span class="muted" style="font-size: 12px">Business Address</span>
+          <label id="business-address-label" class="business-field">
+            <span class="muted">Business Address</span>
             <input
               type="text"
               id="business-address-input"
@@ -312,11 +210,8 @@
           </label>
 
           <!-- Business Phone -->
-          <label
-            id="business-phone-label"
-            style="display: flex; flex-direction: column; gap: 6px"
-          >
-            <span class="muted" style="font-size: 12px">Phone Number</span>
+          <label id="business-phone-label" class="business-field">
+            <span class="muted">Phone Number</span>
             <input
               type="text"
               id="business-phone-input"
@@ -327,11 +222,8 @@
           </label>
 
           <!-- Business Email -->
-          <label
-            id="business-email-label"
-            style="display: flex; flex-direction: column; gap: 6px"
-          >
-            <span class="muted" style="font-size: 12px">Email Address</span>
+          <label id="business-email-label" class="business-field">
+            <span class="muted">Email Address</span>
             <input
               type="email"
               id="business-email-input"
@@ -342,11 +234,8 @@
           </label>
 
           <!-- Business Website -->
-          <label
-            id="business-website-label"
-            style="display: flex; flex-direction: column; gap: 6px"
-          >
-            <span class="muted" style="font-size: 12px">Website</span>
+          <label id="business-website-label" class="business-field">
+            <span class="muted">Website</span>
             <input
               type="text"
               id="business-website-input"
@@ -357,13 +246,8 @@
           </label>
 
           <!-- Business TFN -->
-          <label
-            id="business-tfn-label"
-            style="display: flex; flex-direction: column; gap: 6px"
-          >
-            <span class="muted" style="font-size: 12px"
-              >TFN (Tax File Number)</span
-            >
+          <label id="business-tfn-label" class="business-field">
+            <span class="muted">TFN (Tax File Number)</span>
             <input
               type="text"
               id="business-tfn-input"
@@ -374,13 +258,8 @@
           </label>
 
           <!-- Business ABN -->
-          <label
-            id="business-abn-label"
-            style="display: flex; flex-direction: column; gap: 6px"
-          >
-            <span class="muted" style="font-size: 12px"
-              >ABN (Australian Business Number)</span
-            >
+          <label id="business-abn-label" class="business-field">
+            <span class="muted">ABN (Australian Business Number)</span>
             <input
               type="text"
               id="business-abn-input"
@@ -391,20 +270,11 @@
           </label>
 
           <!-- Save Button -->
-          <div style="display: flex; gap: 10px; margin-top: 8px">
+          <div class="business-settings-actions">
             <button type="button" id="business-settings-save" class="primary">
               Save Business Settings
             </button>
-            <div
-              id="business-settings-status"
-              class="muted"
-              style="
-                font-size: 12px;
-                display: flex;
-                align-items: center;
-                padding-left: 4px;
-              "
-            ></div>
+            <div id="business-settings-status" class="muted"></div>
           </div>
         </div>
       </div>
