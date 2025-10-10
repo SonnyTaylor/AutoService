@@ -63,8 +63,9 @@ export async function buildCustomerHeader(title, overall, report) {
   const business = await getBusinessSettings();
   const showBranding = business.enabled && (business.name || business.logo);
 
-  // Use business name if provided, otherwise default to AutoService
-  const companyName = business.name || "AutoService";
+  // Use business name only if business mode is enabled, otherwise default to AutoService
+  const companyName =
+    business.enabled && business.name ? business.name : "AutoService";
 
   // Logo is stored as base64 data URL, use directly
   const logoUrl = business.logo;
@@ -130,7 +131,7 @@ export async function buildCustomerHeader(title, overall, report) {
  * Build the customer-facing summary content.
  * @param {ServiceReport} report
  */
-export function buildCustomerSummary(report, layout = "list") {
+export async function buildCustomerSummary(report, layout = "list") {
   const resolvedLayout = normalizeLayout(layout);
   const results = report?.results || [];
   const metrics = extractCustomerMetrics(results);
@@ -140,6 +141,11 @@ export function buildCustomerSummary(report, layout = "list") {
   const metricsMarkup = metrics
     .map((metric) => renderMetricCard(metric))
     .join("");
+
+  // Get business settings for thank you message
+  const business = await getBusinessSettings();
+  const companyName =
+    business.enabled && business.name ? business.name : "AutoService";
 
   return `
     <div class="customer-summary ${listClass}" data-layout="${resolvedLayout}">
@@ -152,7 +158,7 @@ export function buildCustomerSummary(report, layout = "list") {
         ${metricsMarkup}
       </div>
       <div class="footer-note">
-        <p><strong>Thank you for choosing AutoService.</strong></p>
+        <p><strong>Thank you for choosing ${companyName}.</strong></p>
         <p class="small-print">Need the technical breakdown? Your technician can provide the detailed report on request.</p>
       </div>
     </div>

@@ -36,9 +36,10 @@ export async function buildCustomerPrintHtml(report, options = {}) {
     ? requestedLayout
     : "list";
   const customerHeader = await buildCustomerHeader(title, overall, report);
+  const customerSummary = await buildCustomerSummary(report, layout);
   const body = `
     ${customerHeader}
-    ${buildCustomerSummary(report, layout)}
+    ${customerSummary}
   `;
   return `<div class="customer-print layout-${layout}" data-layout="${layout}">${body}</div>`;
 }
