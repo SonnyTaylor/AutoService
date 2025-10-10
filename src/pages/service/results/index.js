@@ -257,7 +257,7 @@ async function doPrint(
       type: "raw-html",
       printable: docHtml,
       scanStyles: false,
-      documentTitle: title,
+      documentTitle: "", // Empty to avoid browser header text
       honorColor: true,
       onPrintDialogClose: () => {
         if (button) {

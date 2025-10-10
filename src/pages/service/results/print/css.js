@@ -1,13 +1,27 @@
 export const PRINT_LIGHT_CSS = `
-  @page { size: A4; margin: 8mm; }
+  @page { 
+    size: A4; 
+    margin: 8mm;
+  }
+  @media print {
+    @page { 
+      margin: 8mm;
+    }
+    /* Attempt to hide browser-injected headers/footers */
+    html::before, html::after,
+    body::before, body::after {
+      display: none !important;
+      content: none !important;
+    }
+  }
   * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact; }
   html, body {
     background: #fff !important; color: #0f172a !important;
     font-family: 'Segoe UI Variable', 'Segoe UI', 'Inter', Roboto, Helvetica, Arial, 'Noto Sans', system-ui, sans-serif;
     font-size: 10.5pt; line-height: 1.4;
-    margin: 0; padding: 0;
+    margin: 0 !important; padding: 0 !important;
   }
-  body { margin: 0; padding: 0; }
+  body { margin: 0 !important; padding: 0 !important; }
   
   /* Print Header */
   .print-header { 
@@ -445,20 +459,39 @@ export const PRINT_LIGHT_CSS = `
 `;
 
 export const CUSTOMER_PRINT_CSS = `
-  @page { size: A4; margin: 10mm; }
+  @page { 
+    size: A4; 
+    margin: 10mm;
+  }
+  @media print {
+    @page { 
+      margin: 10mm;
+    }
+    /* Attempt to hide browser-injected headers/footers */
+    html::before, html::after,
+    body::before, body::after {
+      display: none !important;
+      content: none !important;
+    }
+  }
   * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact; }
   
   html, body {
     background: #fff !important;
     color: #1e293b !important;
     font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
-  font-size: 10pt;
-  line-height: 1.45;
-    margin: 0;
-    padding: 0;
+    font-size: 10pt;
+    line-height: 1.45;
+    margin: 0 !important;
+    padding: 0 !important;
   }
   
-  body { margin: 0; padding: 12px; }
+  body { 
+    margin: 0 !important; 
+    padding: 0 !important;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
   
   /* Customer Header */
   .customer-header {
@@ -574,6 +607,13 @@ export const CUSTOMER_PRINT_CSS = `
   /* Customer Summary */
   .customer-summary {
     max-width: 100%;
+    padding: 0 4px;
+  }
+  
+  .customer-print {
+    max-width: 100%;
+    overflow-x: hidden;
+    padding: 0 4px;
   }
   
   .section-heading {
@@ -597,6 +637,8 @@ export const CUSTOMER_PRINT_CSS = `
     grid-template-columns: 1fr;
     gap: 10px;
     margin-bottom: 16px;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .metrics-list.layout-list {
@@ -605,10 +647,12 @@ export const CUSTOMER_PRINT_CSS = `
 
   .metrics-list.layout-two {
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 8px;
   }
 
   .metrics-list.layout-three {
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 8px;
   }
 
   .metrics-list.layout-masonry {
@@ -640,6 +684,9 @@ export const CUSTOMER_PRINT_CSS = `
     break-inside: avoid;
     column-break-inside: avoid;
     width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
   }
 
   .metrics-list.layout-masonry .metric-card {
@@ -700,6 +747,7 @@ export const CUSTOMER_PRINT_CSS = `
   .metric-content {
     flex: 1;
     min-width: 0;
+    overflow: hidden;
   }
   
   .metric-label {
@@ -709,6 +757,8 @@ export const CUSTOMER_PRINT_CSS = `
     color: #64748b;
     font-weight: 600;
     margin-bottom: 2px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
   
   .metric-value {
@@ -717,6 +767,8 @@ export const CUSTOMER_PRINT_CSS = `
     color: #0f172a;
     margin-bottom: 2px;
     line-height: 1.2;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
   
   .metric-card.success .metric-value {
