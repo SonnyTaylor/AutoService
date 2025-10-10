@@ -66,26 +66,8 @@ export async function buildCustomerHeader(title, overall, report) {
   // Use business name if provided, otherwise default to AutoService
   const companyName = business.name || "AutoService";
 
-  // Resolve logo path (convert portable paths to absolute if needed)
-  let logoUrl = business.logo;
-  if (logoUrl && logoUrl.startsWith("data/")) {
-    try {
-      const { invoke } = window.__TAURI__.core;
-      logoUrl = await invoke("resolve_portable_path", {
-        portablePath: logoUrl,
-      });
-      // Convert Windows paths to file:// URLs for use in img src
-      if (
-        logoUrl &&
-        !logoUrl.startsWith("http") &&
-        !logoUrl.startsWith("file://")
-      ) {
-        logoUrl = `file:///${logoUrl.replace(/\\/g, "/")}`;
-      }
-    } catch (err) {
-      console.error("Failed to resolve logo path:", err);
-    }
-  }
+  // Logo is stored as base64 data URL, use directly
+  const logoUrl = business.logo;
 
   // Build business info lines (only show if business mode enabled and field has value)
   const businessInfoLines = [];

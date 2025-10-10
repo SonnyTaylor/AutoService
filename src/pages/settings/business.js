@@ -139,44 +139,46 @@ export async function initializeBusinessSettings(root) {
       }
 
       try {
-        // Get data directory for default path
-        const dataDirs = await invoke("get_data_dirs");
-        const dataPath = dataDirs.data;
-
         // Open file dialog to select image
         const { open } = window.__TAURI__.dialog;
         const selected = await open({
           title: "Select Business Logo",
-          defaultPath: dataPath,
           multiple: false,
           filters: [
             {
               name: "Image Files",
-              extensions: ["png", "jpg", "jpeg", "gif", "bmp", "webp", "svg"],
+              extensions: [
+                "png",
+                "jpg",
+                "jpeg",
+                "gif",
+                "bmp",
+                "webp",
+                "svg",
+                "ico",
+              ],
             },
           ],
         });
 
         if (selected) {
-          // Convert absolute path to portable relative path
-          const portablePath = await invoke("make_portable_path", {
-            absolutePath: selected,
-          });
-          logoInput.value = portablePath;
+          // Convert image to base64 data URL
+          showStatus("Loading logo...", "success");
 
-          // Show confirmation
-          if (portablePath.startsWith("data/")) {
-            showStatus("Logo selected (portable path)", "success");
-          } else {
-            showStatus(
-              "Logo selected (absolute path - not portable)",
-              "success"
-            );
-          }
+          const dataUrl = await invoke("read_image_as_data_url", {
+            path: selected,
+          });
+
+          // Store base64 data URL directly
+          logoInput.value = dataUrl;
+
+          // Show confirmation with file size info
+          const sizeKB = Math.round((dataUrl.length * 0.75) / 1024);
+          showStatus(`Logo loaded (${sizeKB} KB)`, "success");
         }
       } catch (err) {
-        console.error("Failed to browse for logo:", err);
-        showStatus("Failed to open file browser", "error");
+        console.error("Failed to load logo:", err);
+        showStatus("Failed to load logo image", "error");
       }
     });
   }
