@@ -7,7 +7,10 @@
 // HANDLER INTEGRATION
 // =============================================================================
 
-import { getCustomerMetricExtractors } from "../../handlers/index.js";
+import {
+  getCustomerMetricExtractors,
+  getServiceDefinitions,
+} from "../../handlers/index.js";
 
 /**
  * All customer metrics are now extracted by handlers.
@@ -77,38 +80,21 @@ export function extractCustomerMetrics(results) {
 // =============================================================================
 
 /**
- * Map of task type identifiers to customer-friendly display names.
- * @private
- */
-const TASK_DISPLAY_NAMES = {
-  bleachbit_clean: "System Cleanup & Junk File Removal",
-  adwcleaner_clean: "Adware & Malware Removal",
-  kvrt_scan: "Virus Scan & Removal",
-  sfc_scan: "System File Integrity Check",
-  dism_health_check: "System Health Verification",
-  smartctl_report: "Hard Drive Health Analysis",
-  chkdsk_scan: "Disk Error Check & Repair",
-  heavyload_stress_test: "CPU & RAM Stress Test",
-  furmark_stress_test: "Graphics Card Stress Test",
-  winsat_disk: "Disk Performance Test",
-  speedtest: "Internet Speed Test",
-  ping_test: "Network Connectivity Test",
-  iperf_test: "Network Throughput Test",
-  windows_update: "Windows Updates",
-  whynotwin11_check: "Windows 11 Compatibility Check",
-  ai_startup_disable: "Startup Optimization",
-  disk_space_report: "Disk Space Report",
-};
-
-/**
  * Get customer-friendly display name for a task type.
+ * Retrieves the label from the handler definition if available,
+ * otherwise converts snake_case to Title Case.
+ *
  * @private
  * @param {string} taskType - Internal task type identifier
  * @returns {string} Human-readable task name
  */
 function getTaskDisplayName(taskType) {
-  if (TASK_DISPLAY_NAMES[taskType]) {
-    return TASK_DISPLAY_NAMES[taskType];
+  // Try to get label from handler definition
+  const serviceDefinitions = getServiceDefinitions();
+  const definition = serviceDefinitions[taskType];
+
+  if (definition?.label) {
+    return definition.label;
   }
 
   // Fallback: convert snake_case to Title Case
@@ -176,23 +162,35 @@ export function buildCustomerTaskList(results) {
 
 /**
  * Check if any threats were detected during service execution.
+ * Uses a generic approach to detect threats based on common patterns
+ * in summary data from security-related handlers.
+ *
  * @private
  * @param {ServiceTaskResult[]} results - Array of task results
  * @returns {boolean} True if threats were found
  */
 function hasThreatsDetected(results) {
   return results.some((result) => {
-    const type = result?.task_type || "";
     const summary = result?.summary || {};
 
-    // Check KVRT scan for virus detections
-    if (type === "kvrt_scan" && Array.isArray(summary.detections)) {
-      return summary.detections.length > 0;
+    // Generic threat detection patterns:
+    // 1. Check for detections array (KVRT, security scanners)
+    if (Array.isArray(summary.detections) && summary.detections.length > 0) {
+      return true;
     }
 
-    // Check AdwCleaner for quarantined items
-    if (type === "adwcleaner_clean" && summary.quarantined) {
-      return summary.quarantined > 0;
+    // 2. Check for quarantined items count (AdwCleaner, cleaners)
+    if (summary.quarantined && summary.quarantined > 0) {
+      return true;
+    }
+
+    // 3. Check for removed/detected threat counts
+    if (summary.threats_removed && summary.threats_removed > 0) {
+      return true;
+    }
+
+    if (summary.threats_detected && summary.threats_detected > 0) {
+      return true;
     }
 
     return false;
