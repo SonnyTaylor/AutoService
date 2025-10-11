@@ -35,6 +35,7 @@ const CACHE_DURATION = 60000; // 1 minute
  * @property {string} website - Business website (empty string if not set).
  * @property {string} tfn - Tax File Number (empty string if not set).
  * @property {string} abn - Australian Business Number (empty string if not set).
+ * @property {string[]} technician_names - Array of saved technician names (empty array if not set).
  */
 
 /**
@@ -107,6 +108,9 @@ export async function getBusinessSettings(force = false) {
       website: String(business.website || "").trim(),
       tfn: String(business.tfn || "").trim(),
       abn: String(business.abn || "").trim(),
+      technician_names: Array.isArray(business.technician_names)
+        ? business.technician_names
+        : [],
     };
 
     cacheSettings(normalized);
@@ -123,6 +127,7 @@ export async function getBusinessSettings(force = false) {
       website: "",
       tfn: "",
       abn: "",
+      technician_names: [],
     };
   }
 }

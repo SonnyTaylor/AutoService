@@ -182,6 +182,36 @@
 
           <hr />
 
+          <!-- Technician Names Management -->
+          <div id="technician-names-section" class="business-field">
+            <span class="muted">Technician Names</span>
+            <p class="muted" style="font-size: 0.9rem; margin: 4px 0 12px 0">
+              Add technician names for quick selection when starting services
+            </p>
+
+            <form
+              id="technician-name-form"
+              style="display: flex; gap: 8px; margin-bottom: 12px"
+            >
+              <input
+                type="text"
+                id="technician-name-input"
+                placeholder="Enter technician name..."
+                autocomplete="off"
+                style="flex: 1"
+              />
+              <button type="submit" class="primary">Add</button>
+            </form>
+
+            <div
+              id="technician-names-list"
+              class="list"
+              style="margin-top: 12px"
+            ></div>
+          </div>
+
+          <hr />
+
           <!-- Business Logo -->
           <label
             id="business-logo-label"

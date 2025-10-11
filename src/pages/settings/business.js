@@ -24,6 +24,11 @@ export async function initializeBusinessSettings(root) {
   const saveBtn = root.querySelector("#business-settings-save");
   const statusEl = root.querySelector("#business-settings-status");
 
+  // Technician names management
+  const techNameForm = root.querySelector("#technician-name-form");
+  const techNameInput = root.querySelector("#technician-name-input");
+  const techNamesList = root.querySelector("#technician-names-list");
+
   // Get category containers for opacity control
   const categories = [
     root.querySelector("#branding-category"),
@@ -54,6 +59,10 @@ export async function initializeBusinessSettings(root) {
     websiteInput.value = business.website || "";
     tfnInput.value = business.tfn || "";
     abnInput.value = business.abn || "";
+
+    // Load and render technician names
+    const technicianNames = business.technician_names || [];
+    renderTechnicianNames(technicianNames);
 
     // Apply initial disabled state
     updateInputsDisabledState(techModeEnabled);
@@ -237,4 +246,116 @@ export async function initializeBusinessSettings(root) {
       }
     });
   });
+
+  /**
+   * Render the list of technician names
+   * @param {string[]} names - Array of technician names
+   */
+  function renderTechnicianNames(names) {
+    if (!techNamesList) return;
+
+    if (names.length === 0) {
+      techNamesList.innerHTML =
+        '<p class="muted" style="font-size: 0.9rem;">No technician names added yet.</p>';
+      return;
+    }
+
+    techNamesList.innerHTML = names
+      .map(
+        (name, index) => `
+        <div class="row" style="padding: 8px 12px;">
+          <div class="main">
+            <span class="name">${escapeHtml(name)}</span>
+          </div>
+          <button type="button" class="ghost" data-tech-index="${index}" style="padding: 4px 12px; min-height: auto;">
+            Remove
+          </button>
+        </div>
+      `
+      )
+      .join("");
+
+    // Attach remove handlers
+    techNamesList.querySelectorAll("button[data-tech-index]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const index = parseInt(btn.dataset.techIndex, 10);
+        await removeTechnicianName(index);
+      });
+    });
+  }
+
+  /**
+   * Add a technician name
+   * @param {string} name - The name to add
+   */
+  async function addTechnicianName(name) {
+    try {
+      const settings = await invoke("load_app_settings");
+      settings.business = settings.business || {};
+      settings.business.technician_names =
+        settings.business.technician_names || [];
+
+      // Check for duplicates
+      if (settings.business.technician_names.includes(name)) {
+        showStatus("This name already exists", "error");
+        return;
+      }
+
+      settings.business.technician_names.push(name);
+      await invoke("save_app_settings", { data: settings });
+      clearBusinessCache();
+
+      renderTechnicianNames(settings.business.technician_names);
+      showStatus("Technician name added", "success");
+    } catch (err) {
+      console.error("Failed to add technician name:", err);
+      showStatus("Failed to add name", "error");
+    }
+  }
+
+  /**
+   * Remove a technician name by index
+   * @param {number} index - The index of the name to remove
+   */
+  async function removeTechnicianName(index) {
+    try {
+      const settings = await invoke("load_app_settings");
+      settings.business = settings.business || {};
+      settings.business.technician_names =
+        settings.business.technician_names || [];
+
+      settings.business.technician_names.splice(index, 1);
+      await invoke("save_app_settings", { data: settings });
+      clearBusinessCache();
+
+      renderTechnicianNames(settings.business.technician_names);
+      showStatus("Technician name removed", "success");
+    } catch (err) {
+      console.error("Failed to remove technician name:", err);
+      showStatus("Failed to remove name", "error");
+    }
+  }
+
+  /**
+   * Escape HTML to prevent XSS
+   * @param {string} str - String to escape
+   * @returns {string} Escaped string
+   */
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // Handle technician name form submission
+  if (techNameForm && techNameInput) {
+    techNameForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = techNameInput.value.trim();
+      if (!name) return;
+
+      await addTechnicianName(name);
+      techNameInput.value = "";
+    });
+  }
 }

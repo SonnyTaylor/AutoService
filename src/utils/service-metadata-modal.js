@@ -32,7 +32,7 @@ export async function promptServiceMetadata() {
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0, 0, 0, 0.6);
+      background: rgba(0, 0, 0, 0.7);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -43,13 +43,13 @@ export async function promptServiceMetadata() {
     const modal = document.createElement("div");
     modal.className = "service-metadata-modal";
     modal.style.cssText = `
-      background: var(--bg-secondary, #1e1e1e);
+      background: var(--panel-2);
       border-radius: 12px;
       padding: 28px;
       max-width: 480px;
       width: 90%;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-      border: 1px solid var(--border-color, #333);
+      border: 1px solid var(--border);
     `;
 
     const title = document.createElement("h2");
@@ -57,7 +57,7 @@ export async function promptServiceMetadata() {
     title.style.cssText = `
       margin: 0 0 8px 0;
       font-size: 1.5rem;
-      color: var(--text-primary, #fff);
+      color: var(--text);
     `;
 
     const subtitle = document.createElement("p");
@@ -65,7 +65,7 @@ export async function promptServiceMetadata() {
       "Please provide information for the customer report.";
     subtitle.style.cssText = `
       margin: 0 0 24px 0;
-      color: var(--text-secondary, #aaa);
+      color: var(--muted);
       font-size: 0.95rem;
     `;
 
@@ -86,35 +86,120 @@ export async function promptServiceMetadata() {
     technicianLabel.htmlFor = "service-metadata-technician";
     technicianLabel.style.cssText = `
       font-weight: 500;
-      color: var(--text-primary, #fff);
+      color: var(--text);
       font-size: 0.95rem;
     `;
+
+    // Load saved technician names from business settings
+    const savedNames = business.technician_names || [];
+    console.log("Loaded technician names:", savedNames);
+
+    // Create input wrapper for hybrid select/input
+    const technicianInputWrapper = document.createElement("div");
+    technicianInputWrapper.style.cssText = `
+      display: flex;
+      gap: 8px;
+    `;
+
+    // If there are saved names, show a select dropdown
+    let technicianSelect = null;
+    if (savedNames.length > 0) {
+      technicianSelect = document.createElement("select");
+      technicianSelect.id = "service-metadata-technician-select";
+      technicianSelect.style.cssText = `
+        padding: 8px 10px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--panel-accent);
+        color: var(--text);
+        font-size: 1rem;
+        font-family: inherit;
+        transition: border-color 0.15s, background-color 0.15s, box-shadow 0.15s;
+        min-height: 38px;
+        cursor: pointer;
+        flex: 1;
+      `;
+
+      // Add default option
+      const defaultOption = document.createElement("option");
+      defaultOption.value = "";
+      defaultOption.textContent = "-- Select or type below --";
+      technicianSelect.appendChild(defaultOption);
+
+      // Add saved names
+      savedNames.forEach((name) => {
+        const option = document.createElement("option");
+        option.value = name;
+        option.textContent = name;
+        technicianSelect.appendChild(option);
+      });
+
+      technicianSelect.addEventListener("focus", () => {
+        technicianSelect.style.borderColor = "#335d9b";
+        technicianSelect.style.outline = "none";
+        technicianSelect.style.boxShadow = "0 0 0 1px #335d9b";
+      });
+      technicianSelect.addEventListener("blur", () => {
+        technicianSelect.style.borderColor = "var(--border)";
+        technicianSelect.style.boxShadow = "none";
+      });
+    }
 
     const technicianInput = document.createElement("input");
     technicianInput.type = "text";
     technicianInput.id = "service-metadata-technician";
     technicianInput.required = true;
-    technicianInput.placeholder = "Enter your name";
+    technicianInput.placeholder =
+      savedNames.length > 0 ? "Or type a name" : "Enter your name";
     technicianInput.style.cssText = `
-      padding: 10px 14px;
-      border: 1px solid var(--border-color, #444);
-      border-radius: 6px;
-      background: var(--bg-primary, #252525);
-      color: var(--text-primary, #fff);
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--panel-accent);
+      color: var(--text);
       font-size: 1rem;
       font-family: inherit;
-      transition: border-color 0.2s;
+      transition: border-color 0.15s, background-color 0.15s, box-shadow 0.15s;
+      min-height: 38px;
+      flex: ${savedNames.length > 0 ? "1" : "1"};
     `;
     technicianInput.addEventListener("focus", () => {
-      technicianInput.style.borderColor = "var(--accent-color, #0078d4)";
+      technicianInput.style.borderColor = "#335d9b";
       technicianInput.style.outline = "none";
+      technicianInput.style.boxShadow = "0 0 0 1px #335d9b";
     });
     technicianInput.addEventListener("blur", () => {
-      technicianInput.style.borderColor = "var(--border-color, #444)";
+      technicianInput.style.borderColor = "var(--border)";
+      technicianInput.style.boxShadow = "none";
     });
 
+    // When select changes, populate input
+    if (technicianSelect) {
+      technicianSelect.addEventListener("change", () => {
+        if (technicianSelect.value) {
+          technicianInput.value = technicianSelect.value;
+        }
+      });
+
+      technicianInputWrapper.appendChild(technicianSelect);
+    }
+
+    technicianInputWrapper.appendChild(technicianInput);
+
     technicianGroup.appendChild(technicianLabel);
-    technicianGroup.appendChild(technicianInput);
+    technicianGroup.appendChild(technicianInputWrapper);
+
+    // Add hint if there are saved names
+    if (savedNames.length > 0) {
+      const hint = document.createElement("div");
+      hint.style.cssText = `
+        font-size: 0.85rem;
+        color: var(--muted);
+        margin-top: -2px;
+      `;
+      hint.textContent = "Select from dropdown or type a name";
+      technicianGroup.appendChild(hint);
+    }
 
     // Customer Name Field
     const customerGroup = document.createElement("div");
@@ -126,7 +211,7 @@ export async function promptServiceMetadata() {
     customerLabel.htmlFor = "service-metadata-customer";
     customerLabel.style.cssText = `
       font-weight: 500;
-      color: var(--text-primary, #fff);
+      color: var(--text);
       font-size: 0.95rem;
     `;
 
@@ -136,21 +221,24 @@ export async function promptServiceMetadata() {
     customerInput.required = true;
     customerInput.placeholder = "Enter customer's name";
     customerInput.style.cssText = `
-      padding: 10px 14px;
-      border: 1px solid var(--border-color, #444);
-      border-radius: 6px;
-      background: var(--bg-primary, #252525);
-      color: var(--text-primary, #fff);
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--panel-accent);
+      color: var(--text);
       font-size: 1rem;
       font-family: inherit;
-      transition: border-color 0.2s;
+      transition: border-color 0.15s, background-color 0.15s, box-shadow 0.15s;
+      min-height: 38px;
     `;
     customerInput.addEventListener("focus", () => {
-      customerInput.style.borderColor = "var(--accent-color, #0078d4)";
+      customerInput.style.borderColor = "#335d9b";
       customerInput.style.outline = "none";
+      customerInput.style.boxShadow = "0 0 0 1px #335d9b";
     });
     customerInput.addEventListener("blur", () => {
-      customerInput.style.borderColor = "var(--border-color, #444)";
+      customerInput.style.borderColor = "var(--border)";
+      customerInput.style.boxShadow = "none";
     });
 
     customerGroup.appendChild(customerLabel);
@@ -168,19 +256,20 @@ export async function promptServiceMetadata() {
     const cancelBtn = document.createElement("button");
     cancelBtn.type = "button";
     cancelBtn.textContent = "Cancel";
+    cancelBtn.className = "ghost";
     cancelBtn.style.cssText = `
-      padding: 10px 20px;
-      border: 1px solid var(--border-color, #444);
-      border-radius: 6px;
+      padding: 8px 20px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
       background: transparent;
-      color: var(--text-primary, #fff);
+      color: var(--text);
       font-size: 1rem;
       cursor: pointer;
       font-family: inherit;
-      transition: all 0.2s;
+      transition: all 0.15s;
     `;
     cancelBtn.addEventListener("mouseenter", () => {
-      cancelBtn.style.background = "var(--bg-hover, #2a2a2a)";
+      cancelBtn.style.background = "var(--panel-hover)";
     });
     cancelBtn.addEventListener("mouseleave", () => {
       cancelBtn.style.background = "transparent";
@@ -190,22 +279,21 @@ export async function promptServiceMetadata() {
     startBtn.type = "submit";
     startBtn.textContent = "Start Service";
     startBtn.style.cssText = `
-      padding: 10px 24px;
-      border: none;
-      border-radius: 6px;
-      background: var(--accent-color, #0078d4);
+      padding: 8px 24px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      background: var(--primary);
       color: white;
       font-size: 1rem;
       cursor: pointer;
-      font-weight: 500;
       font-family: inherit;
-      transition: all 0.2s;
+      transition: all 0.15s;
     `;
     startBtn.addEventListener("mouseenter", () => {
-      startBtn.style.background = "var(--accent-hover, #106ebe)";
+      startBtn.style.background = "var(--primary-700)";
     });
     startBtn.addEventListener("mouseleave", () => {
-      startBtn.style.background = "var(--accent-color, #0078d4)";
+      startBtn.style.background = "var(--primary)";
     });
 
     buttonGroup.appendChild(cancelBtn);
