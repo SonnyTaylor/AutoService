@@ -1,0 +1,19 @@
+{
+  "task_type": "windows_update",
+  "status": "failure",
+  "summary": {
+    "error": "PowerShell execution failed",
+    "exit_code": 1,
+    "stderr_excerpt": "Module 'PSWindowsUpdate' not found. Please install the module using: Install-Module PSWindowsUpdate",
+    "meta": {
+      "module_available": false,
+      "module_version": null
+    },
+    "errors": [
+      {
+        "where": "Module Check",
+        "message": "PSWindowsUpdate module is not installed"
+      }
+    ]
+  }
+}

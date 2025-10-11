@@ -1053,7 +1053,9 @@ function renderWhyNotWin11(res, index) {
   `;
 }
 
-function renderWindowsUpdate(res, index) {
+// renderWindowsUpdate: MIGRATED TO handlers/windows_update/
+
+function _renderWindowsUpdate_OLD(res, index) {
   return renderGeneric(res, index);
 }
 

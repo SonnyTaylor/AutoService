@@ -182,14 +182,9 @@ function processWhyNotWin11Check(summary, status) {
   };
 }
 
-/**
- * Process Windows Update results.
- * @private
- * @param {object} summary - Task summary containing update data
- * @param {string} status - Task execution status
- * @returns {object|null} Update installation results
- */
-function processWindowsUpdate(summary, status) {
+// processWindowsUpdate: MIGRATED TO handlers/windows_update/index.js
+
+function _processWindowsUpdate_OLD(summary, status) {
   if (status !== "success" && status !== "completed_with_errors") return null;
 
   const install = summary.install || {};
@@ -463,13 +458,9 @@ function buildWin11CompatibilityMetric(compatCheck) {
   };
 }
 
-/**
- * Build Windows Update metric card.
- * @private
- * @param {object|null} updateResults - Windows Update data
- * @returns {CustomerMetric|null} Metric object or null if no updates
- */
-function buildWindowsUpdateMetric(updateResults) {
+// buildWindowsUpdateMetric: MIGRATED TO handlers/windows_update/index.js
+
+function _buildWindowsUpdateMetric_OLD(updateResults) {
   if (!updateResults || updateResults.updatesInstalled === 0) return null;
 
   const items = [];
@@ -606,13 +597,7 @@ function aggregateTaskData(results) {
       data.win11Compatibility = processWhyNotWin11Check(summary, status);
     }
 
-    // Process Windows Update tasks
-    else if (type === "windows_update") {
-      const updates = processWindowsUpdate(summary, status);
-      if (updates) {
-        data.windowsUpdate = updates;
-      }
-    }
+    // windows_update: MIGRATED TO handlers/windows_update/index.js
 
     // disk_space_report: MIGRATED TO handlers/disk_space_report/index.js
   });
@@ -661,8 +646,7 @@ function buildMetricsFromData(data, totalTasks) {
   const win11Metric = buildWin11CompatibilityMetric(data.win11Compatibility);
   if (win11Metric) metrics.push(win11Metric);
 
-  const updatesMetric = buildWindowsUpdateMetric(data.windowsUpdate);
-  if (updatesMetric) metrics.push(updatesMetric);
+  // updatesMetric: MIGRATED TO handlers/windows_update/index.js
 
   // storageMetric: MIGRATED TO handlers/disk_space_report/index.js
 

@@ -37,6 +37,7 @@ import * as chkdskScan from "./chkdsk_scan/index.js";
 import * as bleachbitClean from "./bleachbit_clean/index.js";
 import * as adwcleanerClean from "./adwcleaner_clean/index.js";
 import * as kvrtScan from "./kvrt_scan/index.js";
+import * as windowsUpdate from "./windows_update/index.js";
 
 // =============================================================================
 // REGISTRY CONSTRUCTION
@@ -62,6 +63,7 @@ const HANDLERS = {
   bleachbit_clean: bleachbitClean,
   adwcleaner_clean: adwcleanerClean,
   kvrt_scan: kvrtScan,
+  windows_update: windowsUpdate,
 };
 
 // =============================================================================

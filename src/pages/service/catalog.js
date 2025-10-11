@@ -96,30 +96,7 @@ export const SERVICES = {
       };
     },
   },
-  windows_update: {
-    id: "windows_update",
-    label: "Windows Update",
-    group: "System Integrity",
-    category: "System Integrity",
-    defaultParams: {
-      microsoftUpdate: true,
-      acceptAll: true,
-      ignoreReboot: true,
-    },
-    toolKeys: [],
-    async build({ params }) {
-      const microsoft_update = params?.microsoftUpdate !== false;
-      const accept_all = params?.acceptAll !== false;
-      const ignore_reboot = params?.ignoreReboot !== false;
-      return {
-        type: "windows_update",
-        microsoft_update,
-        accept_all,
-        ignore_reboot,
-        ui_label: "Windows Update",
-      };
-    },
-  },
+  // windows_update: MIGRATED TO handlers/windows_update/
   // kvrt_scan: MIGRATED TO handlers/kvrt_scan/
   // adwcleaner_clean: MIGRATED TO handlers/adwcleaner_clean/
   // ping_test: MIGRATED TO handlers/ping_test/
