@@ -163,6 +163,7 @@ export function renderTech({ result, index }) {
         },
       },
       grid: { borderColor: "#2a3140" },
+      legend: { show: false },
       tooltip: {
         theme: "dark",
         y: {
