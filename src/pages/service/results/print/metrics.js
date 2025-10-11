@@ -53,14 +53,6 @@ import { getCustomerMetricExtractors } from "../../handlers/index.js";
 // PERFORMANCE TEST PROCESSING
 // =============================================================================
 
-/**
- * Process HeavyLoad stress test results.
- * @deprecated LEGACY: Migrated to handlers/heavyload_stress_*/extractCustomerMetrics
- * @private
- * @param {object} summary - Task summary containing stress test data
- * @param {string} status - Task execution status
- * @returns {object|null} Performance test result
- */
 function _processHeavyLoadTest_OLD(summary, status) {
   if (status !== "success") return null;
 
