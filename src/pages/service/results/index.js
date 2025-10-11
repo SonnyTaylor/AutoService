@@ -75,6 +75,25 @@ export async function initPage() {
     "service.viewingFromReports"
   );
 
+  // Customize UI based on context
+  if (viewingFromReports) {
+    // Hide save button (report is already saved)
+    if (saveBtn) saveBtn.hidden = true;
+
+    // Change back button text
+    if (backBtn) {
+      backBtn.textContent = "Back to Reports";
+    }
+  } else {
+    // Show save button for fresh reports
+    if (saveBtn) saveBtn.hidden = false;
+
+    // Ensure back button says "Back to Runner"
+    if (backBtn) {
+      backBtn.textContent = "Back to Runner";
+    }
+  }
+
   backBtn?.addEventListener("click", () => {
     if (viewingFromReports) {
       // Go back to reports page
