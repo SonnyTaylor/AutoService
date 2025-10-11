@@ -57,14 +57,9 @@
 }
 
 #settings-nav .shortcut-btn.active {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: white;
-}
-
-#settings-nav .shortcut-btn.active:hover {
-  background: var(--primary-700);
-  border-color: var(--primary-700);
+  color: var(--text);
+  background: #21304a;
+  border-color: #2b416b;
 }
 
 /* Content panes - Fix card spacing to match app standards */
