@@ -43,8 +43,8 @@ export const RENDERERS = {
   // speedtest: MIGRATED TO handlers/speedtest/
   // battery_health: MIGRATED TO handlers/battery_health/
   // sfc_scan: MIGRATED TO handlers/sfc_scan/
+  // smartctl_report: MIGRATED TO handlers/smartctl_report/
   dism_health_check: renderDism,
-  smartctl_report: renderSmartctl,
   kvrt_scan: renderKvrt,
   adwcleaner_clean: renderAdwCleaner,
   // ping_test: MIGRATED TO handlers/ping_test/
@@ -317,94 +317,7 @@ function renderDism(res, index) {
   `;
 }
 
-function renderSmartctl(res, index) {
-  const s = res.summary || {};
-  const drives = Array.isArray(s.drives) ? s.drives : [];
-  return html`
-    <div class="card smartctl">
-      ${renderHeader("Drive Health (smartctl)", res.status)}
-      <div class="drive-list">
-        ${drives.length > 0
-          ? map(drives, (d) => {
-              // Calculate health percentage and variant
-              const healthPercent =
-                d.wear_level_percent_used != null
-                  ? 100 - d.wear_level_percent_used
-                  : null;
-              const healthVariant = (() => {
-                if (healthPercent == null) return undefined;
-                if (healthPercent >= 90) return "ok";
-                if (healthPercent >= 70) return "warn";
-                return "fail";
-              })();
-
-              return html`
-                <div class="drive-card">
-                  <div class="drive-head">
-                    <div class="drive-model">
-                      ${d.model_name || d.name || "Drive"}
-                      <span class="muted small">
-                        (SN: ${d.serial_number || "?"}, FW:
-                        ${d.firmware_version || "?"})
-                      </span>
-                    </div>
-                    <span class="badge ${d.health_passed ? "ok" : "fail"}"
-                      >${d.health_passed ? "PASSED" : "FAILED"}</span
-                    >
-                  </div>
-                  <div class="kpi-row">
-                    ${healthPercent != null
-                      ? kpiBox(
-                          "Drive Health",
-                          `${healthPercent}%`,
-                          healthVariant
-                        )
-                      : ""}
-                    ${kpiBox("Temp", d.temperature || "-")}
-                    ${d.media_errors != null
-                      ? kpiBox(
-                          "Media Errors",
-                          String(d.media_errors),
-                          d.media_errors > 0 ? "fail" : undefined
-                        )
-                      : ""}
-                    ${d.error_log_entries != null
-                      ? kpiBox(
-                          "Error Log",
-                          String(d.error_log_entries),
-                          d.error_log_entries > 0 ? "warn" : undefined
-                        )
-                      : ""}
-                    ${d.unsafe_shutdowns != null
-                      ? kpiBox(
-                          "Unsafe Shutdowns",
-                          String(d.unsafe_shutdowns),
-                          d.unsafe_shutdowns > 0 ? "warn" : undefined
-                        )
-                      : ""}
-                    ${kpiBox(
-                      "Power On Hrs",
-                      d.power_on_hours != null ? String(d.power_on_hours) : "-"
-                    )}
-                    ${kpiBox(
-                      "Power Cycles",
-                      d.power_cycles != null ? String(d.power_cycles) : "-"
-                    )}
-                    ${d.data_written_human
-                      ? kpiBox("Data Written", d.data_written_human)
-                      : ""}
-                    ${d.data_read_human
-                      ? kpiBox("Data Read", d.data_read_human)
-                      : ""}
-                  </div>
-                </div>
-              `;
-            })
-          : html`<div class="muted">No drive data</div>`}
-      </div>
-    </div>
-  `;
-}
+// renderSmartctl: MIGRATED TO handlers/smartctl_report/
 
 function renderKvrt(res, index) {
   const s = res.summary || {};

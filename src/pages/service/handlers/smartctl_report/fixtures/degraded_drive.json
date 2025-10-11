@@ -1,0 +1,30 @@
+{
+  "task_type": "smartctl_report",
+  "status": "success",
+  "summary": {
+    "drives": [
+      {
+        "name": "/dev/nvme0n1",
+        "model_name": "Samsung SSD 860 EVO 500GB",
+        "serial_number": "S3Z9NB0K123456Z",
+        "firmware_version": "RVT04B6Q",
+        "health_passed": true,
+        "wear_level_percent_used": 85,
+        "power_on_hours": 15234,
+        "power_cycles": 432,
+        "unsafe_shutdowns": 67,
+        "media_errors": 0,
+        "error_log_entries": 3,
+        "data_written_bytes": 89456723200000,
+        "data_written_human": "89.5 TB",
+        "data_read_bytes": 125678912000000,
+        "data_read_human": "125.7 TB",
+        "temperature": "45 °C",
+        "last_self_test_result": "Completed without error",
+        "friendly": "Drive: Samsung SSD 860 EVO 500GB (SN: S3Z9NB0K123456Z, FW: RVT04B6Q)\nHealth: PASSED\nWear Level: 85% used\nPower On Time: 15,234 hours\nPower Cycles: 432\nUnsafe Shutdowns: 67\nMedia Errors: 0\nError Log Entries: 3\nData Written: ~89.5 TB\nData Read: ~125.7 TB\nTemperature: 45 °C\nLast Self-Test: Completed without error"
+      }
+    ],
+    "queried_devices": 1,
+    "scan_command": ["smartctl", "--scan", "-j"]
+  }
+}

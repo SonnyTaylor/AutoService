@@ -1,0 +1,15 @@
+{
+  "task_type": "smartctl_report",
+  "status": "failure",
+  "summary": {
+    "drives": [],
+    "queried_devices": 0,
+    "scan_command": ["smartctl", "--scan", "-j"],
+    "skipped_devices": [
+      {
+        "device": "/dev/sdb",
+        "reason": "usb"
+      }
+    ]
+  }
+}

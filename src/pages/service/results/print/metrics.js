@@ -216,33 +216,7 @@ function processDISMHealthCheck(summary, status) {
 // DRIVE HEALTH PROCESSING
 // =============================================================================
 
-/**
- * Process SMART drive health data.
- * @private
- * @param {object} summary - Task summary containing drive information
- * @param {string} status - Task execution status
- * @returns {Array<object>} Array of drive health data
- */
-function processDriveHealth(summary, status) {
-  if (status !== "success") return [];
-
-  const drives = Array.isArray(summary.drives) ? summary.drives : [];
-
-  return drives.map((drive) => {
-    const healthPercent =
-      drive.wear_level_percent_used != null
-        ? 100 - drive.wear_level_percent_used
-        : null;
-
-    return {
-      model: drive.model_name || drive.name || "Unknown Drive",
-      health: healthPercent,
-      passed: drive.health_passed,
-      temp: drive.temperature,
-      powerOnHours: drive.power_on_hours,
-    };
-  });
-}
+// processDriveHealth: MIGRATED TO handlers/smartctl_report/
 
 // =============================================================================
 // PERFORMANCE TEST PROCESSING

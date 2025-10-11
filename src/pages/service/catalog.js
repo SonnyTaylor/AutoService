@@ -248,25 +248,7 @@ export const SERVICES = {
     },
   },
   // sfc_scan: MIGRATED TO handlers/sfc_scan/
-  smartctl_report: {
-    id: "smartctl_report",
-    label: "Drive Health Report (smartctl)",
-    group: "Diagnostics",
-    category: "Diagnostics",
-    toolKeys: ["smartctl", "gsmartcontrol"],
-    async build({ resolveToolPath }) {
-      let pSmart = await resolveToolPath(["smartctl", "gsmartcontrol"]);
-      if (pSmart && /gsmartcontrol\.exe$/i.test(pSmart)) {
-        pSmart = pSmart.replace(/[^\\\/]+$/g, "smartctl.exe");
-      }
-      return {
-        type: "smartctl_report",
-        executable_path: pSmart,
-        detail_level: "basic",
-        ui_label: "Drive Health Report (smartctl)",
-      };
-    },
-  },
+  // smartctl_report: MIGRATED TO handlers/smartctl_report/
   furmark_stress_test: {
     id: "furmark_stress_test",
     label: "GPU Stress (FurMark)",

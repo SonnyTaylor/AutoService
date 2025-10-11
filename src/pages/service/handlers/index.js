@@ -31,6 +31,7 @@ import * as diskSpaceReport from "./disk_space_report/index.js";
 import * as pingTest from "./ping_test/index.js";
 import * as speedtest from "./speedtest/index.js";
 import * as sfcScan from "./sfc_scan/index.js";
+import * as smartctlReport from "./smartctl_report/index.js";
 
 // =============================================================================
 // REGISTRY CONSTRUCTION
@@ -50,6 +51,7 @@ const HANDLERS = {
   ping_test: pingTest,
   speedtest: speedtest,
   sfc_scan: sfcScan,
+  smartctl_report: smartctlReport,
 };
 
 // =============================================================================
