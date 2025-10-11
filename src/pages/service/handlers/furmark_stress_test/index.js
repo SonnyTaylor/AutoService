@@ -9,7 +9,8 @@
  * - Customer metrics extractor showing performance test completion
  */
 
-import { renderGeneric } from "../../results/renderers/common.js";
+import { html } from "lit-html";
+import { renderHeader, renderList } from "../common/ui.js";
 
 /**
  * @typedef {import('../types').ServiceDefinition} ServiceDefinition
@@ -63,7 +64,12 @@ export const definition = {
  * @returns {import('lit-html').TemplateResult} Rendered HTML
  */
 export function renderTech({ result, index }) {
-  return renderGeneric(result, index);
+  return html`
+    <div class="result generic">
+      ${renderHeader(result.ui_label || "GPU Stress (FurMark)", result.status)}
+      ${renderList(result.summary || {})}
+    </div>
+  `;
 }
 
 // =============================================================================
