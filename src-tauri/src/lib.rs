@@ -10,6 +10,7 @@ mod icons;
 mod models;
 mod paths;
 mod programs;
+mod reports;
 mod scripts;
 mod settings;
 mod shortcuts;
@@ -23,6 +24,7 @@ use crate::icons::{read_image_as_data_url, suggest_logo_from_exe};
 use crate::programs::{
     get_tool_statuses, launch_program, list_programs, remove_program, save_program,
 };
+use crate::reports::save_report;
 use crate::scripts::{list_scripts, remove_script, run_script, save_script};
 use crate::settings::{
     load_app_settings, make_portable_path, resolve_portable_path, save_app_settings,
@@ -287,7 +289,8 @@ pub fn run() {
             load_app_settings,
             save_app_settings,
             make_portable_path,
-            resolve_portable_path
+            resolve_portable_path,
+            save_report
         ])
         .setup(|app| {
             // Setup function called after the app is initialized

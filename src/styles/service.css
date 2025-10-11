@@ -1776,3 +1776,44 @@
 [data-page="service-results"] .subtab-panel {
   padding-top: 16px;
 }
+
+/* Save button states */
+[data-page="service-results"] #svc-results-save.success {
+  background: #10b981;
+}
+
+[data-page="service-results"] #svc-results-save.error {
+  background: #ef4444;
+}
+
+/* Notification animations */
+@keyframes slideIn {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

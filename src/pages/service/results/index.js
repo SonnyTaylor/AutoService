@@ -20,6 +20,7 @@ export async function initPage() {
   const container = document.getElementById("svc-results-container");
   const tabsNav = document.getElementById("svc-results-tabs");
   const backBtn = document.getElementById("svc-results-back");
+  const saveBtn = document.getElementById("svc-results-save");
   const summaryEl = document.getElementById("svc-results-summary");
   const sectionsEl = document.getElementById("svc-results-sections");
 
@@ -85,6 +86,9 @@ export async function initPage() {
 
   // Set up print handlers
   setupPrintHandlers(report, sectionsEl);
+
+  // Set up save handler
+  setupSaveHandler(report, saveBtn);
 
   if (container) container.hidden = false;
   if (tabsNav) tabsNav.hidden = false;
@@ -495,4 +499,148 @@ function enhancePrintPreviewDocument(doc) {
   });
 
   doc.body.dataset.previewInitialized = "true";
+}
+
+/**
+ * Set up the save report handler
+ */
+function setupSaveHandler(report, saveBtn) {
+  if (!saveBtn) return;
+
+  saveBtn.addEventListener("click", async () => {
+    try {
+      // Disable button during save
+      saveBtn.disabled = true;
+      const originalHTML = saveBtn.innerHTML;
+      saveBtn.innerHTML =
+        '<i class="ph ph-circle-notch" style="margin-right: 6px; vertical-align: -2px; animation: spin 1s linear infinite;"></i>Saving...';
+
+      // Get system info for hostname
+      let hostname = "Unknown_PC";
+      try {
+        const { core } = window.__TAURI__ || {};
+        const sysInfo = await core?.invoke("get_system_info");
+        hostname = sysInfo?.hostname || hostname;
+      } catch (e) {
+        console.warn("Could not fetch hostname:", e);
+      }
+
+      // Get metadata from sessionStorage (if business mode was used)
+      let customerName = null;
+      let technicianName = null;
+      try {
+        const metadataRaw = sessionStorage.getItem("service.metadata");
+        if (metadataRaw) {
+          const metadata = JSON.parse(metadataRaw);
+          customerName = metadata.customerName || null;
+          technicianName = metadata.technicianName || null;
+        }
+      } catch (e) {
+        console.warn("Could not load service metadata:", e);
+      }
+
+      // Get plan and log file paths from sessionStorage (if available)
+      let planFilePath = null;
+      let logFilePath = null;
+      try {
+        const runnerDataRaw = sessionStorage.getItem("service.runnerData");
+        if (runnerDataRaw) {
+          const runnerData = JSON.parse(runnerDataRaw);
+          planFilePath = runnerData.planFile || null;
+          logFilePath = runnerData.logFile || null;
+        }
+      } catch (e) {
+        console.warn("Could not load runner data:", e);
+      }
+
+      // Prepare report JSON
+      const reportJson = JSON.stringify(report, null, 2);
+
+      // Call Rust backend to save
+      const { core } = window.__TAURI__ || {};
+      const response = await core?.invoke("save_report", {
+        request: {
+          report_json: reportJson,
+          plan_file_path: planFilePath,
+          log_file_path: logFilePath,
+          hostname: hostname,
+          customer_name: customerName,
+          technician_name: technicianName,
+        },
+      });
+
+      if (response.success) {
+        // Show success message
+        saveBtn.innerHTML =
+          '<i class="ph ph-check" style="margin-right: 6px; vertical-align: -2px;"></i>Saved!';
+        saveBtn.classList.add("success");
+        setTimeout(() => {
+          saveBtn.innerHTML = originalHTML;
+          saveBtn.classList.remove("success");
+          saveBtn.disabled = false;
+        }, 2000);
+
+        // Show notification with folder path
+        if (response.report_folder) {
+          showNotification(
+            `Report saved successfully to: ${response.report_folder}`,
+            "success"
+          );
+        }
+      } else {
+        throw new Error(response.error || "Unknown error");
+      }
+    } catch (error) {
+      console.error("Failed to save report:", error);
+      const originalHTML = saveBtn.innerHTML;
+      saveBtn.innerHTML =
+        '<i class="ph ph-x" style="margin-right: 6px; vertical-align: -2px;"></i>Save Failed';
+      saveBtn.classList.add("error");
+      setTimeout(() => {
+        saveBtn.innerHTML = originalHTML;
+        saveBtn.classList.remove("error");
+        saveBtn.disabled = false;
+      }, 2000);
+
+      showNotification(
+        `Failed to save report: ${error.message || error}`,
+        "error"
+      );
+    }
+  });
+}
+
+/**
+ * Show a temporary notification message
+ */
+function showNotification(message, type = "info") {
+  const notification = document.createElement("div");
+  notification.className = `notification notification-${type}`;
+  notification.textContent = message;
+  notification.style.cssText = `
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    padding: 16px 24px;
+    background: ${
+      type === "success" ? "#10b981" : type === "error" ? "#ef4444" : "#3b82f6"
+    };
+    color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 10000;
+    max-width: 400px;
+    font-size: 14px;
+    line-height: 1.5;
+    animation: slideIn 0.3s ease-out;
+  `;
+
+  document.body.appendChild(notification);
+
+  setTimeout(() => {
+    notification.style.animation = "slideOut 0.3s ease-out";
+    setTimeout(() => {
+      document.body.removeChild(notification);
+    }, 300);
+  }, 5000);
 }

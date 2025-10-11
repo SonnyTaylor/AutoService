@@ -390,6 +390,21 @@ export async function initPage() {
         const ok = finalReport?.overall_status === "success";
         showSummary(ok);
         persistFinalReport(lastFinalJsonString);
+
+        // Store plan and log file paths for later save operation
+        try {
+          const runnerData = {
+            planFile: payload.plan_file || null,
+            logFile: payload.log_file || null,
+          };
+          sessionStorage.setItem(
+            "service.runnerData",
+            JSON.stringify(runnerData)
+          );
+        } catch (e) {
+          console.warn("Failed to store runner data:", e);
+        }
+
         try {
           if (viewResultsBtn) {
             viewResultsBtn.removeAttribute("disabled");
