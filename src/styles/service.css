@@ -899,6 +899,20 @@
 }
 
 /* Service results page */
+[data-page="service-results"] .run-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+[data-page="service-results"] .run-header .run-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  justify-content: space-between;
+}
 [data-page="service-results"] .results-two-pane {
   display: grid;
   grid-template-columns: 1fr 420px;
