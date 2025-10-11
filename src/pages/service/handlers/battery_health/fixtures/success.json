@@ -1,0 +1,13 @@
+{
+  "task_type": "battery_health",
+  "status": "success",
+  "ui_label": "Battery Health",
+  "summary": {
+    "count_batteries": 1,
+    "average_soh_percent": 95,
+    "low_health_batteries": 0,
+    "human_readable": {
+      "verdict": "Pass"
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "task_type": "bleachbit",
+  "status": "success",
+  "summary": {
+    "space_freed_bytes": 2684354560,
+    "files_deleted": 1247,
+    "errors": 0
+  },
+  "ui_label": "BleachBit Clean"
+}

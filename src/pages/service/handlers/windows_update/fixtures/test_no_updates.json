@@ -1,0 +1,44 @@
+{
+  "task_type": "windows_update",
+  "status": "success",
+  "summary": {
+    "pre_scan": {
+      "count_total": 0,
+      "count_windows": 0,
+      "count_driver": 0,
+      "items": []
+    },
+    "install": {
+      "count_installed": 0,
+      "count_downloaded": 0,
+      "count_failed": 0,
+      "count_windows_installed": 0,
+      "count_driver_installed": 0,
+      "items": []
+    },
+    "post_scan": {
+      "count_remaining": 0,
+      "items": []
+    },
+    "reboot_required": false,
+    "human_readable": {
+      "verdict": "up-to-date",
+      "notes": [],
+      "summary_line": ""
+    },
+    "meta": {
+      "module_available": true,
+      "module_version": "2.2.0.3",
+      "get_command": "Get-WindowsUpdate",
+      "install_command": "Install-WindowsUpdate"
+    },
+    "timings": {
+      "pre_scan_seconds": 12.5,
+      "install_seconds": 0.1,
+      "post_scan_seconds": 10.8
+    },
+    "errors": [],
+    "exit_code": 0,
+    "stderr_excerpt": ""
+  }
+}

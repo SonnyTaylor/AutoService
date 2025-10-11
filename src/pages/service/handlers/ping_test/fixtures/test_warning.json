@@ -1,0 +1,24 @@
+{
+  "task_type": "ping_test",
+  "status": "success",
+  "summary": {
+    "host": "remote-server.com",
+    "latency_ms": {
+      "avg": 125.8,
+      "min": 110.0,
+      "max": 145.0
+    },
+    "packets": {
+      "sent": 4,
+      "received": 4,
+      "loss_percent": 0
+    },
+    "interval_stats": {
+      "stdev": 15.2
+    },
+    "human_readable": {
+      "stability_score": 65.0
+    }
+  },
+  "ui_label": "Ping Test (remote-server.com, 4x)"
+}

@@ -1,0 +1,146 @@
+{
+  "task_type": "windows_update",
+  "status": "completed_with_errors",
+  "summary": {
+    "pre_scan": {
+      "count_total": 4,
+      "count_windows": 3,
+      "count_driver": 1,
+      "items": [
+        {
+          "Stage": "available",
+          "Title": "2024-10 Cumulative Update for Windows 11 (KB5031455)",
+          "KB": "KB5031455",
+          "Size": "485 MB",
+          "Category": "Security Updates",
+          "Result": null,
+          "IsDriver": false
+        },
+        {
+          "Stage": "available",
+          "Title": "Security Update for Microsoft Edge (KB5032196)",
+          "KB": "KB5032196",
+          "Size": "125 MB",
+          "Category": "Security Updates",
+          "Result": null,
+          "IsDriver": false
+        },
+        {
+          "Stage": "available",
+          "Title": "Optional Feature Update for Windows 11 (KB5034848)",
+          "KB": "KB5034848",
+          "Size": "1.2 GB",
+          "Category": "Feature Updates",
+          "Result": null,
+          "IsDriver": false
+        },
+        {
+          "Stage": "available",
+          "Title": "Intel - System - 30.0.101.1191",
+          "KB": "",
+          "Size": "2 MB",
+          "Category": "Driver Updates",
+          "Result": null,
+          "IsDriver": true
+        }
+      ]
+    },
+    "install": {
+      "count_installed": 2,
+      "count_downloaded": 0,
+      "count_failed": 2,
+      "count_windows_installed": 2,
+      "count_driver_installed": 0,
+      "items": [
+        {
+          "Stage": "installed",
+          "Title": "2024-10 Cumulative Update for Windows 11 (KB5031455)",
+          "KB": "KB5031455",
+          "Size": "485 MB",
+          "Category": "Security Updates",
+          "Result": "Installed",
+          "IsDriver": false
+        },
+        {
+          "Stage": "installed",
+          "Title": "Security Update for Microsoft Edge (KB5032196)",
+          "KB": "KB5032196",
+          "Size": "125 MB",
+          "Category": "Security Updates",
+          "Result": "Installed",
+          "IsDriver": false
+        },
+        {
+          "Stage": "installed",
+          "Title": "Optional Feature Update for Windows 11 (KB5034848)",
+          "KB": "KB5034848",
+          "Size": "1.2 GB",
+          "Category": "Feature Updates",
+          "Result": "Failed: Insufficient disk space",
+          "IsDriver": false
+        },
+        {
+          "Stage": "installed",
+          "Title": "Intel - System - 30.0.101.1191",
+          "KB": "",
+          "Size": "2 MB",
+          "Category": "Driver Updates",
+          "Result": "Failed: Driver installation error",
+          "IsDriver": true
+        }
+      ]
+    },
+    "post_scan": {
+      "count_remaining": 2,
+      "items": [
+        {
+          "Stage": "remaining",
+          "Title": "Optional Feature Update for Windows 11 (KB5034848)",
+          "KB": "KB5034848",
+          "Size": "1.2 GB",
+          "Category": "Feature Updates",
+          "Result": null,
+          "IsDriver": false
+        },
+        {
+          "Stage": "remaining",
+          "Title": "Intel - System - 30.0.101.1191",
+          "KB": "",
+          "Size": "2 MB",
+          "Category": "Driver Updates",
+          "Result": null,
+          "IsDriver": true
+        }
+      ]
+    },
+    "reboot_required": false,
+    "human_readable": {
+      "verdict": "updates-remaining",
+      "notes": ["Failed: 2", "Installed: 2", "Remaining: 2"],
+      "summary_line": "Failed: 2; Installed: 2; Remaining: 2"
+    },
+    "meta": {
+      "module_available": true,
+      "module_version": "2.2.0.3",
+      "get_command": "Get-WindowsUpdate",
+      "install_command": "Install-WindowsUpdate"
+    },
+    "timings": {
+      "pre_scan_seconds": 14.8,
+      "install_seconds": 180.3,
+      "post_scan_seconds": 11.2
+    },
+    "errors": [
+      {
+        "where": "InstallUpdates",
+        "message": "Update KB5034848 failed: Insufficient disk space (0x80070070)"
+      },
+      {
+        "where": "InstallUpdates",
+        "message": "Driver installation failed: The specified service does not exist (0x80070424)"
+      }
+    ],
+    "exit_code": 0,
+    "stderr_excerpt": "WARNING: Some updates failed to install. See details above."
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "task_type": "chkdsk",
+  "status": "success",
+  "summary": {
+    "return_code": 0,
+    "output": "The type of the file system is NTFS.\nVolume label is OS.\n\nWindows has scanned the file system and found no problems.\nNo further action is required.\n\n  976754687 KB total disk space.\n  184325123 KB in 425831 files.\n      156432 KB in 42567 indexes.\n           0 KB in bad sectors.\n      523421 KB in use by the system.\n       65536 KB occupied by the log file.\n  791775731 KB available on disk.\n\n      4096 bytes in each allocation unit.\n 244188671 total allocation units on disk.\n 197943932 allocation units available on disk.\n",
+    "verdict": "The file system is healthy.",
+    "severity": "success"
+  },
+  "ui_label": "CHKDSK Scan"
+}

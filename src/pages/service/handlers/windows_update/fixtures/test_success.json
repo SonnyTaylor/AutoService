@@ -1,0 +1,136 @@
+{
+  "task_type": "windows_update",
+  "status": "success",
+  "summary": {
+    "pre_scan": {
+      "count_total": 5,
+      "count_windows": 3,
+      "count_driver": 2,
+      "items": [
+        {
+          "Stage": "available",
+          "Title": "2024-10 Cumulative Update for Windows 11 Version 23H2 (KB5031455)",
+          "KB": "KB5031455",
+          "Size": "485 MB",
+          "Category": "Security Updates",
+          "Result": null,
+          "IsDriver": false
+        },
+        {
+          "Stage": "available",
+          "Title": "Security Update for Microsoft Edge (KB5032196)",
+          "KB": "KB5032196",
+          "Size": "125 MB",
+          "Category": "Security Updates",
+          "Result": null,
+          "IsDriver": false
+        },
+        {
+          "Stage": "available",
+          "Title": "Update for Windows Defender Antivirus (KB2267602)",
+          "KB": "KB2267602",
+          "Size": "15 MB",
+          "Category": "Definition Updates",
+          "Result": null,
+          "IsDriver": false
+        },
+        {
+          "Stage": "available",
+          "Title": "Intel - System - 30.0.101.1191",
+          "KB": "",
+          "Size": "2 MB",
+          "Category": "Driver Updates",
+          "Result": null,
+          "IsDriver": true
+        },
+        {
+          "Stage": "available",
+          "Title": "Realtek - MEDIA - 6.0.9600.1",
+          "KB": "",
+          "Size": "45 MB",
+          "Category": "Driver Updates",
+          "Result": null,
+          "IsDriver": true
+        }
+      ]
+    },
+    "install": {
+      "count_installed": 5,
+      "count_downloaded": 0,
+      "count_failed": 0,
+      "count_windows_installed": 3,
+      "count_driver_installed": 2,
+      "items": [
+        {
+          "Stage": "installed",
+          "Title": "2024-10 Cumulative Update for Windows 11 Version 23H2 (KB5031455)",
+          "KB": "KB5031455",
+          "Size": "485 MB",
+          "Category": "Security Updates",
+          "Result": "Installed",
+          "IsDriver": false
+        },
+        {
+          "Stage": "installed",
+          "Title": "Security Update for Microsoft Edge (KB5032196)",
+          "KB": "KB5032196",
+          "Size": "125 MB",
+          "Category": "Security Updates",
+          "Result": "Installed",
+          "IsDriver": false
+        },
+        {
+          "Stage": "installed",
+          "Title": "Update for Windows Defender Antivirus (KB2267602)",
+          "KB": "KB2267602",
+          "Size": "15 MB",
+          "Category": "Definition Updates",
+          "Result": "Installed",
+          "IsDriver": false
+        },
+        {
+          "Stage": "installed",
+          "Title": "Intel - System - 30.0.101.1191",
+          "KB": "",
+          "Size": "2 MB",
+          "Category": "Driver Updates",
+          "Result": "Installed",
+          "IsDriver": true
+        },
+        {
+          "Stage": "installed",
+          "Title": "Realtek - MEDIA - 6.0.9600.1",
+          "KB": "",
+          "Size": "45 MB",
+          "Category": "Driver Updates",
+          "Result": "Installed",
+          "IsDriver": true
+        }
+      ]
+    },
+    "post_scan": {
+      "count_remaining": 0,
+      "items": []
+    },
+    "reboot_required": true,
+    "human_readable": {
+      "verdict": "updated",
+      "notes": ["Installed: 5", "Reboot required"],
+      "summary_line": "Installed: 5; Reboot required"
+    },
+    "meta": {
+      "module_available": true,
+      "module_version": "2.2.0.3",
+      "get_command": "Get-WindowsUpdate",
+      "install_command": "Install-WindowsUpdate"
+    },
+    "timings": {
+      "pre_scan_seconds": 15.2,
+      "install_seconds": 245.8,
+      "post_scan_seconds": 12.5
+    },
+    "errors": [],
+    "exit_code": 0,
+    "stderr_excerpt": ""
+  }
+}

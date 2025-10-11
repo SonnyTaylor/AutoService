@@ -1,0 +1,8 @@
+{
+  "task_type": "battery_health",
+  "status": "error",
+  "ui_label": "Battery Health",
+  "summary": {
+    "error": "Failed to query battery API"
+  }
+}

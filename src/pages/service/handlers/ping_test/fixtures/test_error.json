@@ -1,0 +1,14 @@
+{
+  "task_type": "ping_test",
+  "status": "error",
+  "summary": {
+    "host": "unreachable.invalid",
+    "error": "Host unreachable",
+    "packets": {
+      "sent": 4,
+      "received": 0,
+      "loss_percent": 100
+    }
+  },
+  "ui_label": "Ping Test (unreachable.invalid, 4x)"
+}

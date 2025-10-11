@@ -1,0 +1,14 @@
+{
+  "task_type": "template_service",
+  "status": "success",
+  "summary": {
+    "human_readable": {
+      "example_value": "Test Value",
+      "verdict": "Success"
+    },
+    "results": {
+      "raw_data": "Raw test data here"
+    }
+  },
+  "ui_label": "Template Service"
+}

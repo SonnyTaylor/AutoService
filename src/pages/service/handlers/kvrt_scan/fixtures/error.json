@@ -1,0 +1,8 @@
+{
+  "task_type": "kvrt",
+  "status": "failure",
+  "summary": {
+    "error": "Kaspersky Virus Removal Tool executable not found"
+  },
+  "ui_label": "Kaspersky Virus Scan"
+}

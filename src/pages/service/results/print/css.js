@@ -1,4 +1,10 @@
-export const PRINT_LIGHT_CSS = `
+import { getHandlerPrintCSS } from "../../handlers/index.js";
+
+/**
+ * Base print CSS - shared styles for all technician reports.
+ * Service-specific CSS is now defined in individual handlers.
+ */
+const BASE_PRINT_CSS = `
   @page { 
     size: A4; 
     margin: 8mm;
@@ -128,250 +134,6 @@ export const PRINT_LIGHT_CSS = `
   }
   .badge.ok { color: #166534; border-color: #86efac; background: #dcfce7; }
   .badge.fail { color: #991b1b; border-color: #fca5a5; background: #fee2e2; }
-
-  /* SFC Layout */
-  .sfc-layout { display: grid; grid-template-columns: 40px 1fr; gap: 12px; align-items: start; }
-  .sfc-icon { font-size: 26px; }
-  .sfc-icon .ok { color: #16a34a; }
-  .sfc-icon .fail { color: #dc2626; }
-  .sfc-verdict { font-weight: 600; font-size: 11.5pt; margin-bottom: 4px; }
-  .sfc-repair { margin-top: 6px; font-size: 10pt; color: #64748b; }
-
-  /* DISM & Other Cards */
-  .dism, .chkdsk, .bleachbit, .adwcleaner, .kvrt, .heavyload, .wn11, .winsat { margin-bottom: 4px; }
-  
-  /* Windows 11 Compatibility Check (WhyNotWin11) */
-  .card.wn11 {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .card.wn11 .wn11-status-banner {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 12px;
-    border-radius: 6px;
-    border: 1.5px solid #cbd5e1;
-    background: #fafbfc;
-  }
-  .card.wn11 .wn11-status-banner.ready {
-    border-color: #86efac;
-    background: #f0fdf4;
-  }
-  .card.wn11 .wn11-status-banner.not-ready {
-    border-color: #fca5a5;
-    background: #fef2f2;
-  }
-  .card.wn11 .wn11-status-icon {
-    font-size: 26px;
-    line-height: 1;
-    flex-shrink: 0;
-  }
-  .card.wn11 .wn11-status-banner.ready .wn11-status-icon {
-    color: #16a34a;
-  }
-  .card.wn11 .wn11-status-banner.not-ready .wn11-status-icon {
-    color: #dc2626;
-  }
-  .card.wn11 .wn11-status-content {
-    flex: 1;
-    min-width: 0;
-  }
-  .card.wn11 .wn11-status-title {
-    font-size: 11.5pt;
-    font-weight: 600;
-    letter-spacing: 0.01em;
-    margin-bottom: 2px;
-    color: #0f172a;
-  }
-  .card.wn11 .wn11-status-subtitle {
-    font-size: 9.5pt;
-    color: #64748b;
-  }
-  .card.wn11 .wn11-checks-section {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 10px 12px;
-    background: #fafbfc;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-  }
-  .card.wn11 .wn11-checks-section .section-title {
-    font-size: 9pt;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #64748b;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    margin-bottom: 4px;
-  }
-  .card.wn11 .wn11-checks-section .section-title i {
-    font-size: 12px;
-  }
-  .card.wn11 .wn11-check-group {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-  }
-  .card.wn11 .wn11-check-group-title {
-    font-size: 9pt;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-    color: #64748b;
-    margin-top: 2px;
-  }
-  .card.wn11 .wn11-passing-details {
-    margin-top: 4px;
-  }
-  /* Force details open for print - can't interact with dropdowns on paper! */
-  .card.wn11 .wn11-passing-details[open],
-  .card.wn11 .wn11-passing-details {
-    display: block;
-  }
-  .card.wn11 .wn11-passing-details summary {
-    font-size: 9pt;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #64748b;
-    margin-bottom: 6px;
-    list-style: none;
-    cursor: default;
-    padding: 0;
-    background: none;
-    border: none;
-  }
-  .card.wn11 .wn11-passing-details summary::-webkit-details-marker {
-    display: none;
-  }
-  /* Hide the dropdown arrow in print */
-  .card.wn11 .wn11-passing-details summary::before {
-    display: none;
-  }
-  .card.wn11 .wn11-passing-details .pill-row {
-    margin-top: 0;
-  }
-  .card.wn11 .wn11-recommendations {
-    padding: 10px 12px;
-    background: #fef9c3;
-    border: 1px solid #facc15;
-    border-radius: 6px;
-  }
-  .card.wn11 .wn11-rec-title {
-    font-size: 9pt;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #854d0e;
-    margin-bottom: 6px;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-  }
-  .card.wn11 .wn11-rec-title i {
-    font-size: 12px;
-  }
-  .card.wn11 .wn11-rec-list {
-    margin: 0;
-    padding-left: 18px;
-    list-style: disc;
-  }
-  .card.wn11 .wn11-rec-list li {
-    margin: 5px 0;
-    font-size: 9.5pt;
-    line-height: 1.4;
-    color: #475569;
-  }
-  .card.wn11 .wn11-rec-list li strong {
-    color: #0f172a;
-    font-weight: 600;
-  }
-  
-  /* WinSAT print layout */
-  .winsat-kpis { 
-    display: grid; 
-    grid-template-columns: 1fr;
-    gap: 10px; 
-    margin-bottom: 10px;
-  }
-  .winsat-meta { 
-    background: #fafbfc; border: 1px solid #e5e7eb; 
-    border-radius: 6px; padding: 8px 10px;
-  }
-  .winsat-meta-row { 
-    display: flex; justify-content: space-between; 
-    margin: 3px 0; font-size: 9.5pt; 
-    gap: 8px;
-  }
-  .winsat-meta-row .lab { 
-    text-transform: uppercase; letter-spacing: 0.5px; 
-    color: #64748b; font-weight: 500; 
-    flex-shrink: 0;
-  }
-  .winsat-kpi-grid { 
-    display: grid; grid-template-columns: repeat(2, 1fr); 
-    gap: 8px; max-width: 100%;
-  }
-  .winsat-latency, .winsat-scores {
-    background: #fafbfc; border: 1px solid #e5e7eb; 
-    border-radius: 6px; padding: 10px;
-  }
-  .winsat-latency .section-title, .winsat-scores .section-title {
-    font-size: 10pt; text-transform: uppercase; 
-    letter-spacing: 0.5px; color: #64748b; 
-    margin-bottom: 8px; font-weight: 600;
-  }
-  .winsat-latency .kpi-row, .winsat-scores .kpi-row {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  /* Hide complex charts in print - replace with simple visuals */
-  .speedtest-chart, .ping-chart, .ping-chart-shell, .chart-container, .winsat-chart,
-  [id^="speedtest-chart-"], [id^="ping-chart-"], [id^="iperf-chart-"], [id^="winsat-chart-"] {
-    display: none !important;
-  }
-  
-  /* Print-friendly layouts */
-  .ping-layout, .speedtest-layout, .winsat-layout { 
-    display: block; 
-  }
-  
-  /* KPI layouts */
-  .speedtest-kpis, .ping-kpis { 
-    display: grid; 
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px; 
-    margin-bottom: 10px;
-  }
-  .speedtest-kpi-grid { 
-    display: grid; grid-template-columns: repeat(2, 1fr); 
-    gap: 8px; max-width: 100%;
-  }
-  .speedtest-meta { 
-    background: #fafbfc; border: 1px solid #e5e7eb; 
-    border-radius: 6px; padding: 8px 10px; margin-top: 6px;
-    word-wrap: break-word;
-  }
-  .speedtest-meta-row { 
-    display: flex; justify-content: space-between; 
-    margin: 3px 0; font-size: 9.5pt; 
-    gap: 8px;
-  }
-  .speedtest-meta-row .lab { 
-    text-transform: uppercase; letter-spacing: 0.5px; 
-    color: #64748b; font-weight: 500; 
-    flex-shrink: 0;
-  }
-  .speedtest-meta-row .val {
-    overflow: hidden; text-overflow: ellipsis; 
-    white-space: nowrap;
-    text-align: right;
-  }
   
   /* Simple visual bars for print */
   .print-bar {
@@ -414,27 +176,6 @@ export const PRINT_LIGHT_CSS = `
   .iperf .kpi-row {
     grid-template-columns: repeat(3, 1fr);
   }
-  
-  /* KVRT Detections */
-  .kvrt-detections { margin-top: 10px; }
-  .kvrt-detection-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
-  .kvrt-detection { 
-    background: #fafbfc; border: 1px solid #cbd5e1; 
-    border-radius: 6px; padding: 10px; 
-  }
-  .kvrt-detection-head { display: flex; justify-content: space-between; align-items: start; gap: 10px; margin-bottom: 6px; }
-  .kvrt-threat { font-weight: 600; font-size: 10.5pt; color: #92400e; }
-  .kvrt-detection-body { font-size: 9.5pt; }
-  .kvrt-label { text-transform: uppercase; font-size: 8.5pt; letter-spacing: 0.5px; color: #64748b; margin-bottom: 2px; }
-  .kvrt-object { 
-    font-family: 'Consolas', 'Monaco', monospace; 
-    font-size: 9pt; color: #334155; 
-    word-break: break-all; margin-top: 2px;
-  }
-  .kvrt-meta { 
-    border-top: 1px solid #e5e7eb; padding-top: 8px; 
-    margin-top: 8px; font-size: 9pt; color: #64748b; 
-  }
 
   /* Typography */
   h2, h3 { page-break-after: avoid; }
@@ -457,6 +198,21 @@ export const PRINT_LIGHT_CSS = `
     font-family: 'Consolas', 'Monaco', monospace;
   }
 `;
+
+/**
+ * Get complete technician print CSS.
+ * Combines base CSS with service-specific CSS from handlers.
+ * @returns {string} Complete CSS for technician reports
+ */
+export function getTechPrintCSS() {
+  return BASE_PRINT_CSS + "\n\n" + getHandlerPrintCSS();
+}
+
+/**
+ * Legacy export for backward compatibility.
+ * Use getTechPrintCSS() for dynamic handler CSS injection.
+ */
+export const PRINT_LIGHT_CSS = getTechPrintCSS();
 
 export const CUSTOMER_PRINT_CSS = `
   @page { 

@@ -1,0 +1,43 @@
+{
+  "task_type": "kvrt",
+  "status": "success",
+  "summary": {
+    "objects_scanned": 125847,
+    "threats_found": 5,
+    "threats_neutralized": 5,
+    "detections": [
+      {
+        "threat_name": "Trojan-Downloader.Win32.Agent",
+        "file_path": "C:\\Users\\Public\\Downloads\\setup.exe",
+        "status": "removed"
+      },
+      {
+        "threat_name": "HEUR:Trojan.Win32.Generic",
+        "file_path": "C:\\Users\\User\\AppData\\Local\\Temp\\tmp5F3A.tmp",
+        "status": "removed"
+      },
+      {
+        "threat_name": "Adware.Win32.Agent",
+        "file_path": "C:\\Program Files (x86)\\ToolBar\\toolbar.dll",
+        "status": "removed"
+      },
+      {
+        "threat_name": "Trojan-Spy.Win32.Zbot",
+        "file_path": "C:\\Windows\\System32\\svchost32.exe",
+        "status": "removed"
+      },
+      {
+        "threat_name": "Backdoor.Win32.Agent",
+        "file_path": "C:\\Users\\User\\Documents\\file.scr",
+        "status": "quarantined"
+      }
+    ],
+    "scan_duration_seconds": 542,
+    "config_flags": {
+      "extended_scan": true,
+      "scan_archives": true,
+      "scan_email": false
+    }
+  },
+  "ui_label": "Kaspersky Virus Scan"
+}

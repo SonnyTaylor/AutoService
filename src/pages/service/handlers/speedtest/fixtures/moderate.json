@@ -1,0 +1,19 @@
+{
+  "task_type": "speedtest",
+  "status": "success",
+  "ui_label": "Internet Speed Test",
+  "summary": {
+    "duration_seconds": 52.1,
+    "human_readable": {
+      "download_mbps": 15.2,
+      "upload_mbps": 3.8,
+      "ping_ms": 65.0,
+      "server_description": "Chicago, Test Server, US",
+      "isp": "Slow ISP",
+      "verdict": "fair",
+      "notes": ["moderate download 15.2 Mbps", "elevated ping 65 ms"],
+      "score": 60.0,
+      "rating_stars": 3
+    }
+  }
+}

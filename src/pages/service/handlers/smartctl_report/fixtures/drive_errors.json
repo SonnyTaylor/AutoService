@@ -1,0 +1,30 @@
+{
+  "task_type": "smartctl_report",
+  "status": "success",
+  "summary": {
+    "drives": [
+      {
+        "name": "/dev/nvme0n1",
+        "model_name": "Crucial MX500 1TB",
+        "serial_number": "2145E6123456",
+        "firmware_version": "M3CR046",
+        "health_passed": false,
+        "wear_level_percent_used": 98,
+        "power_on_hours": 23456,
+        "power_cycles": 892,
+        "unsafe_shutdowns": 234,
+        "media_errors": 12,
+        "error_log_entries": 47,
+        "data_written_bytes": 156789234560000,
+        "data_written_human": "156.8 TB",
+        "data_read_bytes": 234567891230000,
+        "data_read_human": "234.6 TB",
+        "temperature": "52 °C",
+        "last_self_test_result": "Completed: read failure",
+        "friendly": "Drive: Crucial MX500 1TB (SN: 2145E6123456, FW: M3CR046)\nHealth: FAILED\nWear Level: 98% used\nPower On Time: 23,456 hours\nPower Cycles: 892\nUnsafe Shutdowns: 234\nMedia Errors: 12\nError Log Entries: 47\nData Written: ~156.8 TB\nData Read: ~234.6 TB\nTemperature: 52 °C\nLast Self-Test: Completed: read failure"
+      }
+    ],
+    "queried_devices": 1,
+    "scan_command": ["smartctl", "--scan", "-j"]
+  }
+}

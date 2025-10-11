@@ -1,0 +1,24 @@
+{
+  "task_type": "ping_test",
+  "status": "success",
+  "summary": {
+    "host": "google.com",
+    "latency_ms": {
+      "avg": 15.5,
+      "min": 12.0,
+      "max": 20.0
+    },
+    "packets": {
+      "sent": 4,
+      "received": 4,
+      "loss_percent": 0
+    },
+    "interval_stats": {
+      "stdev": 2.5
+    },
+    "human_readable": {
+      "stability_score": 95.0
+    }
+  },
+  "ui_label": "Ping Test (google.com, 4x)"
+}

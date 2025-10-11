@@ -1,0 +1,50 @@
+{
+  "task_type": "smartctl_report",
+  "status": "success",
+  "summary": {
+    "drives": [
+      {
+        "name": "/dev/nvme0n1",
+        "model_name": "Samsung SSD 980 PRO 1TB",
+        "serial_number": "S5GYNX0R123456A",
+        "firmware_version": "5B2QGXA7",
+        "health_passed": true,
+        "wear_level_percent_used": 1,
+        "power_on_hours": 2419,
+        "power_cycles": 58,
+        "unsafe_shutdowns": 5,
+        "media_errors": 0,
+        "error_log_entries": 0,
+        "data_written_bytes": 33205913600000,
+        "data_written_human": "33.2 TB",
+        "data_read_bytes": 25179576320000,
+        "data_read_human": "25.2 TB",
+        "temperature": "30–43 °C",
+        "last_self_test_result": "Completed without error",
+        "friendly": "Drive: Samsung SSD 980 PRO 1TB (SN: S5GYNX0R123456A, FW: 5B2QGXA7)\nHealth: PASSED\nWear Level: 1% used\nPower On Time: 2,419 hours\nPower Cycles: 58\nUnsafe Shutdowns: 5\nMedia Errors: 0\nError Log Entries: 0\nData Written: ~33.2 TB\nData Read: ~25.2 TB\nTemperature: 30–43 °C\nLast Self-Test: Completed without error"
+      },
+      {
+        "name": "/dev/sda",
+        "model_name": "WD Blue 1TB HDD",
+        "serial_number": "WD-WCC4N0123456",
+        "firmware_version": "01.01A01",
+        "health_passed": true,
+        "wear_level_percent_used": null,
+        "power_on_hours": 8234,
+        "power_cycles": 142,
+        "unsafe_shutdowns": 12,
+        "media_errors": 0,
+        "error_log_entries": 0,
+        "data_written_bytes": null,
+        "data_written_human": null,
+        "data_read_bytes": null,
+        "data_read_human": null,
+        "temperature": "32 °C",
+        "last_self_test_result": "Completed: read failure",
+        "friendly": "Drive: WD Blue 1TB HDD (SN: WD-WCC4N0123456, FW: 01.01A01)\nHealth: PASSED\nWear Level: N/A\nPower On Time: 8,234 hours\nPower Cycles: 142\nUnsafe Shutdowns: 12\nMedia Errors: 0\nError Log Entries: 0\nData Written: N/A\nData Read: N/A\nTemperature: 32 °C\nLast Self-Test: Completed: read failure"
+      }
+    ],
+    "queried_devices": 2,
+    "scan_command": ["smartctl", "--scan", "-j"]
+  }
+}

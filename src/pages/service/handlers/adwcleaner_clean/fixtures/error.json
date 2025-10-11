@@ -1,0 +1,8 @@
+{
+  "task_type": "adwcleaner",
+  "status": "failure",
+  "summary": {
+    "error": "AdwCleaner executable not found at specified path"
+  },
+  "ui_label": "AdwCleaner Scan"
+}

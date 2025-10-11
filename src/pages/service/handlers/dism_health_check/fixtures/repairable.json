@@ -1,0 +1,40 @@
+{
+  "task_type": "dism_health_check",
+  "status": "success",
+  "summary": {
+    "steps": [
+      {
+        "action": "checkhealth",
+        "command": ["DISM.exe", "/Online", "/Cleanup-Image", "/CheckHealth"],
+        "return_code": 0,
+        "parsed": {
+          "health_state": "repairable",
+          "message": "The component store is repairable."
+        },
+        "stderr": ""
+      },
+      {
+        "action": "scanhealth",
+        "command": ["DISM.exe", "/Online", "/Cleanup-Image", "/ScanHealth"],
+        "return_code": 0,
+        "parsed": {
+          "health_state": "repairable",
+          "message": "Component store corruption was detected."
+        },
+        "stderr": ""
+      },
+      {
+        "action": "restorehealth",
+        "command": ["DISM.exe", "/Online", "/Cleanup-Image", "/RestoreHealth"],
+        "return_code": 0,
+        "parsed": {
+          "health_state": "healthy",
+          "message": "The restore operation completed successfully.",
+          "repair_success": true
+        },
+        "stderr": ""
+      }
+    ]
+  },
+  "ui_label": "DISM Health Check"
+}

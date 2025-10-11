@@ -1,0 +1,10 @@
+{
+  "task_type": "speedtest",
+  "status": "failure",
+  "ui_label": "Internet Speed Test",
+  "summary": {
+    "reason": "Exception during speedtest execution",
+    "error": "Network unreachable",
+    "duration_seconds": 2.5
+  }
+}

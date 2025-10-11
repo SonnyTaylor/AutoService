@@ -1,0 +1,8 @@
+{
+  "task_type": "bleachbit",
+  "status": "failure",
+  "summary": {
+    "error": "BleachBit executable not found"
+  },
+  "ui_label": "BleachBit Clean"
+}

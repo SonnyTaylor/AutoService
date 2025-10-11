@@ -1,0 +1,29 @@
+{
+  "task_type": "disk_space_report",
+  "status": "success",
+  "summary": {
+    "drives": [
+      {
+        "drive": "C:",
+        "total_gb": 500.0,
+        "used_gb": 475.0,
+        "free_gb": 25.0,
+        "usage_percent": 95.0
+      },
+      {
+        "drive": "D:",
+        "total_gb": 2000.0,
+        "used_gb": 1920.0,
+        "free_gb": 80.0,
+        "usage_percent": 96.0
+      }
+    ],
+    "human_readable": {
+      "warnings": [
+        "Drive C: is critically low on space (95% used)",
+        "Drive D: is critically low on space (96% used)"
+      ]
+    }
+  },
+  "ui_label": "Disk Space Report"
+}
