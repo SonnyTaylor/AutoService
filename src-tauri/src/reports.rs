@@ -1,6 +1,6 @@
 /// Report management utilities for AutoService.
 ///
-/// Handles saving service run reports to persistent storage in the data/reports directory.
+/// Handles saving, loading, listing, and deleting service run reports in the data/reports directory.
 /// Each report is saved in a dedicated folder with a descriptive name including
 /// PC hostname, customer name (if available), and timestamp.
 use crate::state::AppState;
@@ -144,6 +144,215 @@ pub fn save_report(
         report_folder: Some(report_folder.to_string_lossy().to_string()),
         error: None,
     })
+}
+
+/// Metadata structure for saved reports
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ReportMetadata {
+    pub timestamp: u64,
+    pub hostname: Option<String>,
+    pub customer_name: Option<String>,
+    pub technician_name: Option<String>,
+    pub saved_at: String,
+}
+
+/// List item for a saved report
+#[derive(Debug, Serialize)]
+pub struct ReportListItem {
+    pub folder_name: String,
+    pub folder_path: String,
+    pub metadata: Option<ReportMetadata>,
+    pub has_report_json: bool,
+    pub has_execution_log: bool,
+    pub has_run_plan: bool,
+}
+
+/// Lists all saved reports in the data/reports directory
+///
+/// Scans for report folders (ignoring temporary JSON files) and returns
+/// metadata for each report. Results are sorted by timestamp (newest first).
+///
+/// # Arguments
+/// * `state` - Application state containing data directory path
+///
+/// # Returns
+/// A vector of report list items with metadata
+#[tauri::command]
+pub fn list_reports(state: tauri::State<AppState>) -> Result<Vec<ReportListItem>, String> {
+    let data_root = state.data_dir.as_path();
+    let reports_dir = data_root.join("reports");
+
+    // Ensure reports directory exists
+    if !reports_dir.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut reports = Vec::new();
+
+    // Read directory entries
+    let entries = fs::read_dir(&reports_dir)
+        .map_err(|e| format!("Failed to read reports directory: {}", e))?;
+
+    for entry in entries {
+        let entry = match entry {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
+
+        let path = entry.path();
+
+        // Only process directories (skip temporary JSON files)
+        if !path.is_dir() {
+            continue;
+        }
+
+        let folder_name = match path.file_name() {
+            Some(name) => name.to_string_lossy().to_string(),
+            None => continue,
+        };
+
+        // Check for required files
+        let has_report_json = path.join("report.json").exists();
+        let has_execution_log = path.join("execution.log").exists();
+        let has_run_plan = path.join("run_plan.json").exists();
+
+        // Read metadata if available
+        let metadata = read_metadata(&path);
+
+        reports.push(ReportListItem {
+            folder_name,
+            folder_path: path.to_string_lossy().to_string(),
+            metadata,
+            has_report_json,
+            has_execution_log,
+            has_run_plan,
+        });
+    }
+
+    // Sort by timestamp (newest first)
+    reports.sort_by(|a, b| {
+        let a_time = a.metadata.as_ref().map(|m| m.timestamp).unwrap_or(0);
+        let b_time = b.metadata.as_ref().map(|m| m.timestamp).unwrap_or(0);
+        b_time.cmp(&a_time)
+    });
+
+    Ok(reports)
+}
+
+/// Loaded report data including JSON content and metadata
+#[derive(Debug, Serialize)]
+pub struct LoadedReport {
+    pub report_json: String,
+    pub execution_log: Option<String>,
+    pub run_plan: Option<String>,
+    pub metadata: ReportMetadata,
+}
+
+/// Loads a specific report's data from disk
+///
+/// Reads the report.json, metadata.json, and optionally the execution.log
+/// and run_plan.json files from the specified report folder.
+///
+/// # Arguments
+/// * `state` - Application state containing data directory path
+/// * `folder_name` - Name of the report folder to load
+///
+/// # Returns
+/// A loaded report with all available data
+#[tauri::command]
+pub fn load_report(
+    state: tauri::State<AppState>,
+    folder_name: String,
+) -> Result<LoadedReport, String> {
+    let data_root = state.data_dir.as_path();
+    let report_folder = data_root.join("reports").join(&folder_name);
+
+    // Verify folder exists
+    if !report_folder.exists() {
+        return Err(format!("Report folder not found: {}", folder_name));
+    }
+
+    // Read report.json (required)
+    let report_path = report_folder.join("report.json");
+    if !report_path.exists() {
+        return Err("report.json not found in report folder".to_string());
+    }
+    let report_json = fs::read_to_string(&report_path)
+        .map_err(|e| format!("Failed to read report.json: {}", e))?;
+
+    // Read metadata.json (required)
+    let metadata = read_metadata(&report_folder)
+        .ok_or_else(|| "metadata.json not found or invalid".to_string())?;
+
+    // Read execution.log (optional)
+    let execution_log = {
+        let log_path = report_folder.join("execution.log");
+        if log_path.exists() {
+            fs::read_to_string(&log_path).ok()
+        } else {
+            None
+        }
+    };
+
+    // Read run_plan.json (optional)
+    let run_plan = {
+        let plan_path = report_folder.join("run_plan.json");
+        if plan_path.exists() {
+            fs::read_to_string(&plan_path).ok()
+        } else {
+            None
+        }
+    };
+
+    Ok(LoadedReport {
+        report_json,
+        execution_log,
+        run_plan,
+        metadata,
+    })
+}
+
+/// Deletes a report folder and all its contents
+///
+/// Recursively removes the specified report folder from the data/reports directory.
+///
+/// # Arguments
+/// * `state` - Application state containing data directory path
+/// * `folder_name` - Name of the report folder to delete
+///
+/// # Returns
+/// True if deletion succeeded, error message otherwise
+#[tauri::command]
+pub fn delete_report(state: tauri::State<AppState>, folder_name: String) -> Result<bool, String> {
+    let data_root = state.data_dir.as_path();
+    let report_folder = data_root.join("reports").join(&folder_name);
+
+    // Verify folder exists
+    if !report_folder.exists() {
+        return Err(format!("Report folder not found: {}", folder_name));
+    }
+
+    // Verify it's actually a directory
+    if !report_folder.is_dir() {
+        return Err("Specified path is not a directory".to_string());
+    }
+
+    // Delete the folder and all contents
+    fs::remove_dir_all(&report_folder)
+        .map_err(|e| format!("Failed to delete report folder: {}", e))?;
+
+    Ok(true)
+}
+
+/// Helper function to read and parse metadata.json from a report folder
+fn read_metadata(report_folder: &PathBuf) -> Option<ReportMetadata> {
+    let metadata_path = report_folder.join("metadata.json");
+    if !metadata_path.exists() {
+        return None;
+    }
+
+    let content = fs::read_to_string(&metadata_path).ok()?;
+    serde_json::from_str(&content).ok()
 }
 
 /// Generates a folder name for a saved report.

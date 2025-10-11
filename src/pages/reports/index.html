@@ -1,4 +1,36 @@
+<!--
+  Reports Page
+  - Toolbar: search input, sort dropdown
+  - List container: .reports-list populated by view.js
+  - Viewer overlay: #report-viewer, modal showing full report details
+  IDs are used by JS to find controls; keep them stable.
+-->
 <section class="page" data-page="reports">
   <h1>Reports</h1>
-  <p class="muted">This page will show generated reports. Coming soon.</p>
+  <p class="muted">
+    View and manage saved service reports from the data/reports folder.
+  </p>
+
+  <div class="toolbar reports-toolbar">
+    <!-- Search text filters by hostname/customer/technician in view.applyFilter() -->
+    <input
+      id="report-search"
+      class="shortcut-search"
+      type="search"
+      placeholder="Search reports by hostname, customer, or technician..."
+    />
+    <!-- Sort options map to state.sort; see view.applyFilter() for order -->
+    <select id="report-sort" title="Sort reports">
+      <option value="date-desc">Newest first</option>
+      <option value="date-asc">Oldest first</option>
+      <option value="name-asc">Hostname (A-Z)</option>
+      <option value="name-desc">Hostname (Z-A)</option>
+    </select>
+  </div>
+
+  <!-- Render target for the reports list; content is replaced by view.renderList() -->
+  <div class="reports-list"></div>
 </section>
+
+<!-- Report Viewer Overlay (hidden by default, shown when viewing a report) -->
+<div id="report-viewer" hidden></div>

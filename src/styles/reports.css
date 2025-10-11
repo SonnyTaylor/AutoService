@@ -1,0 +1,350 @@
+/* Reports Page Styles */
+
+/* Toolbar */
+.reports-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 8px 0 14px;
+  flex-wrap: wrap;
+}
+
+.reports-toolbar #report-search {
+  flex: 1;
+  min-width: 200px;
+}
+
+.reports-toolbar #report-sort {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  height: 40px;
+  line-height: 1.2;
+  /* custom chevron */
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: right 12px center, right 6px center;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 28px;
+}
+
+.reports-toolbar #report-sort:hover {
+  background-color: #222a3a;
+}
+
+.reports-toolbar #report-sort:disabled {
+  opacity: 0.6;
+}
+
+/* Reports List */
+.reports-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.report-row {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  grid-template-areas: "icon main actions";
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-2);
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.report-row:hover {
+  background: #222a3a;
+  border-color: #3a4558;
+}
+
+.report-icon {
+  grid-area: icon;
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  background: #12151d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  font-size: 28px;
+  color: #a7b3cc;
+}
+
+.status-badge {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  border: 2px solid var(--bg);
+  font-weight: 600;
+}
+
+.status-badge.exists {
+  background: #10b981;
+  color: white;
+}
+
+.status-badge.missing {
+  background: #ef4444;
+  color: white;
+}
+
+.report-main {
+  grid-area: main;
+  flex: 1;
+  min-width: 0;
+}
+
+.report-title {
+  font-weight: 500;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.report-title .hostname {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.report-title .customer {
+  color: var(--muted);
+  font-weight: normal;
+  font-size: 14px;
+}
+
+.report-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+
+.report-meta .date {
+  color: var(--muted);
+}
+
+.report-meta .badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--accent-dim);
+  color: var(--accent);
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.report-actions {
+  grid-area: actions;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Report Viewer Overlay */
+#report-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  backdrop-filter: blur(2px);
+}
+
+.viewer-overlay {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.viewer-content {
+  background: var(--bg);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  width: 100%;
+  max-width: 1400px;
+  height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+/* Loading and error states */
+.viewer-content.loading,
+.viewer-content.error {
+  max-width: 400px;
+  height: auto;
+  padding: 40px;
+  text-align: center;
+  align-items: center;
+  justify-content: center;
+}
+
+.viewer-content.loading .spinner,
+.viewer-content.error i {
+  margin-bottom: 16px;
+}
+
+.viewer-content.loading .spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.viewer-content.error p {
+  margin: 8px 0;
+}
+
+.viewer-content.error .muted {
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+/* Viewer Header */
+.viewer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-2);
+  flex-shrink: 0;
+}
+
+.viewer-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.viewer-title h2 {
+  margin: 0 0 4px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.viewer-title .muted {
+  font-size: 13px;
+  margin: 0;
+}
+
+.viewer-header button {
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+
+/* Viewer Tabs (reuse subtabs styling) */
+#viewer-tabs {
+  border-bottom: 1px solid var(--border);
+  margin: 0;
+  padding: 0 20px;
+  background: var(--panel);
+  flex-shrink: 0;
+}
+
+/* Viewer Panels */
+.viewer-panels {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  background: var(--bg);
+}
+
+.viewer-panel {
+  display: block;
+}
+
+.viewer-panel[hidden] {
+  display: none;
+}
+
+/* Viewer results sections inherit from service results styles in service.css */
+/* Preview cards in viewer inherit from service.css */
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .viewer-content {
+    max-width: 100%;
+    height: 95vh;
+    border-radius: 8px;
+  }
+
+  .viewer-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .viewer-header button {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .report-row {
+    grid-template-columns: 48px 1fr;
+    grid-template-areas:
+      "icon main"
+      "icon actions";
+    gap: 8px;
+  }
+
+  .report-icon {
+    width: 48px;
+    height: 48px;
+    font-size: 24px;
+  }
+
+  .report-actions {
+    grid-area: actions;
+    margin-top: 8px;
+  }
+
+  .reports-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .reports-toolbar #report-search,
+  .reports-toolbar #report-sort {
+    width: 100%;
+  }
+}
+
+/* Spin animation for loading spinners */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

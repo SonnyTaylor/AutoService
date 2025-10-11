@@ -13,6 +13,52 @@ import {
 } from "./print.js";
 
 /**
+ * Render the summary header for a report
+ * Exported for reuse by reports viewer
+ * @param {Object} report - Report data
+ * @param {HTMLElement} summaryEl - Container element
+ */
+export function renderResultsSummary(report, summaryEl) {
+  const overall = String(report.overall_status || "").toLowerCase();
+  const summaryTemplate = html`
+    <div class="summary-head ${overall === "success" ? "ok" : "warn"}">
+      <div class="left">
+        <div class="title">
+          Overall:
+          ${overall === "success" ? "Success" : "Completed with errors"}
+        </div>
+        <div class="muted small">${report.results.length} task(s)</div>
+      </div>
+    </div>
+  `;
+  render(summaryTemplate, summaryEl);
+}
+
+/**
+ * Render the results sections for a report
+ * Exported for reuse by reports viewer
+ * @param {Object} report - Report data
+ * @param {HTMLElement} sectionsEl - Container element
+ */
+export function renderResultsSections(report, sectionsEl) {
+  const sectionsTemplate = html`
+    ${map(report.results, (res, index) => {
+      const type = res?.task_type || res?.type || "unknown";
+      const renderer = RENDERERS[type] || renderGeneric;
+      let content;
+      try {
+        content = renderer(res, index);
+      } catch (e) {
+        console.error("Failed to render result section:", res, e);
+        content = renderGeneric(res, index);
+      }
+      return html`<section class="result-section">${content}</section>`;
+    })}
+  `;
+  render(sectionsTemplate, sectionsEl);
+}
+
+/**
  * Initializes the results page, loads the report, and renders all content.
  * @returns {Promise<void>}
  */
@@ -52,37 +98,9 @@ export async function initPage() {
     return;
   }
 
-  // Summary header
-  const overall = String(report.overall_status || "").toLowerCase();
-  const summaryTemplate = html`
-    <div class="summary-head ${overall === "success" ? "ok" : "warn"}">
-      <div class="left">
-        <div class="title">
-          Overall:
-          ${overall === "success" ? "Success" : "Completed with errors"}
-        </div>
-        <div class="muted small">${report.results.length} task(s)</div>
-      </div>
-    </div>
-  `;
-  render(summaryTemplate, summaryEl);
-
-  // Build sections modularly (fault-tolerant per task)
-  const sectionsTemplate = html`
-    ${map(report.results, (res, index) => {
-      const type = res?.task_type || res?.type || "unknown";
-      const renderer = RENDERERS[type] || renderGeneric;
-      let content;
-      try {
-        content = renderer(res, index);
-      } catch (e) {
-        console.error("Failed to render result section:", res, e);
-        content = renderGeneric(res, index);
-      }
-      return html`<section class="result-section">${content}</section>`;
-    })}
-  `;
-  render(sectionsTemplate, sectionsEl);
+  // Render summary and sections using exported functions
+  renderResultsSummary(report, summaryEl);
+  renderResultsSections(report, sectionsEl);
 
   // Set up print handlers
   setupPrintHandlers(report, sectionsEl);
@@ -96,10 +114,16 @@ export async function initPage() {
 
 /**
  * Set up tab switching functionality
+ * Exported for reuse by reports viewer
+ * @param {string} [tabsSelector='[role="tab"]'] - CSS selector for tab buttons
+ * @param {string} [panelsSelector='[role="tabpanel"]'] - CSS selector for panels
  */
-function setupTabs() {
-  const tabButtons = document.querySelectorAll('[role="tab"]');
-  const panels = document.querySelectorAll('[role="tabpanel"]');
+export function setupTabs(
+  tabsSelector = '[role="tab"]',
+  panelsSelector = '[role="tabpanel"]'
+) {
+  const tabButtons = document.querySelectorAll(tabsSelector);
+  const panels = document.querySelectorAll(panelsSelector);
 
   tabButtons.forEach((button) => {
     button.addEventListener("click", () => {
