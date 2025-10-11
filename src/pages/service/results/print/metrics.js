@@ -675,7 +675,14 @@ export function extractCustomerMetrics(results) {
     // Try handler extraction first
     const extractor = handlerExtractors[taskType];
     if (extractor) {
-      const extracted = extractor({ result });
+      // Pass both formats for backward compatibility:
+      // - Standard format: { summary, status } as per CustomerMetricsContext typedef
+      // - Legacy format: { result } for handlers not yet updated
+      const extracted = extractor({
+        summary: result.summary,
+        status: result.status,
+        result: result, // Legacy compatibility
+      });
       if (extracted) {
         if (Array.isArray(extracted)) {
           handlerMetrics.push(...extracted);
