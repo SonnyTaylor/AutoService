@@ -1,10 +1,21 @@
 /**
- * Service Registry (services.js)
+ * Service Registry (catalog.js)
  * ---------------------------------------------------------------------------
  * Purpose: Provide a single, modular source of truth for all services that
  * the UI can render and that `service_runner.exe` understands.
  *
- * HOW TO ADD A NEW SERVICE (example: Battery Report)
+ * MIGRATION IN PROGRESS:
+ * Services are being migrated to the new handler system in handlers/.
+ * See docs/HANDLER_MIGRATION_GUIDE.md for full instructions.
+ *
+ * HOW TO ADD A NEW SERVICE:
+ *
+ * NEW WAY (Recommended):
+ * 1. Create a handler in src/pages/service/handlers/[service_id]/
+ * 2. Use the template at handlers/_TEMPLATE/index.js
+ * 3. Register in handlers/index.js
+ *
+ * OLD WAY (Legacy - being phased out):
  * 1) Create a new entry in `SERVICES` with a unique `id` (e.g. "battery_report").
  * 2) Fill in: `label`, `group`, optional `defaultParams`, `toolKeys` (if any
  *    external tool is required), and a `build` function that returns the JSON
@@ -18,23 +29,19 @@
  * 4) If your runner expects a specific `type`, have the `build` function set
  *    that string; attach an optional `ui_label` to control how the item appears
  *    in the UI without affecting the runner.
- *
- * Example skeleton:
- * {
- *   id: 'battery_report',
- *   label: 'Battery Health Report',
- *   group: 'Diagnostics',
- *   defaultParams: { minutes: 0 }, // optional
- *   toolKeys: [], // optional, e.g. ['batteryutil'] if an external tool is needed
- *   async build({ params, resolveToolPath }) {
- *     return {
- *       type: 'battery_report',
- *       detail_level: 'basic',
- *       ui_label: 'Battery Health Report'
- *     };
- *   }
- * }
  */
+
+// =============================================================================
+// HANDLER INTEGRATION (NEW SYSTEM)
+// =============================================================================
+
+// Uncomment when first handler is migrated:
+// import { getServiceDefinitions } from './handlers/index.js';
+// const HANDLER_DEFINITIONS = getServiceDefinitions();
+
+// =============================================================================
+// LEGACY SERVICE DEFINITIONS (TO BE MIGRATED)
+// =============================================================================
 
 /**
  * @typedef {Object} ServiceBuildArgs
@@ -56,9 +63,22 @@
 
 /**
  * Central catalog of services available to the run builder.
+ *
+ * MIGRATION NOTE:
+ * Once handlers are migrated, merge them like this:
+ * export const SERVICES = {
+ *   ...HANDLER_DEFINITIONS,  // Migrated handlers
+ *   legacy_service: { ... }  // Remaining legacy definitions
+ * };
+ *
  * @type {Record<string, ServiceDef>}
  */
 export const SERVICES = {
+  // TODO: Merge handler definitions once first migration is complete
+  // ...HANDLER_DEFINITIONS,
+
+  // ===== LEGACY DEFINITIONS (TO BE MIGRATED) =====
+
   speedtest: {
     id: "speedtest",
     label: "Internet Speed Test",

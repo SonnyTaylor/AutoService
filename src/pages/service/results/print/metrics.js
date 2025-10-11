@@ -4,6 +4,25 @@
  */
 
 // =============================================================================
+// HANDLER INTEGRATION (NEW SYSTEM)
+// =============================================================================
+
+// Uncomment when first handler is migrated:
+// import { getCustomerMetricExtractors } from '../../../handlers/index.js';
+
+// =============================================================================
+// LEGACY PROCESSING FUNCTIONS (TO BE MIGRATED)
+// =============================================================================
+
+/**
+ * MIGRATION NOTE:
+ * As handlers are migrated, the extractCustomerMetrics function below should
+ * check for handler-based extractors first, then fall back to legacy processing.
+ *
+ * See docs/HANDLER_MIGRATION_GUIDE.md section "Update Metrics" for integration pattern.
+ */
+
+// =============================================================================
 // SECURITY & THREAT PROCESSING
 // =============================================================================
 
@@ -1035,6 +1054,11 @@ function buildMetricsFromData(data, totalTasks) {
  * various task types including security scans, disk cleanup, system health
  * checks, performance tests, and network diagnostics.
  *
+ * MIGRATION NOTE:
+ * As handlers are migrated, this function should check for handler-based
+ * extractors first before falling back to legacy processing. See integration
+ * example in docs/HANDLER_MIGRATION_GUIDE.md.
+ *
  * @param {ServiceTaskResult[]} results - Array of service task execution results
  * @returns {CustomerMetric[]} Array of formatted metric cards for display
  *
@@ -1046,6 +1070,33 @@ function buildMetricsFromData(data, totalTasks) {
  * // ]
  */
 export function extractCustomerMetrics(results) {
+  // TODO: Integrate handler-based extractors once first migration is complete
+  // const handlerExtractors = getCustomerMetricExtractors();
+  // const metrics = [];
+  //
+  // for (const result of results) {
+  //   const taskType = result.task_type || result.type;
+  //   const summary = result.summary || {};
+  //   const status = result.status || "unknown";
+  //
+  //   // Try handler extraction first
+  //   const extractor = handlerExtractors[taskType];
+  //   if (extractor) {
+  //     const extracted = extractor({ summary, status });
+  //     if (extracted) {
+  //       if (Array.isArray(extracted)) {
+  //         metrics.push(...extracted);
+  //       } else {
+  //         metrics.push(extracted);
+  //       }
+  //     }
+  //     continue; // Skip legacy processing for migrated handlers
+  //   }
+  //
+  //   // Fall through to legacy aggregation below for unmigrated services
+  // }
+
+  // LEGACY AGGREGATION APPROACH (current)
   // First, aggregate all raw data from task results
   const aggregatedData = aggregateTaskData(results);
 

@@ -12,7 +12,34 @@ import {
   fmtMbps,
 } from "./common.js";
 
+// =============================================================================
+// HANDLER INTEGRATION (NEW SYSTEM)
+// =============================================================================
+
+// Uncomment when first handler is migrated:
+// import { getTechRenderers } from '../../../handlers/index.js';
+// const HANDLER_RENDERERS = getTechRenderers();
+
+// =============================================================================
+// LEGACY RENDERERS (TO BE MIGRATED)
+// =============================================================================
+
+/**
+ * MIGRATION NOTE:
+ * Once handlers are migrated, merge them like this:
+ * export const RENDERERS = {
+ *   ...HANDLER_RENDERERS,  // Migrated handlers
+ *   legacy_service: renderLegacyService,  // Remaining legacy renderers
+ * };
+ *
+ * Then remove the individual legacy renderer functions from this file.
+ */
 export const RENDERERS = {
+  // TODO: Merge handler renderers once first migration is complete
+  // ...HANDLER_RENDERERS,
+
+  // ===== LEGACY RENDERERS (TO BE MIGRATED) =====
+
   speedtest: renderSpeedtest,
   battery_health: renderBatteryHealth,
   sfc_scan: renderSfc,
