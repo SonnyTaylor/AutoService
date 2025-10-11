@@ -117,13 +117,13 @@ The `smartctl_report` handler provides drive health diagnostics using smartctl f
 ╠══════════════════════════════════════════════════════╣
 ║ Samsung SSD 980 PRO 1TB                      PASSED  ║
 ║ (SN: S5GYNX0R123456A, FW: 5B2QGXA7)                  ║
-║                                                       ║
+║                                                      ║
 ║ [Drive Health] [  Temp  ] [Media Errors] [Error Log] ║
 ║     99%           35 °C         0             0      ║
-║                                                       ║
-║ [Unsafe Shutdowns] [Power On Hrs] [Power Cycles]    ║
+║                                                      ║
+║ [Unsafe Shutdowns] [Power On Hrs] [Power Cycles]     ║
 ║         5               2,419           58           ║
-║                                                       ║
+║                                                      ║
 ║ [Data Written] [Data Read]                           ║
 ║    33.2 TB       25.2 TB                             ║
 ╚══════════════════════════════════════════════════════╝
