@@ -26,191 +26,22 @@ import { getCustomerMetricExtractors } from "../../handlers/index.js";
 // SECURITY & THREAT PROCESSING
 // =============================================================================
 
-/**
- * Process Kaspersky virus scan results.
- * @private
- * @param {object} summary - Task summary containing detection data
- * @returns {{count: number, detail: object|null}} Threat count and details
- */
-function processKVRTScan(summary) {
-  const detections = Array.isArray(summary.detections)
-    ? summary.detections
-    : [];
-
-  // Only count actually removed threats (exclude explicitly skipped ones)
-  // If no action is specified, assume it was handled
-  const removedDetections = detections.filter((d) => {
-    const action = d?.action;
-    // If action exists and is "Skip", exclude it
-    if (action && ["Skip", "skip", "SKIP"].includes(action)) {
-      return false;
-    }
-    // Otherwise include it (either has removal action or no action field means old format/removed)
-    return true;
-  });
-
-  if (removedDetections.length === 0) {
-    return { count: 0, detail: null };
-  }
-
-  return {
-    count: removedDetections.length,
-    detail: {
-      source: "Virus Scan",
-      count: removedDetections.length,
-      detections: removedDetections,
-    },
-  };
-}
-
-/**
- * Process AdwCleaner malware removal results.
- * @private
- * @param {object} summary - Task summary containing quarantine data
- * @returns {{count: number, detail: object|null}} Threat count and details
- */
-function processAdwCleanerScan(summary) {
-  const cleaned = summary.cleaned || 0;
-
-  if (cleaned === 0) {
-    return { count: 0, detail: null };
-  }
-
-  // For customer view, trust the cleaned count and show high-level categories
-  // Count items in each category (including "Needs Reboot" since they WERE cleaned)
-  const getLen = (arr) => (Array.isArray(arr) ? arr.length : 0);
-
-  const browserHits = summary.browsers
-    ? Object.values(summary.browsers).reduce(
-        (sum, v) => sum + (Array.isArray(v) ? v.length : 0),
-        0
-      )
-    : 0;
-
-  // Build category breakdown - show what was addressed
-  const categories = [];
-  const registryCount = getLen(summary.registry);
-  const filesCount = getLen(summary.files);
-  const foldersCount = getLen(summary.folders);
-  const servicesCount = getLen(summary.services);
-  const tasksCount = getLen(summary.tasks);
-  const shortcutsCount = getLen(summary.shortcuts);
-  const dllsCount = getLen(summary.dlls);
-  const wmiCount = getLen(summary.wmi);
-  const preinstalledCount = getLen(summary.preinstalled);
-
-  // Add categories with friendly names
-  if (registryCount > 0)
-    categories.push({ label: "Registry entries", count: registryCount });
-  if (filesCount > 0) categories.push({ label: "Files", count: filesCount });
-  if (foldersCount > 0)
-    categories.push({ label: "Programs/folders", count: foldersCount });
-  if (servicesCount > 0)
-    categories.push({ label: "Services", count: servicesCount });
-  if (tasksCount > 0)
-    categories.push({ label: "Scheduled tasks", count: tasksCount });
-  if (shortcutsCount > 0)
-    categories.push({ label: "Shortcuts", count: shortcutsCount });
-  if (dllsCount > 0)
-    categories.push({ label: "System files", count: dllsCount });
-  if (wmiCount > 0)
-    categories.push({ label: "System entries", count: wmiCount });
-  if (browserHits > 0)
-    categories.push({ label: "Browser extensions", count: browserHits });
-  if (preinstalledCount > 0)
-    categories.push({ label: "Unwanted apps", count: preinstalledCount });
-
-  return {
-    count: cleaned,
-    detail: {
-      source: "Adware & PUP Removal",
-      count: cleaned,
-      categories: categories,
-    },
-  };
-}
+// processKVRTScan: MIGRATED TO handlers/kvrt_scan/
+// processAdwCleanerScan: MIGRATED TO handlers/adwcleaner_clean/
 
 // =============================================================================
 // DISK & CLEANUP PROCESSING
 // =============================================================================
 
-/**
- * Process BleachBit disk cleanup results.
- * @private
- * @param {object} summary - Task summary containing cleanup statistics
- * @returns {{spaceRecovered: number, filesDeleted: number}} Cleanup statistics
- */
-function processDiskCleanup(summary) {
-  return {
-    spaceRecovered: summary.space_recovered_bytes || 0,
-    filesDeleted: summary.files_deleted || 0,
-  };
-}
-
-/**
- * Process CHKDSK disk scan results.
- * @private
- * @param {object} summary - Task summary containing disk scan data
- * @param {string} status - Task execution status
- * @returns {string|null} Human-readable health status
- */
-function processCHKDSKScan(summary, status) {
-  if (status !== "success") return null;
-
-  const drive = summary.drive || "Unknown drive";
-  const mode = summary.mode || "unknown";
-
-  if (summary.found_no_problems) {
-    return `${drive}: No problems found`;
-  }
-
-  if (summary.made_corrections) {
-    return `${drive}: Errors found and corrected`;
-  }
-
-  if (summary.scheduled) {
-    return `${drive}: Scan scheduled for next boot`;
-  }
-
-  // If we have bad sectors or other issues but no corrections made
-  if (summary.bad_sectors_kb && summary.bad_sectors_kb > 0) {
-    return `${drive}: Bad sectors detected`;
-  }
-
-  return null;
-}
+// processDiskCleanup: MIGRATED TO handlers/bleachbit_clean/
+// processCHKDSKScan: MIGRATED TO handlers/chkdsk_scan/
 
 // =============================================================================
 // SYSTEM HEALTH PROCESSING
 // =============================================================================
 
 // processSFCScan: MIGRATED TO handlers/sfc_scan/index.js
-
-/**
- * Process DISM health check results.
- * @private
- * @param {object} summary - Task summary containing DISM steps
- * @param {string} status - Task execution status
- * @returns {string|null} Human-readable health status
- */
-function processDISMHealthCheck(summary, status) {
-  if (status !== "success") return null;
-
-  const steps = Array.isArray(summary.steps) ? summary.steps : [];
-  const checkHealth = steps.find((s) => s.action === "checkhealth")?.parsed;
-  const restoreHealth = steps.find((s) => s.action === "restorehealth")?.parsed;
-
-  if (checkHealth?.health_state === "healthy") {
-    return "Windows image: Healthy";
-  } else if (checkHealth?.health_state === "repairable") {
-    const repaired = restoreHealth?.message
-      ?.toLowerCase()
-      .includes("operation completed successfully");
-    return `Windows image: ${repaired ? "Repaired" : "Corruption found"}`;
-  }
-
-  return null;
-}
+// processDISMHealthCheck: MIGRATED TO handlers/dism_health_check/
 
 // =============================================================================
 // DRIVE HEALTH PROCESSING

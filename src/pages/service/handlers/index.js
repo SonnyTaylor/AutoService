@@ -32,6 +32,11 @@ import * as pingTest from "./ping_test/index.js";
 import * as speedtest from "./speedtest/index.js";
 import * as sfcScan from "./sfc_scan/index.js";
 import * as smartctlReport from "./smartctl_report/index.js";
+import * as dismHealthCheck from "./dism_health_check/index.js";
+import * as chkdskScan from "./chkdsk_scan/index.js";
+import * as bleachbitClean from "./bleachbit_clean/index.js";
+import * as adwcleanerClean from "./adwcleaner_clean/index.js";
+import * as kvrtScan from "./kvrt_scan/index.js";
 
 // =============================================================================
 // REGISTRY CONSTRUCTION
@@ -52,6 +57,11 @@ const HANDLERS = {
   speedtest: speedtest,
   sfc_scan: sfcScan,
   smartctl_report: smartctlReport,
+  dism_health_check: dismHealthCheck,
+  chkdsk_scan: chkdskScan,
+  bleachbit_clean: bleachbitClean,
+  adwcleaner_clean: adwcleanerClean,
+  kvrt_scan: kvrtScan,
 };
 
 // =============================================================================

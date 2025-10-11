@@ -44,12 +44,12 @@ export const RENDERERS = {
   // battery_health: MIGRATED TO handlers/battery_health/
   // sfc_scan: MIGRATED TO handlers/sfc_scan/
   // smartctl_report: MIGRATED TO handlers/smartctl_report/
-  dism_health_check: renderDism,
-  kvrt_scan: renderKvrt,
-  adwcleaner_clean: renderAdwCleaner,
+  // dism_health_check: MIGRATED TO handlers/dism_health_check/
+  // kvrt_scan: MIGRATED TO handlers/kvrt_scan/
+  // adwcleaner_clean: MIGRATED TO handlers/adwcleaner_clean/
   // ping_test: MIGRATED TO handlers/ping_test/
-  chkdsk_scan: renderChkdsk,
-  bleachbit_clean: renderBleachBit,
+  // chkdsk_scan: MIGRATED TO handlers/chkdsk_scan/
+  // bleachbit_clean: MIGRATED TO handlers/bleachbit_clean/
   furmark_stress_test: renderFurmark,
   heavyload_stress_test: renderHeavyload,
   iperf_test: renderIperf,
@@ -318,8 +318,10 @@ function renderDism(res, index) {
 }
 
 // renderSmartctl: MIGRATED TO handlers/smartctl_report/
+// renderDism: MIGRATED TO handlers/dism_health_check/
+// renderKvrt: MIGRATED TO handlers/kvrt_scan/
 
-function renderKvrt(res, index) {
+function _renderKvrt_OLD(res, index) {
   const s = res.summary || {};
   const detections = Array.isArray(s.detections) ? s.detections : [];
   const skipCount = detections.filter(
@@ -453,7 +455,9 @@ function renderKvrt(res, index) {
   `;
 }
 
-function renderAdwCleaner(res, index) {
+// renderAdwCleaner: MIGRATED TO handlers/adwcleaner_clean/
+
+function _renderAdwCleaner_OLD(res, index) {
   const s = res.summary || {};
   const getLen = (a) => (Array.isArray(a) ? a.length : 0);
   const browserHits = Object.values(s.browsers || {}).reduce(
@@ -521,8 +525,9 @@ function renderAdwCleaner(res, index) {
 }
 
 // renderPing: MIGRATED TO handlers/ping_test/index.js
+// renderChkdsk: MIGRATED TO handlers/chkdsk_scan/
 
-function renderChkdsk(res, index) {
+function _renderChkdsk_OLD(res, index) {
   const s = res.summary || {};
   const toNumber = (v) => {
     const n = Number(v);
@@ -620,7 +625,9 @@ function renderChkdsk(res, index) {
   `;
 }
 
-function renderBleachBit(res, index) {
+// renderBleachBit: MIGRATED TO handlers/bleachbit_clean/
+
+function _renderBleachBit_OLD(res, index) {
   const s = res.summary || {};
   const recovered = s.space_recovered_bytes;
   return html`

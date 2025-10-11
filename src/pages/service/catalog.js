@@ -120,135 +120,14 @@ export const SERVICES = {
       };
     },
   },
-  kvrt_scan: {
-    id: "kvrt_scan",
-    label: "Malware Scan (KVRT)",
-    group: "Security",
-    category: "Antivirus",
-    defaultParams: {
-      allVolumes: false,
-      processLevel: 2,
-    },
-    toolKeys: ["kvrt"],
-    async build({ params, resolveToolPath, getDataDirs }) {
-      const p = await resolveToolPath(["kvrt"]);
-      const dirs = (await getDataDirs()) || {};
-      const dataRoot = (dirs.data || "..\\data")
-        .toString()
-        .replace(/[\\/]+$/, "");
-      const quarantineDir = `${dataRoot}\\logs\\KVRT`;
-      const allVolumes = !!params?.allVolumes;
-      const processLevel = Number.isFinite(params?.processLevel)
-        ? Math.max(0, Math.min(3, parseInt(params.processLevel, 10)))
-        : 2;
-      const task = {
-        type: "kvrt_scan",
-        executable_path: p,
-        accept_eula: true,
-        silent: true,
-        details: true,
-        dontencrypt: true,
-        noads: true,
-        fixednames: true,
-        processlevel: processLevel,
-        quarantine_dir: quarantineDir,
-        allvolumes: allVolumes,
-        ui_label: `Malware Scan (KVRT${allVolumes ? ": all volumes" : ""})`,
-      };
-      return task;
-    },
-  },
-  adwcleaner_clean: {
-    id: "adwcleaner_clean",
-    label: "Adware Clean (AdwCleaner)",
-    group: "Cleanup",
-    category: "Antivirus",
-    toolKeys: ["adwcleaner"],
-    async build({ resolveToolPath }) {
-      return {
-        type: "adwcleaner_clean",
-        executable_path: await resolveToolPath("adwcleaner"),
-        working_path: "..\\data\\logs",
-        clean_preinstalled: false,
-        ui_label: "Adware Clean (AdwCleaner)",
-      };
-    },
-  },
+  // kvrt_scan: MIGRATED TO handlers/kvrt_scan/
+  // adwcleaner_clean: MIGRATED TO handlers/adwcleaner_clean/
   // ping_test: MIGRATED TO handlers/ping_test/
-  chkdsk_scan: {
-    id: "chkdsk_scan",
-    label: "File System Check (CHKDSK)",
-    group: "System Integrity",
-    category: "System Integrity",
-    defaultParams: { drive: "C:", mode: "read_only", schedule_if_busy: false },
-    toolKeys: [],
-    async build({ params }) {
-      const drive = (params?.drive || "C:").toString();
-      const mode = params?.mode || "read_only"; // read_only | fix_errors | comprehensive
-      const schedule = Boolean(params?.schedule_if_busy);
-      return {
-        type: "chkdsk_scan",
-        drive,
-        mode,
-        schedule_if_busy: schedule,
-        ui_label: `CHKDSK (${drive}, ${mode})`,
-      };
-    },
-  },
-  bleachbit_clean: {
-    id: "bleachbit_clean",
-    label: "Junk Cleanup (BleachBit)",
-    group: "Cleanup",
-    category: "Junk",
-    toolKeys: ["bleachbit"],
-    async build({ resolveToolPath }) {
-      return {
-        type: "bleachbit_clean",
-        executable_path: await resolveToolPath("bleachbit"),
-        options: [
-          "system.tmp", // Windows temporary files
-          "system.recycle_bin", // Recycle Bin
-          "system.prefetch", // Prefetch (can grow large)
-          "system.logs", // System logs
-          "system.memory_dump", // Memory/crash dumps (often GBs)
-          "system.updates", // Windows Update leftovers
-          "google_chrome.cache", // Chrome browser cache
-          "microsoft_edge.cache", // Edge browser cache
-          "firefox.cache", // Firefox cache
-          "brave.cache", // Brave cache
-          "opera.cache", // Opera cache
-          "librewolf.cache", // LibreWolf cache
-          "palemoon.cache", // Pale Moon cache
-          "waterfox.cache", // Waterfox cache
-          "discord.cache", // Discord cache
-          "slack.cache", // Slack cache
-          "zoom.cache", // Zoom cache
-          "zoom.recordings", // Zoom local recordings (can be very large if unused)
-          "windows_defender.temp", // Defender temp files
-          "winrar.temp", // WinRAR temp
-          "vuze.cache", // Vuze cache
-          "vuze.temp", // Vuze temp
-        ],
-        ui_label: "Junk Cleanup (BleachBit)",
-      };
-    },
-  },
-  dism_health_check: {
-    id: "dism_health_check",
-    label: "DISM Health Check",
-    group: "System Integrity",
-    category: "System Integrity",
-    toolKeys: [],
-    async build() {
-      return {
-        type: "dism_health_check",
-        actions: ["checkhealth", "scanhealth", "restorehealth"],
-        ui_label: "DISM Health Check",
-      };
-    },
-  },
+  // chkdsk_scan: MIGRATED TO handlers/chkdsk_scan/
+  // bleachbit_clean: MIGRATED TO handlers/bleachbit_clean/
   // sfc_scan: MIGRATED TO handlers/sfc_scan/
   // smartctl_report: MIGRATED TO handlers/smartctl_report/
+  // dism_health_check: MIGRATED TO handlers/dism_health_check/
   furmark_stress_test: {
     id: "furmark_stress_test",
     label: "GPU Stress (FurMark)",
