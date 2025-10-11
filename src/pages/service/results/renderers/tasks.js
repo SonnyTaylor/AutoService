@@ -34,29 +34,15 @@ const HANDLER_RENDERERS = getTechRenderers();
  *
  * Then remove the individual legacy renderer functions from this file.
  */
+/**
+ * ALL RENDERERS MIGRATED TO HANDLERS (100%)
+ * All 17 services have been migrated to handlers/
+ * See handlers/index.js for the complete list
+ * Legacy functions below are kept for reference with _OLD suffix
+ */
 export const RENDERERS = {
-  // Merge handler renderers
+  // Merge handler renderers - all 17 services now use handler system
   ...HANDLER_RENDERERS,
-
-  // ===== LEGACY RENDERERS (TO BE MIGRATED) =====
-
-  // speedtest: MIGRATED TO handlers/speedtest/
-  // battery_health: MIGRATED TO handlers/battery_health/
-  // sfc_scan: MIGRATED TO handlers/sfc_scan/
-  // smartctl_report: MIGRATED TO handlers/smartctl_report/
-  // dism_health_check: MIGRATED TO handlers/dism_health_check/
-  // kvrt_scan: MIGRATED TO handlers/kvrt_scan/
-  // adwcleaner_clean: MIGRATED TO handlers/adwcleaner_clean/
-  // ping_test: MIGRATED TO handlers/ping_test/
-  // chkdsk_scan: MIGRATED TO handlers/chkdsk_scan/
-  // bleachbit_clean: MIGRATED TO handlers/bleachbit_clean/
-  furmark_stress_test: renderFurmark,
-  heavyload_stress_test: renderHeavyload,
-  iperf_test: renderIperf,
-  whynotwin11_check: renderWhyNotWin11,
-  windows_update: renderWindowsUpdate,
-  winsat_disk: renderWinSAT,
-  // disk_space_report: MIGRATED TO handlers/disk_space_report/
 };
 
 export function renderGeneric(res, index) {
@@ -648,11 +634,13 @@ function _renderBleachBit_OLD(res, index) {
   `;
 }
 
-function renderFurmark(res, index) {
+// LEGACY: Migrated to handlers/furmark_stress_test/
+function _renderFurmark_OLD(res, index) {
   return renderGeneric(res, index);
 }
 
-function renderHeavyload(res, index) {
+// LEGACY: Migrated to handlers/heavyload_stress_*/
+function _renderHeavyload_OLD(res, index) {
   const s = res.summary || {};
   const modes = [
     s.stress_cpu ? "CPU" : "",
@@ -716,7 +704,8 @@ function renderHeavyload(res, index) {
   `;
 }
 
-function renderIperf(res, index) {
+// LEGACY: Migrated to handlers/iperf_test/
+function _renderIperf_OLD(res, index) {
   const s = res.summary || {};
   const hr = s.human_readable || {};
   const throughput = hr.throughput || {};
@@ -863,7 +852,8 @@ function renderIperf(res, index) {
   `;
 }
 
-function renderWhyNotWin11(res, index) {
+// LEGACY: Migrated to handlers/whynotwin11_check/
+function _renderWhyNotWin11_OLD(res, index) {
   const s = res.summary || {};
   const hr = s.human_readable || {};
   const failing = Array.isArray(s.failing_checks) ? s.failing_checks.length : 0;
@@ -1053,13 +1043,13 @@ function renderWhyNotWin11(res, index) {
   `;
 }
 
-// renderWindowsUpdate: MIGRATED TO handlers/windows_update/
-
+// LEGACY: Migrated to handlers/windows_update/
 function _renderWindowsUpdate_OLD(res, index) {
   return renderGeneric(res, index);
 }
 
-function renderWinSAT(res, index) {
+// LEGACY: Migrated to handlers/winsat_disk/
+function _renderWinSAT_OLD(res, index) {
   const s = res.summary || {};
   const r = s.results || {};
   const hr = s.human_readable || {};

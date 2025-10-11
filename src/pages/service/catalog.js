@@ -77,10 +77,37 @@ export const SERVICES = {
   // Merge handler definitions
   ...HANDLER_DEFINITIONS,
 
-  // ===== LEGACY DEFINITIONS (TO BE MIGRATED) =====
+  // ===== ALL SERVICES MIGRATED TO HANDLERS =====
 
-  // speedtest: MIGRATED TO handlers/speedtest/
-  // battery_health: MIGRATED TO handlers/battery_health/
+  // All service definitions have been migrated to handlers/
+  // See handlers/index.js for the complete list
+  // Legacy definitions below are kept for reference only
+
+  /* MIGRATED SERVICES:
+  - battery_health: handlers/battery_health/
+  - disk_space_report: handlers/disk_space_report/
+  - ping_test: handlers/ping_test/
+  - speedtest: handlers/speedtest/
+  - sfc_scan: handlers/sfc_scan/
+  - smartctl_report: handlers/smartctl_report/
+  - dism_health_check: handlers/dism_health_check/
+  - chkdsk_scan: handlers/chkdsk_scan/
+  - bleachbit_clean: handlers/bleachbit_clean/
+  - adwcleaner_clean: handlers/adwcleaner_clean/
+  - kvrt_scan: handlers/kvrt_scan/
+  - windows_update: handlers/windows_update/
+  - heavyload_stress_cpu: handlers/heavyload_stress_cpu/
+  - heavyload_stress_memory: handlers/heavyload_stress_memory/
+  - heavyload_stress_gpu: handlers/heavyload_stress_gpu/
+  - furmark_stress_test: handlers/furmark_stress_test/
+  - iperf_test: handlers/iperf_test/
+  - winsat_disk: handlers/winsat_disk/
+  - whynotwin11_check: handlers/whynotwin11_check/
+  */
+};
+
+// Legacy code below - can be removed once migration is validated
+const _LEGACY_SERVICES = {
   whynotwin11_check: {
     id: "whynotwin11_check",
     label: "Windows 11 Upgrade Check",
@@ -254,8 +281,7 @@ export const SERVICES = {
       };
     },
   },
-  // disk_space_report: MIGRATED TO handlers/disk_space_report/
-};
+}; // End of _LEGACY_SERVICES
 
 /**
  * @returns {string[]} All service IDs in display order.

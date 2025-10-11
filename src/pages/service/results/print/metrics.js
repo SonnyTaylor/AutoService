@@ -55,12 +55,13 @@ import { getCustomerMetricExtractors } from "../../handlers/index.js";
 
 /**
  * Process HeavyLoad stress test results.
+ * @deprecated LEGACY: Migrated to handlers/heavyload_stress_*/extractCustomerMetrics
  * @private
  * @param {object} summary - Task summary containing stress test data
  * @param {string} status - Task execution status
  * @returns {object|null} Performance test result
  */
-function processHeavyLoadTest(summary, status) {
+function _processHeavyLoadTest_OLD(summary, status) {
   if (status !== "success") return null;
 
   const modes = [];
@@ -79,11 +80,12 @@ function processHeavyLoadTest(summary, status) {
 
 /**
  * Process FurMark GPU stress test results.
+ * @deprecated LEGACY: Migrated to handlers/furmark_stress_test/extractCustomerMetrics
  * @private
  * @param {string} status - Task execution status
  * @returns {object|null} Performance test result
  */
-function processFurMarkTest(status) {
+function _processFurMarkTest_OLD(status) {
   if (status !== "success") return null;
 
   return {
@@ -95,12 +97,13 @@ function processFurMarkTest(status) {
 
 /**
  * Process WinSAT disk benchmark results.
+ * @deprecated LEGACY: Migrated to handlers/winsat_disk/extractCustomerMetrics
  * @private
  * @param {object} summary - Task summary containing benchmark data
  * @param {string} status - Task execution status
  * @returns {object|null} Performance test result
  */
-function processWinSATDisk(summary, status) {
+function _processWinSATDisk_OLD(summary, status) {
   if (status !== "success") return null;
 
   const hr = summary.human_readable || {};
@@ -130,12 +133,13 @@ function processWinSATDisk(summary, status) {
 
 /**
  * Process iPerf network throughput test results.
+ * @deprecated LEGACY: Migrated to handlers/iperf_test/extractCustomerMetrics
  * @private
  * @param {object} summary - Task summary containing throughput data
  * @param {string} status - Task execution status
  * @returns {object|null} Network throughput results
  */
-function processIPerfTest(summary, status) {
+function _processIPerfTest_OLD(summary, status) {
   if (status !== "success") return null;
 
   const hr = summary.human_readable || {};
@@ -162,12 +166,13 @@ function processIPerfTest(summary, status) {
 
 /**
  * Process WhyNotWin11 compatibility check results.
+ * @deprecated LEGACY: Migrated to handlers/whynotwin11_check/extractCustomerMetrics
  * @private
  * @param {object} summary - Task summary containing compatibility data
  * @param {string} status - Task execution status
  * @returns {object|null} Compatibility check results
  */
-function processWhyNotWin11Check(summary, status) {
+function _processWhyNotWin11Check_OLD(summary, status) {
   if (status !== "success") return null;
 
   const checks = summary.checks || {};
@@ -357,11 +362,12 @@ function buildSystemHealthMetric(healthIssues) {
 
 /**
  * Build performance tests metric card.
+ * @deprecated LEGACY: Performance tests now use handler extractCustomerMetrics
  * @private
  * @param {Array<object>} performanceResults - Array of performance test results
  * @returns {CustomerMetric|null} Metric object or null if no tests
  */
-function buildPerformanceMetric(performanceResults) {
+function _buildPerformanceMetric_OLD(performanceResults) {
   if (performanceResults.length === 0) return null;
 
   const items = performanceResults.map((p) => {
@@ -396,11 +402,12 @@ function buildPerformanceMetric(performanceResults) {
 
 /**
  * Build network throughput metric card.
+ * @deprecated LEGACY: Migrated to handlers/iperf_test/extractCustomerMetrics
  * @private
  * @param {object|null} throughputTest - Network throughput data
  * @returns {CustomerMetric|null} Metric object or null if no test
  */
-function buildNetworkThroughputMetric(throughputTest) {
+function _buildNetworkThroughputMetric_OLD(throughputTest) {
   if (!throughputTest) return null;
 
   const items = [];
@@ -435,11 +442,12 @@ function buildNetworkThroughputMetric(throughputTest) {
 
 /**
  * Build Windows 11 compatibility metric card.
+ * @deprecated LEGACY: Migrated to handlers/whynotwin11_check/extractCustomerMetrics
  * @private
  * @param {object|null} compatCheck - Compatibility check data
  * @returns {CustomerMetric|null} Metric object or null if no check
  */
-function buildWin11CompatibilityMetric(compatCheck) {
+function _buildWin11CompatibilityMetric_OLD(compatCheck) {
   if (!compatCheck) return null;
 
   const items = [];
@@ -573,29 +581,15 @@ function aggregateTaskData(results) {
       data.driveHealth.push(...drives);
     }
 
-    // Process performance test tasks
-    else if (type === "heavyload_stress_test") {
-      const test = processHeavyLoadTest(summary, status);
-      if (test) data.performance.push(test);
-    } else if (type === "furmark_stress_test") {
-      const test = processFurMarkTest(status);
-      if (test) data.performance.push(test);
-    } else if (type === "winsat_disk") {
-      const test = processWinSATDisk(summary, status);
-      if (test) data.performance.push(test);
-    }
-
-    // Process network test tasks
-    // speedtest: MIGRATED TO handlers/speedtest/index.js
-    // ping_test: MIGRATED TO handlers/ping_test/index.js
-    else if (type === "iperf_test") {
-      data.networkThroughput = processIPerfTest(summary, status);
-    }
-
-    // Process compatibility check tasks
-    else if (type === "whynotwin11_check") {
-      data.win11Compatibility = processWhyNotWin11Check(summary, status);
-    }
+    // LEGACY: All performance/network/compatibility tests migrated to handlers/
+    // These task types now use handler extractCustomerMetrics functions:
+    // - heavyload_stress_cpu/memory/gpu: handlers/heavyload_stress_*/
+    // - furmark_stress_test: handlers/furmark_stress_test/
+    // - winsat_disk: handlers/winsat_disk/
+    // - iperf_test: handlers/iperf_test/
+    // - whynotwin11_check: handlers/whynotwin11_check/
+    // - speedtest: handlers/speedtest/
+    // - ping_test: handlers/ping_test/
 
     // windows_update: MIGRATED TO handlers/windows_update/index.js
 
@@ -634,17 +628,12 @@ function buildMetricsFromData(data, totalTasks) {
   const systemMetric = buildSystemHealthMetric(data.systemHealth);
   if (systemMetric) metrics.push(systemMetric);
 
-  const perfMetric = buildPerformanceMetric(data.performance);
-  if (perfMetric) metrics.push(perfMetric);
-
-  // speedMetric: MIGRATED TO handlers/speedtest/index.js
-  // latencyMetric: MIGRATED TO handlers/ping_test/index.js
-
-  const throughputMetric = buildNetworkThroughputMetric(data.networkThroughput);
-  if (throughputMetric) metrics.push(throughputMetric);
-
-  const win11Metric = buildWin11CompatibilityMetric(data.win11Compatibility);
-  if (win11Metric) metrics.push(win11Metric);
+  // LEGACY: Performance/network/compatibility now use handler extractCustomerMetrics
+  // - buildPerformanceMetric: handlers/heavyload_stress_*/furmark_stress_test/winsat_disk
+  // - buildNetworkThroughputMetric: handlers/iperf_test/
+  // - buildWin11CompatibilityMetric: handlers/whynotwin11_check/
+  // - speedMetric: handlers/speedtest/
+  // - latencyMetric: handlers/ping_test/
 
   // updatesMetric: MIGRATED TO handlers/windows_update/index.js
 

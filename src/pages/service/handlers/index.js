@@ -38,6 +38,13 @@ import * as bleachbitClean from "./bleachbit_clean/index.js";
 import * as adwcleanerClean from "./adwcleaner_clean/index.js";
 import * as kvrtScan from "./kvrt_scan/index.js";
 import * as windowsUpdate from "./windows_update/index.js";
+import * as heavyloadStressCpu from "./heavyload_stress_cpu/index.js";
+import * as heavyloadStressMemory from "./heavyload_stress_memory/index.js";
+import * as heavyloadStressGpu from "./heavyload_stress_gpu/index.js";
+import * as furmarkStressTest from "./furmark_stress_test/index.js";
+import * as iperfTest from "./iperf_test/index.js";
+import * as winsatDisk from "./winsat_disk/index.js";
+import * as whynotwin11Check from "./whynotwin11_check/index.js";
 
 // =============================================================================
 // REGISTRY CONSTRUCTION
@@ -64,6 +71,13 @@ const HANDLERS = {
   adwcleaner_clean: adwcleanerClean,
   kvrt_scan: kvrtScan,
   windows_update: windowsUpdate,
+  heavyload_stress_cpu: heavyloadStressCpu,
+  heavyload_stress_memory: heavyloadStressMemory,
+  heavyload_stress_gpu: heavyloadStressGpu,
+  furmark_stress_test: furmarkStressTest,
+  iperf_test: iperfTest,
+  winsat_disk: winsatDisk,
+  whynotwin11_check: whynotwin11Check,
 };
 
 // =============================================================================
