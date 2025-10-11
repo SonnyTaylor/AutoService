@@ -1,0 +1,9 @@
+{
+  "task_type": "sfc_scan",
+  "status": "failure",
+  "ui_label": "SFC Scan",
+  "summary": {
+    "error": "'sfc' command not found in PATH"
+  },
+  "return_code": 1
+}

@@ -30,6 +30,7 @@ import * as batteryHealth from "./battery_health/index.js";
 import * as diskSpaceReport from "./disk_space_report/index.js";
 import * as pingTest from "./ping_test/index.js";
 import * as speedtest from "./speedtest/index.js";
+import * as sfcScan from "./sfc_scan/index.js";
 
 // =============================================================================
 // REGISTRY CONSTRUCTION
@@ -48,6 +49,7 @@ const HANDLERS = {
   disk_space_report: diskSpaceReport,
   ping_test: pingTest,
   speedtest: speedtest,
+  sfc_scan: sfcScan,
 };
 
 // =============================================================================

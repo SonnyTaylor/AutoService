@@ -247,16 +247,7 @@ export const SERVICES = {
       };
     },
   },
-  sfc_scan: {
-    id: "sfc_scan",
-    label: "SFC Scan",
-    group: "System Integrity",
-    category: "System Integrity",
-    toolKeys: [],
-    async build() {
-      return { type: "sfc_scan", ui_label: "SFC Scan" };
-    },
-  },
+  // sfc_scan: MIGRATED TO handlers/sfc_scan/
   smartctl_report: {
     id: "smartctl_report",
     label: "Drive Health Report (smartctl)",

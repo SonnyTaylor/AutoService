@@ -1,0 +1,13 @@
+{
+  "task_type": "sfc_scan",
+  "status": "success",
+  "ui_label": "SFC Scan",
+  "summary": {
+    "integrity_violations": false,
+    "repairs_attempted": false,
+    "repairs_successful": null,
+    "message": "Windows Resource Protection did not find any integrity violations.",
+    "raw_output_preview": "Verification 100% complete.\nWindows Resource Protection did not find any integrity violations."
+  },
+  "return_code": 0
+}

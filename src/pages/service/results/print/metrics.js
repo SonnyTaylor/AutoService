@@ -184,29 +184,7 @@ function processCHKDSKScan(summary, status) {
 // SYSTEM HEALTH PROCESSING
 // =============================================================================
 
-/**
- * Process System File Checker (SFC) scan results.
- * @private
- * @param {object} summary - Task summary containing integrity data
- * @param {string} status - Task execution status
- * @returns {string|null} Human-readable health status
- */
-function processSFCScan(summary, status) {
-  if (status !== "success") return null;
-
-  const violations = summary.integrity_violations;
-  const repairs = summary.repairs_attempted;
-
-  if (violations === false) {
-    return "System files: No issues found";
-  } else if (violations === true) {
-    return `System files: ${
-      repairs ? "Issues found and repaired" : "Issues found"
-    }`;
-  }
-
-  return null;
-}
+// processSFCScan: MIGRATED TO handlers/sfc_scan/index.js
 
 /**
  * Process DISM health check results.
@@ -784,10 +762,8 @@ function aggregateTaskData(results) {
     }
 
     // Process system health tasks
-    else if (type === "sfc_scan") {
-      const health = processSFCScan(summary, status);
-      if (health) data.systemHealth.push(health);
-    } else if (type === "dism_health_check") {
+    // sfc_scan: MIGRATED TO handlers/sfc_scan/index.js
+    else if (type === "dism_health_check") {
       const health = processDISMHealthCheck(summary, status);
       if (health) data.systemHealth.push(health);
     } else if (type === "chkdsk_scan") {

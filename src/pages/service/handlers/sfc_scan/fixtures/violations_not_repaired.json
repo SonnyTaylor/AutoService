@@ -1,0 +1,13 @@
+{
+  "task_type": "sfc_scan",
+  "status": "success",
+  "ui_label": "SFC Scan",
+  "summary": {
+    "integrity_violations": true,
+    "repairs_attempted": true,
+    "repairs_successful": false,
+    "message": "Windows Resource Protection found corrupt files but was unable to fix some of them.\nDetails are included in the CBS.Log.",
+    "raw_output_preview": "Verification 100% complete.\nWindows Resource Protection found corrupt files but was unable to fix some of them.\nFor online repairs, details are included in the CBS.Log windir\\Logs\\CBS\\CBS.log."
+  },
+  "return_code": 0
+}

@@ -42,7 +42,7 @@ export const RENDERERS = {
 
   // speedtest: MIGRATED TO handlers/speedtest/
   // battery_health: MIGRATED TO handlers/battery_health/
-  sfc_scan: renderSfc,
+  // sfc_scan: MIGRATED TO handlers/sfc_scan/
   dism_health_check: renderDism,
   smartctl_report: renderSmartctl,
   kvrt_scan: renderKvrt,
@@ -257,47 +257,7 @@ function _renderSpeedtest_OLD(res, index) {
 
 // renderBatteryHealth: MIGRATED TO handlers/battery_health/
 
-function renderSfc(res, index) {
-  const s = res.summary || {};
-  const violations = s.integrity_violations;
-  const repairs = s.repairs_attempted;
-  const success = s.repairs_successful;
-
-  let icon, message;
-  if (violations === false) {
-    icon = html`<i class="ph-fill ph-check-circle ok"></i>`;
-    message = "No integrity violations found.";
-  } else if (violations === true) {
-    icon = html`<i class="ph-fill ph-warning-circle fail"></i>`;
-    message = "System file integrity violations were found.";
-  } else {
-    icon = html`<i class="ph-fill ph-question"></i>`;
-    message = "Scan result could not be determined.";
-  }
-
-  return html`
-    <div class="card sfc">
-      ${renderHeader("System File Checker (SFC)", res.status)}
-      <div class="sfc-layout">
-        <div class="sfc-icon">${icon}</div>
-        <div class="sfc-details">
-          <div class="sfc-verdict">${message}</div>
-          ${violations
-            ? html`
-                <div class="sfc-repair muted">
-                  ${repairs
-                    ? `Repairs were attempted. Result: ${
-                        success ? "Success" : "Failed"
-                      }`
-                    : "Repairs were not attempted."}
-                </div>
-              `
-            : ""}
-        </div>
-      </div>
-    </div>
-  `;
-}
+// renderSfc: MIGRATED TO handlers/sfc_scan/
 
 function renderDism(res, index) {
   const s = res.summary || {};
