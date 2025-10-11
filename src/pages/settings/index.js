@@ -8,6 +8,7 @@ import { initializePaneNavigation } from "./navigation.js";
 import { initializeTechnicianLinks } from "./links-manager.js";
 import { initializeNetworkSettings } from "./network.js";
 import { initializeBusinessSettings } from "./business.js";
+import { initializeReportsSettings } from "./reports.js";
 
 /**
  * Initializes the settings page functionality.
@@ -27,4 +28,5 @@ export async function initPage() {
   await initializeTechnicianLinks(root);
   await initializeNetworkSettings(root);
   await initializeBusinessSettings(root);
+  await initializeReportsSettings(root);
 }

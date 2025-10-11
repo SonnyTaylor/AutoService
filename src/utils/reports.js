@@ -122,3 +122,60 @@ export async function deleteReport(folderName) {
   const { core } = window.__TAURI__;
   return await core.invoke("delete_report", { folderName });
 }
+
+/**
+ * Check if auto-save is enabled in settings
+ * @returns {Promise<boolean>} True if auto-save is enabled
+ */
+export async function isAutoSaveEnabled() {
+  try {
+    const { core } = window.__TAURI__;
+    const settings = await core.invoke("load_app_settings");
+    return settings?.reports?.auto_save === true;
+  } catch (err) {
+    console.error("Failed to check auto-save setting:", err);
+    return false;
+  }
+}
+
+/**
+ * Auto-save a report after service completion
+ * @param {Object} report - The final report data
+ * @param {Object} options - Additional options
+ * @param {string} options.planFilePath - Path to the plan file
+ * @param {string} options.logFilePath - Path to the log file
+ * @param {string} options.hostname - System hostname
+ * @param {string} options.customerName - Customer name (optional)
+ * @param {string} options.technicianName - Technician name (optional)
+ * @returns {Promise<Object>} Save response with success status and folder path
+ */
+export async function autoSaveReport(report, options = {}) {
+  const {
+    planFilePath = null,
+    logFilePath = null,
+    hostname = "Unknown_PC",
+    customerName = null,
+    technicianName = null,
+  } = options;
+
+  try {
+    const { core } = window.__TAURI__;
+    const reportJson = JSON.stringify(report, null, 2);
+
+    const response = await core.invoke("save_report", {
+      request: {
+        report_json: reportJson,
+        plan_file_path: planFilePath,
+        log_file_path: logFilePath,
+        hostname: hostname,
+        customer_name: customerName,
+        technician_name: technicianName,
+      },
+    });
+
+    return response;
+  } catch (error) {
+    console.error("Auto-save failed:", error);
+    throw error;
+  }
+}

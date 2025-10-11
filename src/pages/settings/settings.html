@@ -15,6 +15,7 @@
         </button>
         <button class="shortcut-btn" data-target="network">Network</button>
         <button class="shortcut-btn" data-target="business">Business</button>
+        <button class="shortcut-btn" data-target="reports">Reports</button>
       </nav>
     </aside>
 
@@ -300,6 +301,28 @@
             </button>
             <div id="business-settings-status" class="muted"></div>
           </div>
+        </div>
+      </div>
+
+      <!-- Reports pane -->
+      <div class="card settings-pane" data-pane="reports" style="display: none">
+        <div class="card-title"><span>Reports</span></div>
+        <div class="card-body">
+          <p class="muted">Configure report saving behavior and preferences.</p>
+
+          <!-- Auto-save Toggle -->
+          <label class="business-settings-toggle">
+            <input type="checkbox" id="reports-autosave-toggle" />
+            <div class="toggle-text">
+              <div class="toggle-title">Auto-save Reports</div>
+              <div class="muted toggle-description">
+                Automatically save reports after every service completes (no
+                need to manually click Save Report)
+              </div>
+            </div>
+          </label>
+
+          <div id="reports-settings-status" class="muted"></div>
         </div>
       </div>
     </div>

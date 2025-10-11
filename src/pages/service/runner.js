@@ -1,5 +1,6 @@
 import { getToolStatuses } from "../../utils/tools.js";
 import { promptServiceMetadata } from "../../utils/service-metadata-modal.js";
+import { isAutoSaveEnabled, autoSaveReport } from "../../utils/reports.js";
 import hljs from "highlight.js/lib/core";
 import jsonLang from "highlight.js/lib/languages/json";
 import "highlight.js/styles/github-dark.css";
@@ -55,6 +56,96 @@ export async function initPage() {
     try {
       localStorage.removeItem("service.finalReport");
     } catch {}
+  }
+
+  // Helper: auto-save report if enabled in settings
+  async function handleAutoSave(finalReport, payload) {
+    try {
+      // Check if auto-save is enabled
+      const autoSaveOn = await isAutoSaveEnabled();
+      if (!autoSaveOn) {
+        console.log("Auto-save disabled, skipping");
+        return;
+      }
+
+      console.log("Auto-save enabled, saving report...");
+
+      // Get system info for hostname
+      let hostname = "Unknown_PC";
+      try {
+        const sysInfo = await invoke("get_system_info");
+        hostname = sysInfo?.hostname || hostname;
+      } catch (e) {
+        console.warn("Could not fetch hostname for auto-save:", e);
+      }
+
+      // Get metadata from sessionStorage
+      let customerName = null;
+      let technicianName = null;
+      try {
+        const metadataRaw = sessionStorage.getItem("service.metadata");
+        if (metadataRaw) {
+          const metadata = JSON.parse(metadataRaw);
+          customerName = metadata.customerName || null;
+          technicianName = metadata.technicianName || null;
+        }
+      } catch (e) {
+        console.warn("Could not load metadata for auto-save:", e);
+      }
+
+      // Auto-save the report
+      const response = await autoSaveReport(finalReport, {
+        planFilePath: payload.plan_file || null,
+        logFilePath: payload.log_file || null,
+        hostname,
+        customerName,
+        technicianName,
+      });
+
+      if (response.success) {
+        console.log("Report auto-saved successfully:", response.report_folder);
+        // Show a subtle notification
+        showAutoSaveNotification(response.report_folder);
+      } else {
+        console.error("Auto-save failed:", response.error);
+      }
+    } catch (error) {
+      console.error("Auto-save error:", error);
+    }
+  }
+
+  // Helper: show auto-save notification
+  function showAutoSaveNotification(folderPath) {
+    try {
+      const notification = document.createElement("div");
+      notification.className = "autosave-notification";
+      notification.innerHTML = `
+        <i class="ph ph-check-circle" style="margin-right: 8px; vertical-align: -2px;"></i>
+        Report auto-saved to: ${folderPath}
+      `;
+      notification.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: #10b981;
+        color: white;
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-size: 14px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        z-index: 10000;
+        animation: slideInUp 0.3s ease-out;
+        max-width: 400px;
+      `;
+      document.body.appendChild(notification);
+
+      setTimeout(() => {
+        notification.style.animation = "slideOutDown 0.3s ease-in";
+        setTimeout(() => notification.remove(), 300);
+      }, 4000);
+    } catch (e) {
+      console.warn("Could not show auto-save notification:", e);
+    }
   }
 
   // Ensure the log overlay is hidden on initial load
@@ -404,6 +495,9 @@ export async function initPage() {
         } catch (e) {
           console.warn("Failed to store runner data:", e);
         }
+
+        // Auto-save report if enabled in settings
+        handleAutoSave(finalReport, payload);
 
         try {
           if (viewResultsBtn) {
