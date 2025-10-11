@@ -70,8 +70,20 @@ export async function initPage() {
   const summaryEl = document.getElementById("svc-results-summary");
   const sectionsEl = document.getElementById("svc-results-sections");
 
+  // Check if we're viewing from reports page or from runner
+  const viewingFromReports = sessionStorage.getItem(
+    "service.viewingFromReports"
+  );
+
   backBtn?.addEventListener("click", () => {
-    window.location.hash = "#/service-report";
+    if (viewingFromReports) {
+      // Go back to reports page
+      sessionStorage.removeItem("service.viewingFromReports");
+      window.location.hash = "#/reports";
+    } else {
+      // Go back to runner
+      window.location.hash = "#/service-report";
+    }
   });
 
   // Set up tab switching
