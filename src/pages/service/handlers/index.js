@@ -26,6 +26,7 @@
 // import * as speedtest from './speedtest/index.js';
 // import * as batteryHealth from './battery_health/index.js';
 
+import * as batteryHealth from "./battery_health/index.js";
 import * as diskSpaceReport from "./disk_space_report/index.js";
 import * as pingTest from "./ping_test/index.js";
 
@@ -41,8 +42,8 @@ const HANDLERS = {
   // Add handlers here as they are migrated.
   // Example:
   // speedtest: speedtest,
-  // battery_health: batteryHealth,
 
+  battery_health: batteryHealth,
   disk_space_report: diskSpaceReport,
   ping_test: pingTest,
 };

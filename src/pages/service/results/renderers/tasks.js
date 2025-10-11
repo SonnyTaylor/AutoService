@@ -41,7 +41,7 @@ export const RENDERERS = {
   // ===== LEGACY RENDERERS (TO BE MIGRATED) =====
 
   speedtest: renderSpeedtest,
-  battery_health: renderBatteryHealth,
+  // battery_health: MIGRATED TO handlers/battery_health/
   sfc_scan: renderSfc,
   dism_health_check: renderDism,
   smartctl_report: renderSmartctl,
@@ -254,33 +254,7 @@ function renderSpeedtest(res, index) {
   `;
 }
 
-function renderBatteryHealth(res, index) {
-  const s = res.summary || {};
-  const info = {
-    Batteries: s.count_batteries,
-    "Average SOH %": s.average_soh_percent,
-    "Low‑health batteries": s.low_health_batteries,
-    Verdict: s.human_readable?.verdict,
-  };
-  return html`
-    <div class="result battery">
-      ${renderHeader("Battery Health", res.status)}
-      <div class="kpi-row">
-        ${kpiBox("Batteries", info.Batteries ?? "-")}
-        ${kpiBox(
-          "Avg SOH",
-          info["Average SOH %"] != null ? `${info["Average SOH %"]}%` : "-"
-        )}
-        ${kpiBox("Low Health", info["Low‑health batteries"] ?? "-")}
-        ${kpiBox(
-          "Verdict",
-          (info.Verdict || "").toString(),
-          info.Verdict?.toLowerCase().includes("fail") ? "fail" : undefined
-        )}
-      </div>
-    </div>
-  `;
-}
+// renderBatteryHealth: MIGRATED TO handlers/battery_health/
 
 function renderSfc(res, index) {
   const s = res.summary || {};

@@ -11,6 +11,7 @@
  */
 
 import { html } from "lit-html";
+import ApexCharts from "apexcharts";
 import { renderHeader, kpiBox } from "../common/ui.js";
 import { buildMetric, getStatusVariant } from "../common/metrics.js";
 
@@ -217,7 +218,7 @@ export function renderTech({ result, index }) {
         },
       };
 
-      const chart = new window.ApexCharts(chartEl, options);
+      const chart = new ApexCharts(chartEl, options);
       chart.render();
     }
   }, 0);
