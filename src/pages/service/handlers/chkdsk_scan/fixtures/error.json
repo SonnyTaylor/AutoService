@@ -1,0 +1,8 @@
+{
+  "task_type": "chkdsk",
+  "status": "failure",
+  "summary": {
+    "error": "Access denied - CHKDSK requires administrator privileges"
+  },
+  "ui_label": "CHKDSK Scan"
+}

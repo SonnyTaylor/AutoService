@@ -1,0 +1,11 @@
+{
+  "task_type": "chkdsk",
+  "status": "success",
+  "summary": {
+    "return_code": 2,
+    "output": "The type of the file system is NTFS.\nVolume label is OS.\n\nWindows found errors on the disk. These errors need to be repaired before continuing.\n\nErrors found. CHKDSK cannot continue in read-only mode.\n",
+    "verdict": "Errors found - disk requires repair",
+    "severity": "error"
+  },
+  "ui_label": "CHKDSK Scan"
+}

@@ -1,0 +1,17 @@
+{
+  "task_type": "kvrt",
+  "status": "success",
+  "summary": {
+    "objects_scanned": 125847,
+    "threats_found": 0,
+    "threats_neutralized": 0,
+    "detections": [],
+    "scan_duration_seconds": 342,
+    "config_flags": {
+      "extended_scan": false,
+      "scan_archives": true,
+      "scan_email": false
+    }
+  },
+  "ui_label": "Kaspersky Virus Scan"
+}

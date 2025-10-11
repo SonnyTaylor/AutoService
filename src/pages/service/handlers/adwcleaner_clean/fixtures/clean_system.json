@@ -1,0 +1,21 @@
+{
+  "task_type": "adwcleaner",
+  "status": "success",
+  "summary": {
+    "total_cleaned": 0,
+    "reboot_required": false,
+    "categories": {
+      "registry": 0,
+      "file": 0,
+      "folder": 0,
+      "service": 0,
+      "task": 0,
+      "shortcut": 0,
+      "dll": 0,
+      "wmi": 0,
+      "browser": 0,
+      "preinstalled": 0
+    }
+  },
+  "ui_label": "AdwCleaner Scan"
+}
