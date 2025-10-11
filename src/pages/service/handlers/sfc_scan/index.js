@@ -141,3 +141,30 @@ export function extractCustomerMetrics({ result }) {
   // Unknown status - don't show metric
   return null;
 }
+
+// =============================================================================
+// PRINT CSS (service-specific styles for technician reports)
+// =============================================================================
+
+export const printCSS = `
+  /* SFC Layout */
+  .sfc-layout { 
+    display: grid; 
+    grid-template-columns: 40px 1fr; 
+    gap: 12px; 
+    align-items: start; 
+  }
+  .sfc-icon { font-size: 26px; }
+  .sfc-icon .ok { color: #16a34a; }
+  .sfc-icon .fail { color: #dc2626; }
+  .sfc-verdict { 
+    font-weight: 600; 
+    font-size: 11.5pt; 
+    margin-bottom: 4px; 
+  }
+  .sfc-repair { 
+    margin-top: 6px; 
+    font-size: 10pt; 
+    color: #64748b; 
+  }
+`;

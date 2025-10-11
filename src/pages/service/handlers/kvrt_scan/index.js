@@ -266,3 +266,30 @@ export function extractCustomerMetrics({ result }) {
     }),
   ];
 }
+
+// =============================================================================
+// PRINT CSS (service-specific styles for technician reports)
+// =============================================================================
+
+export const printCSS = `
+  /* KVRT Detections */
+  .kvrt-detections { margin-top: 10px; }
+  .kvrt-detection-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  .kvrt-detection { 
+    background: #fafbfc; border: 1px solid #cbd5e1; 
+    border-radius: 6px; padding: 10px; 
+  }
+  .kvrt-detection-head { display: flex; justify-content: space-between; align-items: start; gap: 10px; margin-bottom: 6px; }
+  .kvrt-threat { font-weight: 600; font-size: 10.5pt; color: #92400e; }
+  .kvrt-detection-body { font-size: 9.5pt; }
+  .kvrt-label { text-transform: uppercase; font-size: 8.5pt; letter-spacing: 0.5px; color: #64748b; margin-bottom: 2px; }
+  .kvrt-object { 
+    font-family: 'Consolas', 'Monaco', monospace; 
+    font-size: 9pt; color: #334155; 
+    word-break: break-all; margin-top: 2px;
+  }
+  .kvrt-meta { 
+    border-top: 1px solid #e5e7eb; padding-top: 8px; 
+    margin-top: 8px; font-size: 9pt; color: #64748b; 
+  }
+`;

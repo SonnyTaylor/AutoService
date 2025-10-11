@@ -320,3 +320,66 @@ export function extractCustomerMetrics({ result }) {
     keepAllItems: true,
   });
 }
+
+// =============================================================================
+// PRINT CSS (service-specific styles for technician reports)
+// =============================================================================
+
+export const printCSS = `
+  /* Speedtest print layout */
+  .speedtest-layout { 
+    display: block; 
+  }
+  
+  .speedtest-kpis { 
+    display: grid; 
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px; 
+    margin-bottom: 10px;
+  }
+  
+  .speedtest-kpi-grid { 
+    display: grid; 
+    grid-template-columns: repeat(2, 1fr); 
+    gap: 8px; 
+    max-width: 100%;
+  }
+  
+  .speedtest-meta { 
+    background: #fafbfc; 
+    border: 1px solid #e5e7eb; 
+    border-radius: 6px; 
+    padding: 8px 10px; 
+    margin-top: 6px;
+    word-wrap: break-word;
+  }
+  
+  .speedtest-meta-row { 
+    display: flex; 
+    justify-content: space-between; 
+    margin: 3px 0; 
+    font-size: 9.5pt; 
+    gap: 8px;
+  }
+  
+  .speedtest-meta-row .lab { 
+    text-transform: uppercase; 
+    letter-spacing: 0.5px; 
+    color: #64748b; 
+    font-weight: 500; 
+    flex-shrink: 0;
+  }
+  
+  .speedtest-meta-row .val {
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+    white-space: nowrap;
+    text-align: right;
+  }
+  
+  /* Hide chart in print - replaced by KPI boxes */
+  .speedtest-chart,
+  [id^="speedtest-chart-"] {
+    display: none !important;
+  }
+`;

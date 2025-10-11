@@ -294,3 +294,28 @@ export function extractCustomerMetrics({ result }) {
     items: items.length > 0 ? items : undefined,
   });
 }
+
+// =============================================================================
+// PRINT CSS (service-specific styles for technician reports)
+// =============================================================================
+
+export const printCSS = `
+  /* Hide chart in print */
+  .ping-chart, 
+  .ping-chart-shell,
+  [id^="ping-chart-"] {
+    display: none !important;
+  }
+  
+  .ping-layout { 
+    display: block; 
+  }
+  
+  /* KPI layout for ping */
+  .ping-kpis { 
+    display: grid; 
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px; 
+    margin-bottom: 10px;
+  }
+`;

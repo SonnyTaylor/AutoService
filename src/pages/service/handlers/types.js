@@ -61,4 +61,5 @@
  * @property {ServiceDefinition} definition - Service catalog definition
  * @property {function(TechRendererContext): any} renderTech - Technician view renderer (lit-html)
  * @property {function(CustomerMetricsContext): CustomerMetric|CustomerMetric[]|null} [extractCustomerMetrics] - Customer metric extractor (optional)
+ * @property {string} [printCSS] - Optional CSS rules specific to this service's print output
  */

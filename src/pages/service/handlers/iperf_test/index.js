@@ -276,3 +276,19 @@ export function extractCustomerMetrics({ summary, status }) {
     items: items.length > 0 ? items : undefined,
   });
 }
+
+// =============================================================================
+// PRINT CSS (service-specific styles for technician reports)
+// =============================================================================
+
+export const printCSS = `
+  /* Enhanced Print Display for iPerf */
+  .iperf .kpi-row {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  /* Hide chart in print */
+  [id^="iperf-chart-"] {
+    display: none !important;
+  }
+`;

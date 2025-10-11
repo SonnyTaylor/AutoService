@@ -304,3 +304,70 @@ export function extractCustomerMetrics({ summary, status }) {
     variant: "info",
   });
 }
+
+// =============================================================================
+// PRINT CSS (service-specific styles for technician reports)
+// =============================================================================
+
+export const printCSS = `
+  /* WinSAT print layout */
+  .winsat-kpis { 
+    display: grid; 
+    grid-template-columns: 1fr;
+    gap: 10px; 
+    margin-bottom: 10px;
+  }
+  .winsat-meta { 
+    background: #fafbfc; 
+    border: 1px solid #e5e7eb; 
+    border-radius: 6px; 
+    padding: 8px 10px;
+  }
+  .winsat-meta-row { 
+    display: flex; 
+    justify-content: space-between; 
+    margin: 3px 0; 
+    font-size: 9.5pt; 
+    gap: 8px;
+  }
+  .winsat-meta-row .lab { 
+    text-transform: uppercase; 
+    letter-spacing: 0.5px; 
+    color: #64748b; 
+    font-weight: 500; 
+    flex-shrink: 0;
+  }
+  .winsat-kpi-grid { 
+    display: grid; 
+    grid-template-columns: repeat(2, 1fr); 
+    gap: 8px; 
+    max-width: 100%;
+  }
+  .winsat-latency, .winsat-scores {
+    background: #fafbfc; 
+    border: 1px solid #e5e7eb; 
+    border-radius: 6px; 
+    padding: 10px;
+  }
+  .winsat-latency .section-title, .winsat-scores .section-title {
+    font-size: 10pt; 
+    text-transform: uppercase; 
+    letter-spacing: 0.5px; 
+    color: #64748b; 
+    margin-bottom: 8px; 
+    font-weight: 600;
+  }
+  .winsat-latency .kpi-row, .winsat-scores .kpi-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  /* Hide chart in print */
+  .winsat-chart,
+  [id^="winsat-chart-"] {
+    display: none !important;
+  }
+  
+  .winsat-layout { 
+    display: block; 
+  }
+`;

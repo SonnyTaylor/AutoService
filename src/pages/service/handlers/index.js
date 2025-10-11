@@ -146,6 +146,24 @@ export function getCustomerMetricExtractors() {
 }
 
 /**
+ * Get all print CSS from registered handlers.
+ * Returns a concatenated string of all service-specific print CSS rules.
+ * @returns {string} Combined CSS string
+ */
+export function getHandlerPrintCSS() {
+  const cssChunks = [];
+  for (const [id, handler] of Object.entries(HANDLERS)) {
+    if (handler.printCSS && typeof handler.printCSS === "string") {
+      // Add a comment to identify the source handler
+      cssChunks.push(`/* CSS from handler: ${id} */`);
+      cssChunks.push(handler.printCSS);
+      cssChunks.push(""); // blank line for readability
+    }
+  }
+  return cssChunks.join("\n");
+}
+
+/**
  * Check if a handler is registered.
  * @param {string} id - Service handler ID
  * @returns {boolean} True if handler exists

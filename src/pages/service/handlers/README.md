@@ -95,6 +95,19 @@ export function extractCustomerMetrics({ summary, status }) {
 }
 ```
 
+### 4. Print CSS (Optional)
+
+```javascript
+export const printCSS = `
+  /* Service-specific print styles for technician reports */
+  .speedtest-layout { display: block; }
+  .speedtest-kpis { display: grid; grid-template-columns: repeat(2, 1fr); }
+  
+  /* Hide charts in print */
+  .speedtest-chart { display: none !important; }
+`;
+```
+
 ## Creating a New Handler
 
 ### Option 1: During Migration (Recommended)
@@ -169,8 +182,89 @@ The registry (`index.js`) provides these functions:
 - `getServiceDefinitions()` - Get all service catalog definitions
 - `getTechRenderers()` - Get all tech renderer functions
 - `getCustomerMetricExtractors()` - Get all customer metric extractors
+- `getHandlerPrintCSS()` - Get concatenated print CSS from all handlers
 - `hasHandler(id)` - Check if handler is registered
 - `listHandlerIds()` - Get list of all handler IDs
+
+## Print CSS System
+
+Handlers can optionally export service-specific print CSS for technician reports.
+
+### Why Use Print CSS?
+
+Print CSS is needed when:
+
+- ✅ Your service has custom layouts (grids, flexbox)
+- ✅ Charts/visualizations need hiding in print
+- ✅ Service-specific components need print styling
+- ❌ **Not needed** if using only common components (`.card`, `.kpi-row`, `.pill-row`)
+
+### How It Works
+
+```javascript
+// 1. Export CSS in your handler
+export const printCSS = `
+  .my-service .custom-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  
+  /* Hide chart in print */
+  .my-service-chart { display: none !important; }
+`;
+
+// 2. CSS automatically included in print documents
+// No additional configuration needed!
+```
+
+### Best Practices
+
+**✅ Do:**
+
+- Scope CSS with service class: `.my-service .custom { }`
+- Focus on print-specific needs (layout, hiding charts)
+- Use comments to document sections
+- Keep it minimal
+
+**❌ Don't:**
+
+- Use global selectors (affects all services)
+- Duplicate base styles (cards, KPIs already styled)
+- Include screen-only styles (put in component CSS instead)
+
+### Example
+
+```javascript
+export const printCSS = `
+  /* Detection grid layout */
+  .kvrt-detection-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  
+  /* Detection card styling */
+  .kvrt-detection {
+    background: #fafbfc;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 10px;
+    page-break-inside: avoid;
+  }
+  
+  /* Hide interactive elements in print */
+  .kvrt-chart { display: none !important; }
+`;
+```
+
+### Documentation
+
+See `CSS_MIGRATION_GUIDE.md` for:
+
+- Complete print CSS system overview
+- Migration steps for existing services
+- Examples and troubleshooting
 
 ## Integration
 

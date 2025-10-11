@@ -134,3 +134,31 @@ export function extractCustomerMetrics({ summary, status }) {
 
   return null; // Remove this when implementing
 }
+
+// =============================================================================
+// PRINT CSS (optional - service-specific styles for technician reports)
+// =============================================================================
+
+/**
+ * Optional: Export custom CSS for this service's print output.
+ * This CSS is automatically included in technician print reports.
+ *
+ * Use this for service-specific styling needs. Keep it minimal and focused
+ * on print layout improvements. Base print styles are in css.js.
+ *
+ * @example
+ * export const printCSS = `
+ *   .template-service .custom-section {
+ *     display: grid;
+ *     grid-template-columns: repeat(2, 1fr);
+ *     gap: 10px;
+ *   }
+ *
+ *   .template-service .highlight-box {
+ *     background: #fafbfc;
+ *     border: 1px solid #cbd5e1;
+ *     border-radius: 6px;
+ *     padding: 10px;
+ *   }
+ * `;
+ */
