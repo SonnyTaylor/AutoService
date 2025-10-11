@@ -261,12 +261,13 @@ export function renderTech({ result, index }) {
  * @param {CustomerMetricsContext} context - Extraction context
  * @returns {CustomerMetric|null} Customer metric or null
  */
-export function extractCustomerMetrics({ summary, status }) {
-  if (status !== "success") return null;
+export function extractCustomerMetrics({ result }) {
+  if (result.status !== "success") return null;
 
-  const lat = summary?.latency_ms;
-  const host = summary?.host;
-  const loss = summary?.packets?.loss_percent;
+  const summary = result.summary || {};
+  const lat = summary.latency_ms;
+  const host = summary.host;
+  const loss = summary.packets?.loss_percent;
 
   if (!lat || lat.avg == null) return null;
 

@@ -341,18 +341,7 @@ function processWinSATDisk(summary, status) {
  * @param {string} status - Task execution status
  * @returns {object|null} Speed test results
  */
-function processSpeedTest(summary, status) {
-  if (status !== "success") return null;
-
-  const hr = summary.human_readable || {};
-
-  return {
-    download: hr.download_mbps,
-    upload: hr.upload_mbps,
-    ping: hr.ping_ms,
-    verdict: hr.verdict,
-  };
-}
+// processSpeedTest: MIGRATED TO handlers/speedtest/index.js
 
 // processPingTest: MIGRATED TO handlers/ping_test/index.js
 
@@ -623,32 +612,7 @@ function buildPerformanceMetric(performanceResults) {
  * @param {object|null} speedTestResults - Speed test data
  * @returns {CustomerMetric|null} Metric object or null if no test
  */
-function buildSpeedTestMetric(speedTestResults) {
-  if (!speedTestResults) return null;
-
-  const items = [
-    `Download: ${speedTestResults.download?.toFixed(1) || "?"} Mbps`,
-    `Upload: ${speedTestResults.upload?.toFixed(1) || "?"} Mbps`,
-    `Ping: ${speedTestResults.ping?.toFixed(0) || "?"} ms`,
-  ];
-
-  if (speedTestResults.verdict) {
-    items.push(`Quality: ${speedTestResults.verdict}`);
-  }
-
-  return {
-    icon: "🌐",
-    label: "Internet Speed",
-    value:
-      speedTestResults.download != null
-        ? `${speedTestResults.download.toFixed(1)} Mbps`
-        : "Tested",
-    detail: "Download speed",
-    variant: "info",
-    items,
-    keepAllItems: true,
-  };
-}
+// buildSpeedTestMetric: MIGRATED TO handlers/speedtest/index.js
 
 // buildNetworkLatencyMetric: MIGRATED TO handlers/ping_test/index.js
 
@@ -850,9 +814,7 @@ function aggregateTaskData(results) {
     }
 
     // Process network test tasks
-    else if (type === "speedtest") {
-      data.speedTest = processSpeedTest(summary, status);
-    }
+    // speedtest: MIGRATED TO handlers/speedtest/index.js
     // ping_test: MIGRATED TO handlers/ping_test/index.js
     else if (type === "iperf_test") {
       data.networkThroughput = processIPerfTest(summary, status);
@@ -909,9 +871,7 @@ function buildMetricsFromData(data, totalTasks) {
   const perfMetric = buildPerformanceMetric(data.performance);
   if (perfMetric) metrics.push(perfMetric);
 
-  const speedMetric = buildSpeedTestMetric(data.speedTest);
-  if (speedMetric) metrics.push(speedMetric);
-
+  // speedMetric: MIGRATED TO handlers/speedtest/index.js
   // latencyMetric: MIGRATED TO handlers/ping_test/index.js
 
   const throughputMetric = buildNetworkThroughputMetric(data.networkThroughput);
@@ -926,7 +886,8 @@ function buildMetricsFromData(data, totalTasks) {
   // storageMetric: MIGRATED TO handlers/disk_space_report/index.js
 
   // Add fallback metric if no specific metrics were generated
-  if (metrics.length === 0) {
+  // Only add if we actually have legacy tasks to report
+  if (metrics.length === 0 && totalTasks > 0) {
     metrics.push(buildDefaultMetric(totalTasks));
   }
 
@@ -964,13 +925,11 @@ export function extractCustomerMetrics(results) {
   // First pass: Try handler extraction for each result
   for (const result of results) {
     const taskType = result.task_type || result.type;
-    const summary = result.summary || {};
-    const status = result.status || "unknown";
 
     // Try handler extraction first
     const extractor = handlerExtractors[taskType];
     if (extractor) {
-      const extracted = extractor({ summary, status });
+      const extracted = extractor({ result });
       if (extracted) {
         if (Array.isArray(extracted)) {
           handlerMetrics.push(...extracted);

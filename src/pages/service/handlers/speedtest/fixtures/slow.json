@@ -1,0 +1,21 @@
+{
+  "task_type": "speedtest",
+  "status": "success",
+  "ui_label": "Internet Speed Test",
+  "summary": {
+    "duration_seconds": 68.5,
+    "human_readable": {
+      "download_mbps": 5.1,
+      "upload_mbps": 1.2,
+      "ping_ms": 150.0,
+      "verdict": "poor",
+      "notes": [
+        "slow download 5.1 Mbps",
+        "slow upload 1.2 Mbps",
+        "high ping 150 ms"
+      ],
+      "score": 15.0,
+      "rating_stars": 1
+    }
+  }
+}

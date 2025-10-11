@@ -29,6 +29,7 @@
 import * as batteryHealth from "./battery_health/index.js";
 import * as diskSpaceReport from "./disk_space_report/index.js";
 import * as pingTest from "./ping_test/index.js";
+import * as speedtest from "./speedtest/index.js";
 
 // =============================================================================
 // REGISTRY CONSTRUCTION
@@ -46,6 +47,7 @@ const HANDLERS = {
   battery_health: batteryHealth,
   disk_space_report: diskSpaceReport,
   ping_test: pingTest,
+  speedtest: speedtest,
 };
 
 // =============================================================================

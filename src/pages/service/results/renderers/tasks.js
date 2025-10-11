@@ -40,7 +40,7 @@ export const RENDERERS = {
 
   // ===== LEGACY RENDERERS (TO BE MIGRATED) =====
 
-  speedtest: renderSpeedtest,
+  // speedtest: MIGRATED TO handlers/speedtest/
   // battery_health: MIGRATED TO handlers/battery_health/
   sfc_scan: renderSfc,
   dism_health_check: renderDism,
@@ -68,7 +68,8 @@ export function renderGeneric(res, index) {
   `;
 }
 
-function renderSpeedtest(res, index) {
+// renderSpeedtest: MIGRATED TO handlers/speedtest/
+function _renderSpeedtest_OLD(res, index) {
   const h = res.summary?.human_readable || {};
   const chartId = `speedtest-chart-${index}`;
 

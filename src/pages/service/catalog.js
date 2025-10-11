@@ -79,30 +79,7 @@ export const SERVICES = {
 
   // ===== LEGACY DEFINITIONS (TO BE MIGRATED) =====
 
-  speedtest: {
-    id: "speedtest",
-    label: "Internet Speed Test",
-    group: "Network",
-    category: "Network",
-    defaultParams: {},
-    toolKeys: [],
-    async build({ params }) {
-      // Optional parameters supported by the runner; UI currently keeps defaults
-      const threads = Number.isFinite(params?.threads)
-        ? Math.max(1, parseInt(params.threads, 10))
-        : null;
-      const share = !!params?.share;
-      const secure = params?.secure === false ? false : true;
-      const task = {
-        type: "speedtest",
-        ...(threads ? { threads } : {}),
-        ...(share ? { share: true } : {}),
-        secure,
-        ui_label: "Internet Speed Test",
-      };
-      return task;
-    },
-  },
+  // speedtest: MIGRATED TO handlers/speedtest/
   // battery_health: MIGRATED TO handlers/battery_health/
   whynotwin11_check: {
     id: "whynotwin11_check",

@@ -120,10 +120,11 @@ export function renderTech({ result, index }) {
  * @param {CustomerMetricsContext} context - Extraction context
  * @returns {CustomerMetric|null} Customer metric or null
  */
-export function extractCustomerMetrics({ summary, status }) {
-  if (status !== "success") return null;
+export function extractCustomerMetrics({ result }) {
+  if (result.status !== "success") return null;
 
-  const drives = Array.isArray(summary?.drives) ? summary.drives : [];
+  const summary = result.summary || {};
+  const drives = Array.isArray(summary.drives) ? summary.drives : [];
   if (drives.length === 0) return null;
 
   let totalGb = 0;

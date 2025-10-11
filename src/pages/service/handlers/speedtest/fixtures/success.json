@@ -1,0 +1,34 @@
+{
+  "task_type": "speedtest",
+  "status": "success",
+  "ui_label": "Internet Speed Test",
+  "summary": {
+    "duration_seconds": 45.2,
+    "results": {
+      "download": 125400000.0,
+      "upload": 45200000.0,
+      "ping": 18.5,
+      "timestamp": "2025-10-11T10:30:00Z",
+      "server": {
+        "name": "New York",
+        "sponsor": "Speedtest",
+        "country": "US"
+      },
+      "client": {
+        "isp": "Example ISP"
+      }
+    },
+    "human_readable": {
+      "download_mbps": 125.4,
+      "upload_mbps": 45.2,
+      "ping_ms": 18.5,
+      "jitter_ms": 2.1,
+      "server_description": "New York, Speedtest, US",
+      "isp": "Example ISP",
+      "verdict": "excellent",
+      "notes": [],
+      "score": 100.0,
+      "rating_stars": 5
+    }
+  }
+}
