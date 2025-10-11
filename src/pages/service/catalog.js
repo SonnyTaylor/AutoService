@@ -35,9 +35,9 @@
 // HANDLER INTEGRATION (NEW SYSTEM)
 // =============================================================================
 
-// Uncomment when first handler is migrated:
-// import { getServiceDefinitions } from './handlers/index.js';
-// const HANDLER_DEFINITIONS = getServiceDefinitions();
+// Import handler definitions
+import { getServiceDefinitions } from "./handlers/index.js";
+const HANDLER_DEFINITIONS = getServiceDefinitions();
 
 // =============================================================================
 // LEGACY SERVICE DEFINITIONS (TO BE MIGRATED)
@@ -74,8 +74,8 @@
  * @type {Record<string, ServiceDef>}
  */
 export const SERVICES = {
-  // TODO: Merge handler definitions once first migration is complete
-  // ...HANDLER_DEFINITIONS,
+  // Merge handler definitions
+  ...HANDLER_DEFINITIONS,
 
   // ===== LEGACY DEFINITIONS (TO BE MIGRATED) =====
 
@@ -216,33 +216,7 @@ export const SERVICES = {
       };
     },
   },
-  ping_test: {
-    id: "ping_test",
-    label: "Ping Test",
-    group: "Network",
-    category: "Network",
-    defaultParams: { host: "", count: 4 },
-    toolKeys: [],
-    async build({ params }) {
-      // Load default ping host from app settings if not provided
-      let host = (params?.host || "").toString();
-      if (!host) {
-        try {
-          const { core } = window.__TAURI__ || {};
-          const inv = core?.invoke;
-          const settings = inv ? await inv("load_app_settings") : {};
-          host = settings?.network?.ping_host || "google.com";
-        } catch {}
-      }
-      const count = parseInt(params?.count ?? 4, 10) || 4;
-      return {
-        type: "ping_test",
-        host,
-        count,
-        ui_label: `Ping Test (${host}, ${count}x)`,
-      };
-    },
-  },
+  // ping_test: MIGRATED TO handlers/ping_test/
   chkdsk_scan: {
     id: "chkdsk_scan",
     label: "File System Check (CHKDSK)",
@@ -493,20 +467,7 @@ export const SERVICES = {
       };
     },
   },
-  disk_space_report: {
-    id: "disk_space_report",
-    label: "Disk Space Report",
-    group: "Diagnostics",
-    category: "Diagnostics",
-    defaultParams: {},
-    toolKeys: [],
-    async build({ params }) {
-      return {
-        type: "disk_space_report",
-        ui_label: "Disk Space Report",
-      };
-    },
-  },
+  // disk_space_report: MIGRATED TO handlers/disk_space_report/
 };
 
 /**

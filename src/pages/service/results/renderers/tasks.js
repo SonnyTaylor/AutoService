@@ -16,9 +16,9 @@ import {
 // HANDLER INTEGRATION (NEW SYSTEM)
 // =============================================================================
 
-// Uncomment when first handler is migrated:
-// import { getTechRenderers } from '../../../handlers/index.js';
-// const HANDLER_RENDERERS = getTechRenderers();
+// Import handler renderers
+import { getTechRenderers } from "../../handlers/index.js";
+const HANDLER_RENDERERS = getTechRenderers();
 
 // =============================================================================
 // LEGACY RENDERERS (TO BE MIGRATED)
@@ -35,8 +35,8 @@ import {
  * Then remove the individual legacy renderer functions from this file.
  */
 export const RENDERERS = {
-  // TODO: Merge handler renderers once first migration is complete
-  // ...HANDLER_RENDERERS,
+  // Merge handler renderers
+  ...HANDLER_RENDERERS,
 
   // ===== LEGACY RENDERERS (TO BE MIGRATED) =====
 
@@ -47,7 +47,7 @@ export const RENDERERS = {
   smartctl_report: renderSmartctl,
   kvrt_scan: renderKvrt,
   adwcleaner_clean: renderAdwCleaner,
-  ping_test: renderPing,
+  // ping_test: MIGRATED TO handlers/ping_test/
   chkdsk_scan: renderChkdsk,
   bleachbit_clean: renderBleachBit,
   furmark_stress_test: renderFurmark,
@@ -56,7 +56,7 @@ export const RENDERERS = {
   whynotwin11_check: renderWhyNotWin11,
   windows_update: renderWindowsUpdate,
   winsat_disk: renderWinSAT,
-  disk_space_report: renderDiskSpace,
+  // disk_space_report: MIGRATED TO handlers/disk_space_report/
 };
 
 export function renderGeneric(res, index) {
@@ -672,169 +672,7 @@ function renderAdwCleaner(res, index) {
   `;
 }
 
-function renderPing(res, index) {
-  const s = res.summary || {};
-  const hr = s.human_readable || {};
-  const lat = s.latency_ms || {};
-  const stats = s.interval_stats || {};
-  const loss = s.packets?.loss_percent;
-  const toNumber = (val) => {
-    const num = Number(val);
-    return Number.isFinite(num) ? num : null;
-  };
-  const stabilityScore = toNumber(hr.stability_score);
-  const stabilityVariant = (() => {
-    if (stabilityScore == null) return undefined;
-    if (stabilityScore >= 85) return "ok";
-    if (stabilityScore >= 70) return "info";
-    if (stabilityScore >= 50) return "warn";
-    return "fail";
-  })();
-  const stabilityDisplay = (() => {
-    if (stabilityScore == null) return "-";
-    const score =
-      Number.isInteger(stabilityScore) || Math.abs(stabilityScore % 1) < 0.05
-        ? stabilityScore.toFixed(0)
-        : stabilityScore.toFixed(1);
-    return `${score}/100`;
-  })();
-
-  setTimeout(() => {
-    const chartEl = document.getElementById(`ping-chart-${index}`);
-    if (chartEl && lat.avg != null) {
-      if (chartEl.dataset.rendered === "true") return;
-      chartEl.dataset.rendered = "true";
-      const getPingColor = (ping) => {
-        if (ping == null) return "#4f8cff";
-        if (ping < 30) return "#2f6b4a";
-        if (ping < 60) return "#4f8cff";
-        if (ping < 100) return "#6b422b";
-        return "#7a3333";
-      };
-
-      const options = {
-        chart: {
-          type: "bar",
-          height: 180,
-          width: "100%",
-          toolbar: { show: false },
-          animations: { enabled: false },
-        },
-        series: [{ name: "Average", data: [lat.avg.toFixed(1)] }],
-        plotOptions: {
-          bar: { horizontal: true, barHeight: "35%", distributed: false },
-        },
-        colors: [getPingColor(lat.avg)],
-        xaxis: {
-          categories: [""],
-          max: Math.max(120, Math.ceil((lat.max || 0) / 20) * 20),
-          labels: {
-            style: { colors: "#a3adbf", fontFamily: "Inter, sans-serif" },
-            formatter: (val) => `${val} ms`,
-          },
-        },
-        yaxis: { labels: { show: false } },
-        grid: { borderColor: "#2a3140", padding: { left: 20, right: 20 } },
-        tooltip: {
-          theme: "dark",
-          y: { title: { formatter: () => "Average Ping" } },
-        },
-        annotations: {
-          xaxis: [
-            {
-              x: 0,
-              x2: 30,
-              fillColor: "#2f6b4a",
-              opacity: 0.1,
-              label: {
-                text: "Excellent",
-                position: "top",
-                style: {
-                  background: "transparent",
-                  color: "#fff",
-                  fontSize: "10px",
-                },
-              },
-            },
-            {
-              x: 30,
-              x2: 60,
-              fillColor: "#4f8cff",
-              opacity: 0.1,
-              label: {
-                text: "Good",
-                position: "top",
-                style: {
-                  background: "transparent",
-                  color: "#fff",
-                  fontSize: "10px",
-                },
-              },
-            },
-            {
-              x: 60,
-              x2: 100,
-              fillColor: "#6b422b",
-              opacity: 0.1,
-              label: {
-                text: "Fair",
-                position: "top",
-                style: {
-                  background: "transparent",
-                  color: "#fff",
-                  fontSize: "10px",
-                },
-              },
-            },
-            {
-              x: 100,
-              x2: 999,
-              fillColor: "#7a3333",
-              opacity: 0.1,
-              label: {
-                text: "Poor",
-                position: "top",
-                style: {
-                  background: "transparent",
-                  color: "#fff",
-                  fontSize: "10px",
-                },
-              },
-            },
-          ],
-        },
-      };
-      const chart = new ApexCharts(chartEl, options);
-      chart.render();
-    }
-  }, 0);
-
-  return html`
-    <div class="card ping">
-      ${renderHeader(`Ping Test: ${s.host || ""}`, res.status)}
-      <div class="ping-layout">
-        <div class="ping-kpis">
-          ${kpiBox("Average Latency", fmtMs(lat.avg))}
-          ${kpiBox("Packet Loss", loss != null ? `${loss}%` : "-")}
-          ${kpiBox("Stability", stabilityDisplay, stabilityVariant)}
-          ${kpiBox(
-            "Jitter (StDev)",
-            stats.stdev != null ? fmtMs(stats.stdev) : "-"
-          )}
-        </div>
-        <div class="ping-chart">
-          ${lat.avg != null
-            ? html`
-                <div class="ping-chart-shell">
-                  <div id="ping-chart-${index}"></div>
-                </div>
-              `
-            : html`<div class="muted">No latency data for chart.</div>`}
-        </div>
-      </div>
-    </div>
-  `;
-}
+// renderPing: MIGRATED TO handlers/ping_test/index.js
 
 function renderChkdsk(res, index) {
   const s = res.summary || {};
@@ -1750,54 +1588,4 @@ function renderWinSAT(res, index) {
   `;
 }
 
-function renderDiskSpace(res, index) {
-  const s = res.summary || {};
-  const drives = s.drives || [];
-  const hr = s.human_readable || {};
-  const warnings = hr.warnings || [];
-
-  return html`
-    <div class="card disk-space">
-      ${renderHeader("Disk Space Report", res.status)}
-      <div class="disk-space-content">
-        ${drives.length > 0
-          ? html`
-              <div class="disk-drives">
-                ${map(drives, (drive) => {
-                  const percent = drive.usage_percent || 0;
-                  const variant =
-                    percent > 90 ? "fail" : percent > 80 ? "warn" : "ok";
-                  return html`
-                    <div class="drive-item">
-                      <div class="drive-label">${drive.drive}</div>
-                      <div class="drive-bar">
-                        <div
-                          class="drive-bar-fill ${variant}"
-                          style="width: ${Math.min(percent, 100)}%"
-                        ></div>
-                      </div>
-                      <div class="drive-stats">
-                        ${drive.used_gb?.toFixed(1) || 0}GB used of
-                        ${drive.total_gb?.toFixed(1) || 0}GB
-                        (${percent?.toFixed(1) || 0}%)
-                      </div>
-                    </div>
-                  `;
-                })}
-              </div>
-            `
-          : html`<div class="no-data">No drive information available</div>`}
-        ${warnings.length > 0
-          ? html`
-              <div class="warnings">
-                <h4><i class="ph ph-warning"></i> Warnings</h4>
-                <ul>
-                  ${map(warnings, (warning) => html`<li>${warning}</li>`)}
-                </ul>
-              </div>
-            `
-          : ""}
-      </div>
-    </div>
-  `;
-}
+// renderDiskSpace: MIGRATED TO handlers/disk_space_report/index.js

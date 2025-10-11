@@ -1,0 +1,8 @@
+{
+  "task_type": "disk_space_report",
+  "status": "error",
+  "summary": {
+    "error": "Failed to enumerate drives"
+  },
+  "ui_label": "Disk Space Report"
+}

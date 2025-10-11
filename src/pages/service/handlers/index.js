@@ -26,6 +26,9 @@
 // import * as speedtest from './speedtest/index.js';
 // import * as batteryHealth from './battery_health/index.js';
 
+import * as diskSpaceReport from "./disk_space_report/index.js";
+import * as pingTest from "./ping_test/index.js";
+
 // =============================================================================
 // REGISTRY CONSTRUCTION
 // =============================================================================
@@ -39,6 +42,9 @@ const HANDLERS = {
   // Example:
   // speedtest: speedtest,
   // battery_health: batteryHealth,
+
+  disk_space_report: diskSpaceReport,
+  ping_test: pingTest,
 };
 
 // =============================================================================
@@ -78,13 +84,15 @@ export function getServiceDefinitions() {
 
 /**
  * Get all tech renderers from registered handlers.
+ * Wraps handler renderTech functions to match legacy signature (result, index).
  * @returns {Record<string, Function>} Map of service ID to tech renderer function
  */
 export function getTechRenderers() {
   const renderers = {};
   for (const [id, handler] of Object.entries(HANDLERS)) {
     if (handler.renderTech) {
-      renderers[id] = handler.renderTech;
+      // Wrap to convert from (result, index) to ({ result, index })
+      renderers[id] = (result, index) => handler.renderTech({ result, index });
     }
   }
   return renderers;

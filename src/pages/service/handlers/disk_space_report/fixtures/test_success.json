@@ -1,0 +1,26 @@
+{
+  "task_type": "disk_space_report",
+  "status": "success",
+  "summary": {
+    "drives": [
+      {
+        "drive": "C:",
+        "total_gb": 500.0,
+        "used_gb": 350.5,
+        "free_gb": 149.5,
+        "usage_percent": 70.1
+      },
+      {
+        "drive": "D:",
+        "total_gb": 1000.0,
+        "used_gb": 250.0,
+        "free_gb": 750.0,
+        "usage_percent": 25.0
+      }
+    ],
+    "human_readable": {
+      "warnings": []
+    }
+  },
+  "ui_label": "Disk Space Report"
+}

@@ -7,8 +7,8 @@
 // HANDLER INTEGRATION (NEW SYSTEM)
 // =============================================================================
 
-// Uncomment when first handler is migrated:
-// import { getCustomerMetricExtractors } from '../../../handlers/index.js';
+// Import handler metric extractors
+import { getCustomerMetricExtractors } from "../../handlers/index.js";
 
 // =============================================================================
 // LEGACY PROCESSING FUNCTIONS (TO BE MIGRATED)
@@ -354,24 +354,7 @@ function processSpeedTest(summary, status) {
   };
 }
 
-/**
- * Process network ping/latency test results.
- * @private
- * @param {object} summary - Task summary containing ping data
- * @param {string} status - Task execution status
- * @returns {object|null} Network latency results
- */
-function processPingTest(summary, status) {
-  if (status !== "success") return null;
-
-  const lat = summary.latency_ms || {};
-
-  return {
-    host: summary.host,
-    avg: lat.avg,
-    loss: summary.packets?.loss_percent,
-  };
-}
+// processPingTest: MIGRATED TO handlers/ping_test/index.js
 
 /**
  * Process iPerf network throughput test results.
@@ -399,41 +382,7 @@ function processIPerfTest(summary, status) {
 // STORAGE USAGE PROCESSING
 // =============================================================================
 
-/**
- * Process Disk Space Report results.
- * Expects summary.drives: [{ drive, total_gb, used_gb, free_gb, usage_percent }]
- * @private
- * @param {object} summary
- * @param {string} status
- * @returns {object|null} { totalUsedGb, totalGb, avgUsage, critical:[], low:[], items:[] }
- */
-function processDiskSpaceReport(summary, status) {
-  if (status !== "success") return null;
-  const drives = Array.isArray(summary?.drives) ? summary.drives : [];
-  if (drives.length === 0) return null;
-
-  let totalGb = 0;
-  let totalUsedGb = 0;
-  const critical = [];
-  const low = [];
-  const items = [];
-
-  drives.forEach((d) => {
-    const t = Number(d.total_gb) || 0;
-    const u = Number(d.used_gb) || 0;
-    const p = Number(d.usage_percent) || 0;
-    totalGb += t;
-    totalUsedGb += u;
-    if (p >= 90) critical.push(d.drive);
-    else if (p >= 80) low.push(d.drive);
-    items.push(
-      `${d.drive} ${u.toFixed(1)}GB / ${t.toFixed(1)}GB (${p.toFixed(1)}%)`
-    );
-  });
-
-  const avgUsage = totalGb > 0 ? (totalUsedGb / totalGb) * 100 : 0;
-  return { totalUsedGb, totalGb, avgUsage, critical, low, items };
-}
+// processDiskSpaceReport: MIGRATED TO handlers/disk_space_report/index.js
 
 // =============================================================================
 // COMPATIBILITY & UPGRADE PROCESSING
@@ -701,30 +650,7 @@ function buildSpeedTestMetric(speedTestResults) {
   };
 }
 
-/**
- * Build network latency metric card.
- * @private
- * @param {object|null} networkLatency - Network latency data
- * @returns {CustomerMetric|null} Metric object or null if no test
- */
-function buildNetworkLatencyMetric(networkLatency) {
-  if (!networkLatency) return null;
-
-  return {
-    icon: "📡",
-    label: "Network Latency",
-    value:
-      networkLatency.avg != null
-        ? `${Math.round(networkLatency.avg)} ms`
-        : "Tested",
-    detail: `Ping to ${networkLatency.host || "server"}`,
-    variant: "info",
-    items:
-      networkLatency.loss != null
-        ? [`Packet loss: ${networkLatency.loss}%`]
-        : undefined,
-  };
-}
+// buildNetworkLatencyMetric: MIGRATED TO handlers/ping_test/index.js
 
 /**
  * Build network throughput metric card.
@@ -827,40 +753,7 @@ function buildWindowsUpdateMetric(updateResults) {
   };
 }
 
-/**
- * Build storage usage metric card from Disk Space Report.
- * @private
- * @param {object|null} storage - Processed storage data
- * @returns {CustomerMetric|null}
- */
-function buildStorageUsageMetric(storage) {
-  if (!storage) return null;
-
-  const used = storage.totalUsedGb || 0;
-  const total = storage.totalGb || 0;
-  const avg = storage.avgUsage || 0;
-
-  const items = [];
-  if (Array.isArray(storage.items) && storage.items.length > 0) {
-    items.push(...storage.items);
-  }
-  if (storage.critical && storage.critical.length > 0) {
-    items.push(`Critical space: ${storage.critical.join(", ")}`);
-  }
-  if (storage.low && storage.low.length > 0) {
-    items.push(`Low space: ${storage.low.join(", ")}`);
-  }
-
-  return {
-    icon: "🗄️",
-    label: "Storage Usage",
-    value: `${used.toFixed(1)} / ${total.toFixed(1)} GB`,
-    detail: `Average utilization ${avg.toFixed(1)}%`,
-    variant:
-      storage.critical && storage.critical.length > 0 ? "warning" : "info",
-    items: items.length > 0 ? items : undefined,
-  };
-}
+// buildStorageUsageMetric: MIGRATED TO handlers/disk_space_report/index.js
 
 /**
  * Build default fallback metric when no specific metrics are available.
@@ -959,9 +852,9 @@ function aggregateTaskData(results) {
     // Process network test tasks
     else if (type === "speedtest") {
       data.speedTest = processSpeedTest(summary, status);
-    } else if (type === "ping_test") {
-      data.networkLatency = processPingTest(summary, status);
-    } else if (type === "iperf_test") {
+    }
+    // ping_test: MIGRATED TO handlers/ping_test/index.js
+    else if (type === "iperf_test") {
       data.networkThroughput = processIPerfTest(summary, status);
     }
 
@@ -978,11 +871,7 @@ function aggregateTaskData(results) {
       }
     }
 
-    // Process disk space report
-    else if (type === "disk_space_report") {
-      const storage = processDiskSpaceReport(summary, status);
-      if (storage) data.storage = storage;
-    }
+    // disk_space_report: MIGRATED TO handlers/disk_space_report/index.js
   });
 
   return data;
@@ -1023,8 +912,7 @@ function buildMetricsFromData(data, totalTasks) {
   const speedMetric = buildSpeedTestMetric(data.speedTest);
   if (speedMetric) metrics.push(speedMetric);
 
-  const latencyMetric = buildNetworkLatencyMetric(data.networkLatency);
-  if (latencyMetric) metrics.push(latencyMetric);
+  // latencyMetric: MIGRATED TO handlers/ping_test/index.js
 
   const throughputMetric = buildNetworkThroughputMetric(data.networkThroughput);
   if (throughputMetric) metrics.push(throughputMetric);
@@ -1035,8 +923,7 @@ function buildMetricsFromData(data, totalTasks) {
   const updatesMetric = buildWindowsUpdateMetric(data.windowsUpdate);
   if (updatesMetric) metrics.push(updatesMetric);
 
-  const storageMetric = buildStorageUsageMetric(data.storage);
-  if (storageMetric) metrics.push(storageMetric);
+  // storageMetric: MIGRATED TO handlers/disk_space_report/index.js
 
   // Add fallback metric if no specific metrics were generated
   if (metrics.length === 0) {
@@ -1070,40 +957,47 @@ function buildMetricsFromData(data, totalTasks) {
  * // ]
  */
 export function extractCustomerMetrics(results) {
-  // TODO: Integrate handler-based extractors once first migration is complete
-  // const handlerExtractors = getCustomerMetricExtractors();
-  // const metrics = [];
-  //
-  // for (const result of results) {
-  //   const taskType = result.task_type || result.type;
-  //   const summary = result.summary || {};
-  //   const status = result.status || "unknown";
-  //
-  //   // Try handler extraction first
-  //   const extractor = handlerExtractors[taskType];
-  //   if (extractor) {
-  //     const extracted = extractor({ summary, status });
-  //     if (extracted) {
-  //       if (Array.isArray(extracted)) {
-  //         metrics.push(...extracted);
-  //       } else {
-  //         metrics.push(extracted);
-  //       }
-  //     }
-  //     continue; // Skip legacy processing for migrated handlers
-  //   }
-  //
-  //   // Fall through to legacy aggregation below for unmigrated services
-  // }
+  const handlerExtractors = getCustomerMetricExtractors();
+  const handlerMetrics = [];
+  const legacyResults = [];
 
-  // LEGACY AGGREGATION APPROACH (current)
-  // First, aggregate all raw data from task results
-  const aggregatedData = aggregateTaskData(results);
+  // First pass: Try handler extraction for each result
+  for (const result of results) {
+    const taskType = result.task_type || result.type;
+    const summary = result.summary || {};
+    const status = result.status || "unknown";
+
+    // Try handler extraction first
+    const extractor = handlerExtractors[taskType];
+    if (extractor) {
+      const extracted = extractor({ summary, status });
+      if (extracted) {
+        if (Array.isArray(extracted)) {
+          handlerMetrics.push(...extracted);
+        } else {
+          handlerMetrics.push(extracted);
+        }
+      }
+      // Skip legacy processing for this task
+      continue;
+    }
+
+    // Task hasn't been migrated yet, add to legacy results
+    legacyResults.push(result);
+  }
+
+  // LEGACY AGGREGATION APPROACH (for unmigrated services)
+  // First, aggregate all raw data from unmigrated task results
+  const aggregatedData = aggregateTaskData(legacyResults);
 
   // Then, convert aggregated data into formatted metric cards
-  const metrics = buildMetricsFromData(aggregatedData, results.length);
+  const legacyMetrics = buildMetricsFromData(
+    aggregatedData,
+    legacyResults.length
+  );
 
-  return metrics;
+  // Combine handler metrics and legacy metrics
+  return [...handlerMetrics, ...legacyMetrics];
 }
 
 // =============================================================================

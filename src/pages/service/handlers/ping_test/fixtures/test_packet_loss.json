@@ -1,0 +1,24 @@
+{
+  "task_type": "ping_test",
+  "status": "success",
+  "summary": {
+    "host": "unstable-host.com",
+    "latency_ms": {
+      "avg": 45.3,
+      "min": 20.0,
+      "max": 150.0
+    },
+    "packets": {
+      "sent": 4,
+      "received": 3,
+      "loss_percent": 25
+    },
+    "interval_stats": {
+      "stdev": 52.8
+    },
+    "human_readable": {
+      "stability_score": 35.0
+    }
+  },
+  "ui_label": "Ping Test (unstable-host.com, 4x)"
+}
