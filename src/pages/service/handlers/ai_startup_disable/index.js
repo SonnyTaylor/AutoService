@@ -424,71 +424,61 @@ export function extractCustomerMetrics({ result }) {
  * @returns {HTMLElement} Parameter controls element
  */
 export function renderParamControls({ params, updateParam }) {
-  const container = document.createElement("div");
-  container.className = "ai-startup-controls";
+  const wrapper = document.createElement("div");
+  wrapper.style.display = "flex";
+  wrapper.style.flexWrap = "wrap";
+  wrapper.style.alignItems = "center";
+  wrapper.style.columnGap = "12px";
+  wrapper.style.rowGap = "6px";
 
-  // Preview Mode Toggle (reversed: checked = preview mode only)
-  const previewLabel = document.createElement("label");
-  previewLabel.style.cssText = `
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
+  const applyChangesVal = params?.apply_changes !== false; // Default true
+  const modelVal = params?.model || "gpt-4o-mini";
+
+  wrapper.innerHTML = `
+    <label class="tiny-lab" style="margin-right:12px;" title="Apply AI recommendations or show preview only">
+      <input type="checkbox" data-param="apply_changes" ${
+        applyChangesVal ? "checked" : ""
+      } />
+      <span class="lab">Apply changes</span>
+    </label>
+    <label class="tiny-lab" style="margin-right:12px;" title="Select AI model for analysis">
+      <span class="lab">AI Model</span>
+      <select data-param="model" aria-label="AI model selection">
+        <option value="gpt-4o-mini" ${
+          modelVal === "gpt-4o-mini" ? "selected" : ""
+        }>GPT-4o Mini (Fast)</option>
+        <option value="gpt-4o" ${
+          modelVal === "gpt-4o" ? "selected" : ""
+        }>GPT-4o (Balanced)</option>
+        <option value="gpt-4-turbo" ${
+          modelVal === "gpt-4-turbo" ? "selected" : ""
+        }>GPT-4 Turbo</option>
+        <option value="gpt-4" ${
+          modelVal === "gpt-4" ? "selected" : ""
+        }>GPT-4</option>
+      </select>
+    </label>
   `;
 
-  const checkbox = document.createElement("input");
-  checkbox.type = "checkbox";
-  // Reverse logic: checked = preview mode (apply_changes = false)
-  checkbox.checked = params?.apply_changes === false;
-  checkbox.addEventListener("change", (e) => {
-    // When checked (preview mode), set apply_changes to false
-    updateParam("apply_changes", !e.target.checked);
+  // Stop event propagation to prevent drag-and-drop interference
+  wrapper.querySelectorAll("input, select").forEach((el) => {
+    ["mousedown", "pointerdown", "click"].forEach((evt) => {
+      el.addEventListener(evt, (e) => e.stopPropagation());
+    });
   });
 
-  const labelText = document.createElement("span");
-  labelText.className = "lab";
-  labelText.textContent = "Preview mode (recommendations only)";
+  const cbApply = wrapper.querySelector('input[data-param="apply_changes"]');
+  const selModel = wrapper.querySelector('select[data-param="model"]');
 
-  previewLabel.appendChild(checkbox);
-  previewLabel.appendChild(labelText);
-
-  // Model Selection
-  const modelLabel = document.createElement("label");
-  modelLabel.style.cssText =
-    "display: flex; flex-direction: column; gap: 4px; min-width: 280px;";
-
-  const modelTitle = document.createElement("span");
-  modelTitle.className = "lab";
-  modelTitle.textContent = "AI Model";
-
-  const modelSelect = document.createElement("select");
-
-  const models = [
-    { value: "gpt-4o-mini", label: "GPT-4o Mini (Recommended - Fast & Cheap)" },
-    { value: "gpt-4o", label: "GPT-4o (More Accurate)" },
-    { value: "gpt-4-turbo", label: "GPT-4 Turbo" },
-    { value: "gpt-4", label: "GPT-4" },
-  ];
-
-  models.forEach((model) => {
-    const option = document.createElement("option");
-    option.value = model.value;
-    option.textContent = model.label;
-    option.selected = (params?.model || "gpt-4o-mini") === model.value;
-    modelSelect.appendChild(option);
+  cbApply?.addEventListener("change", () => {
+    updateParam("apply_changes", cbApply.checked);
   });
 
-  modelSelect.addEventListener("change", (e) => {
-    updateParam("model", e.target.value);
+  selModel?.addEventListener("change", () => {
+    updateParam("model", selModel.value);
   });
 
-  modelLabel.appendChild(modelTitle);
-  modelLabel.appendChild(modelSelect);
-
-  container.appendChild(previewLabel);
-  container.appendChild(modelLabel);
-
-  return container;
+  return wrapper;
 }
 
 // =============================================================================
