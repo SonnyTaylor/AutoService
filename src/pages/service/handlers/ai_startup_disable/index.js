@@ -186,11 +186,11 @@ export function renderTech({ result, index }) {
       ${toDisable.length > 0
         ? html`
             <div class="mt-4">
-              <h4>
+              <div class="section-title">
                 ${results.applied ? "Items Disabled" : "Recommended to Disable"}
                 (${toDisable.length})
-              </h4>
-              <div class="startup-items-list">
+              </div>
+              <div class="startup-detection-grid">
                 ${toDisable.map((item, idx) => renderStartupItem(item, idx))}
               </div>
             </div>
@@ -207,18 +207,16 @@ export function renderTech({ result, index }) {
       <!-- Items Kept Enabled -->
       ${keepEnabled.length > 0
         ? html`
-            <details class="mt-4">
-              <summary>
-                <h4 style="display: inline;">
-                  Critical Items Kept Enabled (${keepEnabled.length})
-                </h4>
-              </summary>
-              <div class="startup-items-list mt-2">
+            <div class="mt-4">
+              <div class="section-title">
+                Critical Items Kept Enabled (${keepEnabled.length})
+              </div>
+              <div class="startup-detection-grid">
                 ${keepEnabled.map((item, idx) =>
                   renderKeepEnabledItem(item, idx)
                 )}
               </div>
-            </details>
+            </div>
           `
         : ""}
 
@@ -315,23 +313,32 @@ function renderStartupItem(item, index) {
       : "muted";
 
   return html`
-    <div class="startup-item">
-      <div class="item-header">
-        <strong>${index + 1}. ${item.name}</strong>
+    <div class="startup-detection" data-index=${index}>
+      <div class="startup-detection-head">
+        <span class="startup-name" title=${item.name}>
+          <strong>${index + 1}.</strong> ${item.name}
+        </span>
         <div class="item-badges">
           ${pill(item.category || "unknown", "info")}
           ${pill(`Risk: ${item.risk}`, riskColor)}
           ${pill(`Confidence: ${item.confidence}`, confidenceColor)}
         </div>
       </div>
-      <div class="item-details">
-        <div><strong>Reason:</strong> ${item.reason}</div>
+      <div class="startup-detection-body">
+        <div class="detail-row">
+          <span class="detail-label">Reason:</span>
+          <span class="detail-value">${item.reason}</span>
+        </div>
         ${item.user_impact
-          ? html`<div><strong>User Impact:</strong> ${item.user_impact}</div>`
+          ? html`<div class="detail-row">
+              <span class="detail-label">User Impact:</span>
+              <span class="detail-value">${item.user_impact}</span>
+            </div>`
           : ""}
         ${item.manual_launch
-          ? html`<div>
-              <strong>Manual Launch:</strong> ${item.manual_launch}
+          ? html`<div class="detail-row">
+              <span class="detail-label">Manual Launch:</span>
+              <span class="detail-value">${item.manual_launch}</span>
             </div>`
           : ""}
       </div>
@@ -344,13 +351,18 @@ function renderStartupItem(item, index) {
  */
 function renderKeepEnabledItem(item, index) {
   return html`
-    <div class="startup-item keep-enabled">
-      <div class="item-header">
-        <strong>${index + 1}. ${item.name}</strong>
+    <div class="startup-detection keep-enabled" data-index=${index}>
+      <div class="startup-detection-head">
+        <span class="startup-name" title=${item.name}>
+          <strong>${index + 1}.</strong> ${item.name}
+        </span>
         ${pill(item.category || "critical", "success")}
       </div>
-      <div class="item-details">
-        <div><strong>Reason:</strong> ${item.reason}</div>
+      <div class="startup-detection-body">
+        <div class="detail-row">
+          <span class="detail-label">Reason:</span>
+          <span class="detail-value">${item.reason}</span>
+        </div>
       </div>
     </div>
   `;
@@ -486,61 +498,119 @@ export function renderParamControls({ params, updateParam }) {
 // =============================================================================
 
 export const printCSS = `
-.ai-startup-optimizer .startup-items-list {
-  display: flex;
-  flex-direction: column;
+/* AI Startup Optimizer - Detection Grid Layout (similar to KVRT) */
+.ai-startup-optimizer .startup-detection-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 12px;
+  margin-top: 12px;
 }
 
-.ai-startup-optimizer .startup-item {
-  border: 1px solid #ddd;
-  border-radius: 4px;
+.ai-startup-optimizer .startup-detection {
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
   padding: 12px;
-  background: #f9f9f9;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  page-break-inside: avoid;
 }
 
-.ai-startup-optimizer .startup-item.keep-enabled {
+.ai-startup-optimizer .startup-detection.keep-enabled {
   border-color: #28a745;
   background: #f0fff4;
 }
 
-.ai-startup-optimizer .item-header {
+.ai-startup-optimizer .startup-detection-head {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.ai-startup-optimizer .startup-name {
+  font-size: 0.95em;
+  font-weight: 600;
+  color: #212529;
+  word-break: break-word;
+  flex: 1;
+  line-height: 1.4;
+}
+
+.ai-startup-optimizer .startup-name strong {
+  color: #6c757d;
+  margin-right: 4px;
 }
 
 .ai-startup-optimizer .item-badges {
   display: flex;
-  gap: 6px;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: flex-end;
 }
 
-.ai-startup-optimizer .item-details {
-  font-size: 0.9em;
-  line-height: 1.6;
+.ai-startup-optimizer .startup-detection-body {
+  font-size: 0.85em;
+  color: #495057;
 }
 
-.ai-startup-optimizer .item-details > div {
-  margin-bottom: 4px;
+.ai-startup-optimizer .detail-row {
+  margin-bottom: 8px;
+  line-height: 1.5;
 }
 
+.ai-startup-optimizer .detail-row:last-child {
+  margin-bottom: 0;
+}
+
+.ai-startup-optimizer .detail-label {
+  font-weight: 600;
+  color: #6c757d;
+  margin-right: 4px;
+}
+
+.ai-startup-optimizer .detail-value {
+  color: #212529;
+}
+
+/* Section Titles */
+.ai-startup-optimizer .section-title {
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #212529;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid #dee2e6;
+}
+
+/* Summary Box */
 .ai-startup-optimizer .summary-box {
   background: #f8f9fa;
   border: 1px solid #dee2e6;
-  border-radius: 4px;
+  border-radius: 6px;
   padding: 12px;
+  margin-top: 12px;
 }
 
 .ai-startup-optimizer .summary-item {
   margin-bottom: 6px;
+  font-size: 0.9em;
+  line-height: 1.6;
 }
 
+.ai-startup-optimizer .summary-item:last-child {
+  margin-bottom: 0;
+}
+
+/* Error List */
 .ai-startup-optimizer .error-list {
   background: #fff3cd;
   border: 1px solid #ffc107;
-  border-radius: 4px;
+  border-radius: 6px;
   padding: 12px;
+  margin-top: 12px;
 }
 
 .ai-startup-optimizer .error-item {
@@ -550,13 +620,25 @@ export const printCSS = `
   border-radius: 4px;
 }
 
+.ai-startup-optimizer .error-item:last-child {
+  margin-bottom: 0;
+}
+
+/* All Items Table */
 .ai-startup-optimizer .all-items-table {
   max-height: 400px;
   overflow-y: auto;
   border: 1px solid #dee2e6;
-  border-radius: 4px;
+  border-radius: 6px;
+  margin-top: 12px;
 }
 
+.ai-startup-optimizer .all-items-table table {
+  width: 100%;
+  font-size: 0.85em;
+}
+
+/* Details/Summary Styling */
 .ai-startup-optimizer details summary {
   cursor: pointer;
   user-select: none;
@@ -564,19 +646,33 @@ export const printCSS = `
   background: #f8f9fa;
   border-radius: 4px;
   margin-bottom: 8px;
+  font-weight: 600;
 }
 
 .ai-startup-optimizer details summary:hover {
   background: #e9ecef;
 }
 
+/* Print-specific styles */
 @media print {
+  .ai-startup-optimizer .startup-detection-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .ai-startup-optimizer .startup-detection {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  
   .ai-startup-optimizer details {
     page-break-inside: avoid;
   }
   
-  .ai-startup-optimizer .startup-item {
-    page-break-inside: avoid;
+  .ai-startup-optimizer details summary {
+    background: none;
+    padding: 4px 0;
   }
 }
 `;
