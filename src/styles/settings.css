@@ -299,6 +299,49 @@
   min-width: 260px;
 }
 
+/* AI/API settings form */
+.ai-api-form {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  padding: 14px;
+  background: var(--panel-accent);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.ai-api-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 260px;
+}
+
+.ai-api-form .muted {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+.ai-api-form .field-hint {
+  font-size: 11px;
+  margin-top: -2px;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: normal;
+}
+
+.ai-api-form input {
+  min-height: 40px;
+}
+
+.ai-api-form button {
+  height: 40px;
+}
+
 #iperf-settings-form .muted,
 #ping-settings-form .muted {
   font-size: 12px;

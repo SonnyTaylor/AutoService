@@ -635,6 +635,12 @@ class BuilderUI {
       window.location.hash = "#/service-report";
     });
 
+    // Listen for AI settings changes to refresh availability
+    window.addEventListener("ai-settings-updated", () => {
+      console.log("AI settings updated, refreshing service availability...");
+      this.render(); // Re-render to trigger availability checks
+    });
+
     this.elements.searchInput?.addEventListener("input", () => {
       this.builder.setFilterQuery(
         (this.elements.searchInput.value || "").trim()
@@ -923,6 +929,19 @@ class BuilderUI {
       }</span>`;
     }
 
+    // Check for custom availability function (async handlers)
+    const handler = getHandlerModule(id);
+    if (handler?.definition?.isAvailable) {
+      // This will be checked asynchronously - mark as "checking" initially
+      // We'll update this after async check completes
+      this.checkCustomAvailability(id, handler);
+      return (
+        '<span class="badge checking" data-service-id="' +
+        id +
+        '">Checking...</span>'
+      );
+    }
+
     // Get tool requirements from service definition
     const key = toolKeysForService(id);
 
@@ -939,6 +958,43 @@ class BuilderUI {
     return `<span class="badge ${ok ? "ok" : "missing"}">${
       ok ? "Available" : "Missing"
     }</span>`;
+  }
+
+  /**
+   * Check custom availability asynchronously and update badge
+   */
+  async checkCustomAvailability(id, handler) {
+    try {
+      const isAvailable = await handler.definition.isAvailable();
+      const badges = this.elements.palette.querySelectorAll(
+        `span.badge[data-service-id="${id}"]`
+      );
+
+      badges.forEach((badge) => {
+        badge.classList.remove("checking");
+        if (isAvailable) {
+          badge.classList.add("ok");
+          badge.textContent = "Available";
+          badge.title = "";
+        } else {
+          badge.classList.add("missing");
+          badge.textContent = "API Key Missing";
+          const reason =
+            handler.definition.getUnavailableReason?.() || "Not available";
+          badge.title = reason;
+        }
+      });
+    } catch (e) {
+      console.error(`Failed to check availability for ${id}:`, e);
+      const badges = this.elements.palette.querySelectorAll(
+        `span.badge[data-service-id="${id}"]`
+      );
+      badges.forEach((badge) => {
+        badge.classList.remove("checking");
+        badge.classList.add("missing");
+        badge.textContent = "Error";
+      });
+    }
   }
 
   /**

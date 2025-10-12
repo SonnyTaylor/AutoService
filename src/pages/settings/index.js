@@ -9,6 +9,7 @@ import { initializeTechnicianLinks } from "./links-manager.js";
 import { initializeNetworkSettings } from "./network.js";
 import { initializeBusinessSettings } from "./business.js";
 import { initializeReportsSettings } from "./reports.js";
+import { initializeAISettings } from "./ai.js";
 
 /**
  * Initializes the settings page functionality.
@@ -29,4 +30,5 @@ export async function initPage() {
   await initializeNetworkSettings(root);
   await initializeBusinessSettings(root);
   await initializeReportsSettings(root);
+  await initializeAISettings(root);
 }

@@ -33,6 +33,23 @@ import {
 // =============================================================================
 
 /**
+ * Check if OpenAI API key is configured in settings.
+ * @returns {Promise<boolean>} True if API key is available
+ */
+async function hasApiKey() {
+  try {
+    const { invoke } = window.__TAURI__?.core || {};
+    if (!invoke) return false;
+
+    const settings = await invoke("load_app_settings");
+    const apiKey = settings?.ai?.openai_api_key;
+    return Boolean(apiKey && apiKey.trim().length > 0);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Service catalog definition.
  * @type {ServiceDefinition}
  */
@@ -43,15 +60,34 @@ export const definition = {
   category: "Performance",
   description: "Use AI to analyze and optimize Windows startup programs",
   defaultParams: {
-    api_key: "env:AUTOSERVICE_OPENAI_KEY",
     model: "gpt-4o-mini",
-    apply_changes: false,
+    apply_changes: true, // Default: actually disable items (not preview mode)
   },
   toolKeys: [],
+  async isAvailable() {
+    // Check if API key is configured
+    return await hasApiKey();
+  },
+  getUnavailableReason() {
+    return "OpenAI API key not configured. Add it in Settings → AI / API.";
+  },
   async build({ params }) {
+    // Get API key from settings
+    const { invoke } = window.__TAURI__?.core || {};
+    let apiKey = "";
+
+    if (invoke) {
+      try {
+        const settings = await invoke("load_app_settings");
+        apiKey = settings?.ai?.openai_api_key || "";
+      } catch (e) {
+        console.error("Failed to load API key from settings:", e);
+      }
+    }
+
     return {
       type: "ai_startup_disable",
-      api_key: params?.api_key || "env:AUTOSERVICE_OPENAI_KEY",
+      api_key: apiKey || "env:AUTOSERVICE_OPENAI_KEY", // Fallback to env var
       model: params?.model || "gpt-4o-mini",
       base_url: params?.base_url || undefined,
       apply_changes: Boolean(params?.apply_changes),
@@ -376,6 +412,83 @@ export function extractCustomerMetrics({ result }) {
     detail: detail,
     variant: results.applied ? "success" : "info",
   });
+}
+
+// =============================================================================
+// PARAMETER CONTROLS (Builder UI)
+// =============================================================================
+
+/**
+ * Render parameter controls for the builder UI.
+ * @param {import('../types').ParamControlsContext} context - Parameter context
+ * @returns {HTMLElement} Parameter controls element
+ */
+export function renderParamControls({ params, updateParam }) {
+  const container = document.createElement("div");
+  container.className = "ai-startup-controls";
+
+  // Preview Mode Toggle (reversed: checked = preview mode only)
+  const previewLabel = document.createElement("label");
+  previewLabel.style.cssText = `
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+  `;
+
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  // Reverse logic: checked = preview mode (apply_changes = false)
+  checkbox.checked = params?.apply_changes === false;
+  checkbox.addEventListener("change", (e) => {
+    // When checked (preview mode), set apply_changes to false
+    updateParam("apply_changes", !e.target.checked);
+  });
+
+  const labelText = document.createElement("span");
+  labelText.className = "lab";
+  labelText.textContent = "Preview mode (recommendations only)";
+
+  previewLabel.appendChild(checkbox);
+  previewLabel.appendChild(labelText);
+
+  // Model Selection
+  const modelLabel = document.createElement("label");
+  modelLabel.style.cssText =
+    "display: flex; flex-direction: column; gap: 4px; min-width: 280px;";
+
+  const modelTitle = document.createElement("span");
+  modelTitle.className = "lab";
+  modelTitle.textContent = "AI Model";
+
+  const modelSelect = document.createElement("select");
+
+  const models = [
+    { value: "gpt-4o-mini", label: "GPT-4o Mini (Recommended - Fast & Cheap)" },
+    { value: "gpt-4o", label: "GPT-4o (More Accurate)" },
+    { value: "gpt-4-turbo", label: "GPT-4 Turbo" },
+    { value: "gpt-4", label: "GPT-4" },
+  ];
+
+  models.forEach((model) => {
+    const option = document.createElement("option");
+    option.value = model.value;
+    option.textContent = model.label;
+    option.selected = (params?.model || "gpt-4o-mini") === model.value;
+    modelSelect.appendChild(option);
+  });
+
+  modelSelect.addEventListener("change", (e) => {
+    updateParam("model", e.target.value);
+  });
+
+  modelLabel.appendChild(modelTitle);
+  modelLabel.appendChild(modelSelect);
+
+  container.appendChild(previewLabel);
+  container.appendChild(modelLabel);
+
+  return container;
 }
 
 // =============================================================================

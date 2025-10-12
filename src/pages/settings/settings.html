@@ -14,6 +14,7 @@
           Technician
         </button>
         <button class="shortcut-btn" data-target="network">Network</button>
+        <button class="shortcut-btn" data-target="ai">AI / API</button>
         <button class="shortcut-btn" data-target="business">Business</button>
         <button class="shortcut-btn" data-target="reports">Reports</button>
       </nav>
@@ -154,6 +155,47 @@
             </form>
             <div id="ping-settings-status"></div>
           </div>
+        </div>
+      </div>
+
+      <!-- AI / API pane -->
+      <div class="card settings-pane" data-pane="ai" style="display: none">
+        <div class="card-title"><span>AI / API Keys</span></div>
+        <div class="card-body">
+          <p class="muted">
+            Configure API keys for AI-powered features like the AI Startup
+            Optimizer.
+          </p>
+
+          <!-- OpenAI API Key -->
+          <form id="openai-settings-form" class="ai-api-form">
+            <label>
+              <span class="muted">OpenAI API Key</span>
+              <input
+                type="password"
+                name="openai_api_key"
+                id="openai-api-key-input"
+                placeholder="sk-proj-..."
+                autocomplete="off"
+              />
+              <span class="muted field-hint">
+                Required for AI Startup Optimizer. Get your API key from
+                <a
+                  href="https://platform.openai.com/api-keys"
+                  target="_blank"
+                  rel="noopener"
+                  >platform.openai.com</a
+                >
+              </span>
+            </label>
+            <div style="display: flex; gap: 8px">
+              <button type="submit" class="primary">Save</button>
+              <button type="button" id="openai-api-key-clear-btn" class="ghost">
+                Clear
+              </button>
+            </div>
+          </form>
+          <div id="openai-settings-status"></div>
         </div>
       </div>
 
