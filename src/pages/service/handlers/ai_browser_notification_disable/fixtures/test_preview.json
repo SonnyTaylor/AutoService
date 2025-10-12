@@ -1,0 +1,13 @@
+{
+  "tasks": [
+    {
+      "type": "ai_browser_notification_disable",
+      "api_key": "env:AUTOSERVICE_OPENAI_KEY",
+      "model": "gpt-4o-mini",
+      "apply_changes": false
+    }
+  ],
+  "metadata": {
+    "description": "Test AI browser notification optimizer in preview mode"
+  }
+}

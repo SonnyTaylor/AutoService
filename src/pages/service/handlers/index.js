@@ -44,6 +44,7 @@ import * as iperfTest from "./iperf_test/index.js";
 import * as winsatDisk from "./winsat_disk/index.js";
 import * as whynotwin11Check from "./whynotwin11_check/index.js";
 import * as aiStartupDisable from "./ai_startup_disable/index.js";
+import * as aiBrowserNotificationDisable from "./ai_browser_notification_disable/index.js";
 
 // =============================================================================
 // REGISTRY CONSTRUCTION
@@ -77,6 +78,7 @@ const HANDLERS = {
   winsat_disk: winsatDisk,
   whynotwin11_check: whynotwin11Check,
   ai_startup_disable: aiStartupDisable,
+  ai_browser_notification_disable: aiBrowserNotificationDisable,
 };
 
 // =============================================================================
