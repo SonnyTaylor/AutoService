@@ -16,6 +16,7 @@ import subprocess
 import logging
 import re
 import time
+import sys
 from typing import Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
@@ -73,8 +74,19 @@ def parse_chkdsk_output(output: str) -> Dict[str, Any]:
             r"found no problems|No further action is required", output, re.IGNORECASE
         )
     )
+    summary["errors_found"] = bool(
+        re.search(
+            r"Windows found errors|Errors found|CHKDSK cannot continue",
+            output,
+            re.IGNORECASE,
+        )
+    )
     summary["volume_in_use"] = bool(
-        re.search(r"volume is in use by another process", output, re.IGNORECASE)
+        re.search(
+            r"volume is in use by another process|cannot lock|cannot run because.*in use",
+            output,
+            re.IGNORECASE,
+        )
     )
     summary["prompted_schedule_or_dismount"] = bool(
         re.search(
@@ -84,6 +96,19 @@ def parse_chkdsk_output(output: str) -> Dict[str, Any]:
     summary["made_corrections"] = bool(
         re.search(r"made corrections to the file system", output, re.IGNORECASE)
     )
+    summary["access_denied"] = bool(
+        re.search(r"Access (is )?denied|insufficient privileges", output, re.IGNORECASE)
+    )
+    summary["invalid_drive"] = bool(
+        re.search(
+            r"cannot find the drive specified|invalid drive", output, re.IGNORECASE
+        )
+    )
+
+    # Extract filesystem type
+    fs_match = re.search(r"The type of the file system is (\w+)", output, re.IGNORECASE)
+    if fs_match:
+        summary["filesystem_type"] = fs_match.group(1)
 
     # Numbers (as available)
     summary["total_disk_kb"] = _int_from_kb_line(
@@ -124,12 +149,15 @@ def run_chkdsk_scan(task: Dict[str, Any]) -> Dict[str, Any]:
     if mode not in {"read_only", "fix_errors", "comprehensive"}:
         return {
             "task_type": "chkdsk_scan",
-            "status": "failure",
-            "summary": {"reason": f"Invalid mode: {mode}"},
+            "status": "error",
+            "summary": {
+                "error": f"Invalid mode: {mode}. Must be 'read_only', 'fix_errors', or 'comprehensive'."
+            },
         }
 
     command = _build_chkdsk_command(drive, mode)
     logger.info("Executing CHKDSK command: %s", " ".join(command))
+    sys.stderr.flush()
 
     started = time.time()
     try:
@@ -141,51 +169,100 @@ def run_chkdsk_scan(task: Dict[str, Any]) -> Dict[str, Any]:
             encoding="utf-8",
             errors="replace",
             check=False,
+            timeout=3600,  # 1 hour timeout for comprehensive scans
         )
     except FileNotFoundError:
         return {
             "task_type": "chkdsk_scan",
-            "status": "failure",
-            "summary": {"reason": "chkdsk not found in PATH"},
+            "status": "error",
+            "summary": {"error": "chkdsk command not found in system PATH"},
         }
-    except Exception as e:
+    except subprocess.TimeoutExpired:
         return {
             "task_type": "chkdsk_scan",
-            "status": "failure",
-            "summary": {"reason": f"Exception starting chkdsk: {e}"},
+            "status": "error",
+            "summary": {
+                "error": "CHKDSK operation timed out after 1 hour",
+                "drive": drive,
+                "mode": mode,
+            },
+        }
+    except Exception as e:
+        logger.error(f"Exception running CHKDSK: {e}")
+        return {
+            "task_type": "chkdsk_scan",
+            "status": "error",
+            "summary": {
+                "error": f"Unexpected exception: {str(e)}",
+                "drive": drive,
+                "mode": mode,
+            },
         }
 
     ended = time.time()
     output = (proc.stdout or "") + ("\n" + proc.stderr if proc.stderr else "")
     parsed = parse_chkdsk_output(output)
     parsed["return_code"] = proc.returncode
-    parsed["output"] = output
     parsed["drive"] = drive
     parsed["mode"] = mode
     parsed.setdefault("duration_seconds", round(ended - started, 3))
 
-    # Determine status heuristically
-    scheduled = (
-        parsed.get("volume_in_use")
-        and parsed.get("prompted_schedule_or_dismount")
-        and schedule_if_busy
-    )
-    if scheduled:
-        status = "success"
-        parsed["scheduled"] = True
-        parsed["note"] = "CHKDSK scheduled due to busy volume"
-    else:
-        if parsed.get("volume_in_use") and not schedule_if_busy and mode != "read_only":
-            status = "skipped"
-            parsed["reason"] = "Volume busy; set schedule_if_busy to true to schedule"
+    # Store output preview for debugging (last 1000 chars)
+    if output:
+        parsed["output_preview"] = output[-1000:] if len(output) > 1000 else output
+
+    # Determine status with improved logic
+    if parsed.get("access_denied"):
+        status = "error"
+        parsed["error"] = (
+            "Access denied. CHKDSK requires administrator privileges for this operation."
+        )
+    elif parsed.get("invalid_drive"):
+        status = "error"
+        parsed["error"] = f"Drive {drive} not found or invalid."
+    elif parsed.get("volume_in_use"):
+        if parsed.get("prompted_schedule_or_dismount") and schedule_if_busy:
+            status = "success"
+            parsed["scheduled"] = True
+            parsed["note"] = f"CHKDSK scheduled for {drive} on next boot"
+        elif mode != "read_only":
+            status = "warning"
+            parsed["warning"] = (
+                f"Volume {drive} is in use. Set schedule_if_busy=true to schedule for next boot."
+            )
         else:
-            # For read-only, any exit code is acceptable; for fix/comprehensive prefer 0 or 1
-            if mode == "read_only":
-                status = "success"
-            else:
-                status = (
-                    "success" if proc.returncode in (0, 1) else "completed_with_errors"
-                )
+            # Read-only mode can still provide useful info even if volume is busy
+            status = "success" if proc.returncode == 0 else "warning"
+    elif parsed.get("errors_found") and mode == "read_only":
+        status = "warning"
+        parsed["warning"] = (
+            "Errors detected. Run with fix_errors or comprehensive mode to repair."
+        )
+    elif parsed.get("found_no_problems"):
+        status = "success"
+        parsed["verdict"] = "No problems found. File system is healthy."
+    elif parsed.get("made_corrections"):
+        status = "success"
+        parsed["verdict"] = "File system errors were successfully repaired."
+    elif proc.returncode == 0:
+        status = "success"
+        parsed["verdict"] = "CHKDSK completed successfully."
+    elif proc.returncode == 2:
+        # Exit code 2: disk cleanup required or errors found
+        if mode == "read_only":
+            status = "warning"
+            parsed["warning"] = "Errors found. Disk requires repair with /f option."
+        else:
+            status = "error"
+            parsed["error"] = "CHKDSK could not complete repairs. Exit code 2."
+    elif proc.returncode == 3:
+        status = "error"
+        parsed["error"] = (
+            "CHKDSK encountered errors and could not be scheduled. Exit code 3."
+        )
+    else:
+        status = "error"
+        parsed["error"] = f"CHKDSK failed with exit code {proc.returncode}."
 
     return {
         "task_type": "chkdsk_scan",
