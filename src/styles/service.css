@@ -1323,10 +1323,6 @@
 [data-page="service-results"] .card.iperf .chart-container {
   margin-top: 16px;
 }
-/* AdwCleaner tweaks */
-[data-page="service-results"] .card.adwcleaner .kpi .val {
-  font-variant-numeric: tabular-nums;
-}
 [data-page="service-results"] .card.kvrt {
   display: flex;
   flex-direction: column;

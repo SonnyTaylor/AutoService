@@ -189,3 +189,14 @@ export function extractCustomerMetrics({ result }) {
     }),
   ];
 }
+
+// =============================================================================
+// PRINT CSS (service-specific styles for technician reports)
+// =============================================================================
+
+export const printCSS = `
+  /* AdwCleaner - Tabular numbers for KPI values */
+  .card.adwcleaner .kpi .val {
+    font-variant-numeric: tabular-nums;
+  }
+`;
