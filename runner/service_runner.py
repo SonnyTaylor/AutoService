@@ -53,6 +53,7 @@ from services.smartctl_service import run_smartctl_report  # type: ignore
 from services.sfc_service import run_sfc_scan  # type: ignore
 from services.dism_service import run_dism_health_check  # type: ignore
 from services.ai_startup_service import run_ai_startup_disable  # type: ignore
+from services.ai_browser_notification_service import run_ai_browser_notification_disable  # type: ignore
 from services.ping_service import run_ping_test  # type: ignore
 from services.chkdsk_service import run_chkdsk_scan  # type: ignore
 from services.iperf_service import run_iperf_test  # type: ignore
@@ -148,6 +149,7 @@ TASK_HANDLERS: Dict[str, TaskHandler] = {
     "sfc_scan": run_sfc_scan,
     "dism_health_check": run_dism_health_check,
     "ai_startup_disable": run_ai_startup_disable,
+    "ai_browser_notification_disable": run_ai_browser_notification_disable,
     "ping_test": run_ping_test,
     "chkdsk_scan": run_chkdsk_scan,
     "iperf_test": run_iperf_test,
