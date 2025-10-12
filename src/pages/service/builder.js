@@ -1,25 +1,31 @@
 /**
- * Service Run Builder (run.js)
+ * Service Run Builder
  * --------------------------------------------------------------
  * @file
  * UI logic for building an ordered queue of diagnostic/maintenance tasks.
- * Produces a JSON spec the Python runner understands, with light validation
+ * Produces a JSON spec the Python runner understands, with validation
  * against available tools. This module is browser-side (Tauri webview).
  *
+ * Architecture:
+ *  - Services are defined in handlers/ (see handlers/index.js)
+ *  - Each handler can optionally export renderParamControls() for custom UI
+ *  - Generic duration controls (minutes/seconds) rendered automatically
+ *  - Tool availability checked via handler's toolKeys definition
+ *
  * Responsibilities:
- *  - Present list of available maintenance/stress tasks.
- *  - Allow selecting & ordering tasks (keyboard + mouse drag reordering).
- *  - Expose per-task parameter controls (durations) inline.
- *  - Provide GPU Stress parent task with sub-options (FurMark / HeavyLoad) where FurMark defaults on.
- *  - Generate JSON spec (similar to test_all.json) stored in sessionStorage for next page.
- *  - Resolve tool executable paths via tools.js (no hard-coded versioned paths).
- *  - Internal documentation for future contributors.
+ *  - Present list of available maintenance/stress tasks from handlers
+ *  - Allow selecting & ordering tasks (keyboard + mouse drag reordering)
+ *  - Render parameter controls (handler-provided or generic duration)
+ *  - Provide GPU Stress parent task with sub-options (FurMark + HeavyLoad)
+ *  - Generate JSON spec stored in sessionStorage for runner
+ *  - Resolve tool executable paths dynamically (no hard-coded paths)
  *
  * Notes for contributors:
- *  - Do not hard-code versioned paths to executables. Use `resolveToolPath` provided
- *    to service builders, which in turn uses `getToolStatuses()`/saved programs.
- *  - Keep this file free of business logic for executing tasks; only build the spec.
- *  - If you add a new service, register it in services.js and it will show here.
+ *  - Add new services by creating handlers in handlers/ directory
+ *  - Use handler.renderParamControls() for custom parameter UI
+ *  - Don't hard-code service IDs - use handler system instead
+ *  - Tool paths resolved via resolveToolPath() using service's toolKeys
+ *  - GPU parent (gpu_stress_parent) is a special UI-only meta-service
  */
 
 import { getToolPath, getToolStatuses } from "../../utils/tools.js";
@@ -35,6 +41,8 @@ import {
   getServiceById,
   toolKeysForService,
 } from "./catalog.js";
+import { getHandler } from "./handlers/index.js";
+import { PRESET_MAP, GPU_PARENT_ID, isGpuChild } from "./handlers/presets.js";
 
 /**
  * @typedef {Object} ToolStatus
@@ -58,35 +66,18 @@ import {
  */
 
 // ---- Constants ------------------------------------------------------------
-const GPU_PARENT_ID = "gpu_stress_parent";
-const PERSIST_KEY = "service.run.builder.v1";
 
-const PRESET_MAP = {
-  general: [
-    "adwcleaner_clean",
-    "bleachbit_clean",
-    "sfc_scan",
-    "dism_health_check",
-    "smartctl_report",
-    "speedtest",
-  ],
-  complete: [
-    "adwcleaner_clean",
-    "bleachbit_clean",
-    "dism_health_check",
-    "sfc_scan",
-    "smartctl_report",
-    GPU_PARENT_ID,
-    "heavyload_stress_cpu",
-    "heavyload_stress_memory",
-    "speedtest",
-  ],
-  custom: [],
-  diagnostics: ["sfc_scan", "dism_health_check", "smartctl_report"],
-};
+const PERSIST_KEY = "service.run.builder.v1";
 
 // ---- Utility Helpers ------------------------------------------------------
 const capitalize = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : "");
+
+/**
+ * Get handler module for a service ID
+ */
+function getHandlerModule(id) {
+  return getHandler(id);
+}
 
 let TOOL_CACHE = null;
 let PROGRAMS_CACHE = null;
@@ -369,6 +360,8 @@ class ServiceQueueBuilder {
         keywords: [],
       };
     });
+
+    // Add GPU parent meta-service to search index
     items.push({
       id: GPU_PARENT_ID,
       label: "GPU Stress",
@@ -417,8 +410,7 @@ class ServiceQueueBuilder {
     // Add existing order first
     for (const id of this.order) {
       if (!allTasks.includes(id)) continue;
-      if (["furmark_stress_test", "heavyload_stress_gpu"].includes(id))
-        continue;
+      if (isGpuChild(id)) continue; // Skip GPU children (shown via parent)
       if (!seen.has(id)) {
         seen.add(id);
         displayOrder.push(id);
@@ -427,8 +419,7 @@ class ServiceQueueBuilder {
 
     // Add remaining tasks
     for (const id of allTasks) {
-      if (["furmark_stress_test", "heavyload_stress_gpu"].includes(id))
-        continue;
+      if (isGpuChild(id)) continue; // Skip GPU children (shown via parent)
       if (!seen.has(id)) {
         seen.add(id);
         displayOrder.push(id);
@@ -450,12 +441,14 @@ class ServiceQueueBuilder {
 
   /**
    * Generate tasks array for JSON export
+   * Expands GPU parent into individual FurMark/HeavyLoad tasks based on selection
    */
   async generateTasksArray() {
     const result = [];
     for (const id of this.order) {
       if (!this.selection.has(id)) continue;
 
+      // Special handling: GPU parent expands to real service tasks
       if (id === GPU_PARENT_ID) {
         if (this.gpuConfig.subs.furmark) {
           const furmarkDef = getServiceById("furmark_stress_test");
@@ -727,217 +720,32 @@ class BuilderUI {
       wrapper.addEventListener(evt, (e) => e.stopPropagation());
     });
 
-    // Special UI for CHKDSK
-    if (id === "chkdsk_scan") {
-      const driveVal = params?.drive ?? "C:";
-      const modeVal = params?.mode ?? "read_only";
-      const schedVal = !!params?.schedule_if_busy;
-      wrapper.innerHTML = `
-        <label class="tiny-lab" style="margin-right:8px;">
-          <span class="lab">Drive</span>
-          <input type="text" class="text-input" data-param="drive" value="${driveVal}" size="4" aria-label="Drive letter (e.g., C:)" />
-        </label>
-        <label class="tiny-lab" style="margin-right:8px;">
-          <span class="lab">Mode</span>
-          <select data-param="mode" aria-label="CHKDSK mode">
-            <option value="read_only" ${
-              modeVal === "read_only" ? "selected" : ""
-            }>Read-only</option>
-            <option value="fix_errors" ${
-              modeVal === "fix_errors" ? "selected" : ""
-            }>Fix errors (/f)</option>
-            <option value="comprehensive" ${
-              modeVal === "comprehensive" ? "selected" : ""
-            }>Comprehensive (/f /r)</option>
-          </select>
-        </label>
-        <label class="tiny-lab">
-          <input type="checkbox" data-param="schedule_if_busy" ${
-            schedVal ? "checked" : ""
-          } />
-          <span class="lab">Schedule if busy</span>
-        </label>
-      `;
-
-      const driveInput = wrapper.querySelector('input[data-param="drive"]');
-      const modeSelect = wrapper.querySelector('select[data-param="mode"]');
-      const schedCb = wrapper.querySelector(
-        'input[data-param="schedule_if_busy"]'
-      );
-
-      [driveInput, modeSelect, schedCb].forEach((el) => {
-        ["mousedown", "pointerdown", "click"].forEach((evt) => {
-          el.addEventListener(evt, (e) => e.stopPropagation());
-        });
+    // Check if handler provides custom parameter controls
+    const handler = getHandlerModule(id);
+    if (handler?.renderParamControls) {
+      const customControls = handler.renderParamControls({
+        params,
+        updateParam: (key, value) => {
+          this.builder.updateTaskParam(id, key, value);
+          this.updateJson();
+        },
       });
-
-      driveInput.addEventListener("change", () => {
-        this.builder.updateTaskParam(
-          id,
-          "drive",
-          (driveInput.value || "C:").trim()
-        );
-        this.updateJson();
-      });
-      modeSelect.addEventListener("change", () => {
-        this.builder.updateTaskParam(id, "mode", modeSelect.value);
-        this.updateJson();
-      });
-      schedCb.addEventListener("change", () => {
-        this.builder.updateTaskParam(id, "schedule_if_busy", !!schedCb.checked);
-        this.updateJson();
-      });
-
-      return wrapper;
-    }
-
-    // KVRT options
-    if (id === "kvrt_scan") {
-      const allVolumesVal = !!params?.allVolumes;
-      const processLevelVal = Number.isFinite(params?.processLevel)
-        ? Math.max(0, Math.min(3, parseInt(params.processLevel, 10)))
-        : 2;
-
-      wrapper.innerHTML = `
-        <label class="tiny-lab" style="margin-right:12px;" title="Add all volumes to scan">
-          <input type="checkbox" data-param="allVolumes" ${
-            allVolumesVal ? "checked" : ""
-          } />
-          <span class="lab">Scan all volumes</span>
-        </label>
-        <label class="tiny-lab" style="margin-right:12px;" title="Set the level of danger of objects to be neutralized">
-          <span class="lab">Process level</span>
-          <select data-param="processLevel" aria-label="KVRT process level">
-            <option value="0" ${
-              processLevelVal === 0 ? "selected" : ""
-            }>0: Skip all</option>
-            <option value="1" ${
-              processLevelVal === 1 ? "selected" : ""
-            }>1: High</option>
-            <option value="2" ${
-              processLevelVal === 2 ? "selected" : ""
-            }>2: High+Medium</option>
-            <option value="3" ${
-              processLevelVal === 3 ? "selected" : ""
-            }>3: High+Medium+Low</option>
-          </select>
-        </label>
-      `;
-
-      wrapper.style.display = "flex";
-      wrapper.style.flexWrap = "wrap";
-      wrapper.style.alignItems = "center";
-      wrapper.style.columnGap = "12px";
-      wrapper.style.rowGap = "6px";
-
-      wrapper.querySelectorAll("input, select").forEach((el) => {
-        ["mousedown", "pointerdown", "click"].forEach((evt) => {
-          el.addEventListener(evt, (e) => e.stopPropagation());
-        });
-      });
-
-      if (!this.builder.taskParams[id]) {
-        this.builder.taskParams[id] = { params: {} };
+      if (customControls) {
+        // If handler returns a DOM element, append it
+        if (customControls instanceof HTMLElement) {
+          wrapper.appendChild(customControls);
+          return wrapper;
+        }
+        // If handler returns HTML string, use it
+        if (typeof customControls === "string") {
+          wrapper.innerHTML = customControls;
+          // Handler is responsible for attaching event listeners
+          return wrapper;
+        }
       }
-      this.builder.taskParams[id].params.allVolumes = allVolumesVal;
-      this.builder.taskParams[id].params.processLevel = processLevelVal;
-      this.builder.taskParams[id].params.details = true;
-
-      const cbAll = wrapper.querySelector('input[data-param="allVolumes"]');
-      const selProc = wrapper.querySelector(
-        'select[data-param="processLevel"]'
-      );
-
-      cbAll?.addEventListener("change", () => {
-        this.builder.updateTaskParam(id, "allVolumes", !!cbAll.checked);
-        this.updateJson();
-      });
-      selProc?.addEventListener("change", () => {
-        const v = parseInt(selProc.value, 10);
-        this.builder.updateTaskParam(
-          id,
-          "processLevel",
-          Number.isFinite(v) ? Math.max(0, Math.min(3, v)) : 2
-        );
-        this.updateJson();
-      });
-
-      return wrapper;
     }
 
-    // WinSAT Disk Benchmark options
-    if (id === "winsat_disk") {
-      const driveVal = (params?.drive ?? "C:").toString().toUpperCase();
-      const testModeVal = params?.test_mode ?? "full";
-
-      wrapper.innerHTML = `
-        <label class="tiny-lab" style="margin-right:12px;" title="Drive to benchmark">
-          <span class="lab">Drive</span>
-          <input type="text" class="text-input" data-param="drive" value="${driveVal}" size="4" aria-label="Drive letter (e.g., C:)" placeholder="C:" />
-        </label>
-        <label class="tiny-lab" style="margin-right:12px;" title="Select test mode to run">
-          <span class="lab">Test Mode</span>
-          <select data-param="test_mode" aria-label="WinSAT test mode">
-            <option value="full" ${
-              testModeVal === "full" ? "selected" : ""
-            }>Full Benchmark</option>
-            <option value="random_read" ${
-              testModeVal === "random_read" ? "selected" : ""
-            }>Random Read Only</option>
-            <option value="sequential_read" ${
-              testModeVal === "sequential_read" ? "selected" : ""
-            }>Sequential Read Only</option>
-            <option value="sequential_write" ${
-              testModeVal === "sequential_write" ? "selected" : ""
-            }>Sequential Write Only</option>
-            <option value="flush" ${
-              testModeVal === "flush" ? "selected" : ""
-            }>Flush Test</option>
-          </select>
-        </label>
-      `;
-
-      wrapper.style.display = "flex";
-      wrapper.style.flexWrap = "wrap";
-      wrapper.style.alignItems = "center";
-      wrapper.style.columnGap = "12px";
-      wrapper.style.rowGap = "6px";
-
-      wrapper.querySelectorAll("input, select").forEach((el) => {
-        ["mousedown", "pointerdown", "click"].forEach((evt) => {
-          el.addEventListener(evt, (e) => e.stopPropagation());
-        });
-      });
-
-      if (!this.builder.taskParams[id]) {
-        this.builder.taskParams[id] = { params: {} };
-      }
-      this.builder.taskParams[id].params.drive = driveVal;
-      this.builder.taskParams[id].params.test_mode = testModeVal;
-
-      const driveInput = wrapper.querySelector('input[data-param="drive"]');
-      const testModeSelect = wrapper.querySelector(
-        'select[data-param="test_mode"]'
-      );
-
-      driveInput?.addEventListener("change", () => {
-        const val = (driveInput.value || "C:").trim().toUpperCase();
-        // Normalize to just letter or letter with colon
-        const normalized = val.length === 1 ? val + ":" : val.substring(0, 2);
-        driveInput.value = normalized;
-        this.builder.updateTaskParam(id, "drive", normalized);
-        this.updateJson();
-      });
-
-      testModeSelect?.addEventListener("change", () => {
-        this.builder.updateTaskParam(id, "test_mode", testModeSelect.value);
-        this.updateJson();
-      });
-
-      return wrapper;
-    }
-
-    // Generic duration controls
+    // Generic duration controls (minutes/seconds)
     Object.entries(params).forEach(([key, value]) => {
       if (key === "seconds") {
         wrapper.innerHTML += `<label class="tiny-lab"><span class="lab">Duration</span> <input type="number" class="minutes-input" min="10" max="3600" step="10" data-param="seconds" value="${value}" aria-label="Duration in seconds" /> <span class="unit">sec</span></label>`;
@@ -965,7 +773,9 @@ class BuilderUI {
   }
 
   /**
-   * Render GPU sub-options
+   * Render GPU sub-options for GPU parent meta-service
+   * This UI allows selecting which GPU stress tests to run and configuring their durations.
+   * The GPU parent expands into real service tasks (furmark_stress_test, heavyload_stress_gpu).
    */
   renderGpuSubOptions() {
     const div = document.createElement("div");
@@ -1066,13 +876,15 @@ class BuilderUI {
 
     if (!isGpuParent && selected && getServiceById(id)?.defaultParams) {
       const p = this.builder.taskParams[id]?.params || {};
+      // Check if handler provides custom param controls OR if has generic duration params
+      const handler = getHandlerModule(id);
+      const hasCustomControls =
+        handler && typeof handler.renderParamControls === "function";
       const hasGenericParams =
         Object.prototype.hasOwnProperty.call(p, "minutes") ||
-        Object.prototype.hasOwnProperty.call(p, "seconds") ||
-        id === "chkdsk_scan" ||
-        id === "kvrt_scan" ||
-        id === "winsat_disk";
-      if (hasGenericParams) {
+        Object.prototype.hasOwnProperty.call(p, "seconds");
+
+      if (hasCustomControls || hasGenericParams) {
         row.appendChild(this.renderParamControls(id, p));
       }
     }
@@ -1098,15 +910,7 @@ class BuilderUI {
    * Render availability badge
    */
   renderAvailabilityBadge(id) {
-    if (
-      id === "sfc_scan" ||
-      id === "dism_health_check" ||
-      id === "chkdsk_scan" ||
-      id === "winsat_disk"
-    ) {
-      return '<span class="badge ok" title="Built-in Windows tool">Built-in</span>';
-    }
-
+    // Special case: GPU parent (meta-service that combines FurMark + HeavyLoad)
     if (id === GPU_PARENT_ID) {
       const okF = this.builder.isToolAvailable(["furmark", "furmark2"]);
       const okH = this.builder.isToolAvailable(["heavyload"]);
@@ -1119,12 +923,18 @@ class BuilderUI {
       }</span>`;
     }
 
+    // Get tool requirements from service definition
     const key = toolKeysForService(id);
+
+    // Services with no tool dependencies are built-in
     if (Array.isArray(key) && key.length === 0) {
       return '<span class="badge ok" title="Built-in">Built-in</span>';
     }
+
+    // Services without toolKeys defined
     if (!key) return "";
 
+    // Check availability based on toolKeys
     const ok = this.builder.isToolAvailable(key);
     return `<span class="badge ${ok ? "ok" : "missing"}">${
       ok ? "Available" : "Missing"

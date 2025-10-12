@@ -54,6 +54,12 @@
  */
 
 /**
+ * @typedef {Object} ParamControlsContext
+ * @property {Record<string, any>} params - Current parameter values
+ * @property {(key: string, value: any) => void} updateParam - Callback to update a parameter
+ */
+
+/**
  * Service handler module interface.
  * Each handler exports these components to integrate with the service system.
  *
@@ -61,5 +67,6 @@
  * @property {ServiceDefinition} definition - Service catalog definition
  * @property {function(TechRendererContext): any} renderTech - Technician view renderer (lit-html)
  * @property {function(CustomerMetricsContext): CustomerMetric|CustomerMetric[]|null} [extractCustomerMetrics] - Customer metric extractor (optional)
+ * @property {function(ParamControlsContext): HTMLElement|string|null} [renderParamControls] - Optional UI controls for service parameters in builder
  * @property {string} [printCSS] - Optional CSS rules specific to this service's print output
  */

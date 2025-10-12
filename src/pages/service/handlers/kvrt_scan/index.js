@@ -293,3 +293,78 @@ export const printCSS = `
     margin-top: 8px; font-size: 9pt; color: #64748b; 
   }
 `;
+
+// =============================================================================
+// PARAMETER CONTROLS RENDERER (for builder UI)
+// =============================================================================
+
+/**
+ * Render custom parameter controls for KVRT configuration.
+ * @param {object} context - Parameter control context
+ * @param {object} context.params - Current parameter values
+ * @param {function} context.updateParam - Callback to update parameters
+ * @returns {HTMLElement} DOM element with controls
+ */
+export function renderParamControls({ params, updateParam }) {
+  const wrapper = document.createElement("div");
+  wrapper.style.display = "flex";
+  wrapper.style.flexWrap = "wrap";
+  wrapper.style.alignItems = "center";
+  wrapper.style.columnGap = "12px";
+  wrapper.style.rowGap = "6px";
+
+  const allVolumesVal = !!params?.allVolumes;
+  const processLevelVal = Number.isFinite(params?.processLevel)
+    ? Math.max(0, Math.min(3, parseInt(params.processLevel, 10)))
+    : 2;
+
+  wrapper.innerHTML = `
+    <label class="tiny-lab" style="margin-right:12px;" title="Add all volumes to scan">
+      <input type="checkbox" data-param="allVolumes" ${
+        allVolumesVal ? "checked" : ""
+      } />
+      <span class="lab">Scan all volumes</span>
+    </label>
+    <label class="tiny-lab" style="margin-right:12px;" title="Set the level of danger of objects to be neutralized">
+      <span class="lab">Process level</span>
+      <select data-param="processLevel" aria-label="KVRT process level">
+        <option value="0" ${
+          processLevelVal === 0 ? "selected" : ""
+        }>0: Skip all</option>
+        <option value="1" ${
+          processLevelVal === 1 ? "selected" : ""
+        }>1: High</option>
+        <option value="2" ${
+          processLevelVal === 2 ? "selected" : ""
+        }>2: High+Medium</option>
+        <option value="3" ${
+          processLevelVal === 3 ? "selected" : ""
+        }>3: High+Medium+Low</option>
+      </select>
+    </label>
+  `;
+
+  // Stop event propagation to prevent drag-and-drop interference
+  wrapper.querySelectorAll("input, select").forEach((el) => {
+    ["mousedown", "pointerdown", "click"].forEach((evt) => {
+      el.addEventListener(evt, (e) => e.stopPropagation());
+    });
+  });
+
+  const cbAll = wrapper.querySelector('input[data-param="allVolumes"]');
+  const selProc = wrapper.querySelector('select[data-param="processLevel"]');
+
+  cbAll?.addEventListener("change", () => {
+    updateParam("allVolumes", cbAll.checked);
+  });
+
+  selProc?.addEventListener("change", () => {
+    const v = parseInt(selProc.value, 10);
+    updateParam(
+      "processLevel",
+      Number.isFinite(v) ? Math.max(0, Math.min(3, v)) : 2
+    );
+  });
+
+  return wrapper;
+}

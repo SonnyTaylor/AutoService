@@ -237,3 +237,78 @@ export function extractCustomerMetrics({ result }) {
 
   return [];
 }
+
+// =============================================================================
+// PARAMETER CONTROLS RENDERER (for builder UI)
+// =============================================================================
+
+/**
+ * Render custom parameter controls for CHKDSK configuration.
+ * @param {object} context - Parameter control context
+ * @param {object} context.params - Current parameter values
+ * @param {function} context.updateParam - Callback to update parameters
+ * @returns {HTMLElement} DOM element with controls
+ */
+export function renderParamControls({ params, updateParam }) {
+  const wrapper = document.createElement("div");
+  wrapper.style.display = "flex";
+  wrapper.style.flexWrap = "wrap";
+  wrapper.style.alignItems = "center";
+  wrapper.style.gap = "8px";
+
+  const driveVal = params?.drive ?? "C:";
+  const modeVal = params?.mode ?? "read_only";
+  const schedVal = !!params?.schedule_if_busy;
+
+  wrapper.innerHTML = `
+    <label class="tiny-lab" style="margin-right:8px;">
+      <span class="lab">Drive</span>
+      <input type="text" class="text-input" data-param="drive" value="${driveVal}" size="4" aria-label="Drive letter (e.g., C:)" />
+    </label>
+    <label class="tiny-lab" style="margin-right:8px;">
+      <span class="lab">Mode</span>
+      <select data-param="mode" aria-label="CHKDSK mode">
+        <option value="read_only" ${
+          modeVal === "read_only" ? "selected" : ""
+        }>Read-only</option>
+        <option value="fix_errors" ${
+          modeVal === "fix_errors" ? "selected" : ""
+        }>Fix errors (/f)</option>
+        <option value="comprehensive" ${
+          modeVal === "comprehensive" ? "selected" : ""
+        }>Comprehensive (/f /r)</option>
+      </select>
+    </label>
+    <label class="tiny-lab">
+      <input type="checkbox" data-param="schedule_if_busy" ${
+        schedVal ? "checked" : ""
+      } />
+      <span class="lab">Schedule if busy</span>
+    </label>
+  `;
+
+  const driveInput = wrapper.querySelector('input[data-param="drive"]');
+  const modeSelect = wrapper.querySelector('select[data-param="mode"]');
+  const schedCb = wrapper.querySelector('input[data-param="schedule_if_busy"]');
+
+  // Stop event propagation to prevent drag-and-drop interference
+  [driveInput, modeSelect, schedCb].forEach((el) => {
+    ["mousedown", "pointerdown", "click"].forEach((evt) => {
+      el.addEventListener(evt, (e) => e.stopPropagation());
+    });
+  });
+
+  driveInput.addEventListener("change", () => {
+    updateParam("drive", (driveInput.value || "C:").trim());
+  });
+
+  modeSelect.addEventListener("change", () => {
+    updateParam("mode", modeSelect.value);
+  });
+
+  schedCb.addEventListener("change", () => {
+    updateParam("schedule_if_busy", schedCb.checked);
+  });
+
+  return wrapper;
+}
