@@ -345,6 +345,64 @@ pub fn delete_report(state: tauri::State<AppState>, folder_name: String) -> Resu
     Ok(true)
 }
 
+/// Opens a report folder in the system file explorer
+///
+/// Opens the specified report folder using the default file manager.
+/// On Windows, this uses explorer.exe to open the folder.
+///
+/// # Arguments
+/// * `state` - Application state containing data directory path
+/// * `folder_name` - Name of the report folder to open
+///
+/// # Returns
+/// True if the folder was opened successfully, error message otherwise
+#[tauri::command]
+pub fn open_report_folder(
+    state: tauri::State<AppState>,
+    folder_name: String,
+) -> Result<bool, String> {
+    let data_root = state.data_dir.as_path();
+    let report_folder = data_root.join("reports").join(&folder_name);
+
+    // Verify folder exists
+    if !report_folder.exists() {
+        return Err(format!("Report folder not found: {}", folder_name));
+    }
+
+    // Verify it's actually a directory
+    if !report_folder.is_dir() {
+        return Err("Specified path is not a directory".to_string());
+    }
+
+    // Open the folder in file explorer
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer.exe")
+            .arg(&report_folder)
+            .spawn()
+            .map(|_| true)
+            .map_err(|e| format!("Failed to open folder: {}", e))
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&report_folder)
+            .spawn()
+            .map(|_| true)
+            .map_err(|e| format!("Failed to open folder: {}", e))
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&report_folder)
+            .spawn()
+            .map(|_| true)
+            .map_err(|e| format!("Failed to open folder: {}", e))
+    }
+}
+
 /// Helper function to read and parse metadata.json from a report folder
 fn read_metadata(report_folder: &PathBuf) -> Option<ReportMetadata> {
     let metadata_path = report_folder.join("metadata.json");

@@ -40,6 +40,7 @@ export const LIST_SELECTOR = ".reports-list";
  * @property {ReportItem[]} all - Source list from backend
  * @property {ReportItem[]} filtered - Derived list after search/sort
  * @property {string} query - Current search text
+ * @property {string} technicianFilter - Filter by technician name (empty string = all)
  * @property {"date-desc"|"date-asc"|"name-asc"|"name-desc"} sort - Sort key
  * @property {Object|null} viewing - Currently open report data (full loaded report)
  */
@@ -49,6 +50,7 @@ export let state = {
   all: [],
   filtered: [],
   query: "",
+  technicianFilter: "",
   sort: "date-desc",
   viewing: null,
 };

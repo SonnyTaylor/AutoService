@@ -25,6 +25,7 @@ function renderReportRow(item) {
   const { folder_name, metadata } = item;
   const hostname = metadata?.hostname || "Unknown PC";
   const customerName = metadata?.customer_name;
+  const technicianName = metadata?.technician_name;
   const timestamp = metadata?.timestamp || 0;
   const dateStr = formatReportDate(timestamp);
 
@@ -53,14 +54,24 @@ function renderReportRow(item) {
         </div>
         <div class="report-meta muted">
           <span class="date">${escapeHtml(dateStr)}</span>
-          ${item.has_execution_log ? '<span class="badge">Log</span>' : ""}
-          ${item.has_run_plan ? '<span class="badge">Plan</span>' : ""}
+          ${
+            technicianName
+              ? `<span class="badge tech">👤 ${escapeHtml(
+                  technicianName
+                )}</span>`
+              : ""
+          }
+          ${item.has_execution_log ? '<span class="badge">📋 Log</span>' : ""}
+          ${item.has_run_plan ? '<span class="badge">📝 Plan</span>' : ""}
         </div>
       </div>
       <div class="report-actions">
         <button data-action="view" class="primary" ${
           !hasFiles ? "disabled" : ""
         }>View</button>
+      <button data-action="open" class="ghost" title="Open folder in file explorer">
+          <i class="ph ph-folder-open"></i> Open
+        </button>
         <button data-action="delete" class="ghost">Delete</button>
       </div>
     </div>`;
@@ -101,18 +112,28 @@ export async function loadReports() {
 }
 
 /**
- * Apply current search query and sort order to derive filtered list
+ * Apply current search query, technician filter, and sort order to derive filtered list
  */
 export function applyFilter() {
   const q = state.query.trim();
+  const tech = state.technicianFilter.trim();
   let base;
 
+  // Start with all or search results
   if (q) {
     if (!fuse) buildFuseIndex();
     const results = fuse.search(q);
     base = results.map((r) => r.item);
   } else {
     base = [...state.all];
+  }
+
+  // Apply technician filter
+  if (tech) {
+    base = base.filter((item) => {
+      const itemTech = item.metadata?.technician_name || "";
+      return itemTech === tech;
+    });
   }
 
   // Sort
@@ -155,9 +176,16 @@ function buildFuseIndex() {
   }));
 
   fuse = new Fuse(items, {
-    keys: ["hostname", "customer_name", "technician_name"],
-    threshold: 0.3,
+    keys: [
+      { name: "hostname", weight: 2 },
+      { name: "customer_name", weight: 2 },
+      { name: "technician_name", weight: 1 },
+    ],
+    threshold: 0.2, // Lower threshold = more strict matching (better accuracy)
+    distance: 100, // Maximum distance between matched characters
+    minMatchCharLength: 2, // Minimum length of a match
     ignoreLocation: true,
+    useExtendedSearch: false,
   });
 
   // Map Fuse items back to the original report objects
@@ -172,11 +200,12 @@ function buildFuseIndex() {
 }
 
 /**
- * Wire up toolbar event handlers (search, sort)
+ * Wire up toolbar event handlers (search, sort, technician filter)
  */
 export function wireToolbar() {
   const searchInput = $("#report-search");
   const sortSelect = $("#report-sort");
+  const technicianFilter = $("#report-technician-filter");
 
   searchInput?.addEventListener("input", (e) => {
     state.query = e.target.value;
@@ -187,10 +216,62 @@ export function wireToolbar() {
     state.sort = e.target.value;
     applyFilter();
   });
+
+  technicianFilter?.addEventListener("change", (e) => {
+    state.technicianFilter = e.target.value;
+    applyFilter();
+  });
+
+  // Load and populate technician filter from settings
+  loadTechnicianFilter();
 }
 
 /**
- * Wire up list action handlers (view, delete)
+ * Load technician names from settings and populate the filter dropdown
+ */
+async function loadTechnicianFilter() {
+  try {
+    const settings = await invoke("load_app_settings");
+    const technicianNames = settings?.business?.technician_names || [];
+
+    // Get unique technicians from reports
+    const reportTechnicians = new Set();
+    state.all.forEach((item) => {
+      const tech = item.metadata?.technician_name;
+      if (tech) reportTechnicians.add(tech);
+    });
+
+    // Combine both sources (settings and actual report data)
+    const allTechnicians = new Set([
+      ...technicianNames,
+      ...Array.from(reportTechnicians),
+    ]);
+
+    // Sort alphabetically
+    const sortedTechnicians = Array.from(allTechnicians).sort((a, b) =>
+      a.localeCompare(b)
+    );
+
+    // Populate dropdown
+    const technicianFilter = $("#report-technician-filter");
+    if (technicianFilter && sortedTechnicians.length > 0) {
+      // Keep the "All Technicians" option and add individual technicians
+      const options = sortedTechnicians
+        .map(
+          (tech) =>
+            `<option value="${escapeHtml(tech)}">${escapeHtml(tech)}</option>`
+        )
+        .join("");
+
+      technicianFilter.innerHTML = `<option value="">All Technicians</option>${options}`;
+    }
+  } catch (error) {
+    console.error("Failed to load technician filter:", error);
+  }
+}
+
+/**
+ * Wire up list action handlers (view, delete, open)
  */
 export function wireListActions() {
   const list = $(LIST_SELECTOR);
@@ -215,6 +296,12 @@ export function wireListActions() {
         return;
       }
       await openViewer(item);
+    } else if (action === "open") {
+      try {
+        await invoke("open_report_folder", { folderName });
+      } catch (error) {
+        alert(`Failed to open folder: ${error}`);
+      }
     } else if (action === "delete") {
       const confirmMsg = item.metadata?.customer_name
         ? `Delete report for ${item.metadata.hostname} - ${item.metadata.customer_name}?`
