@@ -183,15 +183,15 @@ def enumerate_firefox_notifications(profiles_base: str) -> List[Dict[str, Any]]:
             cursor = conn.cursor()
 
             # Query for notification permissions
-            # permission = 'desktop-notification', capability = 1 (ALLOW)
+            # type = 'desktop-notification', permission = 1 (ALLOW)
             cursor.execute("""
-                SELECT origin, permission, capability
+                SELECT origin, type, permission
                 FROM moz_perms
-                WHERE permission = 'desktop-notification' AND capability = 1
+                WHERE type = 'desktop-notification' AND permission = 1
             """)
 
             for row in cursor.fetchall():
-                origin, permission, capability = row
+                origin, perm_type, perm_value = row
                 notification = {
                     "id": f"firefox:{profile_name}:{origin}",
                     "browser": "Mozilla Firefox",
@@ -273,7 +273,33 @@ Balance user experience improvements with safety. Some notifications ARE valuabl
 - Work email services (Gmail for work domains, Outlook, corporate email)
 - Business chat platforms (Slack, Microsoft Teams, Discord if used for work)
 - Video conferencing (Zoom, Google Meet, Microsoft Teams notifications)
-- Project management tools (Asana, Trello, Jira, Monday.com)
+- Project management tools (Asana, Trello, Jira, Monday.com, Notion)
+- Cloud services (AWS, Azure, Google Cloud Console)
+</category>
+
+<category name="Productivity & Time Management">
+- Task management apps (Any.do, Todoist, Microsoft To Do, Google Keep, TickTick)
+- Calendar services (Google Calendar, Outlook Calendar, Notion Calendar, calendar.notion.so)
+- Pomodoro and focus timers (Pomofocus, Pomodone, Focus To-Do, Marinara Timer)
+- Time tracking tools (Toggl, RescueTime, Clockify)
+- Note-taking with reminders (Notion, Evernote, OneNote)
+- Habit trackers with time-based alerts
+- IMPORTANT: These services are notification-centric - their core value is alerting users at specific times
+</category>
+
+<category name="Notification Services & Alerting">
+- Self-hosted notification services (ntfy, Gotify, Pushover)
+- Custom alert systems (Uptime monitoring, server alerts, smart home notifications)
+- Webhook notification endpoints
+- Personal notification aggregators
+- IMPORTANT: If the domain/service IS a notification platform, NEVER disable it
+</category>
+
+<category name="Development & Localhost">
+- Localhost notifications (http://localhost:*, http://127.0.0.1:*)
+- Local development servers (*.local, *.dev domains)
+- Self-hosted services on custom domains
+- IMPORTANT: These are often personal tools or services - be conservative
 </category>
 
 <category name="Security & Financial">
@@ -294,8 +320,6 @@ Balance user experience improvements with safety. Some notifications ARE valuabl
 
 <category name="Critical Services">
 - Cloud storage (Google Drive, Dropbox, OneDrive) - for share notifications
-- Calendar services (Google Calendar, Outlook Calendar)
-- Task management for work
 - Government services or portals
 - Educational platforms (Canvas, Blackboard, Google Classroom)
 </category>
@@ -391,6 +415,21 @@ Return a JSON object with this structure:
 4. Be specific in your reasoning
 5. Only recommend disabling if you're confident it won't harm the user's workflow
 6. Provide clear alternatives for accessing the content
+
+CRITICAL RULES:
+- If the service's PRIMARY PURPOSE is sending notifications/alerts, NEVER disable it (e.g., ntfy, Gotify, Pushover)
+- If it's a timer/pomodoro app that NEEDS to alert users, NEVER disable it (e.g., pomofocus, pomodone)
+- If it's a task/reminder app whose VALUE is time-based notifications, NEVER disable it (e.g., Any.do, Todoist)
+- If it's localhost or a self-hosted service, be VERY conservative - assume it's intentional
+- If it's a calendar service, ALWAYS keep enabled
+- When in doubt about whether a service needs notifications, KEEP IT ENABLED
+
+Only disable notifications from:
+- Social media (Facebook, Twitter, Instagram, TikTok, Reddit)
+- News sites (CNN, BBC, etc.)
+- Shopping sites (Amazon, eBay, etc.)
+- Entertainment (YouTube, Netflix, gaming)
+- Marketing/promotional sites
 </instructions>
 """
 
