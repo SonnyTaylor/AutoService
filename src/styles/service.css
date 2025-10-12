@@ -1465,19 +1465,21 @@
 [data-page="service-results"]
   .card.ai-startup-optimizer
   .startup-detection-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
   padding-bottom: 10px;
   border-bottom: 1px solid rgba(203, 213, 225, 0.15);
+}
+
+[data-page="service-results"] .card.ai-startup-optimizer .startup-name-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
 }
 
 [data-page="service-results"] .card.ai-startup-optimizer .startup-name {
   font-weight: 600;
   color: #f6d8a5;
   word-break: break-word;
-  flex: 1;
   line-height: 1.4;
   font-size: 14px;
 }
@@ -1492,7 +1494,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  justify-content: flex-end;
 }
 
 [data-page="service-results"]
@@ -1599,6 +1600,13 @@
   margin-bottom: 12px;
   border-bottom: 1px solid var(--border);
   border-radius: 6px 6px 0 0;
+}
+
+/* Hide screen-only sections in print */
+@media print {
+  [data-page="service-results"] .card.ai-startup-optimizer .screen-only {
+    display: none !important;
+  }
 }
 
 /* Windows Update */

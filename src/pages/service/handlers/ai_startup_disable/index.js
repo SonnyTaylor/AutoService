@@ -204,19 +204,21 @@ export function renderTech({ result, index }) {
             </div>
           `}
 
-      <!-- Items Kept Enabled -->
+      <!-- Items Kept Enabled (collapsible, screen-only) -->
       ${keepEnabled.length > 0
         ? html`
-            <div class="mt-4">
-              <div class="section-title">
-                Critical Items Kept Enabled (${keepEnabled.length})
-              </div>
-              <div class="startup-detection-grid">
+            <details class="mt-4 screen-only">
+              <summary>
+                <h4 style="display: inline;">
+                  Critical Items Kept Enabled (${keepEnabled.length})
+                </h4>
+              </summary>
+              <div class="startup-detection-grid mt-2">
                 ${keepEnabled.map((item, idx) =>
                   renderKeepEnabledItem(item, idx)
                 )}
               </div>
-            </div>
+            </details>
           `
         : ""}
 
@@ -238,10 +240,10 @@ export function renderTech({ result, index }) {
           `
         : ""}
 
-      <!-- All Enumerated Items (collapsed) -->
+      <!-- All Enumerated Items (collapsed, screen-only) -->
       ${results.all_items && results.all_items.length > 0
         ? html`
-            <details class="mt-4">
+            <details class="mt-4 screen-only">
               <summary>
                 <h4 style="display: inline;">
                   All Startup Items (${results.all_items.length})
@@ -315,13 +317,15 @@ function renderStartupItem(item, index) {
   return html`
     <div class="startup-detection" data-index=${index}>
       <div class="startup-detection-head">
-        <span class="startup-name" title=${item.name}>
-          <strong>${index + 1}.</strong> ${item.name}
-        </span>
-        <div class="item-badges">
-          ${pill(item.category || "unknown", "info")}
-          ${pill(`Risk: ${item.risk}`, riskColor)}
-          ${pill(`Confidence: ${item.confidence}`, confidenceColor)}
+        <div class="startup-name-block">
+          <span class="startup-name" title=${item.name}>
+            <strong>${index + 1}.</strong> ${item.name}
+          </span>
+          <div class="item-badges">
+            ${pill(item.category || "unknown", "info")}
+            ${pill(`Risk: ${item.risk}`, riskColor)}
+            ${pill(`Confidence: ${item.confidence}`, confidenceColor)}
+          </div>
         </div>
       </div>
       <div class="startup-detection-body">
@@ -521,13 +525,16 @@ export const printCSS = `
 }
 
 .ai-startup-optimizer .startup-detection-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 8px;
   margin-bottom: 10px;
   padding-bottom: 8px;
   border-bottom: 1px solid #e9ecef;
+}
+
+.ai-startup-optimizer .startup-name-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
 }
 
 .ai-startup-optimizer .startup-name {
@@ -535,7 +542,6 @@ export const printCSS = `
   font-weight: 600;
   color: #212529;
   word-break: break-word;
-  flex: 1;
   line-height: 1.4;
 }
 
@@ -548,7 +554,6 @@ export const printCSS = `
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  justify-content: flex-end;
 }
 
 .ai-startup-optimizer .startup-detection-body {
@@ -655,6 +660,11 @@ export const printCSS = `
 
 /* Print-specific styles */
 @media print {
+  /* Hide screen-only sections in print (Critical Items + All Items) */
+  .ai-startup-optimizer .screen-only {
+    display: none !important;
+  }
+
   .ai-startup-optimizer .startup-detection-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
