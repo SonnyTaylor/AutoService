@@ -189,6 +189,7 @@ input[type="search"],
 input[type="number"],
 input[type="email"],
 input[type="tel"],
+input[type="password"],
 select,
 textarea {
   background: var(--panel-accent);
@@ -205,6 +206,7 @@ input[type="search"]:focus,
 input[type="number"]:focus,
 input[type="email"]:focus,
 input[type="tel"]:focus,
+input[type="password"]:focus,
 select:focus,
 textarea:focus {
   border-color: #335d9b;

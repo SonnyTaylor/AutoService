@@ -171,13 +171,24 @@
           <form id="openai-settings-form" class="ai-api-form">
             <label>
               <span class="muted">OpenAI API Key</span>
-              <input
-                type="password"
-                name="openai_api_key"
-                id="openai-api-key-input"
-                placeholder="sk-proj-..."
-                autocomplete="off"
-              />
+              <div style="display: flex; gap: 8px; align-items: flex-end">
+                <input
+                  type="password"
+                  name="openai_api_key"
+                  id="openai-api-key-input"
+                  placeholder="sk-proj-..."
+                  autocomplete="off"
+                  style="flex: 1"
+                />
+                <button type="submit" class="primary">Save</button>
+                <button
+                  type="button"
+                  id="openai-api-key-clear-btn"
+                  class="ghost"
+                >
+                  Clear
+                </button>
+              </div>
               <span class="muted field-hint">
                 Required for AI Startup Optimizer. Get your API key from
                 <a
@@ -188,12 +199,6 @@
                 >
               </span>
             </label>
-            <div style="display: flex; gap: 8px">
-              <button type="submit" class="primary">Save</button>
-              <button type="button" id="openai-api-key-clear-btn" class="ghost">
-                Clear
-              </button>
-            </div>
           </form>
           <div id="openai-settings-status"></div>
         </div>
