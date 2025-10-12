@@ -425,36 +425,75 @@ function formatKey(key) {
  * Extract customer-friendly metrics from AI browser notification optimizer results.
  *
  * @param {CustomerMetricsContext} context - Extraction context
- * @returns {CustomerMetric | null} Customer metric or null
+ * @returns {Array<CustomerMetric>} Array of customer metrics
  */
 export function extractCustomerMetrics({ result }) {
   const { summary, status } = result;
 
-  if (status === "error") return null;
+  if (status === "error") return [];
 
   const hr = summary?.human_readable || {};
   const results = summary?.results || {};
 
+  const totalNotifications = hr.total_notifications || 0;
   const recommendations = hr.recommendations || 0;
   const disabled = hr.notifications_disabled || 0;
   const estimatedReduction = hr.estimated_reduction || "Unknown";
 
-  // Only show metric if there were recommendations
-  if (recommendations === 0) return null;
+  // Only show metric if there were any notifications analyzed
+  if (totalNotifications === 0) return [];
+
+  // If no recommendations, show clean result
+  if (recommendations === 0) {
+    return [
+      buildMetric({
+        icon: "🔔",
+        label: "Browser Notifications",
+        value: "All clean",
+        detail: `${totalNotifications} notification${
+          totalNotifications !== 1 ? "s" : ""
+        } checked - no changes needed`,
+        variant: "success",
+      }),
+    ];
+  }
+
+  // Build detail items showing what was found
+  const items = [];
+  const toDisable = results.to_disable || [];
+
+  // Group by category
+  const categoryGroups = {};
+  toDisable.forEach((item) => {
+    const cat = item.category || "other";
+    if (!categoryGroups[cat]) categoryGroups[cat] = [];
+    categoryGroups[cat].push(item);
+  });
+
+  // Create items from categories
+  Object.entries(categoryGroups).forEach(([category, items]) => {
+    const catLabel = formatKey(category);
+    items.forEach((item) => {
+      const origin = cleanOrigin(item.origin);
+      const browser = item.browser || "Unknown";
+      items.push(`${catLabel}: ${origin} (${browser})`);
+    });
+  });
 
   const value = results.applied
-    ? `${disabled} notifications disabled`
-    : `${recommendations} notifications can be optimized`;
+    ? `${disabled} disabled`
+    : `${recommendations} can be optimized`;
 
-  const detail = `${estimatedReduction}`;
-
-  return buildMetric({
-    icon: "🔔",
-    label: "Browser Notifications",
-    value: value,
-    detail: detail,
-    variant: results.applied ? "success" : "info",
-  });
+  return [
+    buildMetric({
+      icon: "🔔",
+      label: "Browser Notifications",
+      value: value,
+      detail: estimatedReduction,
+      variant: results.applied ? "success" : "info",
+      items: items.length > 0 ? items : undefined,
+    }),
+  ];
 }
 
 // =============================================================================
