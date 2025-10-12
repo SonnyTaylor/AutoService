@@ -1,4 +1,8 @@
 {
+  "metadata": {
+    "test_name": "AI Startup Optimizer Test",
+    "description": "Test AI-powered startup optimization analysis"
+  },
   "tasks": [
     {
       "type": "ai_startup_disable",

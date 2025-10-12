@@ -1,0 +1,15 @@
+{
+  "metadata": {
+    "test_name": "AI Startup Optimizer Test (Apply Changes)",
+    "description": "Test AI-powered startup optimization with actual changes applied",
+    "warning": "This will actually disable startup items recommended by AI. Use with caution!"
+  },
+  "tasks": [
+    {
+      "type": "ai_startup_disable",
+      "api_key": "env:AUTOSERVICE_OPENAI_KEY",
+      "model": "gpt-4o-mini",
+      "apply_changes": true
+    }
+  ]
+}

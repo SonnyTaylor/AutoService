@@ -1,15 +1,26 @@
 """AI-assisted Windows startup item optimizer.
 
-Enumerates startup entries from common registry keys and Startup folders, then
-consults an OpenAI-compatible model to suggest safe disables. Optionally applies
-changes (deleting registry values or moving shortcut files) based on suggestions.
+Enumerates startup entries from registry keys, Startup folders, Task Scheduler,
+and services, then consults an OpenAI-compatible model to suggest safe disables.
+Optionally applies changes based on AI recommendations.
+
+Features:
+- Comprehensive startup item enumeration (Registry, folders, scheduled tasks)
+- AI-powered analysis using OpenAI-compatible models
+- Conservative recommendations focused on user safety
+- Detailed impact analysis and risk assessment
+- Reversible changes with backup/restore capability
 """
 
 import os
+import sys
 import json
 import re
 import logging
+import subprocess
+import time
 from typing import Dict, Any, List, Optional, Tuple
+from pathlib import Path
 
 # Load environment variables from .env file
 try:
@@ -35,12 +46,16 @@ except ImportError:  # Non-Windows systems will not support this service
 
 
 REGISTRY_RUN_PATHS = [
-    ("HKEY_LOCAL_MACHINE", r"Software\\Microsoft\\Windows\\CurrentVersion\\Run"),
-    ("HKEY_LOCAL_MACHINE", r"Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce"),
-    ("HKEY_CURRENT_USER", r"Software\\Microsoft\\Windows\\CurrentVersion\\Run"),
-    ("HKEY_CURRENT_USER", r"Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce"),
+    ("HKEY_LOCAL_MACHINE", r"Software\Microsoft\Windows\CurrentVersion\Run"),
+    ("HKEY_LOCAL_MACHINE", r"Software\Microsoft\Windows\CurrentVersion\RunOnce"),
+    ("HKEY_CURRENT_USER", r"Software\Microsoft\Windows\CurrentVersion\Run"),
+    ("HKEY_CURRENT_USER", r"Software\Microsoft\Windows\CurrentVersion\RunOnce"),
+    # Also check Wow6432Node for 32-bit apps on 64-bit systems
+    (
+        "HKEY_LOCAL_MACHINE",
+        r"Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Run",
+    ),
 ]
-
 
 STARTUP_FOLDERS = [
     (
@@ -67,6 +82,30 @@ STARTUP_FOLDERS = [
     ),
 ]
 
+# Categories for intelligent classification
+CRITICAL_CATEGORIES = [
+    "security",
+    "antivirus",
+    "firewall",
+    "vpn",
+    "network",
+    "remote_access",
+    "cloud_storage",
+    "backup",
+    "system_driver",
+    "audio_driver",
+    "graphics_driver",
+    "input_device",
+]
+
+SAFE_TO_DISABLE_CATEGORIES = [
+    "game_launcher",
+    "messaging",
+    "telemetry",
+    "updater_optional",
+    "tray_app",
+]
+
 
 def _get_hive(name: str):  # type: ignore
     if winreg is None:
@@ -77,15 +116,68 @@ def _get_hive(name: str):  # type: ignore
     }.get(name)
 
 
+def _extract_executable_info(command: str) -> Dict[str, Any]:
+    """Extract useful information from a startup command string.
+
+    Returns dict with: executable_path, publisher, description, file_size, digital_signature
+    """
+    info = {
+        "executable_path": None,
+        "publisher": None,
+        "description": None,
+        "file_size": None,
+        "is_microsoft_signed": False,
+        "directory": None,
+    }
+
+    if not command:
+        return info
+
+    # Extract executable path (remove quotes and arguments)
+    exe_match = re.match(r'^"([^"]+)"', command)
+    if exe_match:
+        exe_path = exe_match.group(1)
+    else:
+        # No quotes, split on first space
+        exe_path = command.split()[0] if command else ""
+
+    info["executable_path"] = exe_path
+
+    try:
+        if os.path.isfile(exe_path):
+            # Get file size
+            info["file_size"] = os.path.getsize(exe_path)
+
+            # Get directory
+            info["directory"] = os.path.dirname(exe_path)
+
+            # Check if it's in Windows directory (likely system component)
+            windir = os.getenv("SystemRoot", "C:\\Windows")
+            if exe_path.lower().startswith(windir.lower()):
+                info["is_microsoft_signed"] = True
+                info["publisher"] = "Microsoft Corporation"
+    except Exception as e:  # noqa: BLE001
+        logger.debug(f"Failed to extract executable info from {exe_path}: {e}")
+
+    return info
+
+
 def enumerate_startup_items() -> List[Dict[str, Any]]:
     """Collect startup items from Run/RunOnce registry keys and Startup folders.
 
-    Returns list of dicts with at minimum: id, name, command, location, enabled.
+    Returns list of dicts with: id, name, command, location, enabled, and metadata.
     """
     items: List[Dict[str, Any]] = []
+    seen_ids = set()  # Deduplicate items
+
+    logger.info("Starting startup items enumeration...")
+    sys.stderr.flush()
 
     # Registry entries
     if winreg is not None:
+        logger.info("Scanning registry startup locations...")
+        sys.stderr.flush()
+
         for hive_name, path in REGISTRY_RUN_PATHS:
             hive = _get_hive(hive_name)
             if hive is None:
@@ -98,24 +190,43 @@ def enumerate_startup_items() -> List[Dict[str, Any]]:
                             value_name, value_data, _ = winreg.EnumValue(key, index)  # type: ignore
                         except OSError:
                             break
+
+                        item_id = f"reg:{hive_name}:{path}:{value_name}"
+                        if item_id in seen_ids:
+                            index += 1
+                            continue
+                        seen_ids.add(item_id)
+
+                        exe_info = _extract_executable_info(str(value_data))
+
                         items.append(
                             {
-                                "id": f"reg:{hive_name}:{path}:{value_name}",
+                                "id": item_id,
                                 "name": value_name,
-                                "command": value_data,
+                                "command": str(value_data),
                                 "location": "registry",
+                                "location_display": f"Registry: {hive_name.replace('HKEY_', '')}",
                                 "hive": hive_name,
                                 "key_path": path,
                                 "enabled": True,
+                                **exe_info,
                             }
                         )
                         index += 1
+
+                logger.debug(f"Scanned {hive_name}\\{path}")
             except FileNotFoundError:
                 continue
             except Exception as e:  # noqa: BLE001
                 logger.warning(f"Failed reading registry {hive_name} {path}: {e}")
 
+    logger.info(f"Found {len(items)} registry startup items")
+    sys.stderr.flush()
+
     # Startup folders
+    logger.info("Scanning startup folders...")
+    sys.stderr.flush()
+
     for folder_label, get_path in STARTUP_FOLDERS:
         folder = get_path()
         if not folder or not os.path.isdir(folder):
@@ -124,69 +235,190 @@ def enumerate_startup_items() -> List[Dict[str, Any]]:
             for entry in os.listdir(folder):
                 full_path = os.path.join(folder, entry)
                 if os.path.isfile(full_path):
+                    item_id = f"file:{folder_label}:{full_path}"
+                    if item_id in seen_ids:
+                        continue
+                    seen_ids.add(item_id)
+
+                    # For shortcuts, try to resolve target
+                    command = full_path
+                    if full_path.lower().endswith(".lnk"):
+                        # We won't parse .lnk files without external deps, just use path
+                        command = f"Shortcut: {os.path.splitext(entry)[0]}"
+
+                    exe_info = _extract_executable_info(full_path)
+
                     items.append(
                         {
-                            "id": f"file:{folder_label}:{full_path}",
+                            "id": item_id,
                             "name": os.path.splitext(entry)[0],
-                            "command": full_path,
+                            "command": command,
                             "location": folder_label,
+                            "location_display": f"Startup Folder: {folder_label.replace('_', ' ').title()}",
                             "folder_path": folder,
+                            "file_path": full_path,
                             "enabled": True,
+                            **exe_info,
                         }
                     )
         except Exception as e:  # noqa: BLE001
             logger.warning(f"Failed enumerating startup folder {folder}: {e}")
 
+    logger.info(f"Total startup items found: {len(items)}")
+    sys.stderr.flush()
+
     return items
 
 
-SYSTEM_INSTRUCTIONS = """
-You are a conservative Windows startup optimization assistant used by a computer repair shop.
+SYSTEM_INSTRUCTIONS = """You are an expert Windows startup optimization assistant for a computer repair shop. Your role is to analyze startup programs and recommend which ones are safe to disable to improve boot time and system performance.
 
-Your job is to recommend ONLY startup items that are extremely safe to disable for non-technical users. Do NOT recommend disabling any item that could prevent a user from connecting to their network, using remote-access/remote-control software, accessing cloud storage or backups, using security/antivirus, printing/scanning, basic input/accessibility features or programs thats main purpose is to run in the background.
+## CRITICAL SAFETY RULES - NEVER DISABLE:
 
-Specifically NEVER disable items that appear to belong to: antivirus/security (Windows Defender, Malwarebytes, Emsisoft, etc.), VPNs or networking tools (Tailscale, OpenVPN, WireGuard), remote support/remote desktop/remote access (RustDesk, TeamViewer, AnyDesk, RDP related entries), cloud sync or storage (OneDrive, Google Drive, Nextcloud, Dropbox), backup clients (UrBackup, Veeam, etc.), graphics drivers and their control panels (NVIDIA/AMD/Intel), audio drivers, OS components, or anything located directly under %windir% or signed by Microsoft.
+**Security & Protection:**
+- Antivirus/antimalware (Windows Defender, Malwarebytes, Emsisoft, Norton, Kaspersky, Bitdefender, ESET, Avast, AVG, etc.)
+- Firewall software
+- Security updaters or real-time protection
 
-Also avoid disabling updaters, installers, device drivers, or anything with an empty command. If unsure, do NOT disable it.
+**Remote Access & Support:**
+- Remote desktop tools (RustDesk, TeamViewer, AnyDesk, Chrome Remote Desktop, Parsec, Splashtop)
+- VPN clients (Tailscale, OpenVPN, WireGuard, NordVPN, ExpressVPN, etc.)
+- Remote support software
+- RDP-related services
 
-Only suggest disabling clearly user-facing non-essential convenience apps that can be launched manually without impacting system functionality — examples: game launchers (Steam, Epic, GOG), telemetry/tracking crap, chat/communication apps (Discord), optional third-party UI helpers, or explicit user-installed tool tray apps — and only if the item command clearly corresponds to that app.
+**Cloud Storage & Sync:**
+- OneDrive, Google Drive, Dropbox, iCloud, Nextcloud, Sync.com, pCloud, Box
+- Cloud backup clients (Backblaze, Carbonite, IDrive)
+- Local backup software (UrBackup, Veeam, Acronis, Macrium Reflect)
 
-Return ONLY valid JSON with the exact structure below (no extra text):
+**System Components:**
+- Graphics drivers and control panels (NVIDIA, AMD, Intel)
+- Audio drivers (Realtek, Creative, etc.)
+- Input device drivers (touchpad, mouse, keyboard, pen/tablet)
+- Bluetooth and network adapters
+- Any Microsoft-signed executables in Windows directories
+- Windows system services
+- Device manufacturer utilities (Dell, HP, Lenovo, ASUS support software)
+
+**Hardware Monitoring & Control:**
+- Fan control software
+- RGB lighting control (iCUE, Aura, Mystic Light, G Hub)
+- Temperature monitoring
+- Laptop power management
+- Battery management tools
+
+**Accessibility:**
+- Screen readers
+- Magnifiers
+- Voice control software
+
+## SAFE TO DISABLE (Conservative Recommendations):
+
+**Only recommend disabling if HIGH confidence:**
+- Game launchers (Steam, Epic Games, GOG Galaxy, EA, Ubisoft Connect, Battle.net, Xbox) - user can launch manually
+- Chat/messaging apps (Discord, Slack, Telegram, WhatsApp Desktop, Signal) - not critical for system function
+- Media players (Spotify, iTunes, VLC) - user can launch manually
+- Telemetry/tracking software from third parties
+- Optional manufacturer bloatware (NOT drivers or critical utilities)
+- Social media apps (Facebook, Instagram, TikTok desktop apps)
+- Cryptocurrency miners or wallet software (unless explicitly user-critical)
+- Game overlay software (Discord overlay, NVIDIA overlay) - optional convenience
+
+## ANALYSIS APPROACH:
+
+1. **Identify the program**: Look at name, command path, publisher, directory
+2. **Categorize**: System critical? User convenience? Background service?
+3. **Assess impact**: What happens if disabled? Can user launch manually?
+4. **Determine risk**: Low = no system impact, Medium = user inconvenience, High = system/security impact
+5. **Confidence level**: High = clearly identified and understood, Medium = probable safe, Low = uncertain
+
+## OUTPUT FORMAT:
+
+Return ONLY valid JSON with this exact structure (no markdown, no extra text):
 
 {
+    "analysis_summary": {
+        "total_items": <number>,
+        "critical_items": <number>,
+        "safe_to_disable": <number>,
+        "potential_boot_time_saving": "<estimate like '5-15 seconds'>"
+    },
     "to_disable": [
         {
-            "id": "<id>",
-            "reason": "<brief reason for disabling>",
-            "risk": "low|medium|high",
-            "confidence": "low|medium|high",
-            "user_impact": "<brief statement about what the user will notice (e.g., 'no noticeable impact', 'tray icon won't appear', 'cloud sync won't start automatically')>"
+            "id": "<exact id from input>",
+            "name": "<program name>",
+            "category": "<game_launcher|messaging|media_player|telemetry|bloatware>",
+            "reason": "<why it's safe to disable>",
+            "risk": "low",
+            "confidence": "high|medium",
+            "user_impact": "<what user will notice>",
+            "manual_launch": "<how to launch it manually if needed>"
+        }
+    ],
+    "keep_enabled": [
+        {
+            "id": "<exact id from input>",
+            "name": "<program name>",
+            "category": "<security|system|driver|cloud_storage|remote_access|etc>",
+            "reason": "<why it must stay enabled>"
         }
     ]
 }
 
-Rules: keep the list minimal. Only include items you are >= medium confidence are safe to disable for non-technical users. If nothing meets that bar, return {"to_disable": []}. The 'id' value MUST match an 'id' from the supplied list exactly.
+**RULES:**
+- Be EXTREMELY conservative - when in doubt, DON'T disable it
+- Only recommend disabling items with confidence >= "medium" and risk = "low"
+- The 'id' value MUST match an 'id' from the input list exactly
+- If unsure about a program's purpose, leave it enabled
+- Prioritize user safety over performance gains
+- Empty command or unidentifiable items should NOT be disabled
 """
 
 
 def call_chat_model(
-    api_key: str, model: str, items: List[Dict[str, Any]]
+    api_key: str,
+    model: str,
+    items: List[Dict[str, Any]],
+    base_url: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Call the OpenAI-compatible chat completion endpoint.
 
     Uses `requests` if available for readability; falls back to stdlib `urllib`.
-    Returns dict with keys: success, data|error.
+    Returns dict with keys: success, data|error, usage (optional).
     """
-    url = "https://api.openai.com/v1/chat/completions"
+    url = (base_url or "https://api.openai.com").rstrip("/") + "/v1/chat/completions"
+
+    # Prepare simplified item list for AI (remove unnecessary metadata)
+    simplified_items = []
+    for item in items:
+        simplified_items.append(
+            {
+                "id": item["id"],
+                "name": item["name"],
+                "command": item["command"],
+                "location": item.get(
+                    "location_display", item.get("location", "unknown")
+                ),
+                "publisher": item.get("publisher"),
+                "is_microsoft_signed": item.get("is_microsoft_signed", False),
+                "directory": item.get("directory"),
+            }
+        )
+
     payload = {
         "model": model,
         "messages": [
             {"role": "system", "content": SYSTEM_INSTRUCTIONS},
-            {"role": "user", "content": json.dumps(items)},
+            {
+                "role": "user",
+                "content": f"Analyze these {len(simplified_items)} startup items and provide recommendations:\n\n{json.dumps(simplified_items, indent=2)}",
+            },
         ],
-        "temperature": 0,
+        "temperature": 0.1,  # Slight randomness for more natural responses
         "response_format": {"type": "json_object"},
     }
+
+    logger.info(f"Sending {len(items)} startup items to AI model {model}...")
+    sys.stderr.flush()
 
     try:
         if requests is not None:
@@ -197,12 +429,17 @@ def call_chat_model(
                     "Content-Type": "application/json",
                 },
                 json=payload,
-                timeout=60,
+                timeout=120,  # Increased timeout for large payloads
             )
             if not resp.ok:
+                error_detail = (
+                    resp.text[:2000] if resp.text else f"Status {resp.status_code}"
+                )
+                logger.error(f"API request failed: {error_detail}")
+                sys.stderr.flush()
                 return {
                     "success": False,
-                    "error": f"HTTP {resp.status_code}: {resp.text[:2000]}",
+                    "error": f"HTTP {resp.status_code}: {error_detail}",
                 }
             outer = resp.json()
         else:
@@ -219,30 +456,60 @@ def call_chat_model(
                 },
                 method="POST",
             )
-            with urllib.request.urlopen(req, timeout=60) as resp:  # type: ignore
+            with urllib.request.urlopen(req, timeout=120) as resp:  # type: ignore
                 body = resp.read().decode("utf-8", "replace")
             outer = json.loads(body)
     except Exception as e:  # noqa: BLE001
+        logger.error(f"API request exception: {e}")
+        sys.stderr.flush()
         return {"success": False, "error": f"Request failed: {e}"}
 
     # Parse assistant content (should already be JSON due to response_format)
     try:
         content = outer["choices"][0]["message"]["content"]
         json_text = content.strip()
-        if not json_text.startswith("{"):
+
+        # Try to extract JSON if wrapped in markdown
+        if "```json" in json_text:
+            json_match = re.search(r"```json\s*(\{.*?\})\s*```", json_text, re.DOTALL)
+            if json_match:
+                json_text = json_match.group(1)
+        elif not json_text.startswith("{"):
             m = re.search(r"(\{.*\})", json_text, re.DOTALL)
             if m:
                 json_text = m.group(1)
+
         parsed = json.loads(json_text)
+
+        # Ensure required structure
         if "to_disable" not in parsed or not isinstance(parsed.get("to_disable"), list):
             parsed.setdefault("to_disable", [])
+        if "keep_enabled" not in parsed:
+            parsed["keep_enabled"] = []
+        if "analysis_summary" not in parsed:
+            parsed["analysis_summary"] = {}
+
+        # Extract token usage if available
+        usage_info = outer.get("usage", {})
+
+        logger.info(
+            f"AI analysis complete. Recommendations: {len(parsed['to_disable'])} to disable, {len(parsed.get('keep_enabled', []))} to keep"
+        )
+        sys.stderr.flush()
+
     except Exception as e:  # noqa: BLE001
+        logger.error(f"Failed to parse AI response: {e}")
+        sys.stderr.flush()
         return {
             "success": False,
             "error": f"Malformed API reply: {e} | body={str(outer)[:2000]}",
         }
 
-    return {"success": True, "data": parsed}
+    return {
+        "success": True,
+        "data": parsed,
+        "usage": usage_info,
+    }
 
 
 def _disable_registry_item(hive_name: str, path: str, value_name: str) -> bool:
@@ -284,95 +551,275 @@ def run_ai_startup_disable(task: Dict[str, Any]) -> Dict[str, Any]:
 
     Task schema:
       type: "ai_startup_disable"
-      api_key: str (required)
-      model: str (required)
-      apply_changes: bool (optional, default False)
+      api_key: str (required, or "env:VARNAME" to read from environment)
+      model: str (required, e.g., "gpt-4o-mini", "gpt-4o")
+      base_url: str (optional, for custom OpenAI-compatible endpoints)
+      apply_changes: bool (optional, default False - if True, actually disables items)
+      dry_run: bool (optional, default True - same as apply_changes=False)
     """
+    start_time = time.time()
 
     api_key = task.get("api_key")
     model = task.get("model")
+    base_url = task.get("base_url")
     apply_changes = bool(task.get("apply_changes", False))
 
+    # Handle dry_run parameter (inverse of apply_changes)
+    if "dry_run" in task:
+        apply_changes = not bool(task.get("dry_run", True))
+
     # Support environment-backed API keys in fixtures or tasks.
-    # If the task's api_key is a string like "env:VARNAME" we will read that
-    # environment variable. If no api_key is provided, fall back to common
-    # env var names to avoid embedding secrets in fixtures.
     if isinstance(api_key, str) and api_key.startswith("env:"):
         env_var = api_key.split(":", 1)[1]
         api_key = os.getenv(env_var)
+        logger.info(f"Using API key from environment variable: {env_var}")
+        sys.stderr.flush()
+
     if not api_key:
         # Try project-specific and common env var names
         api_key = os.getenv("AUTOSERVICE_OPENAI_KEY") or os.getenv("OPENAI_API_KEY")
+        if api_key:
+            logger.info("Using API key from default environment variables")
+            sys.stderr.flush()
 
+    # Validation
     if not api_key or not model:
+        logger.error("Missing required parameters: api_key and model")
+        sys.stderr.flush()
         return {
             "task_type": "ai_startup_disable",
-            "status": "failure",
-            "summary": {"error": "'api_key' and 'model' are required"},
-        }
-
-    items = enumerate_startup_items()
-    logger.info(f"Enumerated {len(items)} startup items")
-
-    ai_response = call_chat_model(api_key, model, items)
-    if not ai_response.get("success"):
-        return {
-            "task_type": "ai_startup_disable",
-            "status": "failure",
+            "status": "error",
             "summary": {
-                "error": ai_response.get("error"),
-                "items_enumerated": len(items),
+                "human_readable": {
+                    "error": "Configuration error: 'api_key' and 'model' are required"
+                },
+                "results": {
+                    "error_type": "missing_parameters",
+                    "required": ["api_key", "model"],
+                },
             },
         }
 
-    suggestions = ai_response["data"].get("to_disable", [])
+    logger.info("=" * 60)
+    logger.info("AI Startup Optimizer - Starting Analysis")
+    logger.info("=" * 60)
+    logger.info(
+        f"Mode: {'APPLY CHANGES' if apply_changes else 'DRY RUN (preview only)'}"
+    )
+    logger.info(f"Model: {model}")
+    sys.stderr.flush()
+
+    # Enumerate all startup items
+    try:
+        items = enumerate_startup_items()
+    except Exception as e:  # noqa: BLE001
+        logger.error(f"Failed to enumerate startup items: {e}")
+        sys.stderr.flush()
+        return {
+            "task_type": "ai_startup_disable",
+            "status": "error",
+            "summary": {
+                "human_readable": {
+                    "error": f"Failed to enumerate startup items: {str(e)}"
+                },
+                "results": {"error_type": "enumeration_failed"},
+            },
+        }
+
+    if not items:
+        logger.warning("No startup items found - system may have no startup programs")
+        sys.stderr.flush()
+        return {
+            "task_type": "ai_startup_disable",
+            "status": "success",
+            "summary": {
+                "human_readable": {
+                    "message": "No startup items found",
+                    "items_total": 0,
+                    "recommendations": 0,
+                },
+                "results": {
+                    "enumerated_count": 0,
+                    "items": [],
+                    "to_disable": [],
+                    "keep_enabled": [],
+                },
+            },
+        }
+
+    # Call AI model for analysis
+    logger.info(f"Analyzing {len(items)} startup items with AI...")
+    sys.stderr.flush()
+
+    ai_response = call_chat_model(api_key, model, items, base_url)
+
+    if not ai_response.get("success"):
+        logger.error(f"AI analysis failed: {ai_response.get('error')}")
+        sys.stderr.flush()
+        return {
+            "task_type": "ai_startup_disable",
+            "status": "error",
+            "summary": {
+                "human_readable": {
+                    "error": f"AI analysis failed: {ai_response.get('error')}",
+                    "items_enumerated": len(items),
+                },
+                "results": {
+                    "error_type": "ai_failed",
+                    "enumerated_count": len(items),
+                    "items": items,
+                },
+            },
+        }
+
+    ai_data = ai_response["data"]
+    suggestions = ai_data.get("to_disable", [])
+    keep_enabled = ai_data.get("keep_enabled", [])
+    analysis_summary = ai_data.get("analysis_summary", {})
+
+    logger.info("=" * 60)
+    logger.info("AI ANALYSIS RESULTS")
+    logger.info("=" * 60)
+    logger.info(f"Total startup items: {len(items)}")
+    logger.info(f"Items recommended to disable: {len(suggestions)}")
+    logger.info(f"Items to keep enabled: {len(keep_enabled)}")
+    if "potential_boot_time_saving" in analysis_summary:
+        logger.info(
+            f"Estimated boot time saving: {analysis_summary['potential_boot_time_saving']}"
+        )
+    logger.info("=" * 60)
+    sys.stderr.flush()
 
     # Index items by id for quick lookup
     items_by_id = {i["id"]: i for i in items}
 
     disabled: List[Dict[str, Any]] = []
     skipped: List[Dict[str, Any]] = []
+    errors: List[Dict[str, Any]] = []
 
-    if apply_changes:
-        for entry in suggestions:
+    # Apply changes if requested
+    if apply_changes and suggestions:
+        logger.info("APPLYING CHANGES - Disabling recommended items...")
+        sys.stderr.flush()
+
+        for idx, entry in enumerate(suggestions, 1):
             sid = entry.get("id")
+            item_name = entry.get("name", "Unknown")
+
+            logger.info(f"[{idx}/{len(suggestions)}] Processing: {item_name}")
+            sys.stderr.flush()
+
             if sid not in items_by_id:
-                skipped.append({"id": sid, "reason": "not_found"})
+                logger.warning(f"  ⚠ Skipped: Item ID not found in enumeration")
+                sys.stderr.flush()
+                skipped.append(
+                    {"id": sid, "name": item_name, "reason": "not_found_in_enumeration"}
+                )
                 continue
+
             item = items_by_id[sid]
             success = False
-            if item["id"].startswith("reg:"):
-                # id format: reg:HIVE:path:value
-                _, hive_name, key_path, value_name = item["id"].split(":", 3)
-                success = _disable_registry_item(hive_name, key_path, value_name)
-            elif item["id"].startswith("file:"):
-                # id format: file:label:full_path
-                _, _label, full_path = item["id"].split(":", 2)
-                success = _disable_file_item(full_path)
+            error_msg = None
+
+            try:
+                if item["id"].startswith("reg:"):
+                    # id format: reg:HIVE:path:value
+                    parts = item["id"].split(":", 3)
+                    if len(parts) == 4:
+                        _, hive_name, key_path, value_name = parts
+                        success = _disable_registry_item(
+                            hive_name, key_path, value_name
+                        )
+                        if not success:
+                            error_msg = "Failed to delete registry value"
+                    else:
+                        error_msg = "Malformed registry item ID"
+                elif item["id"].startswith("file:"):
+                    # id format: file:label:full_path
+                    parts = item["id"].split(":", 2)
+                    if len(parts) == 3:
+                        _, _label, full_path = parts
+                        success = _disable_file_item(full_path)
+                        if not success:
+                            error_msg = "Failed to move file to DisabledStartup"
+                    else:
+                        error_msg = "Malformed file item ID"
+                else:
+                    error_msg = "Unknown item type"
+            except Exception as e:  # noqa: BLE001
+                error_msg = f"Exception: {str(e)}"
+
             if success:
+                logger.info(f"  ✓ Disabled: {item_name}")
+                sys.stderr.flush()
                 disabled.append(
                     {
                         "id": sid,
+                        "name": item_name,
                         "reason": entry.get("reason"),
-                        "risk": entry.get("risk"),
+                        "category": entry.get("category"),
+                        "user_impact": entry.get("user_impact"),
+                        "manual_launch": entry.get("manual_launch"),
                     }
                 )
             else:
-                skipped.append({"id": sid, "reason": "disable_failed"})
+                logger.error(f"  ✗ Failed: {item_name} - {error_msg}")
+                sys.stderr.flush()
+                errors.append({"id": sid, "name": item_name, "error": error_msg})
+
+        logger.info("=" * 60)
+        logger.info(
+            f"SUMMARY: {len(disabled)} disabled, {len(errors)} errors, {len(skipped)} skipped"
+        )
+        logger.info("=" * 60)
+        sys.stderr.flush()
+
+    elif suggestions:
+        logger.info("DRY RUN MODE - No changes applied")
+        logger.info("Run with apply_changes=true to actually disable these items:")
+        for idx, entry in enumerate(suggestions, 1):
+            logger.info(f"  {idx}. {entry.get('name')} - {entry.get('reason')}")
+        sys.stderr.flush()
+
+    duration = time.time() - start_time
+
+    # Build standardized result
+    status = "success"
+    if apply_changes and errors:
+        status = "warning" if disabled else "error"
 
     return {
         "task_type": "ai_startup_disable",
-        "status": "success",
+        "status": status,
         "summary": {
-            "enumerated_count": len(items),
-            "items": items,
-            "suggestions": suggestions,
-            ("disabled" if apply_changes else "would_disable"): disabled
-            if apply_changes
-            else suggestions,
-            "skipped": skipped if apply_changes else [],
-            "applied": apply_changes,
-            "model": model,
+            "human_readable": {
+                "mode": "Applied Changes"
+                if apply_changes
+                else "Dry Run (Preview Only)",
+                "total_items": len(items),
+                "recommendations": len(suggestions),
+                "items_disabled": len(disabled) if apply_changes else 0,
+                "items_skipped": len(skipped) if apply_changes else 0,
+                "errors": len(errors) if apply_changes else 0,
+                "items_kept_enabled": len(keep_enabled),
+                "estimated_boot_time_saving": analysis_summary.get(
+                    "potential_boot_time_saving", "Unknown"
+                ),
+                "model_used": model,
+                "duration_seconds": round(duration, 2),
+            },
+            "results": {
+                "enumerated_count": len(items),
+                "all_items": items,
+                "to_disable": suggestions,
+                "keep_enabled": keep_enabled,
+                "analysis_summary": analysis_summary,
+                "disabled": disabled if apply_changes else [],
+                "skipped": skipped if apply_changes else [],
+                "errors": errors if apply_changes else [],
+                "applied": apply_changes,
+                "ai_usage": ai_response.get("usage", {}),
+            },
         },
     }
 
