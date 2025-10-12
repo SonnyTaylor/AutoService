@@ -68,7 +68,6 @@ const PRESET_MAP = {
     "sfc_scan",
     "dism_health_check",
     "smartctl_report",
-    "battery_health",
     "speedtest",
   ],
   complete: [
@@ -80,7 +79,6 @@ const PRESET_MAP = {
     GPU_PARENT_ID,
     "heavyload_stress_cpu",
     "heavyload_stress_memory",
-    "battery_health",
     "speedtest",
   ],
   custom: [],

@@ -301,8 +301,7 @@ export async function initPage() {
       const clientIdx = [];
       const runnerTasks = [];
       tasks.forEach((t, idx) => {
-        if (t && (t._client_only || t.type === "battery_health"))
-          clientIdx.push(idx);
+        if (t && t._client_only) clientIdx.push(idx);
         else runnerTasks.push(t);
       });
 
@@ -678,7 +677,6 @@ export async function initPage() {
 
   function friendlyTaskLabel(type) {
     // Prefer a label embedded in task spec via ui_label when building the plan
-    if (type === "battery_health") return "Battery Health";
     return type;
   }
 
@@ -739,149 +737,11 @@ export async function initPage() {
         status: "failure",
         summary: { error: "Invalid task" },
       };
-    if (task.type === "battery_health") {
-      return await runBatteryHealthTask(task);
-    }
     return {
       task_type: task.type,
       status: "skipped",
       summary: { reason: "Client handler not implemented" },
     };
-  }
-
-  async function runBatteryHealthTask(task) {
-    const source = String(task.source || "auto");
-    let info = null;
-    try {
-      if (source === "cache" || source === "auto") {
-        try {
-          cacheApi?.loadCache && cacheApi.loadCache();
-        } catch {}
-        info = cacheApi?.getCache ? cacheApi.getCache() : null;
-      }
-      if (
-        (!info || !info.batteries) &&
-        (source === "live" || source === "auto")
-      ) {
-        info = await invoke?.("get_system_info");
-      }
-    } catch {}
-
-    const batteries = Array.isArray(info?.batteries) ? info.batteries : [];
-    const summaries = batteries.map(normalizeBattery);
-    const count = summaries.length;
-    const avgSoh = (() => {
-      const vals = summaries
-        .map((b) => b.state_of_health_pct)
-        .filter((v) => typeof v === "number");
-      if (!vals.length) return null;
-      return (
-        Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10
-      );
-    })();
-    const lowHealth = summaries.filter(
-      (b) =>
-        typeof b.state_of_health_pct === "number" && b.state_of_health_pct < 70
-    ).length;
-    const anyPoor = summaries.some((b) => b.verdict === "poor");
-    const anyFair = summaries.some((b) => b.verdict === "fair");
-    const status =
-      count === 0 ? "success" : anyPoor ? "completed_with_errors" : "success";
-    const overallVerdict =
-      count === 0 ? "no_battery" : anyPoor ? "poor" : anyFair ? "fair" : "good";
-
-    const human = {
-      batteries: count,
-      average_soh_percent: avgSoh,
-      low_health_batteries: lowHealth,
-      verdict: overallVerdict,
-      notes: count === 0 ? ["No battery detected"] : [],
-    };
-
-    return {
-      task_type: "battery_health",
-      status,
-      summary: {
-        count_batteries: count,
-        average_soh_percent: avgSoh,
-        low_health_batteries: lowHealth,
-        batteries: summaries,
-        human_readable: human,
-      },
-    };
-  }
-
-  function normalizeBattery(b) {
-    const soh = numOrNull(b?.state_of_health_pct);
-    const energyFull = numOrNull(b?.energy_full_wh);
-    const energyDesign = numOrNull(b?.energy_full_design_wh);
-    const estSoh =
-      !soh && energyFull && energyDesign && energyDesign > 0
-        ? Math.round((energyFull / energyDesign) * 1000) / 10
-        : soh;
-    const cycle = numOrNull(b?.cycle_count);
-    const temp = numOrNull(b?.temperature_c);
-    const pct = numOrNull(b?.percentage);
-    let score = 100.0;
-    const notes = [];
-    if (typeof estSoh === "number") {
-      if (estSoh < 70) {
-        score -= 40;
-        notes.push(`low SOH ${estSoh}%`);
-      } else if (estSoh < 80) {
-        score -= 20;
-        notes.push(`SOH ${estSoh}%`);
-      }
-    } else {
-      score -= 10;
-      notes.push("SOH unknown");
-    }
-    if (typeof cycle === "number" && cycle > 800) {
-      score -= 20;
-      notes.push(`cycles ${cycle}`);
-    }
-    if (
-      typeof pct === "number" &&
-      pct < 20 &&
-      (b?.state || "").toLowerCase() !== "charging"
-    ) {
-      score -= 5;
-      notes.push(`low charge ${pct}%`);
-    }
-    const verdict =
-      score >= 85
-        ? "excellent"
-        : score >= 70
-        ? "good"
-        : score >= 50
-        ? "fair"
-        : "poor";
-
-    return {
-      vendor: b?.vendor || null,
-      model: b?.model || null,
-      serial: b?.serial || null,
-      technology: b?.technology || null,
-      state: b?.state || null,
-      percentage: pct,
-      cycle_count: cycle,
-      state_of_health_pct: estSoh || null,
-      energy_wh: numOrNull(b?.energy_wh),
-      energy_full_wh: energyFull,
-      energy_full_design_wh: energyDesign,
-      voltage_v: numOrNull(b?.voltage_v),
-      temperature_c: temp,
-      time_to_full_sec: numOrNull(b?.time_to_full_sec),
-      time_to_empty_sec: numOrNull(b?.time_to_empty_sec),
-      score: Math.round(score),
-      verdict,
-      notes,
-    };
-  }
-
-  function numOrNull(v) {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : null;
   }
 
   function buildFinalReportFromClient(results) {
