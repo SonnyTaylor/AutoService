@@ -226,7 +226,7 @@ input[type="checkbox"] {
   height: 18px;
   border: 1.5px solid var(--border);
   border-radius: 5px;
-  background: var(--panel-accent);
+  background: #1a1f2b;
   cursor: pointer;
   position: relative;
   transition: border-color 0.15s ease, background-color 0.15s ease,
