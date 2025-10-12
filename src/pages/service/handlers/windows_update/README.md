@@ -203,6 +203,47 @@ Reboot indicator shown in:
 - Customer metrics items
 - Summary notes
 
+## Customer Metrics
+
+The handler extracts customer-friendly metrics covering all scenarios:
+
+### Scenario 1: Updates Installed
+
+- **Icon**: ✅
+- **Label**: "System Updated"
+- **Value**: Number of installed updates
+- **Items**: Windows/driver breakdown, failed updates, reboot status
+
+### Scenario 2: Updates Available but Not Installed
+
+- **Icon**: ⚠️
+- **Label**: "Updates Available"
+- **Value**: Number of available updates
+- **Items**: Windows/driver breakdown
+- **Use Case**: When pre-scan found updates but installation didn't complete
+
+### Scenario 3: System Up to Date
+
+- **Icon**: ✅
+- **Label**: "System Up to Date"
+- **Value**: "Current"
+- **Items**: "No updates needed"
+- **Use Case**: When no updates were found
+
+### Scenario 4: Status Unclear
+
+- **Icon**: ℹ️
+- **Label**: "Windows Updates"
+- **Value**: "Checked"
+- **Items**: Pending updates if any
+- **Use Case**: Fallback for edge cases
+
+All metrics include:
+
+- Reboot requirements (if applicable)
+- Failed update counts (if any)
+- Remaining updates after reboot (if applicable)
+
 ## Testing
 
 ### Fixtures
@@ -247,12 +288,15 @@ python runner/service_runner.py runner/fixtures/test_windows_update.json
 - [x] Service definition migrated from catalog.js
 - [x] Tech renderer implemented (replaces renderWindowsUpdate)
 - [x] Customer metrics extractor implemented (replaces processWindowsUpdate + buildWindowsUpdateMetric)
-- [ ] Handler registered in handlers/index.js
-- [ ] Test fixtures created
-- [ ] Integration tested
-- [ ] Legacy code removed from:
-  - [ ] catalog.js
-  - [ ] renderers/tasks.js
-  - [ ] print/metrics.js
-- [ ] Documentation reviewed
-- [ ] Migration progress tracker updated
+- [x] Handler registered in handlers/index.js
+- [x] Test fixtures created
+- [x] Integration tested
+- [x] Customer metrics enhanced to show all scenarios:
+  - [x] Updates installed successfully
+  - [x] Updates available but not installed
+  - [x] System up-to-date
+  - [x] Reboot required status
+  - [x] Failed updates
+  - [x] Remaining updates after reboot
+- [x] Documentation reviewed
+- [x] Migration complete

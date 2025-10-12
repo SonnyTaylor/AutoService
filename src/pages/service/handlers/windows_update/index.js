@@ -317,54 +317,124 @@ export function renderTech({ result, index }) {
 
 /**
  * Extract customer-friendly Windows Update metrics.
- * Shows update installation summary with reboot status.
+ * Shows update installation summary, system status, and reboot requirements.
  *
  * @param {CustomerMetricsContext} context - Extraction context
  * @returns {CustomerMetric|null} Customer metric or null
  */
-export function extractCustomerMetrics({ summary, status }) {
-  // Only show metrics if updates were actually performed
-  if (status !== "success" && status !== "completed_with_errors") return null;
+export function extractCustomerMetrics({ summary, status, result }) {
+  // Skip if the service failed completely
+  if (status === "failure") return null;
 
   const install = summary?.install || {};
   const preScan = summary?.pre_scan || {};
+  const postScan = summary?.post_scan || {};
+  const hr = summary?.human_readable || {};
   const installed = install.count_installed || 0;
   const failed = install.count_failed || 0;
+  const available = preScan.count_total || 0;
+  const remaining = postScan.count_remaining || 0;
   const rebootRequired = summary?.reboot_required || false;
   const windowsUpdates = install.count_windows_installed || 0;
   const driverUpdates = install.count_driver_installed || 0;
+  const verdict = hr.verdict || "";
 
-  // Don't show if no updates were installed
-  if (installed === 0) return null;
-
+  // Determine what to show based on the situation
   const items = [];
+  let icon = "🔄";
+  let label = "Windows Updates";
+  let value = "";
+  let detail = "";
+  let variant = "info";
 
-  if (windowsUpdates > 0) {
-    items.push(
-      `${windowsUpdates} Windows update${windowsUpdates !== 1 ? "s" : ""}`
-    );
+  // Case 1: Updates were installed
+  if (installed > 0) {
+    icon = "✅";
+    label = "System Updated";
+    value = `${installed}`;
+    detail = rebootRequired ? "Reboot required" : "Updates installed";
+    variant = failed > 0 ? "warning" : "success";
+
+    if (windowsUpdates > 0) {
+      items.push(
+        `${windowsUpdates} Windows update${windowsUpdates !== 1 ? "s" : ""}`
+      );
+    }
+
+    if (driverUpdates > 0) {
+      items.push(
+        `${driverUpdates} driver update${driverUpdates !== 1 ? "s" : ""}`
+      );
+    }
+
+    if (failed > 0) {
+      items.push(`${failed} failed to install`);
+    }
+
+    if (rebootRequired) {
+      items.push("Reboot required to complete");
+    }
+
+    if (remaining > 0) {
+      items.push(`${remaining} more available after reboot`);
+    }
   }
+  // Case 2: No updates installed but some are available
+  else if (available > 0) {
+    icon = "⚠️";
+    label = "Updates Available";
+    value = `${available}`;
+    detail = "Not installed";
+    variant = "warning";
 
-  if (driverUpdates > 0) {
-    items.push(
-      `${driverUpdates} driver update${driverUpdates !== 1 ? "s" : ""}`
-    );
+    const windowsAvailable = preScan.count_windows || 0;
+    const driversAvailable = preScan.count_driver || 0;
+
+    if (windowsAvailable > 0) {
+      items.push(
+        `${windowsAvailable} Windows update${windowsAvailable !== 1 ? "s" : ""}`
+      );
+    }
+
+    if (driversAvailable > 0) {
+      items.push(
+        `${driversAvailable} driver update${driversAvailable !== 1 ? "s" : ""}`
+      );
+    }
+
+    if (failed > 0) {
+      items.push(`${failed} failed to install`);
+    }
   }
-
-  if (failed > 0) {
-    items.push(`${failed} failed`);
+  // Case 3: System is fully up to date
+  else if (verdict.includes("up-to-date")) {
+    icon = "✅";
+    label = "System Up to Date";
+    value = "Current";
+    detail = "All updates installed";
+    variant = "success";
+    items.push("No updates needed");
   }
+  // Case 4: Updates checked but status unclear
+  else {
+    icon = "ℹ️";
+    label = "Windows Updates";
+    value = "Checked";
+    detail = "Status reviewed";
+    variant = "info";
 
-  if (rebootRequired) {
-    items.push("Reboot required");
+    if (remaining > 0) {
+      items.push(`${remaining} update${remaining !== 1 ? "s" : ""} pending`);
+    }
   }
 
   return buildMetric({
-    icon: "🔄",
-    label: "Updates Installed",
-    value: `${installed}`,
-    detail: rebootRequired ? "Reboot required" : "Ready to use",
-    variant: failed > 0 ? "warning" : "success",
+    icon,
+    label,
+    value,
+    detail,
+    variant,
     items: items.length > 0 ? items : undefined,
+    keepAllItems: true,
   });
 }
