@@ -119,11 +119,9 @@ export function applyFilter() {
   const tech = state.technicianFilter.trim();
   let base;
 
-  // Start with all or search results
+  // Start with all or search results using improved custom search
   if (q) {
-    if (!fuse) buildFuseIndex();
-    const results = fuse.search(q);
-    base = results.map((r) => r.item);
+    base = customSearch(q);
   } else {
     base = [...state.all];
   }
@@ -179,13 +177,15 @@ function buildFuseIndex() {
     keys: [
       { name: "hostname", weight: 2 },
       { name: "customer_name", weight: 2 },
-      { name: "technician_name", weight: 1 },
+      { name: "technician_name", weight: 2 },
     ],
-    threshold: 0.2, // Lower threshold = more strict matching (better accuracy)
-    distance: 100, // Maximum distance between matched characters
-    minMatchCharLength: 2, // Minimum length of a match
+    threshold: 0.3, // Slightly more lenient for multi-word searches
+    distance: 200, // Allow more distance for multi-word matches
+    minMatchCharLength: 1, // Allow single character matches (for initials)
     ignoreLocation: true,
     useExtendedSearch: false,
+    findAllMatches: true, // Find all matching instances
+    shouldSort: true,
   });
 
   // Map Fuse items back to the original report objects
@@ -197,6 +197,43 @@ function buildFuseIndex() {
       )
       .filter(Boolean);
   })(fuse.search);
+}
+
+/**
+ * Custom search that handles multi-word queries better than Fuse alone
+ * @param {string} query - Search query
+ * @returns {Array} Filtered items
+ */
+function customSearch(query) {
+  const lowerQuery = query.toLowerCase().trim();
+
+  // If query is empty, return all
+  if (!lowerQuery) {
+    return state.all;
+  }
+
+  // First, try exact substring matching (case-insensitive)
+  const exactMatches = state.all.filter((item) => {
+    const hostname = (item.metadata?.hostname || "").toLowerCase();
+    const customerName = (item.metadata?.customer_name || "").toLowerCase();
+    const technicianName = (item.metadata?.technician_name || "").toLowerCase();
+
+    return (
+      hostname.includes(lowerQuery) ||
+      customerName.includes(lowerQuery) ||
+      technicianName.includes(lowerQuery)
+    );
+  });
+
+  // If we found exact matches, return them
+  if (exactMatches.length > 0) {
+    return exactMatches;
+  }
+
+  // Fall back to fuzzy search with Fuse.js for typo tolerance
+  if (!fuse) buildFuseIndex();
+  const fuseResults = fuse.search(lowerQuery);
+  return fuseResults;
 }
 
 /**
