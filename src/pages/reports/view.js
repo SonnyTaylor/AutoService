@@ -56,13 +56,21 @@ function renderReportRow(item) {
           <span class="date">${escapeHtml(dateStr)}</span>
           ${
             technicianName
-              ? `<span class="badge tech">👤 ${escapeHtml(
+              ? `<span class="badge tech"><i class="ph ph-user"></i> ${escapeHtml(
                   technicianName
                 )}</span>`
               : ""
           }
-          ${item.has_execution_log ? '<span class="badge">📋 Log</span>' : ""}
-          ${item.has_run_plan ? '<span class="badge">📝 Plan</span>' : ""}
+          ${
+            item.has_execution_log
+              ? '<span class="badge"><i class="ph ph-clipboard-text"></i> Log</span>'
+              : ""
+          }
+          ${
+            item.has_run_plan
+              ? '<span class="badge"><i class="ph ph-file-text"></i> Plan</span>'
+              : ""
+          }
         </div>
       </div>
       <div class="report-actions">
