@@ -76,6 +76,7 @@ pub fn save_report(
     let folder_name = generate_folder_name(
         request.hostname.as_deref(),
         request.customer_name.as_deref(),
+        request.technician_name.as_deref(),
         timestamp,
     );
 
@@ -357,14 +358,16 @@ fn read_metadata(report_folder: &PathBuf) -> Option<ReportMetadata> {
 
 /// Generates a folder name for a saved report.
 ///
-/// Format: `{hostname}_{customer_name}_{date}_{time}`
+/// Format: `{hostname}_{customer_name}_{technician_name}_{date}_{time}`
 /// - If customer name is missing, uses "Report" instead
 /// - If hostname is missing, uses "Unknown_PC"
+/// - If technician name is provided, includes it in the folder name
 /// - Sanitizes names to be filesystem-safe
 ///
 /// # Arguments
 /// * `hostname` - Optional PC hostname
 /// * `customer_name` - Optional customer name
+/// * `technician_name` - Optional technician name
 /// * `timestamp` - Unix timestamp in seconds
 ///
 /// # Returns
@@ -372,6 +375,7 @@ fn read_metadata(report_folder: &PathBuf) -> Option<ReportMetadata> {
 fn generate_folder_name(
     hostname: Option<&str>,
     customer_name: Option<&str>,
+    technician_name: Option<&str>,
     timestamp: u64,
 ) -> String {
     // Use chrono to format human-readable date/time
@@ -383,7 +387,16 @@ fn generate_folder_name(
     let hostname_part = sanitize_name(hostname.unwrap_or("Unknown_PC"));
     let customer_part = sanitize_name(customer_name.unwrap_or("Report"));
 
-    format!("{}_{}__{}", hostname_part, customer_part, date_str)
+    // Include technician name if provided
+    if let Some(tech) = technician_name {
+        let tech_part = sanitize_name(tech);
+        format!(
+            "{}_{}_{}__{}",
+            hostname_part, customer_part, tech_part, date_str
+        )
+    } else {
+        format!("{}_{}__{}", hostname_part, customer_part, date_str)
+    }
 }
 
 /// Sanitizes a name for use in filesystem paths.
@@ -433,16 +446,31 @@ mod tests {
     #[test]
     fn test_generate_folder_name() {
         let timestamp = 1760000000; // Some fixed timestamp
-        let name = generate_folder_name(Some("MyPC"), Some("John Doe"), timestamp);
+
+        // Test with technician name
+        let name = generate_folder_name(
+            Some("MyPC"),
+            Some("John Doe"),
+            Some("Tech Smith"),
+            timestamp,
+        );
         assert!(name.contains("MyPC"));
         assert!(name.contains("John_Doe"));
+        assert!(name.contains("Tech_Smith"));
         assert!(name.contains("__"));
+
+        // Test without technician name
+        let name_no_tech = generate_folder_name(Some("MyPC"), Some("John Doe"), None, timestamp);
+        assert!(name_no_tech.contains("MyPC"));
+        assert!(name_no_tech.contains("John_Doe"));
+        assert!(!name_no_tech.contains("Tech_Smith"));
+        assert!(name_no_tech.contains("__"));
     }
 
     #[test]
     fn test_generate_folder_name_defaults() {
         let timestamp = 1760000000;
-        let name = generate_folder_name(None, None, timestamp);
+        let name = generate_folder_name(None, None, None, timestamp);
         assert!(name.contains("Unknown_PC"));
         assert!(name.contains("Report"));
     }

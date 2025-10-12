@@ -132,16 +132,16 @@ fn start_service_run(
         }
     }
 
-    // Write plan file into reports directory
-    let (reports_dir, _programs, _settings, _resources) = crate::paths::subdirs(data_root);
-    if let Err(e) = std::fs::create_dir_all(&reports_dir) {
-        return Err(format!("Failed to create reports dir: {e}"));
+    // Write temporary plan file into logs directory
+    let logs_dir = data_root.join("logs");
+    if let Err(e) = std::fs::create_dir_all(&logs_dir) {
+        return Err(format!("Failed to create logs dir: {e}"));
     }
     let ts = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
         .as_millis();
-    let plan_file = reports_dir.join(format!("run_plan_{ts}.json"));
+    let plan_file = logs_dir.join(format!("run_plan_{ts}.json"));
     if let Err(e) = std::fs::write(&plan_file, &plan_json) {
         return Err(format!("Failed to write plan file: {e}"));
     }
