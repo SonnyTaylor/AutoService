@@ -1,0 +1,24 @@
+{
+  "task_type": "battery_health_report",
+  "status": "success",
+  "summary": {
+    "vendor": "LG",
+    "model": "LNV-45N1",
+    "serial_number": "12345",
+    "technology": "Li-ion",
+    "percent": 75.3,
+    "state": "Discharging",
+    "capacity_percent": 85.2,
+    "temperature_c": 32.5,
+    "cycle_count": 145,
+    "energy_wh": 42.5,
+    "energy_full_wh": 48.1,
+    "energy_full_design_wh": 56.5,
+    "voltage_v": 12.35,
+    "time_to_empty": "3h,25m,10s",
+    "time_to_full": null,
+    "health_verdict": "Good",
+    "wear_level_percent": 14.8,
+    "human_readable": "Battery: LG LNV-45N1\nSerial: 12345\nTechnology: Li-ion\nCharge Level: 75.3%\nState: Discharging\nCapacity: 85.2%\nWear Level: 14.8%\nCycle Count: 145\nTemperature: 32.5°C\nVoltage: 12.35V\nEnergy: 42.50Wh / 56.50Wh (design)\nTime to Empty: 3h,25m,10s\nHealth: Good"
+  }
+}

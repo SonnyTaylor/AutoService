@@ -1,0 +1,8 @@
+{
+  "task_type": "battery_health_report",
+  "status": "skipped",
+  "summary": {
+    "error": "No battery detected. This system may not have a battery (desktop) or battery information is unavailable.",
+    "human_readable": "Battery Check: Skipped (No battery detected)"
+  }
+}

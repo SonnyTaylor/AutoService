@@ -45,6 +45,7 @@ import * as winsatDisk from "./winsat_disk/index.js";
 import * as whynotwin11Check from "./whynotwin11_check/index.js";
 import * as aiStartupDisable from "./ai_startup_disable/index.js";
 import * as aiBrowserNotificationDisable from "./ai_browser_notification_disable/index.js";
+import * as batteryHealthReport from "./battery_health_report/index.js";
 
 // =============================================================================
 // REGISTRY CONSTRUCTION
@@ -79,6 +80,7 @@ const HANDLERS = {
   whynotwin11_check: whynotwin11Check,
   ai_startup_disable: aiStartupDisable,
   ai_browser_notification_disable: aiBrowserNotificationDisable,
+  battery_health_report: batteryHealthReport,
 };
 
 // =============================================================================

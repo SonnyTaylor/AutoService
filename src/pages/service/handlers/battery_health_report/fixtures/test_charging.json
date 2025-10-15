@@ -1,0 +1,24 @@
+{
+  "task_type": "battery_health_report",
+  "status": "success",
+  "summary": {
+    "vendor": "Samsung",
+    "model": "SDI-BT50",
+    "serial_number": "BAT98765",
+    "technology": "Li-ion",
+    "percent": 92.1,
+    "state": "Charging",
+    "capacity_percent": 95.8,
+    "temperature_c": 28.3,
+    "cycle_count": 23,
+    "energy_wh": 45.2,
+    "energy_full_wh": 47.1,
+    "energy_full_design_wh": 49.2,
+    "voltage_v": 11.92,
+    "time_to_empty": null,
+    "time_to_full": "1h,12m,35s",
+    "health_verdict": "Excellent",
+    "wear_level_percent": 4.2,
+    "human_readable": "Battery: Samsung SDI-BT50\nSerial: BAT98765\nTechnology: Li-ion\nCharge Level: 92.1%\nState: Charging\nCapacity: 95.8%\nWear Level: 4.2%\nCycle Count: 23\nTemperature: 28.3°C\nVoltage: 11.92V\nEnergy: 45.20Wh / 49.20Wh (design)\nTime to Full: 1h,12m,35s\nHealth: Excellent"
+  }
+}

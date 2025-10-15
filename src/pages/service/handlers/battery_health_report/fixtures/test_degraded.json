@@ -1,0 +1,24 @@
+{
+  "task_type": "battery_health_report",
+  "status": "success",
+  "summary": {
+    "vendor": "Simplo",
+    "model": "PABAS0241231",
+    "serial_number": "567890",
+    "technology": "Li-ion",
+    "percent": 42.8,
+    "state": "Discharging",
+    "capacity_percent": 58.3,
+    "temperature_c": 38.9,
+    "cycle_count": 687,
+    "energy_wh": 22.1,
+    "energy_full_wh": 30.2,
+    "energy_full_design_wh": 51.8,
+    "voltage_v": 10.85,
+    "time_to_empty": "1h,45m,22s",
+    "time_to_full": null,
+    "health_verdict": "Poor",
+    "wear_level_percent": 41.7,
+    "human_readable": "Battery: Simplo PABAS0241231\nSerial: 567890\nTechnology: Li-ion\nCharge Level: 42.8%\nState: Discharging\nCapacity: 58.3%\nWear Level: 41.7%\nCycle Count: 687\nTemperature: 38.9°C\nVoltage: 10.85V\nEnergy: 22.10Wh / 51.80Wh (design)\nTime to Empty: 1h,45m,22s\nHealth: Poor"
+  }
+}
