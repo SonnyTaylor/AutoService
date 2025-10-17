@@ -8,6 +8,7 @@ export { buildPrintHeader } from "./tech.js";
 export { buildCustomerHeader, buildCustomerSummary } from "./customer.js";
 export {
   extractCustomerMetrics,
+  separateServiceAndDiagnostic,
   buildCustomerTaskList,
   generateRecommendations,
 } from "./metrics.js";

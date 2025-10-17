@@ -20,6 +20,7 @@ export const definition = {
   group: "Diagnostics",
   category: "Diagnostics",
   toolKeys: ["smartctl", "gsmartcontrol"],
+  isDiagnostic: true,
   async build({ resolveToolPath }) {
     let pSmart = await resolveToolPath(["smartctl", "gsmartcontrol"]);
     if (pSmart && /gsmartcontrol\.exe$/i.test(pSmart)) {

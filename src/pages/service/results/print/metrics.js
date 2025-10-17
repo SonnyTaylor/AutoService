@@ -26,6 +26,24 @@ import {
  */
 
 // =============================================================================
+// DIAGNOSTIC STATUS DETECTION
+// =============================================================================
+
+/**
+ * Check if a task type is diagnostic (read-only, no system changes).
+ * Uses handler definitions to determine diagnostic status.
+ *
+ * @private
+ * @param {string} taskType - Task type identifier
+ * @returns {boolean} True if task is diagnostic
+ */
+function isTaskTypeDiagnostic(taskType) {
+  const definitions = getServiceDefinitions();
+  const definition = definitions[taskType];
+  return definition?.isDiagnostic === true;
+}
+
+// =============================================================================
 // CUSTOMER METRICS EXTRACTION
 // =============================================================================
 
@@ -37,6 +55,8 @@ import {
  * are now handled by their respective handler modules.
  *
  * @param {ServiceTaskResult[]} results - Array of service task execution results
+ * @param {Object} options - Options for extraction
+ * @param {boolean} [options.includeDiagnostics=true] - Include diagnostic results
  * @returns {CustomerMetric[]} Array of formatted metric cards for display
  *
  * @example
@@ -46,13 +66,20 @@ import {
  * //   { icon: "🧹", label: "Junk Files Cleaned", value: "2.5 GB", ... }
  * // ]
  */
-export function extractCustomerMetrics(results) {
+export function extractCustomerMetrics(results, options = {}) {
+  const { includeDiagnostics = true } = options;
   const handlerExtractors = getCustomerMetricExtractors();
   const metrics = [];
 
   // Extract metrics using handler extractors
   for (const result of results) {
     const taskType = result.task_type || result.type;
+
+    // Skip diagnostic results if not included
+    if (!includeDiagnostics && isTaskTypeDiagnostic(taskType)) {
+      continue;
+    }
+
     const extractor = handlerExtractors[taskType];
 
     if (extractor) {
@@ -73,6 +100,31 @@ export function extractCustomerMetrics(results) {
   }
 
   return metrics;
+}
+
+/**
+ * Separate task results into services (with changes) and diagnostics (read-only).
+ *
+ * @param {ServiceTaskResult[]} results - Array of service task execution results
+ * @returns {Object} Object with 'services' and 'diagnostics' arrays
+ *
+ * @example
+ * const { services, diagnostics } = separateServiceAndDiagnostic(results);
+ */
+export function separateServiceAndDiagnostic(results) {
+  const services = [];
+  const diagnostics = [];
+
+  for (const result of results) {
+    const taskType = result.task_type || result.type;
+    if (isTaskTypeDiagnostic(taskType)) {
+      diagnostics.push(result);
+    } else {
+      services.push(result);
+    }
+  }
+
+  return { services, diagnostics };
 }
 
 // =============================================================================

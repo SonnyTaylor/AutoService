@@ -191,12 +191,16 @@ function setupPrintHandlers(report, sectionsEl) {
   const customerLayoutSelect = document.getElementById(
     "svc-print-customer-layout"
   );
+  const customerDiagnosticsToggle = document.getElementById(
+    "svc-print-customer-diagnostics"
+  );
   const customerLayouts = ["list", "two", "three", "masonry"];
   let currentCustomerLayout = customerLayouts.includes(
     customerLayoutSelect?.value || ""
   )
     ? customerLayoutSelect.value
     : "list";
+  let currentShowDiagnostics = customerDiagnosticsToggle?.checked ?? true;
 
   // Prepare technician print preview
   if (techPreview) {
@@ -232,12 +236,14 @@ function setupPrintHandlers(report, sectionsEl) {
       try {
         const customerHtml = await buildCustomerPrintHtml(report, {
           layout: currentCustomerLayout,
+          showDiagnostics: currentShowDiagnostics,
         });
         if (customerContainer) customerContainer.innerHTML = customerHtml;
         renderPreviewIntoIframeFallback(
           customerPreview,
           await buildCustomerPrintDocumentHtml(report, {
             layout: currentCustomerLayout,
+            showDiagnostics: currentShowDiagnostics,
           })
         );
       } catch (error) {
@@ -254,6 +260,11 @@ function setupPrintHandlers(report, sectionsEl) {
       const next = event.target.value;
       if (!customerLayouts.includes(next)) return;
       currentCustomerLayout = next;
+      renderCustomerPreview();
+    });
+
+    customerDiagnosticsToggle?.addEventListener("change", (event) => {
+      currentShowDiagnostics = event.target.checked;
       renderCustomerPreview();
     });
   }
@@ -278,6 +289,7 @@ function setupPrintHandlers(report, sectionsEl) {
       async () =>
         await buildCustomerPrintDocumentHtml(report, {
           layout: currentCustomerLayout,
+          showDiagnostics: currentShowDiagnostics,
         }),
       customerContainer,
       report

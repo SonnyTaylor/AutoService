@@ -38,6 +38,7 @@ export const definition = {
   category: "Network",
   defaultParams: { host: "", count: 4 },
   toolKeys: [],
+  isDiagnostic: true,
   async build({ params }) {
     // Load default ping host from app settings if not provided
     let host = (params?.host || "").toString();

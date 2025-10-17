@@ -418,6 +418,25 @@ export const CUSTOMER_PRINT_CSS = `
     letter-spacing: -0.3px;
   }
   
+  /* Service and Diagnostic Sections */
+  .customer-services-section,
+  .customer-diagnostics-section {
+    margin-bottom: 16px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .customer-diagnostics-section {
+    margin-top: 24px;
+    padding-top: 12px;
+    border-top: 2px solid #e5e7eb;
+  }
+
+  .customer-diagnostics-section .section-heading {
+    color: #1e293b;
+    opacity: 0.8;
+  }
+  
   .intro-text {
     margin: 0 0 12px;
     font-size: 9.5pt;

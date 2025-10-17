@@ -1,4 +1,7 @@
-import { extractCustomerMetrics } from "./metrics.js";
+import {
+  extractCustomerMetrics,
+  separateServiceAndDiagnostic,
+} from "./metrics.js";
 import { getBusinessSettings } from "../../../../utils/business.js";
 
 const CUSTOMER_LAYOUTS = new Set(["list", "two", "three", "masonry"]);
@@ -157,17 +160,55 @@ export async function buildCustomerHeader(title, overall, report) {
 /**
  * Build the customer-facing summary content.
  * @param {ServiceReport} report
+ * @param {Object} options - Layout and filtering options
+ * @param {string} [options.layout='list'] - Layout type
+ * @param {boolean} [options.showDiagnostics=true] - Show diagnostic results
  */
-export async function buildCustomerSummary(report, layout = "list") {
+export async function buildCustomerSummary(report, options = {}) {
+  const { layout = "list", showDiagnostics = true } = options;
   const resolvedLayout = normalizeLayout(layout);
   const results = report?.results || [];
-  const metrics = extractCustomerMetrics(results);
+
+  // Separate services and diagnostics
+  const { services, diagnostics } = separateServiceAndDiagnostic(results);
+
+  // Build service metrics (always shown if they exist)
+  const serviceMetrics = extractCustomerMetrics(services);
+
+  // Build diagnostic metrics (shown if toggled on)
+  const diagnosticMetrics = showDiagnostics
+    ? extractCustomerMetrics(diagnostics)
+    : [];
 
   const listClass = `layout-${resolvedLayout}`;
 
-  const metricsMarkup = metrics
-    .map((metric) => renderMetricCard(metric))
-    .join("");
+  // Build markup for services section
+  const servicesMarkup =
+    serviceMetrics.length > 0
+      ? `
+      <div class="customer-services-section">
+        <h3 class="section-heading">Services Performed</h3>
+        <div class="metrics-list ${listClass}">
+          ${serviceMetrics.map((metric) => renderMetricCard(metric)).join("")}
+        </div>
+      </div>
+    `
+      : "";
+
+  // Build markup for diagnostics section (if enabled and has content)
+  const diagnosticsMarkup =
+    diagnosticMetrics.length > 0
+      ? `
+      <div class="customer-diagnostics-section">
+        <h3 class="section-heading">Diagnostics</h3>
+        <div class="metrics-list ${listClass}">
+          ${diagnosticMetrics
+            .map((metric) => renderMetricCard(metric))
+            .join("")}
+        </div>
+      </div>
+    `
+      : "";
 
   // Get business settings for thank you message
   const business = await getBusinessSettings();
@@ -176,14 +217,19 @@ export async function buildCustomerSummary(report, layout = "list") {
 
   return `
     <div class="customer-summary ${listClass}" data-layout="${resolvedLayout}">
-      <h3 class="section-heading">Service Highlights</h3>
-      <p class="intro-text">
-        Here's a concise overview of the maintenance completed during your visit.
-      </p>
+      ${
+        serviceMetrics.length > 0 || diagnosticMetrics.length > 0
+          ? `
+        <p class="intro-text">
+          Here's a concise overview of the maintenance and diagnostics completed during your visit.
+        </p>
+      `
+          : ""
+      }
 
-      <div class="metrics-list ${listClass}">
-        ${metricsMarkup}
-      </div>
+      ${servicesMarkup}
+      ${diagnosticsMarkup}
+
       <div class="footer-note">
         <p><strong>Thank you for choosing ${companyName}.</strong></p>
         <p class="small-print">Need the technical breakdown? Your technician can provide the detailed report on request.</p>

@@ -38,6 +38,7 @@ export const definition = {
   category: "Diagnostics",
   defaultParams: {},
   toolKeys: [],
+  isDiagnostic: true,
   async build({ params }) {
     return {
       type: "disk_space_report",

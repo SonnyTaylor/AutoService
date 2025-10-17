@@ -33,6 +33,7 @@ export const definition = {
   group: "Diagnostics",
   category: "Diagnostics",
   toolKeys: ["whynotwin11"],
+  isDiagnostic: true,
   async build({ resolveToolPath }) {
     const p = await resolveToolPath(["whynotwin11", "whynotwin11portable"]);
     return {

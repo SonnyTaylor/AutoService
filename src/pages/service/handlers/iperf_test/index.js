@@ -38,6 +38,7 @@ export const definition = {
   category: "Network",
   defaultParams: { minutes: 10 },
   toolKeys: ["iperf3"],
+  isDiagnostic: true,
   async build({ params, resolveToolPath }) {
     const p = await resolveToolPath(["iperf3"]);
     // Load saved iperf server from app settings

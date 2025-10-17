@@ -119,15 +119,28 @@
         <div class="preview-head">
           <div class="preview-head-left">
             <div class="section-title">Customer Print Preview</div>
-            <label class="layout-picker" for="svc-print-customer-layout">
-              <span class="lab">Layout</span>
-              <select id="svc-print-customer-layout">
-                <option value="list">List (single column)</option>
-                <option value="two">Two columns</option>
-                <option value="three">Three columns (compact)</option>
-                <option value="masonry">Masonry layout</option>
-              </select>
-            </label>
+            <div class="preview-controls">
+              <label class="layout-picker" for="svc-print-customer-layout">
+                <span class="lab">Layout</span>
+                <select id="svc-print-customer-layout">
+                  <option value="list">List (single column)</option>
+                  <option value="two">Two columns</option>
+                  <option value="three">Three columns (compact)</option>
+                  <option value="masonry">Masonry layout</option>
+                </select>
+              </label>
+              <label
+                class="diagnostics-toggle"
+                for="svc-print-customer-diagnostics"
+              >
+                <input
+                  type="checkbox"
+                  id="svc-print-customer-diagnostics"
+                  checked
+                />
+                <span class="toggle-label">Show Diagnostics</span>
+              </label>
+            </div>
           </div>
           <button id="svc-print-customer" class="ghost small">
             <i

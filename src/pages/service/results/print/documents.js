@@ -25,7 +25,7 @@ export function buildPrintableHtml(report, sectionsEl) {
 /**
  * Build customer summary markup.
  * @param {ServiceReport} report
- * @param {{ layout?: string }} [options]
+ * @param {{ layout?: string, showDiagnostics?: boolean }} [options]
  */
 export async function buildCustomerPrintHtml(report, options = {}) {
   const title = "Service Summary";
@@ -35,8 +35,12 @@ export async function buildCustomerPrintHtml(report, options = {}) {
   const layout = ["list", "two", "three", "masonry"].includes(requestedLayout)
     ? requestedLayout
     : "list";
+  const showDiagnostics = options.showDiagnostics !== false; // defaults to true
   const customerHeader = await buildCustomerHeader(title, overall, report);
-  const customerSummary = await buildCustomerSummary(report, layout);
+  const customerSummary = await buildCustomerSummary(report, {
+    layout,
+    showDiagnostics,
+  });
   const body = `
     ${customerHeader}
     ${customerSummary}
@@ -76,7 +80,7 @@ export function buildPrintableDocumentHtml(report, sectionsEl) {
 /**
  * Wrap customer summary markup in a standalone HTML document.
  * @param {ServiceReport} report
- * @param {{ layout?: string }} [options]
+ * @param {{ layout?: string, showDiagnostics?: boolean }} [options]
  */
 export async function buildCustomerPrintDocumentHtml(report, options = {}) {
   const inner = await buildCustomerPrintHtml(report, options);

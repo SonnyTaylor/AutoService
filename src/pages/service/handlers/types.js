@@ -18,6 +18,7 @@
  * @property {string=} category - Sub-category for advanced filtering
  * @property {Object<string, any>=} defaultParams - Default UI parameters
  * @property {string[]=} toolKeys - Array of tool keys required for this service
+ * @property {boolean=} isDiagnostic - If true, this service is read-only diagnostic (no system changes)
  * @property {(args: ServiceBuildArgs) => Promise<Record<string, any>>} build - Build task JSON payload
  */
 

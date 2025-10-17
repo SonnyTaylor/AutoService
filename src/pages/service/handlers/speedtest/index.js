@@ -38,6 +38,7 @@ export const definition = {
   category: "Network",
   defaultParams: {},
   toolKeys: [],
+  isDiagnostic: true,
   async build({ params }) {
     // Optional parameters supported by the runner; UI currently keeps defaults
     const threads = Number.isFinite(params?.threads)

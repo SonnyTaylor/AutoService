@@ -37,6 +37,7 @@ export const definition = {
   category: "Diagnostics",
   defaultParams: {},
   toolKeys: [],
+  isDiagnostic: true,
   async build({ params }) {
     const index = params?.index != null ? parseInt(params.index, 10) : 0;
     return {

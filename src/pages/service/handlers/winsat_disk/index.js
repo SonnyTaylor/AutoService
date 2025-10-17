@@ -33,6 +33,7 @@ export const definition = {
   category: "Diagnostics",
   defaultParams: { drive: "C:", test_mode: "full" },
   toolKeys: [],
+  isDiagnostic: true,
   async build({ params }) {
     const drive = (params?.drive || "C:").toString().toUpperCase();
     const test_mode = params?.test_mode || "full";
