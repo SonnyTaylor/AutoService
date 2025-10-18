@@ -198,7 +198,7 @@ textarea {
   padding: 8px 10px;
   line-height: 1.2;
   transition: border-color 0.15s, background-color 0.15s, box-shadow 0.15s;
-  min-height: 38px;
+  /* min-height: 38px; idk why this is here, it just makes text boxes really big*/
 }
 input[type="text"]:focus,
 input[type="url"]:focus,
