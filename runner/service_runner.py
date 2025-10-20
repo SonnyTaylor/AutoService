@@ -64,6 +64,7 @@ from services.whynotwin11_service import run_whynotwin11_check  # type: ignore
 from services.winsat_service import run_winsat_disk  # type: ignore
 from services.disk_space_service import run_disk_space_report  # type: ignore
 from services.battery_service import run_battery_health_report  # type: ignore
+from services.drivecleanup_service import run_drivecleanup_clean  # type: ignore
 
 """NOTE ON REAL-TIME LOG STREAMING
 
@@ -161,6 +162,7 @@ TASK_HANDLERS: Dict[str, TaskHandler] = {
     "winsat_disk": run_winsat_disk,
     "disk_space_report": run_disk_space_report,
     "battery_health_report": run_battery_health_report,
+    "drivecleanup_clean": run_drivecleanup_clean,
     # "windows_defender_scan": run_windows_defender_scan, # Example for the future
 }
 
