@@ -27,7 +27,8 @@ export function initAISearch() {
     btn = document.createElement("button");
     btn.id = BTN_ID;
     btn.type = "button";
-    btn.textContent = "🤖 AI Search";
+    btn.innerHTML =
+      '<i class="ph ph-open-ai-logo" aria-hidden="true"></i> AI Search';
     // Insert before Add button if present, else append at end
     const addBtn = toolbar.querySelector("#program-add-btn");
     if (addBtn && addBtn.parentElement === toolbar) {
@@ -36,6 +37,10 @@ export function initAISearch() {
       toolbar.appendChild(btn);
     }
   }
+  // Always ensure the label uses the OpenAI icon (handles pre-existing markup)
+  if (btn)
+    btn.innerHTML =
+      '<i class="ph ph-open-ai-logo" aria-hidden="true"></i> AI Search';
 
   // Ensure modal exists in DOM
   let modal = /** @type {HTMLDialogElement|null} */ (
@@ -47,7 +52,7 @@ export function initAISearch() {
     modal.className = "ai-search-modal";
     modal.innerHTML = `
       <form method="dialog" class="ai-search-form">
-        <h3 class="ai-search-title">🤖 AI Program Search</h3>
+        <h3 class="ai-search-title"><i class=\"ph ph-open-ai-logo\" aria-hidden=\"true\"></i> AI Program Search</h3>
         <div class="ai-search-input-wrap">
           <textarea id="ai-search-input" class="ai-search-input" rows="3" placeholder="e.g., fan speed editor, ISO burner, edit EFI partition"></textarea>
         </div>
@@ -286,7 +291,7 @@ function renderResults(container, items) {
 
 function renderProgramRowWithReason(p) {
   const reason = p.__reason
-    ? `<div class="ai-reason muted">${escapeHtml(p.__reason)}</div>`
+    ? `<div class=\"ai-reason\">${escapeHtml(p.__reason)}</div>`
     : "";
   return `
     <div class="program-row ai-result" data-id="${p.id}">
@@ -315,10 +320,10 @@ function renderProgramRowWithReason(p) {
         <div class="program-desc" title="${escapeHtml(
           p.description || ""
         )}">${escapeHtml(p.description || "")}</div>
-        ${reason}
         <div class="program-path muted" title="${escapeHtml(
           p.exe_path
         )}">${escapeHtml(p.exe_path)}</div>
+        ${reason}
       </div>
       <div class="program-actions">
         <button data-action="launch" ${

@@ -383,11 +383,13 @@
   background: var(--panel);
   color: var(--text);
   padding: 16px;
+  overflow: hidden; /* prevent horizontal scrollbars on dialog */
 }
 .ai-search-form {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  overflow: hidden; /* contain children */
 }
 .ai-search-title {
   margin: 0 0 4px;
@@ -400,6 +402,8 @@
   padding: 10px 12px;
   background: var(--panel-2);
   color: var(--text);
+  max-width: 100%;
+  box-sizing: border-box;
 }
 .ai-search-actions {
   display: flex;
@@ -417,11 +421,17 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   max-height: 58vh;
   padding-top: 4px;
 }
 .ai-result .ai-reason {
+  margin-top: 8px;
+  border: 1px dashed #2b416b;
+  background: #0f1726;
+  color: #a7b3cc;
+  padding: 8px 10px;
+  border-radius: 8px;
   font-size: 0.85rem;
-  margin-top: 4px;
 }
