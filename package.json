@@ -12,10 +12,10 @@
     "test:print": "node --test src/pages/service/results/print/__tests__/metrics.test.js"
   },
   "devDependencies": {
-    "@tauri-apps/api": "^2.8.0",
-    "@tauri-apps/cli": "^2.8.4",
+    "@tauri-apps/api": "^2.9.0",
+    "@tauri-apps/cli": "^2.9.0",
     "@tauri-apps/plugin-dialog": "^2.4.0",
-    "vite": "^7.1.10"
+    "vite": "^7.1.11"
   },
   "dependencies": {
     "@phosphor-icons/web": "^2.1.2",
