@@ -356,7 +356,18 @@ def run_drivecleanup_clean(task: Dict[str, Any]) -> Dict[str, Any]:
     if include_full_output:
         summary["stdout_full"] = stdout
 
+    # Some DriveCleanup builds exit with non-zero on help/usage or when nothing matches,
+    # printing only usage text. If counts are all None but stdout looks like usage, treat
+    # this as a no-op success (0 removals) rather than hard failure.
     status = "success" if proc.returncode == 0 else "failure"
+    if status == "failure":
+        looks_like_usage = bool(
+            re.search(r"^DriveCleanUp?\b.*usage", stdout, re.IGNORECASE | re.MULTILINE)
+        ) or bool(re.search(r"^usage\s*$", stdout, re.IGNORECASE | re.MULTILINE))
+        counts_dict = parsed.get("counts", {}) if isinstance(parsed, dict) else {}
+        all_none = all(v is None for v in counts_dict.values()) if counts_dict else True
+        if looks_like_usage and all_none:
+            status = "success"
 
     return {
         "task_type": "drivecleanup_clean",

@@ -1083,6 +1083,33 @@
   gap: 6px;
   margin-top: 8px;
 }
+[data-page="service-results"] .drivecleanup .removed-items {
+  margin-top: 8px;
+}
+[data-page="service-results"] .drivecleanup .removed-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+[data-page="service-results"] .drivecleanup .removed-item {
+  background: #0f172a0d;
+  border: 1px solid #1e293b;
+  border-radius: 6px;
+  padding: 8px;
+}
+[data-page="service-results"] .drivecleanup .removed-item .cat {
+  font-size: 9pt;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+[data-page="service-results"] .drivecleanup .removed-item .id {
+  font-family: Consolas, Monaco, monospace;
+  font-size: 9pt;
+  color: #cbd5e1;
+  word-break: break-all;
+}
 [data-page="service-results"] .section-title {
   margin: 0 0 6px;
   font-size: 12px;
