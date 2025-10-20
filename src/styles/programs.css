@@ -370,3 +370,80 @@
       "actions";
   }
 }
+
+/* --- AI Search Modal ------------------------------------------------------- */
+.ai-search-modal::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+}
+.ai-search-modal {
+  width: min(820px, 92vw);
+  max-height: 88vh;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--text);
+  padding: 16px;
+  overflow: hidden; /* prevent horizontal scrollbars on dialog */
+}
+.ai-search-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden; /* contain children */
+}
+.ai-search-title {
+  margin: 0 0 4px;
+}
+.ai-search-input {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--panel-2);
+  color: var(--text);
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.ai-search-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.ai-search-error {
+  border: 1px solid #a33a45;
+  background: #3b1d24;
+  color: #ffd7db;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+.ai-search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: 58vh;
+  padding-top: 4px;
+}
+.ai-result .ai-reason {
+  margin-top: 8px;
+  border: 1px dashed #2b416b;
+  background: #0f1726;
+  color: #a7b3cc;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+/* Better actions layout for AI results in modal */
+.ai-result .program-actions {
+  flex-direction: column;
+  gap: 6px;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+.ai-result .program-actions button {
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  width: 100%;
+}
