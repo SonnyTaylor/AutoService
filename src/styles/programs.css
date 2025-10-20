@@ -435,3 +435,15 @@
   border-radius: 8px;
   font-size: 0.85rem;
 }
+/* Better actions layout for AI results in modal */
+.ai-result .program-actions {
+  flex-direction: column;
+  gap: 6px;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+.ai-result .program-actions button {
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  width: 100%;
+}
