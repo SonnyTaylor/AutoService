@@ -71,6 +71,13 @@ export const REQUIRED_TOOLS = [
     hint: "WhyNotWin11Portable.exe",
     icon: "ph ph-windows-logo",
   },
+  {
+    key: "DriveCleanup",
+    name: "DriveCleanup",
+    match: ["drivecleanup", "drive-cleanup", "DriveCleanup"],
+    hint: "DriveCleanup.exe",
+    icon: "ph ph-usb",
+  },
 ];
 
 /**
