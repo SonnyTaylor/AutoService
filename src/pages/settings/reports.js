@@ -10,6 +10,9 @@ const { invoke } = window.__TAURI__.core;
  */
 export async function initializeReportsSettings(root) {
   const autoSaveToggle = root.querySelector("#reports-autosave-toggle");
+  const notificationsToggle = root.querySelector(
+    "#reports-notifications-toggle"
+  );
   const statusEl = root.querySelector("#reports-settings-status");
 
   if (!autoSaveToggle) {
@@ -24,6 +27,9 @@ export async function initializeReportsSettings(root) {
 
     // Set toggle state (default to false if not set)
     autoSaveToggle.checked = reports.auto_save === true;
+    if (notificationsToggle) {
+      notificationsToggle.checked = reports.notifications_enabled === true;
+    }
   } catch (err) {
     console.error("Failed to load reports settings:", err);
     showStatus("Failed to load settings", "error");
@@ -68,4 +74,28 @@ export async function initializeReportsSettings(root) {
       autoSaveToggle.checked = !enabled;
     }
   });
+
+  // Handle notifications toggle
+  if (notificationsToggle) {
+    notificationsToggle.addEventListener("change", async () => {
+      const enabled = notificationsToggle.checked;
+      try {
+        const settings = await invoke("load_app_settings");
+        settings.reports = settings.reports || {};
+        settings.reports.notifications_enabled = enabled;
+        await invoke("save_app_settings", { data: settings });
+        showStatus(
+          enabled
+            ? "Notifications enabled - you'll get a toast when services finish"
+            : "Notifications disabled",
+          "success"
+        );
+      } catch (err) {
+        console.error("Failed to save notifications setting:", err);
+        showStatus("Failed to save setting", "error");
+        // Revert toggle on error
+        notificationsToggle.checked = !enabled;
+      }
+    });
+  }
 }

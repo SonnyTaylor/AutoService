@@ -268,6 +268,7 @@ pub fn run() {
         })
         .plugin(tauri_plugin_opener::init()) // Opener plugin for opening files/URLs
         .plugin(tauri_plugin_dialog::init()) // Dialog plugin for file/folder dialogs
+        .plugin(tauri_plugin_notification::init()) // Notification plugin for desktop toasts
         .invoke_handler(tauri::generate_handler![
             // List of all Tauri commands exposed to the frontend
             greet,

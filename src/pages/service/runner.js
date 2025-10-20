@@ -5,6 +5,18 @@ import hljs from "highlight.js/lib/core";
 import jsonLang from "highlight.js/lib/languages/json";
 import "highlight.js/styles/github-dark.css";
 hljs.registerLanguage("json", jsonLang);
+// Notification plugin helpers (dynamically imported when needed)
+let notifyApi = null;
+async function ensureNotificationApi() {
+  if (notifyApi) return notifyApi;
+  try {
+    notifyApi = await import("@tauri-apps/plugin-notification");
+  } catch (e) {
+    console.warn("Notification plugin not available:", e);
+    notifyApi = null;
+  }
+  return notifyApi;
+}
 
 /**
  * Service Runner controller.
@@ -237,6 +249,8 @@ export async function initPage() {
   let _isRunning = false;
   // Hold results for client-only tasks (not executed by Python runner)
   let _clientResults = [];
+  // Prevent duplicate notifications per run
+  let _notifiedOnce = false;
 
   runBtn?.addEventListener("click", async () => {
     if (!tasks.length) return;
@@ -274,6 +288,7 @@ export async function initPage() {
     // New service: clear any previously cached results so navigating back won't show stale data
     clearFinalReportCache();
     lastFinalJsonString = "{}";
+    _notifiedOnce = false;
     if (viewResultsBtn) {
       try {
         viewResultsBtn.setAttribute("disabled", "");
@@ -720,6 +735,11 @@ export async function initPage() {
         viewResultsBtn.removeAttribute("disabled");
       }
     } catch {}
+
+    // Fire a desktop notification if enabled in settings
+    triggerCompletionNotification(ok).catch((e) =>
+      console.warn("Failed to trigger notification:", e)
+    );
   }
   // Navigate to results page with stored final report
   viewResultsBtn?.addEventListener("click", () => {
@@ -847,6 +867,43 @@ export async function initPage() {
         showSummary(ok);
       }
     } catch {}
+  }
+
+  async function triggerCompletionNotification(ok) {
+    if (_notifiedOnce) return;
+    // Load setting
+    try {
+      const { core } = window.__TAURI__ || {};
+      const settings = await core?.invoke?.("load_app_settings");
+      const enabled = settings?.reports?.notifications_enabled === true;
+      if (!enabled) return;
+    } catch (e) {
+      // If settings can't be loaded, do nothing silently
+      return;
+    }
+
+    const api = await ensureNotificationApi();
+    if (!api) return;
+    try {
+      let granted = await api.isPermissionGranted();
+      if (!granted) {
+        const perm = await api.requestPermission();
+        granted = perm === "granted";
+      }
+      if (!granted) return;
+
+      // Basic payload; keep it short and useful
+      const title = ok
+        ? "Service Run Complete"
+        : "Service Run Completed with Errors";
+      const body = ok
+        ? "All tasks completed successfully. Click to view results."
+        : "Some tasks failed. Click to review details.";
+      api.sendNotification({ title, body });
+      _notifiedOnce = true;
+    } catch (e) {
+      console.warn("Notification error:", e);
+    }
   }
 
   async function runRunner(jsonArg) {

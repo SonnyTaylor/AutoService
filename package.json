@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@phosphor-icons/web": "^2.1.2",
+    "@tauri-apps/plugin-notification": "^2.3.1",
     "@tauri-apps/plugin-shell": "~2.3.1",
     "apexcharts": "^5.3.5",
     "escape-html": "^1.0.3",

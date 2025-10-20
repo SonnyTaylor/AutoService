@@ -2,9 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": [
-    "main"
-  ],
+  "windows": ["main"],
   "permissions": [
     "core:default",
     "opener:default",
@@ -17,20 +15,26 @@
     "core:window:allow-close",
     {
       "identifier": "shell:allow-execute",
-      "allow": [{
-        "name": "powershell",
-        "cmd": "powershell.exe",
-        "args": [
-          "-NoProfile",
-          "-ExecutionPolicy",
-          "Bypass",
-          "-Command",
-          { "validator": ".*" }
-        ]
-      },{
-        "name": "service_runner",
-        "cmd": "binaries/service_runner.exe"
-      }]
-    }
+      "allow": [
+        {
+          "name": "powershell",
+          "cmd": "powershell.exe",
+          "args": [
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
+            {
+              "validator": ".*"
+            }
+          ]
+        },
+        {
+          "name": "service_runner",
+          "cmd": "binaries/service_runner.exe"
+        }
+      ]
+    },
+    "notification:default"
   ]
 }
