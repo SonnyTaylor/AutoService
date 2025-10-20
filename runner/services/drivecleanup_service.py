@@ -196,23 +196,27 @@ def _build_command(task: Dict[str, Any]) -> Dict[str, Any]:
 # Regex patterns for parsing
 _RE_VERSION = re.compile(r"^DriveCleanup\s+V([\d.]+)\s+\((x86|x64)\)", re.IGNORECASE)
 _RE_COUNTS = {
-    "usb_devices_removed": re.compile(r"^Removed\s+(\d+)\s+USB devices", re.IGNORECASE),
-    "usb_hubs_removed": re.compile(r"^Removed\s+(\d+)\s+USB hubs", re.IGNORECASE),
+    "usb_devices_removed": re.compile(
+        r"^Removed\s+(\d+)\s+USB devices?", re.IGNORECASE
+    ),
+    "usb_hubs_removed": re.compile(r"^Removed\s+(\d+)\s+USB hubs?", re.IGNORECASE),
     "disk_devices_removed": re.compile(
-        r"^Removed\s+(\d+)\s+Disk devices", re.IGNORECASE
+        r"^Removed\s+(\d+)\s+Disk devices?", re.IGNORECASE
     ),
     "cdrom_devices_removed": re.compile(
-        r"^Removed\s+(\d+)\s+CDROM devices", re.IGNORECASE
+        r"^Removed\s+(\d+)\s+CDROM devices?", re.IGNORECASE
     ),
     "floppy_devices_removed": re.compile(
-        r"^Removed\s+(\d+)\s+Floppy devices", re.IGNORECASE
+        r"^Removed\s+(\d+)\s+Floppy devices?", re.IGNORECASE
     ),
     "storage_volumes_removed": re.compile(
-        r"^Removed\s+(\d+)\s+Storage volumes", re.IGNORECASE
+        r"^Removed\s+(\d+)\s+Storage volumes?", re.IGNORECASE
     ),
-    "wpd_devices_removed": re.compile(r"^Removed\s+(\d+)\s+WPD devices", re.IGNORECASE),
+    "wpd_devices_removed": re.compile(
+        r"^Removed\s+(\d+)\s+WPD devices?", re.IGNORECASE
+    ),
     "registry_items_removed": re.compile(
-        r"^Removed\s+(\d+)\s+Items from registry", re.IGNORECASE
+        r"^Removed\s+(\d+)\s+Items? from registry", re.IGNORECASE
     ),
 }
 

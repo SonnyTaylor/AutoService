@@ -2,7 +2,7 @@
   "tasks": [
     {
       "type": "drivecleanup_clean",
-      "executable_path": "data/programs/DriveCleanup - 1.6.5/x64/DriveCleanup.exe",
+      "executable_path": "..\\data\\programs\\DriveCleanup - 1.6.5\\x64\\DriveCleanup.exe",
       "test_only": true,
       "no_wait": true,
       "categories": ["usb", "disks", "cdroms", "volumes", "wpd", "registry"],
