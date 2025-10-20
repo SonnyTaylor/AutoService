@@ -26,6 +26,14 @@
       <option value="name-asc">Name (A-Z)</option>
       <option value="name-desc">Name (Z-A)</option>
     </select>
+    <!-- AI search button is enabled only when an OpenAI key is configured -->
+    <button
+      id="program-ai-search-btn"
+      title="Configure OpenAI API key in Settings"
+      disabled
+    >
+      <i class="ph ph-open-ai-logo" aria-hidden="true"></i> AI Search
+    </button>
     <!-- Opens the modal editor with a blank template -->
     <button id="program-add-btn">Add</button>
   </div>

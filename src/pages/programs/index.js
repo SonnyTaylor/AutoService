@@ -7,11 +7,13 @@
 // -----------------------------------------------------------------------------
 import { wireEditor } from "./editor.js";
 import { wireListActions, loadPrograms, wireToolbar } from "./view.js";
+import { initAISearch } from "./ai-search.js";
 
 export async function initPage() {
   wireToolbar();
   wireListActions();
   wireEditor();
+  initAISearch();
   // Refresh programs list when editor saves
   window.addEventListener(
     "programs-updated",
