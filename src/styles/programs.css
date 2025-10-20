@@ -370,3 +370,58 @@
       "actions";
   }
 }
+
+/* --- AI Search Modal ------------------------------------------------------- */
+.ai-search-modal::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+}
+.ai-search-modal {
+  width: min(820px, 92vw);
+  max-height: 88vh;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--text);
+  padding: 16px;
+}
+.ai-search-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ai-search-title {
+  margin: 0 0 4px;
+}
+.ai-search-input {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--panel-2);
+  color: var(--text);
+}
+.ai-search-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.ai-search-error {
+  border: 1px solid #a33a45;
+  background: #3b1d24;
+  color: #ffd7db;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+.ai-search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: auto;
+  max-height: 58vh;
+  padding-top: 4px;
+}
+.ai-result .ai-reason {
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
