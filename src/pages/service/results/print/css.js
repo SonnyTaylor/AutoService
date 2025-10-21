@@ -422,8 +422,11 @@ export const CUSTOMER_PRINT_CSS = `
   .customer-services-section,
   .customer-diagnostics-section {
     margin-bottom: 16px;
-    page-break-inside: avoid;
-    break-inside: avoid;
+    /* Allow breaking within sections so we don't push entire blocks to next page
+       which can create large gaps when layouts toggle. Individual metric cards
+       still avoid breaking, so page breaks will occur cleanly between cards. */
+    page-break-inside: auto;
+    break-inside: auto;
   }
 
   .customer-diagnostics-section {

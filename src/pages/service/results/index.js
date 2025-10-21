@@ -504,7 +504,32 @@ function enhancePrintPreviewDocument(doc) {
     return;
   }
 
-  const nodes = Array.from(originalRoot.childNodes);
+  // If this is a customer print document, do not split the DOM into multiple
+  // pages. Instead, wrap the original content in a single page-styled
+  // container to restore the page look while preserving the existing layout
+  // structure (so layout toggles and gaps continue to work in preview).
+  const isCustomerPrint = originalRoot.classList?.contains("customer-print");
+  if (isCustomerPrint) {
+    // Build preview container + one page shell
+    const container = doc.createElement("div");
+    container.className = "preview-container";
+    const page = doc.createElement("section");
+    page.className = "preview-page";
+    page.setAttribute("data-page-number", "Page 1");
+    doc.body.innerHTML = "";
+    doc.body.appendChild(container);
+    container.appendChild(page);
+    doc.body.classList.add("print-preview-mode");
+
+    // Move the existing customer print root into the page shell
+    page.appendChild(originalRoot);
+
+    // Mark as initialized
+    doc.body.dataset.previewInitialized = "true";
+    return;
+  }
+
+  let nodes = Array.from(originalRoot.childNodes);
   const container = doc.createElement("div");
   container.className = "preview-container";
 
