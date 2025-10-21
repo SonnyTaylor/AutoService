@@ -552,6 +552,12 @@
   box-sizing: border-box;
 }
 
+/* UNC path input - use monospace font like textarea for better path readability */
+#network-unc-input {
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo,
+    monospace;
+}
+
 /* Radio button styling for network save modes */
 .network-form-group input[type="radio"] {
   width: 18px;
@@ -607,6 +613,7 @@
   border-radius: 50%;
   background: #1a1f2b;
   transition: border-color 0.15s ease, background-color 0.15s ease;
+  position: relative; /* Ensure ::after positions relative to this element */
 }
 
 .network-save-modes .radio-option input[type="radio"]:hover {
