@@ -36,7 +36,7 @@ function renderReportRow(item) {
     item.source === "network"
       ? '<span class="badge info" title="Network"><i class="ph ph-wifi-high"></i> Net</span>'
       : item.source === "both"
-      ? '<span class="badge ok" title="Local + Network"><i class="ph ph-share"></i> Both</span>'
+      ? '<span class="badge ok" title="Local + Network"><i class="ph ph-file-cloud"></i> Both</span>'
       : '<span class="badge" title="Local"><i class="ph ph-desktop"></i> Local</span>';
 
   return `
