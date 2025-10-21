@@ -114,6 +114,22 @@ export async function listReports() {
 }
 
 /**
+ * Load a report from an absolute folder path (network)
+ * @param {string} folderPath
+ */
+export async function loadReportFromAbsolutePath(folderPath) {
+  const { core } = window.__TAURI__;
+  const res = await core.invoke("load_report_from_path", { folderPath });
+  return {
+    report: JSON.parse(res.report_json),
+    metadata: res.metadata,
+    executionLog: res.execution_log,
+    runPlan: res.run_plan ? JSON.parse(res.run_plan) : null,
+    folderName: folderPath.split(/[\\/]/).pop() || folderPath,
+  };
+}
+
+/**
  * Delete a report from the filesystem
  * @param {string} folderName - Report folder name to delete
  * @returns {Promise<boolean>} True if deletion succeeded

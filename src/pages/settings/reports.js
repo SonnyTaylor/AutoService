@@ -26,6 +26,14 @@ export async function initializeReportsSettings(root) {
   const soundTestBtn = root.querySelector("#reports-sound-test-btn");
   const soundRepeat = root.querySelector("#reports-sound-repeat");
   const statusEl = root.querySelector("#reports-settings-status");
+  // Network sharing elements
+  const networkToggle = root.querySelector("#network-sharing-toggle");
+  const networkUncInput = root.querySelector("#network-unc-input");
+  const networkSaveLocal = root.querySelector("#network-save-local");
+  const networkSaveNetwork = root.querySelector("#network-save-network");
+  const networkSaveBoth = root.querySelector("#network-save-both");
+  const networkTestBtn = root.querySelector("#network-test-btn");
+  const networkStatus = root.querySelector("#network-sharing-status");
 
   if (!autoSaveToggle) {
     console.warn("Reports settings UI elements not found");
@@ -49,6 +57,7 @@ export async function initializeReportsSettings(root) {
   try {
     const settings = await invoke("load_app_settings");
     const reports = settings.reports || {};
+    const network = settings.network_sharing || {};
 
     // Set toggle state (default to false if not set)
     autoSaveToggle.checked = reports.auto_save === true;
@@ -75,6 +84,13 @@ export async function initializeReportsSettings(root) {
         : 1;
       soundRepeat.value = String(rep);
     }
+    // Initialize network sharing fields
+    if (networkToggle) networkToggle.checked = !!network.enabled;
+    if (networkUncInput) networkUncInput.value = network.unc_path || "";
+    const mode = network.save_mode || "both";
+    if (networkSaveLocal) networkSaveLocal.checked = mode === "local";
+    if (networkSaveNetwork) networkSaveNetwork.checked = mode === "network";
+    if (networkSaveBoth) networkSaveBoth.checked = mode === "both";
   } catch (err) {
     console.error("Failed to load reports settings:", err);
     showStatus("Failed to load settings", "error");
@@ -94,6 +110,39 @@ export async function initializeReportsSettings(root) {
       statusEl.textContent = "";
       statusEl.className = "";
     }, 3000);
+  }
+
+  // --- Network sharing helpers and events ---
+  function setNetworkStatus(message, type = "success") {
+    if (!networkStatus) return;
+    const icon = type === "success" ? "✓" : type === "error" ? "✕" : "ℹ";
+    networkStatus.className = `settings-status ${type}`;
+    networkStatus.textContent = `${icon} ${message}`;
+    setTimeout(() => {
+      networkStatus.textContent = "";
+      networkStatus.className = "";
+    }, 3000);
+  }
+
+  function validUncPath(v) {
+    if (!v) return false;
+    const s = String(v).trim();
+    const re = /^(\\\\|\/\/)[^\\\/]+[\\\/][^\\\/]+/;
+    return re.test(s);
+  }
+
+  async function saveNetworkSettings(patch) {
+    const settings = await invoke("load_app_settings");
+    const next = { ...settings };
+    const existing = next.network_sharing || {};
+    next.network_sharing = {
+      enabled: false,
+      unc_path: "",
+      save_mode: "both",
+      ...existing,
+      ...patch,
+    };
+    await invoke("save_app_settings", { data: next });
   }
 
   /**
@@ -296,4 +345,75 @@ export async function initializeReportsSettings(root) {
       }
     });
   }
+
+  // Toggle network sharing
+  networkToggle?.addEventListener("change", async () => {
+    const enabled = networkToggle.checked;
+    try {
+      await saveNetworkSettings({ enabled });
+      setNetworkStatus(
+        enabled ? "Network sharing enabled" : "Network sharing disabled",
+        "success"
+      );
+    } catch (e) {
+      setNetworkStatus("Failed to save network setting", "error");
+      networkToggle.checked = !enabled;
+    }
+  });
+
+  // UNC input change
+  networkUncInput?.addEventListener("change", async () => {
+    const value = networkUncInput.value.trim();
+    if (!validUncPath(value)) {
+      setNetworkStatus(
+        "Enter a valid UNC path like \\server\\share or //server/share",
+        "error"
+      );
+      return;
+    }
+    try {
+      await saveNetworkSettings({ unc_path: value });
+      setNetworkStatus("UNC path saved", "success");
+    } catch (e) {
+      setNetworkStatus("Failed to save UNC path", "error");
+    }
+  });
+
+  // Save mode radios
+  [networkSaveLocal, networkSaveNetwork, networkSaveBoth]
+    .filter(Boolean)
+    .forEach((el) => {
+      el.addEventListener("change", async () => {
+        if (!el.checked) return;
+        try {
+          await saveNetworkSettings({ save_mode: el.value });
+          setNetworkStatus("Save mode updated", "success");
+        } catch (e) {
+          setNetworkStatus("Failed to save mode", "error");
+        }
+      });
+    });
+
+  // Test connection
+  networkTestBtn?.addEventListener("click", async () => {
+    const unc = networkUncInput?.value?.trim() || "";
+    if (!validUncPath(unc)) {
+      setNetworkStatus("Enter a valid UNC path first", "error");
+      return;
+    }
+    try {
+      networkTestBtn.disabled = true;
+      networkTestBtn.innerHTML =
+        '<i class="ph ph-circle-notch" style="animation: spin 1s linear infinite; vertical-align:-2px; margin-right:6px"></i>Testing...';
+      const ok = await invoke("test_network_path", { uncPath: unc });
+      if (ok) setNetworkStatus("Connection OK", "success");
+      else setNetworkStatus("Cannot access path", "error");
+    } catch (e) {
+      setNetworkStatus(String(e), "error");
+    } finally {
+      networkTestBtn.disabled = false;
+      networkTestBtn.innerHTML =
+        '<i class="ph ph-plug-charging"></i> Test Connection';
+    }
+  });
 }

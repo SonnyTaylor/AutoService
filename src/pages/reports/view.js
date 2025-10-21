@@ -32,6 +32,12 @@ function renderReportRow(item) {
   // Determine status badge (we'll need to load report to get actual status)
   // For now, just show if files exist
   const hasFiles = item.has_report_json;
+  const sourceBadge =
+    item.source === "network"
+      ? '<span class="badge info" title="Network">Net</span>'
+      : item.source === "both"
+      ? '<span class="badge ok" title="Local + Network">Both</span>'
+      : '<span class="badge" title="Local">Local</span>';
 
   return `
     <div class="report-row" data-folder="${escapeHtml(folder_name)}">
@@ -51,6 +57,7 @@ function renderReportRow(item) {
               ? `<span class="customer">— ${escapeHtml(customerName)}</span>`
               : ""
           }
+          <span style="margin-left:8px">${sourceBadge}</span>
         </div>
         <div class="report-meta muted">
           <span class="date">${escapeHtml(dateStr)}</span>
@@ -107,7 +114,41 @@ export function renderList() {
  */
 export async function loadReports() {
   try {
-    state.all = await invoke("list_reports");
+    // Load local reports
+    const local = await invoke("list_reports");
+    // Try network when enabled
+    let merged = local.map((r) => ({ ...r, source: "local" }));
+    try {
+      const settings = await invoke("load_app_settings");
+      const ns = settings?.network_sharing;
+      const enabled = !!ns?.enabled;
+      const unc = ns?.unc_path || "";
+      if (enabled && unc) {
+        const network = await invoke("list_network_reports", { uncPath: unc });
+        // Deduplicate by folder_name; prefer the one with newer metadata.timestamp; mark 'both' if same exists
+        const byName = new Map();
+        merged.forEach((r) => byName.set(r.folder_name, r));
+        for (const n of network) {
+          const existing = byName.get(n.folder_name);
+          if (!existing) {
+            byName.set(n.folder_name, { ...n, source: "network" });
+          } else {
+            // Compare timestamps
+            const tA = existing.metadata?.timestamp || 0;
+            const tB = n.metadata?.timestamp || 0;
+            if (tB > tA) {
+              byName.set(n.folder_name, { ...n, source: "both" });
+            } else {
+              byName.set(existing.folder_name, { ...existing, source: "both" });
+            }
+          }
+        }
+        merged = Array.from(byName.values());
+      }
+    } catch (e) {
+      console.warn("Network reports unavailable:", e);
+    }
+    state.all = merged;
     buildFuseIndex();
     applyFilter();
   } catch (error) {
@@ -343,7 +384,11 @@ export function wireListActions() {
       await openViewer(item);
     } else if (action === "open") {
       try {
-        await invoke("open_report_folder", { folderName });
+        if (item.source === "network" && item.folder_path) {
+          await invoke("open_absolute_path", { path: item.folder_path });
+        } else {
+          await invoke("open_report_folder", { folderName });
+        }
       } catch (error) {
         alert(`Failed to open folder: ${error}`);
       }

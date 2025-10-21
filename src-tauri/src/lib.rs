@@ -24,7 +24,10 @@ use crate::icons::{read_image_as_data_url, suggest_logo_from_exe};
 use crate::programs::{
     get_tool_statuses, launch_program, list_programs, remove_program, save_program,
 };
-use crate::reports::{delete_report, list_reports, load_report, open_report_folder, save_report};
+use crate::reports::{
+    delete_report, list_network_reports, list_reports, load_report, load_report_from_path,
+    open_absolute_path, open_report_folder, save_report, save_report_to_network, test_network_path,
+};
 use crate::scripts::{list_scripts, remove_script, run_script, save_script};
 use crate::settings::{
     load_app_settings, make_portable_path, resolve_portable_path, save_app_settings,
@@ -294,8 +297,14 @@ pub fn run() {
             save_report,
             list_reports,
             load_report,
+            load_report_from_path,
             delete_report,
-            open_report_folder
+            open_report_folder,
+            // Network report sharing
+            save_report_to_network,
+            list_network_reports,
+            test_network_path,
+            open_absolute_path
         ])
         .setup(|app| {
             // Setup function called after the app is initialized
