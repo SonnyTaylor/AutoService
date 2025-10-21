@@ -556,7 +556,7 @@ export const CUSTOMER_PRINT_CSS = `
   /* Ink saver: when disabled, neutralize card colors */
   .no-card-color .metric-card {
     background: #ffffff !important;
-    border-color: #000000 !important;
+    border-color: #cbd5e1 !important;
   }
   .no-card-color .metric-card .metric-value,
   .no-card-color .metric-card .metric-label,
