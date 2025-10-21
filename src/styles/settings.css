@@ -520,9 +520,8 @@
 
 .network-form-group form {
   display: flex;
+  flex-direction: column;
   gap: 12px;
-  align-items: flex-end;
-  flex-wrap: wrap;
 }
 
 .network-form-group label {
@@ -546,6 +545,22 @@
 
 .network-form-group > div[id$="-status"] {
   margin-top: 10px; /* Space between form and status message */
+}
+
+.network-form-group input {
+  height: 40px;
+  box-sizing: border-box;
+}
+
+/* Radio button styling for network save modes */
+.network-form-group input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--primary);
+  appearance: none;
+  margin: 0;
+  flex-shrink: 0;
 }
 
 /* Responsive adjustments */
