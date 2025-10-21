@@ -405,7 +405,10 @@ export async function initializeReportsSettings(root) {
       networkTestBtn.disabled = true;
       networkTestBtn.innerHTML =
         '<i class="ph ph-circle-notch" style="animation: spin 1s linear infinite; vertical-align:-2px; margin-right:6px"></i>Testing...';
-      const ok = await invoke("test_network_path", { uncPath: unc });
+      const ok = await invoke("test_network_path", {
+        uncPath: unc,
+        unc_path: unc,
+      });
       if (ok) setNetworkStatus("Connection OK", "success");
       else setNetworkStatus("Cannot access path", "error");
     } catch (e) {

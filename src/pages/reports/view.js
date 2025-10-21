@@ -121,10 +121,14 @@ export async function loadReports() {
     try {
       const settings = await invoke("load_app_settings");
       const ns = settings?.network_sharing;
-      const enabled = !!ns?.enabled;
+      const enabled =
+        ns?.enabled !== undefined ? !!ns?.enabled : !!ns?.unc_path;
       const unc = ns?.unc_path || "";
       if (enabled && unc) {
-        const network = await invoke("list_network_reports", { uncPath: unc });
+        const network = await invoke("list_network_reports", {
+          uncPath: unc,
+          unc_path: unc,
+        });
         // Deduplicate by folder_name; prefer the one with newer metadata.timestamp; mark 'both' if same exists
         const byName = new Map();
         merged.forEach((r) => byName.set(r.folder_name, r));

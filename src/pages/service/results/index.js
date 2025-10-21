@@ -678,7 +678,8 @@ function setupSaveHandler(report, saveBtn) {
         try {
           const settings = await core?.invoke("load_app_settings");
           const ns = settings?.network_sharing;
-          const enabled = !!ns?.enabled;
+          const enabled =
+            ns?.enabled !== undefined ? !!ns?.enabled : !!ns?.unc_path;
           const unc = ns?.unc_path || "";
           const mode = ns?.save_mode || "both";
           const localPath = response.report_folder;
@@ -688,8 +689,11 @@ function setupSaveHandler(report, saveBtn) {
             if (doNetwork) {
               try {
                 await core?.invoke("save_report_to_network", {
+                  // send both key styles for compatibility
                   reportPath: localPath,
+                  report_path: localPath,
                   networkConfig: { unc_path: unc, save_mode: mode },
+                  network_config: { unc_path: unc, save_mode: mode },
                 });
                 showNotification(`Report copied to network: ${unc}`, "success");
                 // If network-only, remove local copy to honor setting
