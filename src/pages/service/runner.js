@@ -950,7 +950,7 @@ export async function initPage() {
     try {
       const mod = await import("tone");
       Tone = mod?.default || mod;
-      const soundMod = await import("../utils/notification-sounds.js");
+      const soundMod = await import("../../utils/notification-sounds.js");
       getSoundById = soundMod.getSoundById;
       ensureToneStarted = soundMod.ensureToneStarted;
     } catch (e) {
