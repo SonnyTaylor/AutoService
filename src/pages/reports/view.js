@@ -34,10 +34,10 @@ function renderReportRow(item) {
   const hasFiles = item.has_report_json;
   const sourceBadge =
     item.source === "network"
-      ? '<span class="badge info" title="Network">Net</span>'
+      ? '<span class="badge info" title="Network"><i class="ph ph-wifi-high"></i> Net</span>'
       : item.source === "both"
-      ? '<span class="badge ok" title="Local + Network">Both</span>'
-      : '<span class="badge" title="Local">Local</span>';
+      ? '<span class="badge ok" title="Local + Network"><i class="ph ph-share"></i> Both</span>'
+      : '<span class="badge" title="Local"><i class="ph ph-desktop"></i> Local</span>';
 
   return `
     <div class="report-row" data-folder="${escapeHtml(folder_name)}">
@@ -57,7 +57,6 @@ function renderReportRow(item) {
               ? `<span class="customer">— ${escapeHtml(customerName)}</span>`
               : ""
           }
-          <span style="margin-left:8px">${sourceBadge}</span>
         </div>
         <div class="report-meta muted">
           <span class="date">${escapeHtml(dateStr)}</span>
@@ -78,6 +77,7 @@ function renderReportRow(item) {
               ? '<span class="badge"><i class="ph ph-file-text"></i> Plan</span>'
               : ""
           }
+          ${sourceBadge}
         </div>
       </div>
       <div class="report-actions">
