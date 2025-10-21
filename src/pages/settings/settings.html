@@ -420,7 +420,7 @@
             <div class="toggle-text">
               <div class="toggle-title">Play Sound on Completion</div>
               <div class="muted toggle-description">
-                Plays a loud tone sequence when a service finishes to get your
+                Plays a tone sequence when a service finishes to get your
                 attention
               </div>
               <div
@@ -429,12 +429,13 @@
                   align-items: center;
                   gap: 10px;
                   margin-top: 8px;
+                  flex-wrap: wrap;
                 "
               >
                 <label
                   for="reports-sound-volume"
                   class="muted"
-                  style="min-width: 90px"
+                  style="min-width: 70px"
                   >Volume</label
                 >
                 <input
@@ -452,6 +453,47 @@
                   style="width: 42px; text-align: right"
                   >80%</span
                 >
+
+                <label
+                  for="reports-sound-select"
+                  class="muted"
+                  style="min-width: 60px"
+                  >Sound</label
+                >
+                <select
+                  id="reports-sound-select"
+                  aria-label="Notification sound"
+                  style="flex: 1; min-width: 160px; max-width: 260px"
+                >
+                  <option value="classic-beep">Classic Beep</option>
+                </select>
+
+                <label
+                  for="reports-sound-repeat"
+                  class="muted"
+                  style="min-width: 60px"
+                  >Repeat</label
+                >
+                <input
+                  id="reports-sound-repeat"
+                  type="number"
+                  min="1"
+                  max="10"
+                  step="1"
+                  value="1"
+                  aria-label="How many times to play the sound"
+                  style="width: 70px"
+                />
+
+                <button
+                  type="button"
+                  id="reports-sound-test-btn"
+                  class="ghost"
+                  title="Test the selected sound"
+                >
+                  <i class="ph ph-speaker-high" aria-hidden="true"></i>
+                  <span>Test</span>
+                </button>
               </div>
             </div>
           </label>

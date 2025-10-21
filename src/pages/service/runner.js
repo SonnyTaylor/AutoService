@@ -919,6 +919,8 @@ export async function initPage() {
     // Load sound settings
     let enabled = false;
     let volumePct = 80;
+    let soundId = "classic-beep";
+    let repeat = 1;
     try {
       const { core } = window.__TAURI__ || {};
       const settings = await core?.invoke?.("load_app_settings");
@@ -929,56 +931,49 @@ export async function initPage() {
           Math.min(100, Number(settings.reports.sound_volume))
         );
       }
+      soundId = settings?.reports?.sound_id || "classic-beep";
+      if (Number.isFinite(settings?.reports?.sound_repeat)) {
+        repeat = Math.max(
+          1,
+          Math.min(10, Number(settings.reports.sound_repeat))
+        );
+      }
     } catch {
       return;
     }
     if (!enabled) return;
 
-    // Lazy import Tone only when needed
+    // Lazy import Tone and notification sounds only when needed
     let Tone;
+    let getSoundById;
+    let ensureToneStarted;
     try {
       const mod = await import("tone");
       Tone = mod?.default || mod;
+      const soundMod = await import("../utils/notification-sounds.js");
+      getSoundById = soundMod.getSoundById;
+      ensureToneStarted = soundMod.ensureToneStarted;
     } catch (e) {
-      console.warn("Tone.js not available:", e);
+      console.warn("Audio modules not available:", e);
       return;
     }
 
     try {
       // Ensure audio is unlocked (required in some webview contexts)
-      if (typeof Tone.start === "function") {
-        try {
-          await Tone.start();
-        } catch {}
+      await ensureToneStarted(Tone);
+
+      // Get the selected sound
+      const sound = getSoundById(soundId);
+      if (!sound) {
+        console.warn(`Sound "${soundId}" not found`);
+        return;
       }
 
-      // Set master volume (convert 0-100% to decibels)
-      const gain = Math.max(0, Math.min(100, volumePct)) / 100; // 0.0 - 1.0
-      // Convert to dB: 20 * log10(gain); clamp at -60dB min
-      const dB = gain <= 0 ? -Infinity : Math.max(-60, 20 * Math.log10(gain));
-      if (Tone.getDestination && Tone.getDestination().volume) {
-        Tone.getDestination().volume.value = dB;
-      } else if (Tone.Destination) {
-        Tone.Destination.volume.value = dB;
+      // Play the selected sound N times sequentially
+      for (let i = 0; i < repeat; i++) {
+        // eslint-disable-next-line no-await-in-loop
+        await sound.play(Tone, volumePct);
       }
-
-      // Build a short, attention-grabbing sequence
-      const synth = new Tone.Synth({
-        oscillator: { type: "square" },
-      }).toDestination();
-      const now = Tone.now();
-      // Two quick beeps then a longer high beep; different pitch if error
-      const base = ok ? 880 : 660; // A5 for success, E5 for error
-      synth.triggerAttackRelease(base, 0.2, now);
-      synth.triggerAttackRelease(base, 0.2, now + 0.35);
-      synth.triggerAttackRelease(ok ? 1174.66 : 523.25, 0.8, now + 0.8); // D6 or C5
-
-      // Stop the synth after sequence finishes
-      setTimeout(() => {
-        try {
-          synth.dispose();
-        } catch {}
-      }, 2500);
 
       _notifiedOnce = true;
     } catch (e) {
