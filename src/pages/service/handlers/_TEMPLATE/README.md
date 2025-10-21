@@ -79,12 +79,36 @@ Test fixtures are available in `fixtures/` directory:
 
 [Any special considerations, edge cases, or business logic notes]
 
+## CSS Exports
+
+Handlers follow a standardized CSS export naming convention:
+
+- `viewCSS` – Technician web view (screen) styles for this handler
+- `printCSS` – Technician print styles (tech PDF)
+- `customerPrintCSS` – Customer print styles (customer PDF)
+
+Guidelines:
+
+- Scope all selectors to this handler (e.g., `.card.template-service` or `.template-service`).
+- Keep CSS minimal and service-specific—avoid duplicating base styles.
+- If no special styling is needed, you can export empty strings.
+
+Example:
+
+```js
+export const viewCSS = `
+  .card.template-service { }
+`;
+
+export const printCSS = `
+  .template-service .grid { display: grid; gap: 8px; }
+`;
+
+export const customerPrintCSS = `
+  .template-service .note { border: 1px solid #cbd5e1; padding: 6px; }
+`;
+```
+
 ## Migration Checklist
 
-- [ ] Service definition migrated from catalog.js
-- [ ] Tech renderer migrated from renderers/tasks.js
-- [ ] Customer metrics migrated from print/metrics.js
-- [ ] Handler registered in handlers/index.js
-- [ ] Old code removed from original locations
-- [ ] Tests updated to import from new location
-- [ ] Documentation reviewed and updated
+- [ ] CSS exports added (viewCSS at minimum; printCSS/customerPrintCSS as needed)
