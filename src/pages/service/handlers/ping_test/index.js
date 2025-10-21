@@ -252,8 +252,45 @@ export function renderTech({ result, index }) {
 }
 
 // =============================================================================
-// CUSTOMER METRICS EXTRACTOR
+// PARAMETER CONTROLS RENDERER
 // =============================================================================
+
+/**
+ * Render parameter controls for ping test configuration.
+ * Allows users to set the number of ping packets to send.
+ *
+ * @param {Object} context - Parameter control context
+ * @param {Object} context.params - Current parameter values
+ * @param {Function} context.updateParam - Callback to update a parameter
+ * @returns {HTMLElement} Parameter controls element
+ */
+export function renderParamControls({ params, updateParam }) {
+  const container = document.createElement("div");
+  container.className = "param-controls";
+
+  const count = params?.count ?? 4;
+
+  container.innerHTML = `
+    <label class="tiny-lab">
+      <span class="lab">Ping Count</span>
+      <input type="number" class="count-input" min="1" max="100" step="1" value="${count}" aria-label="Number of ping packets to send" />
+      <span class="unit">packets</span>
+    </label>
+  `;
+
+  const input = container.querySelector(".count-input");
+  input.addEventListener("change", () => {
+    const value = Math.max(1, Math.min(100, parseInt(input.value, 10) || 4));
+    updateParam("count", value);
+  });
+
+  // Prevent event bubbling to avoid interfering with drag/drop
+  ["mousedown", "pointerdown", "click"].forEach((evt) => {
+    input.addEventListener(evt, (e) => e.stopPropagation());
+  });
+
+  return container;
+}
 
 /**
  * Extract customer-friendly network latency metrics from ping test.
