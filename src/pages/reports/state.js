@@ -32,6 +32,7 @@ export const LIST_SELECTOR = ".reports-list";
  * @property {boolean} has_report_json - Whether report.json exists
  * @property {boolean} has_execution_log - Whether execution.log exists
  * @property {boolean} has_run_plan - Whether run_plan.json exists
+ * @property {('local'|'network'|'both')} [source] - Where this report was found
  */
 
 /**

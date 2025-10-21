@@ -499,6 +499,88 @@
           </label>
 
           <div id="reports-settings-status" class="muted"></div>
+
+          <hr />
+
+          <!-- Network Report Sharing -->
+          <div class="network-form-group">
+            <label class="business-settings-toggle">
+              <input type="checkbox" id="network-sharing-toggle" />
+              <div class="toggle-text">
+                <div class="toggle-title">Enable network report sharing</div>
+                <div class="muted toggle-description">
+                  Copy saved reports to a network share (UNC path)
+                </div>
+              </div>
+            </label>
+
+            <form id="network-sharing-form" style="margin-top: 10px">
+              <label>
+                <span class="muted">Network UNC Path</span>
+                <input
+                  type="text"
+                  id="network-unc-input"
+                  placeholder="\\\\192.168.1.100\\share\\reports"
+                  autocomplete="off"
+                />
+              </label>
+
+              <div
+                style="
+                  display: flex;
+                  gap: 12px;
+                  align-items: center;
+                  flex-wrap: wrap;
+                  margin-top: 8px;
+                "
+              >
+                <span class="muted" style="min-width: 110px">Save to</span>
+                <label style="display: flex; gap: 6px; align-items: center">
+                  <input
+                    type="radio"
+                    name="network-save-mode"
+                    id="network-save-local"
+                    value="local"
+                  />
+                  <span class="muted">Local only</span>
+                </label>
+                <label style="display: flex; gap: 6px; align-items: center">
+                  <input
+                    type="radio"
+                    name="network-save-mode"
+                    id="network-save-network"
+                    value="network"
+                  />
+                  <span class="muted">Network only</span>
+                </label>
+                <label style="display: flex; gap: 6px; align-items: center">
+                  <input
+                    type="radio"
+                    name="network-save-mode"
+                    id="network-save-both"
+                    value="both"
+                    checked
+                  />
+                  <span class="muted">Both (recommended)</span>
+                </label>
+
+                <button
+                  type="button"
+                  id="network-test-btn"
+                  class="ghost"
+                  style="margin-left: auto"
+                >
+                  <i class="ph ph-plug-charging"></i> Test Connection
+                </button>
+              </div>
+            </form>
+
+            <div
+              id="network-sharing-status"
+              class="muted"
+              style="margin-top: 8px"
+            ></div>
+          </div>
         </div>
       </div>
     </div>

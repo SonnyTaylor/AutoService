@@ -660,7 +660,7 @@ function setupSaveHandler(report, saveBtn) {
       // Prepare report JSON
       const reportJson = JSON.stringify(report, null, 2);
 
-      // Call Rust backend to save
+      // Call Rust backend to save locally
       const { core } = window.__TAURI__ || {};
       const response = await core?.invoke("save_report", {
         request: {
@@ -674,6 +674,65 @@ function setupSaveHandler(report, saveBtn) {
       });
 
       if (response.success) {
+        // Attempt network save depending on settings
+        try {
+          const settings = await core?.invoke("load_app_settings");
+          const ns = settings?.network_sharing;
+          const enabled =
+            ns?.enabled !== undefined ? !!ns?.enabled : !!ns?.unc_path;
+          const unc = ns?.unc_path || "";
+          const mode = ns?.save_mode || "both";
+          const localPath = response.report_folder;
+
+          if (enabled && unc && localPath) {
+            const doNetwork = mode === "both" || mode === "network";
+            if (doNetwork) {
+              try {
+                await core?.invoke("save_report_to_network", {
+                  // send both key styles for compatibility
+                  reportPath: localPath,
+                  report_path: localPath,
+                  networkConfig: { unc_path: unc, save_mode: mode },
+                  network_config: { unc_path: unc, save_mode: mode },
+                });
+                showNotification(`Report copied to network: ${unc}`, "success");
+                // If network-only, remove local copy to honor setting
+                if (mode === "network") {
+                  try {
+                    const folderName = String(localPath).split(/[\\/]/).pop();
+                    if (folderName) {
+                      await core?.invoke("delete_report", { folderName });
+                      showNotification(
+                        "Local copy removed (network-only mode)",
+                        "info"
+                      );
+                    }
+                  } catch (delErr) {
+                    console.warn(
+                      "Failed to delete local copy in network-only mode:",
+                      delErr
+                    );
+                    showNotification(
+                      "Could not remove local copy; kept as fallback",
+                      "error"
+                    );
+                  }
+                }
+              } catch (e) {
+                console.warn("Network save failed:", e);
+                showNotification(
+                  `Network copy failed: ${e?.message || e}`,
+                  "error"
+                );
+              }
+            }
+
+            // If mode is network-only, optionally remove local? We keep local to avoid data loss.
+          }
+        } catch (e) {
+          console.warn("Could not process network sharing settings:", e);
+        }
+
         // Show success message
         saveBtn.innerHTML =
           '<i class="ph ph-check" style="margin-right: 6px; vertical-align: -2px;"></i>Saved!';

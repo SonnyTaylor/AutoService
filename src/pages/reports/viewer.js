@@ -6,6 +6,7 @@
 // existing results page infrastructure.
 // -----------------------------------------------------------------------------
 import { loadReportFromDisk } from "../../utils/reports.js";
+import { invoke } from "./state.js";
 import { state } from "./state.js";
 
 /**
@@ -24,7 +25,27 @@ export async function openViewer(item) {
     }
 
     // Load full report data
-    const loaded = await loadReportFromDisk(item.folder_name);
+    let loaded;
+    try {
+      // Prefer local API by folder name
+      loaded = await loadReportFromDisk(item.folder_name);
+    } catch (e) {
+      // If that fails and we have an absolute path (network), try loading from path
+      if (item.folder_path) {
+        const res = await invoke("load_report_from_path", {
+          folderPath: item.folder_path,
+        });
+        loaded = {
+          report: JSON.parse(res.report_json),
+          metadata: res.metadata,
+          executionLog: res.execution_log,
+          runPlan: res.run_plan ? JSON.parse(res.run_plan) : null,
+          folderName: item.folder_name,
+        };
+      } else {
+        throw e;
+      }
+    }
     state.viewing = { ...item, ...loaded };
 
     // Store report in sessionStorage for results page to pick up
