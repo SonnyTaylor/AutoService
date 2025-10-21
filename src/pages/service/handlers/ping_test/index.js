@@ -357,3 +357,48 @@ export const printCSS = `
     margin-bottom: 10px;
   }
 `;
+
+// =============================================================================
+// VIEW CSS (screen styles migrated from service.css)
+// =============================================================================
+
+export const viewCSS = `
+  /* Ping Test layout */
+  .card.ping .ping-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    align-items: center;
+  }
+  .card.ping .ping-kpis {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .card.ping .ping-kpis .kpi {
+    padding: 10px 12px;
+  }
+  .card.ping .ping-chart {
+    display: flex;
+    align-items: stretch;
+  }
+  .card.ping .ping-chart-shell {
+    background: var(--panel-accent);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px 8px;
+    min-height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+  }
+  .card.ping .ping-chart-shell > div {
+    width: 100%;
+  }
+  @media (max-width: 720px) {
+    .card.ping .ping-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+`;
