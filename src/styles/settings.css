@@ -398,6 +398,7 @@
   height: 18px;
   cursor: pointer;
   accent-color: var(--primary);
+  appearance: none;
 }
 
 .business-settings-toggle .toggle-text {

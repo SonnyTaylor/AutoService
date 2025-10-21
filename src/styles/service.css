@@ -1198,6 +1198,7 @@
   cursor: pointer;
   width: 14px;
   height: 14px;
+  appearance: none;
 }
 [data-page="service-results"] .diagnostics-toggle .toggle-label {
   text-transform: uppercase;
