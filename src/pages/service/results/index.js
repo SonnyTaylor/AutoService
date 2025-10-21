@@ -194,6 +194,9 @@ function setupPrintHandlers(report, sectionsEl) {
   const customerDiagnosticsToggle = document.getElementById(
     "svc-print-customer-diagnostics"
   );
+  const customerCardColorToggle = document.getElementById(
+    "svc-print-customer-cardcolor"
+  );
   const customerLayouts = ["list", "two", "three", "masonry"];
   let currentCustomerLayout = customerLayouts.includes(
     customerLayoutSelect?.value || ""
@@ -201,6 +204,7 @@ function setupPrintHandlers(report, sectionsEl) {
     ? customerLayoutSelect.value
     : "list";
   let currentShowDiagnostics = customerDiagnosticsToggle?.checked ?? true;
+  let currentColorCards = customerCardColorToggle?.checked ?? true;
 
   // Prepare technician print preview
   if (techPreview) {
@@ -237,6 +241,7 @@ function setupPrintHandlers(report, sectionsEl) {
         const customerHtml = await buildCustomerPrintHtml(report, {
           layout: currentCustomerLayout,
           showDiagnostics: currentShowDiagnostics,
+          colorCards: currentColorCards,
         });
         if (customerContainer) customerContainer.innerHTML = customerHtml;
         renderPreviewIntoIframeFallback(
@@ -244,6 +249,7 @@ function setupPrintHandlers(report, sectionsEl) {
           await buildCustomerPrintDocumentHtml(report, {
             layout: currentCustomerLayout,
             showDiagnostics: currentShowDiagnostics,
+            colorCards: currentColorCards,
           })
         );
       } catch (error) {
@@ -265,6 +271,11 @@ function setupPrintHandlers(report, sectionsEl) {
 
     customerDiagnosticsToggle?.addEventListener("change", (event) => {
       currentShowDiagnostics = event.target.checked;
+      renderCustomerPreview();
+    });
+
+    customerCardColorToggle?.addEventListener("change", (event) => {
+      currentColorCards = event.target.checked;
       renderCustomerPreview();
     });
   }
@@ -290,6 +301,7 @@ function setupPrintHandlers(report, sectionsEl) {
         await buildCustomerPrintDocumentHtml(report, {
           layout: currentCustomerLayout,
           showDiagnostics: currentShowDiagnostics,
+          colorCards: currentColorCards,
         }),
       customerContainer,
       report

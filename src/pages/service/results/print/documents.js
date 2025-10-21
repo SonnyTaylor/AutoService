@@ -25,7 +25,7 @@ export function buildPrintableHtml(report, sectionsEl) {
 /**
  * Build customer summary markup.
  * @param {ServiceReport} report
- * @param {{ layout?: string, showDiagnostics?: boolean }} [options]
+ * @param {{ layout?: string, showDiagnostics?: boolean, colorCards?: boolean }} [options]
  */
 export async function buildCustomerPrintHtml(report, options = {}) {
   const title = "Service Summary";
@@ -36,6 +36,7 @@ export async function buildCustomerPrintHtml(report, options = {}) {
     ? requestedLayout
     : "list";
   const showDiagnostics = options.showDiagnostics !== false; // defaults to true
+  const colorCards = options.colorCards !== false; // defaults to true
   const customerHeader = await buildCustomerHeader(title, overall, report);
   const customerSummary = await buildCustomerSummary(report, {
     layout,
@@ -45,7 +46,14 @@ export async function buildCustomerPrintHtml(report, options = {}) {
     ${customerHeader}
     ${customerSummary}
   `;
-  return `<div class="customer-print layout-${layout}" data-layout="${layout}">${body}</div>`;
+  const classes = [
+    "customer-print",
+    `layout-${layout}`,
+    colorCards ? "" : "no-card-color",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  return `<div class="${classes}" data-layout="${layout}">${body}</div>`;
 }
 
 /**
@@ -80,7 +88,7 @@ export function buildPrintableDocumentHtml(report, sectionsEl) {
 /**
  * Wrap customer summary markup in a standalone HTML document.
  * @param {ServiceReport} report
- * @param {{ layout?: string, showDiagnostics?: boolean }} [options]
+ * @param {{ layout?: string, showDiagnostics?: boolean, colorCards?: boolean }} [options]
  */
 export async function buildCustomerPrintDocumentHtml(report, options = {}) {
   const inner = await buildCustomerPrintHtml(report, options);

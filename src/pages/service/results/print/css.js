@@ -552,6 +552,19 @@ export const CUSTOMER_PRINT_CSS = `
     background: #fef9c3;
     border-color: #facc15;
   }
+
+  /* Ink saver: when disabled, neutralize card colors */
+  .no-card-color .metric-card {
+    background: #ffffff !important;
+    border-color: #000000 !important;
+  }
+  .no-card-color .metric-card .metric-value,
+  .no-card-color .metric-card .metric-label,
+  .no-card-color .metric-card .metric-detail,
+  .no-card-color .metric-card .metric-items,
+  .no-card-color .metric-card .metric-items li::before {
+    color: #0f172a !important;
+  }
   
   .metric-icon {
     font-size: 22px;
