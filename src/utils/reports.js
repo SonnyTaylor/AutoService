@@ -188,6 +188,53 @@ export async function autoSaveReport(report, options = {}) {
         technician_name: technicianName,
       },
     });
+    // If local save succeeded and network sharing is enabled, mirror to network
+    if (response?.success && response?.report_folder) {
+      try {
+        const settings = await core.invoke("load_app_settings");
+        const ns = settings?.network_sharing;
+        const enabled =
+          ns?.enabled !== undefined ? !!ns?.enabled : !!ns?.unc_path;
+        const unc = ns?.unc_path || "";
+        const mode = ns?.save_mode || "both";
+        const localPath = response.report_folder;
+        if (enabled && unc && localPath) {
+          const doNetwork = mode === "both" || mode === "network";
+          if (doNetwork) {
+            try {
+              await core.invoke("save_report_to_network", {
+                // Send both snake_case and camelCase for compatibility with any invoke mapping
+                reportPath: localPath,
+                report_path: localPath,
+                networkConfig: { unc_path: unc, save_mode: mode },
+                network_config: { unc_path: unc, save_mode: mode },
+              });
+              // If user chose network-only, remove local copy as in manual save flow
+              if (mode === "network") {
+                try {
+                  const folderName = String(localPath).split(/[\\/]/).pop();
+                  if (folderName) {
+                    await core.invoke("delete_report", { folderName });
+                  }
+                } catch (delErr) {
+                  console.warn(
+                    "Auto-save: failed to delete local copy in network-only mode:",
+                    delErr
+                  );
+                }
+              }
+            } catch (e) {
+              console.warn("Auto-save: network copy failed:", e);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn(
+          "Auto-save: could not process network sharing settings:",
+          e
+        );
+      }
+    }
 
     return response;
   } catch (error) {

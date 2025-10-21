@@ -5,8 +5,8 @@
 /// PC hostname, customer name (if available), and timestamp.
 use crate::state::AppState;
 use serde::{Deserialize, Serialize};
-use std::fs;
-use std::io;
+use std::fs::{self, OpenOptions};
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -223,7 +223,7 @@ pub fn list_reports(state: tauri::State<AppState>) -> Result<Vec<ReportListItem>
 
         reports.push(ReportListItem {
             folder_name,
-            folder_path: path.to_string_lossy().to_string(),
+            folder_path: to_user_visible_path(&path),
             metadata,
             has_report_json,
             has_execution_log,
@@ -317,9 +317,13 @@ pub fn load_report(
 /// Loads a specific report from an absolute folder path (e.g., a network share)
 #[tauri::command]
 pub fn load_report_from_path(folder_path: String) -> Result<LoadedReport, String> {
-    let report_folder = PathBuf::from(folder_path);
+    let raw_path = PathBuf::from(&folder_path);
+    let report_folder = prepare_path_for_io(&raw_path);
     if !report_folder.exists() || !report_folder.is_dir() {
-        return Err("Report folder not found".into());
+        return Err(format!(
+            "Report folder not found: {}",
+            to_user_visible_path(&raw_path)
+        ));
     }
 
     let report_path = report_folder.join("report.json");
@@ -461,6 +465,78 @@ fn read_metadata(report_folder: &PathBuf) -> Option<ReportMetadata> {
 
 // ---------------------- Network report sharing ----------------------
 
+struct NetworkCopyLogger {
+    path: Option<PathBuf>,
+}
+
+impl NetworkCopyLogger {
+    fn new_from_state(state: &tauri::State<AppState>) -> Self {
+        let data_root = state.data_dir.as_path();
+        let logs_dir = data_root.join("logs");
+        if let Err(e) = fs::create_dir_all(&logs_dir) {
+            eprintln!(
+                "Failed to ensure logs directory for network copy logging: {}",
+                e
+            );
+            Self { path: None }
+        } else {
+            Self {
+                path: Some(logs_dir.join("network_copy.log")),
+            }
+        }
+    }
+
+    fn log(&self, message: impl AsRef<str>) {
+        let msg = message.as_ref();
+        if let Some(path) = &self.path {
+            if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(path) {
+                let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
+                let _ = writeln!(file, "[{}] {}", timestamp, msg);
+                return;
+            }
+        }
+        eprintln!("network_copy: {}", msg);
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn prepare_path_for_io(path: &Path) -> PathBuf {
+    let value = path.to_string_lossy();
+    let s = value.as_ref();
+    if s.starts_with(r"\\?\") {
+        PathBuf::from(s)
+    } else if s.starts_with(r"\\") {
+        PathBuf::from(format!(r"\\?\UNC\{}", s.trim_start_matches(r"\\")))
+    } else {
+        PathBuf::from(format!(r"\\?\{}", s))
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn prepare_path_for_io(path: &Path) -> PathBuf {
+    path.to_path_buf()
+}
+
+fn to_user_visible_path(path: &Path) -> String {
+    #[cfg(target_os = "windows")]
+    {
+        let value = path.to_string_lossy();
+        let s = value.as_ref();
+        if let Some(rest) = s.strip_prefix(r"\\?\UNC\") {
+            format!(r"\\{}", rest)
+        } else if let Some(rest) = s.strip_prefix(r"\\?\") {
+            rest.to_string()
+        } else {
+            s.to_string()
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        path.to_string_lossy().to_string()
+    }
+}
+
 /// Network sharing configuration
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct NetworkConfig {
@@ -471,11 +547,12 @@ pub struct NetworkConfig {
 }
 
 fn normalize_unc_path(unc: &str) -> String {
+    let trimmed = unc.trim();
     // Support both \\server\share and //server/share by converting to backslashes on Windows
     // On non-Windows platforms this still returns a valid-looking path string.
     #[cfg(target_os = "windows")]
     {
-        let s = unc.replace('/', "\\");
+        let s = trimmed.replace('/', "\\");
         // Ensure it starts with \\ for UNC
         if s.starts_with("\\\\") {
             s
@@ -491,44 +568,103 @@ fn normalize_unc_path(unc: &str) -> String {
     #[cfg(not(target_os = "windows"))]
     {
         // Keep forward slashes on non-Windows systems
-        if unc.starts_with("//") {
-            unc.to_string()
+        if trimmed.starts_with("//") {
+            trimmed.to_string()
         } else {
-            unc.replace('\\', "/")
+            trimmed.replace('\\', "/")
         }
     }
 }
 
-fn copy_dir_recursive(src: &Path, dst: &Path, deadline: Option<SystemTime>) -> io::Result<()> {
+fn copy_dir_recursive<F>(
+    src: &Path,
+    dst: &Path,
+    deadline: Option<SystemTime>,
+    log: &mut F,
+) -> io::Result<()>
+where
+    F: FnMut(String),
+{
     if let Some(deadline) = deadline {
         if SystemTime::now() > deadline {
             return Err(io::Error::new(
                 io::ErrorKind::TimedOut,
-                "Network copy timed out",
+                format!(
+                    "Copy timed out before processing {}",
+                    to_user_visible_path(src)
+                ),
             ));
         }
     }
 
     if !dst.exists() {
-        fs::create_dir_all(dst)?;
+        fs::create_dir_all(dst).map_err(|e| {
+            io::Error::new(
+                e.kind(),
+                format!(
+                    "Failed to create directory {}: {}",
+                    to_user_visible_path(dst),
+                    e
+                ),
+            )
+        })?;
+        log(format!("Created directory {}", to_user_visible_path(dst)));
     }
 
-    for entry in fs::read_dir(src)? {
-        let entry = entry?;
+    let entries = fs::read_dir(src).map_err(|e| {
+        io::Error::new(
+            e.kind(),
+            format!(
+                "Failed to read directory {}: {}",
+                to_user_visible_path(src),
+                e
+            ),
+        )
+    })?;
+
+    for entry in entries {
+        let entry = entry.map_err(|e| {
+            io::Error::new(
+                e.kind(),
+                format!(
+                    "Failed to iterate directory {}: {}",
+                    to_user_visible_path(src),
+                    e
+                ),
+            )
+        })?;
         let path = entry.path();
         let file_name = entry.file_name();
-        let target = dst.join(file_name);
+        let target = dst.join(&file_name);
         if path.is_dir() {
-            copy_dir_recursive(&path, &target, deadline)?;
+            log(format!("Descending into {}", to_user_visible_path(&path)));
+            copy_dir_recursive(&path, &target, deadline, log)?;
         } else {
-            // Overwrite if exists to keep latest
-            fs::copy(&path, &target)?;
+            log(format!(
+                "Copying file {} -> {}",
+                to_user_visible_path(&path),
+                to_user_visible_path(&target)
+            ));
+            fs::copy(&path, &target).map_err(|e| {
+                io::Error::new(
+                    e.kind(),
+                    format!(
+                        "Failed to copy {} -> {}: {}",
+                        to_user_visible_path(&path),
+                        to_user_visible_path(&target),
+                        e
+                    ),
+                )
+            })?;
         }
         if let Some(deadline) = deadline {
             if SystemTime::now() > deadline {
                 return Err(io::Error::new(
                     io::ErrorKind::TimedOut,
-                    "Network copy timed out",
+                    format!(
+                        "Copy timed out while processing {}",
+                        to_user_visible_path(&path)
+                    ),
                 ));
             }
         }
@@ -541,27 +677,100 @@ fn copy_dir_recursive(src: &Path, dst: &Path, deadline: Option<SystemTime>) -> i
 /// Returns true on success, or an error string.
 #[tauri::command]
 pub fn save_report_to_network(
-    _state: tauri::State<AppState>,
+    state: tauri::State<AppState>,
     report_path: String,
     network_config: NetworkConfig,
 ) -> Result<bool, String> {
+    let logger = NetworkCopyLogger::new_from_state(&state);
+    let save_mode = network_config
+        .save_mode
+        .clone()
+        .unwrap_or_else(|| "unknown".to_string());
+
+    logger.log(format!(
+        "Starting network copy | report_path='{}' | unc_path='{}' | mode='{}'",
+        report_path, network_config.unc_path, save_mode
+    ));
+
     let normalized = normalize_unc_path(&network_config.unc_path);
-    let src = PathBuf::from(&report_path);
-    if !src.exists() || !src.is_dir() {
-        return Err("Local report path not found or not a directory".into());
+    if normalized.is_empty() {
+        let msg = "UNC path is empty";
+        logger.log(msg);
+        return Err(msg.into());
     }
 
-    // Destination is UNC root + folder name
-    let folder_name = src
-        .file_name()
-        .ok_or_else(|| "Failed to get report folder name".to_string())?;
-    let dst_root = PathBuf::from(&normalized);
-    let dst = dst_root.join(folder_name);
+    let src_raw = PathBuf::from(&report_path);
+    if !src_raw.exists() || !src_raw.is_dir() {
+        let msg = format!(
+            "Local report path not found or not a directory: {}",
+            to_user_visible_path(&src_raw)
+        );
+        logger.log(&msg);
+        return Err(msg);
+    }
 
-    // Set a conservative timeout for the entire operation
-    let timeout = Duration::from_secs(60);
+    let folder_name = src_raw.file_name().ok_or_else(|| {
+        let msg = format!(
+            "Failed to derive folder name from {}",
+            to_user_visible_path(&src_raw)
+        );
+        logger.log(&msg);
+        msg
+    })?;
+
+    let src = prepare_path_for_io(&src_raw);
+    let share_path = PathBuf::from(&normalized);
+    let dst_root = prepare_path_for_io(&share_path);
+
+    logger.log(format!(
+        "Resolved destination root '{}' (io path: '{}')",
+        normalized,
+        dst_root.display()
+    ));
+
+    match fs::read_dir(&dst_root) {
+        Ok(_) => logger.log(format!(
+            "Verified network share is reachable: {}",
+            normalized
+        )),
+        Err(e) => {
+            let warn = format!(
+                "Warning: unable to list network share {}: {}",
+                normalized, e
+            );
+            logger.log(&warn);
+            if e.kind() == io::ErrorKind::NotFound {
+                return Err(format!("Network share not found: {}", normalized));
+            }
+        }
+    }
+
+    let dst = dst_root.join(&folder_name);
+    logger.log(format!(
+        "Copy target resolved to {}",
+        to_user_visible_path(&dst)
+    ));
+
+    // Allow additional time for network operations to reduce false timeouts on slower links
+    let timeout = Duration::from_secs(120);
     let deadline = SystemTime::now() + timeout;
-    copy_dir_recursive(&src, &dst, Some(deadline)).map_err(|e| format!("Copy failed: {e}"))?;
+
+    let mut log_fn = |line: String| logger.log(line);
+    copy_dir_recursive(&src, &dst, Some(deadline), &mut log_fn).map_err(|e| {
+        logger.log(format!(
+            "Copy failed for {} -> {}: {}",
+            to_user_visible_path(&src_raw),
+            to_user_visible_path(&dst),
+            e
+        ));
+        format!("Copy failed: {e}")
+    })?;
+
+    logger.log(format!(
+        "Network copy completed successfully for {} -> {}",
+        to_user_visible_path(&src_raw),
+        to_user_visible_path(&dst)
+    ));
     Ok(true)
 }
 
@@ -589,7 +798,7 @@ fn list_reports_in_dir(dir: &Path) -> io::Result<Vec<ReportListItem>> {
         let metadata = read_metadata(&path);
         reports.push(ReportListItem {
             folder_name,
-            folder_path: path.to_string_lossy().to_string(),
+            folder_path: to_user_visible_path(&path),
             metadata,
             has_report_json,
             has_execution_log,
@@ -612,7 +821,8 @@ pub fn list_network_reports(
     unc_path: String,
 ) -> Result<Vec<ReportListItem>, String> {
     let normalized = normalize_unc_path(&unc_path);
-    let path = PathBuf::from(&normalized);
+    let share_path = PathBuf::from(&normalized);
+    let path = prepare_path_for_io(&share_path);
 
     // Run in a worker thread with timeout to avoid UI freeze on hanging shares
     let (tx, rx) = std::sync::mpsc::channel();
@@ -631,7 +841,8 @@ pub fn list_network_reports(
 #[tauri::command]
 pub fn test_network_path(_state: tauri::State<AppState>, unc_path: String) -> Result<bool, String> {
     let normalized = normalize_unc_path(&unc_path);
-    let path = PathBuf::from(&normalized);
+    let share_path = PathBuf::from(&normalized);
+    let path = prepare_path_for_io(&share_path);
     let (tx, rx) = std::sync::mpsc::channel();
     std::thread::spawn(move || {
         let res = fs::read_dir(&path).map(|_| true).map_err(|e| e.to_string());
