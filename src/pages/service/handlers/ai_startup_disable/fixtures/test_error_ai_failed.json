@@ -1,0 +1,25 @@
+{
+  "task_type": "ai_startup_disable",
+  "status": "error",
+  "summary": {
+    "human_readable": {
+      "error": "AI analysis failed: Request failed: HTTPSConnectionPool(host='api.openai.com', port=443): Max retries exceeded with url: /v1/chat/completions (Caused by SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate in certificate chain (_ssl.c:1010)')))",
+      "items_enumerated": 20,
+      "model_used": "gpt-4o-mini"
+    },
+    "results": {
+      "enumerated_count": 20,
+      "error_type": "ai_failed",
+      "items": [
+        {
+          "name": "SecurityHealth",
+          "location": "registry",
+          "location_display": "Registry: LOCAL_MACHINE",
+          "command": "%windir%\\system32\\SecurityHealthSystray.exe",
+          "publisher": "Microsoft",
+          "is_microsoft_signed": true
+        }
+      ]
+    }
+  }
+}

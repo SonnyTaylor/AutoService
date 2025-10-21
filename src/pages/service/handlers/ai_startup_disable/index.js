@@ -112,22 +112,38 @@ export function renderTech({ result, index }) {
   const hr = summary.human_readable || {};
   const results = summary.results || {};
 
-  const mode = hr.mode || "Unknown";
-  const totalItems = hr.total_items || 0;
+  const isError = String(result.status) === "error";
+
+  const mode = isError
+    ? "Analysis failed"
+    : hr.mode || (results.applied ? "Apply" : "Preview");
+  const totalItems =
+    hr.total_items ??
+    hr.items_enumerated ??
+    results.enumerated_count ??
+    (Array.isArray(results.all_items) ? results.all_items.length : undefined) ??
+    (Array.isArray(results.items) ? results.items.length : 0);
   const recommendations = hr.recommendations || 0;
   const disabled = hr.items_disabled || 0;
   const errors = hr.errors || 0;
   const skipped = hr.items_skipped || 0;
   const keptEnabled = hr.items_kept_enabled || 0;
-  const bootTimeSaving = hr.estimated_boot_time_saving || "Unknown";
+  const bootTimeSaving =
+    hr.estimated_boot_time_saving || (isError ? "—" : "Unknown");
   const modelUsed = hr.model_used || "N/A";
   const duration = hr.duration_seconds || 0;
 
-  const toDisable = results.to_disable || [];
-  const keepEnabled = results.keep_enabled || [];
+  const toDisable =
+    results.to_disable || results.recommendations?.to_disable || [];
+  const keepEnabled =
+    results.keep_enabled || results.recommendations?.keep_enabled || [];
   const disabledItems = results.disabled || [];
   const errorItems = results.errors || [];
   const analysisSummary = results.analysis_summary || {};
+
+  // Error details (AI/transport/etc.)
+  const errorType = results.error_type || hr.error_type || null;
+  const errorMessage = hr.error || results.error_message || null;
 
   // Determine status variant for header
   const statusVariant = getStatusVariant(result.status);
@@ -135,8 +151,8 @@ export function renderTech({ result, index }) {
   // Build KPI boxes
   const kpis = [
     kpiBox("Total Items", totalItems),
-    kpiBox("Recommendations", recommendations),
-    kpiBox("Boot Time Saving", bootTimeSaving),
+    kpiBox("Recommendations", recommendations, isError ? "muted" : undefined),
+    kpiBox("Boot Time Saving", bootTimeSaving, isError ? "muted" : undefined),
     kpiBox("Model", modelUsed),
   ];
 
@@ -153,7 +169,7 @@ export function renderTech({ result, index }) {
 
       <!-- Mode Badge -->
       <div class="mb-3">
-        ${pill(mode, results.applied ? "info" : "warning")}
+        ${pill(mode, isError ? "error" : results.applied ? "info" : "warning")}
         ${duration
           ? html`<span class="text-muted ms-2"
               >(completed in ${duration}s)</span
@@ -161,11 +177,30 @@ export function renderTech({ result, index }) {
           : ""}
       </div>
 
+      ${isError && errorMessage
+        ? html`
+            <div class="alert alert-danger" role="alert">
+              <div style="font-weight:600;margin-bottom:6px;">
+                ${errorType
+                  ? `Error: ${formatKey(String(errorType))}`
+                  : "AI Analysis Failed"}
+              </div>
+              <div style="white-space:pre-wrap;word-break:break-word;">
+                ${errorMessage}
+              </div>
+              ${renderErrorHints(errorType, errorMessage)}
+              <div class="text-muted" style="margin-top:8px;">
+                No changes were applied.
+              </div>
+            </div>
+          `
+        : ""}
+
       <!-- KPI Overview -->
       <div class="kpi-row">${kpis}</div>
 
       <!-- Analysis Summary -->
-      ${analysisSummary && Object.keys(analysisSummary).length > 0
+      ${!isError && analysisSummary && Object.keys(analysisSummary).length > 0
         ? html`
             <div class="mt-4">
               <h4>AI Analysis Summary</h4>
@@ -183,7 +218,7 @@ export function renderTech({ result, index }) {
         : ""}
 
       <!-- Recommendations to Disable -->
-      ${toDisable.length > 0
+      ${!isError && toDisable.length > 0
         ? html`
             <div class="mt-4">
               <div class="section-title">
@@ -195,14 +230,16 @@ export function renderTech({ result, index }) {
               </div>
             </div>
           `
-        : html`
+        : !isError
+        ? html`
             <div class="mt-4">
               <div class="alert alert-success">
                 <strong>✓ No items recommended for disabling.</strong><br />
                 Your startup configuration looks clean and optimized!
               </div>
             </div>
-          `}
+          `
+        : ""}
 
       <!-- Items Kept Enabled (collapsible, screen-only) -->
       ${keepEnabled.length > 0
@@ -241,12 +278,12 @@ export function renderTech({ result, index }) {
         : ""}
 
       <!-- All Enumerated Items (collapsed, screen-only) -->
-      ${results.all_items && results.all_items.length > 0
+      ${getAllEnumeratedItems(results).length > 0
         ? html`
             <details class="mt-4 screen-only">
               <summary>
                 <h4 style="display: inline;">
-                  All Startup Items (${results.all_items.length})
+                  All Startup Items (${getAllEnumeratedItems(results).length})
                 </h4>
               </summary>
               <div class="all-items-table mt-2">
@@ -260,7 +297,7 @@ export function renderTech({ result, index }) {
                     </tr>
                   </thead>
                   <tbody>
-                    ${results.all_items.map(
+                    ${getAllEnumeratedItems(results).map(
                       (item) => html`
                         <tr>
                           <td><code>${item.name}</code></td>
@@ -388,6 +425,51 @@ function formatKey(key) {
 function truncate(str, maxLen) {
   if (!str) return "—";
   return str.length > maxLen ? str.substring(0, maxLen) + "..." : str;
+}
+
+/**
+ * Consolidate enumerated items from various shapes emitted by runner.
+ * Supports results.all_items (preferred) and results.items (fallback).
+ */
+function getAllEnumeratedItems(results) {
+  if (Array.isArray(results.all_items)) return results.all_items;
+  if (Array.isArray(results.items)) return results.items;
+  return [];
+}
+
+/**
+ * Render context-aware error hints/suggestions where possible.
+ */
+function renderErrorHints(errorType, errorMessage) {
+  const msg = String(errorMessage || "");
+  const hints = [];
+
+  if (/CERTIFICATE_VERIFY_FAILED/i.test(msg)) {
+    hints.push(
+      html`<li>
+        Certificate verification failed. Check for TLS-intercepting proxy or
+        install your organization's root certificate.
+      </li>`
+    );
+  }
+
+  if ((errorType || "").toString() === "ai_failed" && hints.length === 0) {
+    hints.push(
+      html`<li>
+        Verify your API key and network connectivity to the AI provider.
+      </li>`
+    );
+  }
+
+  if (hints.length === 0) return html``;
+  return html`
+    <details style="margin-top:8px;">
+      <summary><strong>Troubleshooting tips</strong></summary>
+      <ul style="margin:6px 0 0 18px;">
+        ${hints}
+      </ul>
+    </details>
+  `;
 }
 
 // =============================================================================

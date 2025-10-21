@@ -1460,6 +1460,349 @@
   margin-top: 4px;
 }
 
+/* Alert styles for error messages */
+.alert {
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 0.9em;
+  line-height: 1.5;
+}
+
+.alert-danger {
+  color: #e6eaf2;
+  background-color: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.alert-success {
+  color: #e6eaf2;
+  background-color: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.alert strong {
+  font-weight: 600;
+}
+
+.alert .text-muted {
+  color: #a3adbf;
+  font-size: 0.85em;
+}
+
+.alert details {
+  margin-top: 8px;
+}
+
+.alert details summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #e6eaf2;
+  margin-bottom: 4px;
+}
+
+.alert details summary:hover {
+  text-decoration: underline;
+}
+
+.alert ul {
+  margin: 6px 0 0 18px;
+  padding: 0;
+}
+
+.alert li {
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.alert li:last-child {
+  margin-bottom: 0;
+}
+
+/* Service report page card styling */
+[data-page="service-report"] .card {
+  background: var(--panel-bg, #ffffff);
+  border: 1px solid var(--border, #dee2e6);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+[data-page="service-report"] .card h3 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary, #212529);
+}
+
+[data-page="service-report"] .card .status {
+  font-size: 14px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+[data-page="service-report"] .card .status.error {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+[data-page="service-report"] .card .status.success {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+[data-page="service-report"] .card .status.warning {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+[data-page="service-report"] .card .kpi-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+[data-page="service-report"] .card .kpi {
+  background: var(--panel-accent, #f8f9fa);
+  border: 1px solid var(--border, #dee2e6);
+  border-radius: 6px;
+  padding: 12px;
+  min-width: 120px;
+  text-align: center;
+}
+
+[data-page="service-report"] .card .kpi .lab {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted, #6c757d);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+[data-page="service-report"] .card .kpi .val {
+  display: block;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary, #212529);
+}
+
+[data-page="service-report"] .card .kpi.muted .val {
+  color: var(--text-muted, #6c757d);
+}
+
+[data-page="service-report"] .card .pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+[data-page="service-report"] .card .pill.error {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+[data-page="service-report"] .card .pill.success {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+[data-page="service-report"] .card .pill.warning {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+[data-page="service-report"] .card .pill.info {
+  background-color: #d1ecf1;
+  color: #0c5460;
+}
+
+[data-page="service-report"] .card .pill.muted {
+  background-color: #e9ecef;
+  color: #6c757d;
+}
+
+[data-page="service-report"] .card .mb-3 {
+  margin-bottom: 12px;
+}
+
+/* AI Startup Optimizer specific styles for service-report */
+[data-page="service-report"]
+  .card.ai-startup-optimizer
+  .startup-detection-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+[data-page="service-report"] .card.ai-startup-optimizer .startup-detection {
+  border: 1px solid var(--border, #dee2e6);
+  border-radius: 6px;
+  padding: 12px;
+  background: var(--panel-bg, #ffffff);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  page-break-inside: avoid;
+}
+
+[data-page="service-report"]
+  .card.ai-startup-optimizer
+  .startup-detection.keep-enabled {
+  border-color: #28a745;
+  background: #f0fff4;
+}
+
+[data-page="service-report"]
+  .card.ai-startup-optimizer
+  .startup-detection-head {
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border, #e9ecef);
+}
+
+[data-page="service-report"] .card.ai-startup-optimizer .startup-name-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+[data-page="service-report"] .card.ai-startup-optimizer .startup-name {
+  font-size: 0.95em;
+  font-weight: 600;
+  color: var(--text-primary, #212529);
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+[data-page="service-report"] .card.ai-startup-optimizer .startup-name strong {
+  color: var(--text-muted, #6c757d);
+  margin-right: 4px;
+}
+
+[data-page="service-report"] .card.ai-startup-optimizer .item-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+[data-page="service-report"]
+  .card.ai-startup-optimizer
+  .startup-detection-body {
+  font-size: 0.85em;
+  color: var(--text-secondary, #495057);
+}
+
+[data-page="service-report"] .card.ai-startup-optimizer .detail-row {
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+[data-page="service-report"] .card.ai-startup-optimizer .detail-row:last-child {
+  margin-bottom: 0;
+}
+
+[data-page="service-report"] .card.ai-startup-optimizer .detail-label {
+  font-weight: 600;
+  color: var(--text-muted, #6c757d);
+  margin-right: 4px;
+}
+
+[data-page="service-report"] .card.ai-startup-optimizer .detail-value {
+  color: var(--text-primary, #212529);
+}
+
+[data-page="service-report"] .card.ai-startup-optimizer .section-title {
+  font-size: 1.1em;
+  font-weight: 600;
+  color: var(--text-primary, #212529);
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--border, #dee2e6);
+}
+
+[data-page="service-report"] .card.ai-startup-optimizer .summary-box {
+  background: var(--panel-accent, #f8f9fa);
+  border: 1px solid var(--border, #dee2e6);
+  border-radius: 6px;
+  padding: 12px;
+  margin-top: 12px;
+}
+
+[data-page="service-report"] .card.ai-startup-optimizer .summary-item {
+  margin-bottom: 6px;
+  font-size: 0.9em;
+  line-height: 1.6;
+}
+
+[data-page="service-report"]
+  .card.ai-startup-optimizer
+  .summary-item:last-child {
+  margin-bottom: 0;
+}
+
+[data-page="service-report"] .card.ai-startup-optimizer .summary-item strong {
+  font-weight: 600;
+}
+
+[data-page="service-report"] .card.ai-startup-optimizer .error-list {
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 6px;
+  padding: 12px;
+  margin-top: 12px;
+}
+
+[data-page="service-report"] .card.ai-startup-optimizer .error-item {
+  margin-bottom: 8px;
+  padding: 8px;
+  background: white;
+  border-radius: 4px;
+}
+
+[data-page="service-report"] .card.ai-startup-optimizer .error-item:last-child {
+  margin-bottom: 0;
+}
+
+[data-page="service-report"] .card.ai-startup-optimizer .all-items-table {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid var(--border, #dee2e6);
+  border-radius: 6px;
+  margin-top: 12px;
+}
+
+[data-page="service-report"] .card.ai-startup-optimizer .all-items-table table {
+  width: 100%;
+  font-size: 0.85em;
+}
+
+[data-page="service-report"] .card.ai-startup-optimizer details summary {
+  cursor: pointer;
+  user-select: none;
+  padding: 8px;
+  background: var(--panel-accent, #f8f9fa);
+  border-radius: 4px;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+[data-page="service-report"] .card.ai-startup-optimizer details summary:hover {
+  background: #e9ecef;
+}
+
 /* Battery Health Report */
 [data-page="service-results"] .card.battery-health {
   display: flex;
