@@ -109,6 +109,11 @@ export const customerPrintCSS = `
 `;
 ```
 
+Injection notes:
+
+- `viewCSS` is automatically injected into the technician results page. Keep selectors scoped to avoid conflicts.
+- `printCSS` and `customerPrintCSS` are automatically included in the respective print documents; no manual wiring required.
+
 ## Migration Checklist
 
 - [ ] CSS exports added (viewCSS at minimum; printCSS/customerPrintCSS as needed)

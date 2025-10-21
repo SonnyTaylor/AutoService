@@ -1,4 +1,7 @@
-import { getHandlerPrintCSS } from "../../handlers/index.js";
+import {
+  getHandlerPrintCSS,
+  getHandlerCustomerPrintCSS,
+} from "../../handlers/index.js";
 
 /**
  * Base print CSS - shared styles for all technician reports.
@@ -214,7 +217,7 @@ export function getTechPrintCSS() {
  */
 export const PRINT_LIGHT_CSS = getTechPrintCSS();
 
-export const CUSTOMER_PRINT_CSS = `
+const BASE_CUSTOMER_PRINT_CSS = `
   @page { 
     size: A4; 
     margin: 10mm;
@@ -688,3 +691,16 @@ export const CUSTOMER_PRINT_CSS = `
     widows: 3;
   }
 `;
+
+/**
+ * Get complete customer print CSS.
+ * Combines base customer CSS with service-specific CSS from handlers.
+ * @returns {string}
+ */
+export function getCustomerPrintCSS() {
+  const handlerCss = getHandlerCustomerPrintCSS();
+  return BASE_CUSTOMER_PRINT_CSS + (handlerCss ? "\n\n" + handlerCss : "");
+}
+
+// Backwards-compatible constant export, evaluated at module load
+export const CUSTOMER_PRINT_CSS = getCustomerPrintCSS();

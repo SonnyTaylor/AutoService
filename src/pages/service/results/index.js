@@ -12,6 +12,7 @@ import {
   waitForChartsRendered,
 } from "./print.js";
 import { isAutoSaveEnabled } from "../../../utils/reports.js";
+import { getHandlerViewCSS } from "../handlers/index.js";
 
 /**
  * Render the summary header for a report
@@ -64,6 +65,9 @@ export function renderResultsSections(report, sectionsEl) {
  * @returns {Promise<void>}
  */
 export async function initPage() {
+  // Ensure handler-specific view CSS is injected for technician web view
+  ensureHandlerViewCSSInjected();
+
   const container = document.getElementById("svc-results-container");
   const tabsNav = document.getElementById("svc-results-tabs");
   const backBtn = document.getElementById("svc-results-back");
@@ -155,6 +159,33 @@ export async function initPage() {
 
   if (container) container.hidden = false;
   if (tabsNav) tabsNav.hidden = false;
+}
+
+// Inject handler view CSS into the page head once; prevent duplicates.
+const HANDLER_VIEW_STYLE_ID = "autoservice-handler-view-css";
+
+function ensureHandlerViewCSSInjected() {
+  try {
+    let styleEl = document.getElementById(HANDLER_VIEW_STYLE_ID);
+    if (!styleEl) {
+      styleEl = document.createElement("style");
+      styleEl.id = HANDLER_VIEW_STYLE_ID;
+      styleEl.textContent = getHandlerViewCSS();
+      document.head.appendChild(styleEl);
+      // Clean up on window unload to avoid lingering styles if context reloads
+      window.addEventListener(
+        "unload",
+        () => {
+          try {
+            styleEl?.remove();
+          } catch {}
+        },
+        { once: true }
+      );
+    }
+  } catch (e) {
+    console.warn("Failed to inject handler view CSS:", e);
+  }
 }
 
 /**

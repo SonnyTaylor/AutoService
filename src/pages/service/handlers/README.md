@@ -221,9 +221,9 @@ The registry (`index.js`) provides these functions:
 - `getServiceDefinitions()` - Get all service catalog definitions
 - `getTechRenderers()` - Get all tech renderer functions
 - `getCustomerMetricExtractors()` - Get all customer metric extractors
-- `getHandlerPrintCSS()` - Get concatenated print CSS from all handlers (technician print)
-- `getHandlerViewCSS()` - Collect all handler `viewCSS` (coming in Phase 2)
-- `getHandlerCustomerPrintCSS()` - Collect all handler `customerPrintCSS` (coming in Phase 2)
+- `getHandlerViewCSS()` - Get concatenated screen CSS (`viewCSS`) from all handlers
+- `getHandlerPrintCSS()` - Get concatenated technician print CSS (`printCSS`) from handlers
+- `getHandlerCustomerPrintCSS()` - Get concatenated customer print CSS (`customerPrintCSS`) from handlers
 - `hasHandler(id)` - Check if handler is registered
 - `listHandlerIds()` - Get list of all handler IDs
 
@@ -247,9 +247,10 @@ export const viewCSS = ` .my-service { } `;
 export const printCSS = ` .my-service { } `; // Technician print
 export const customerPrintCSS = ` .my-service { } `; // Customer print
 
-// 2) Injection
-// - Current: existing system collects handler print CSS for customer prints (legacy name).
-// - Phase 2: viewCSS and customerPrintCSS will be collected automatically via the registry.
+// 2) Injection (implemented)
+// - Technician web view: viewCSS is injected on the results page automatically.
+// - Technician print: printCSS is bundled into the print document via getTechPrintCSS().
+// - Customer print: customerPrintCSS is bundled into the customer print document.
 ```
 
 ### Best Practices
@@ -341,7 +342,7 @@ Test through the full workflow:
 
 ## Migration Status
 
-Current status: Infrastructure ready, handlers to be migrated.
+Current status: Phase 2 (CSS injection) implemented. Handlers will be migrated service-by-service in Phase 3.
 
 ## Service Categories
 
