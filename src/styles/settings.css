@@ -563,6 +563,83 @@
   flex-shrink: 0;
 }
 
+/* Network save modes section */
+.network-save-modes {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.network-save-modes > .muted {
+  flex: 0 0 auto;
+  min-width: 80px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+.network-save-modes .radio-group {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.network-save-modes .radio-option {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.network-save-modes .radio-option input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--primary);
+  appearance: none;
+  margin: 0;
+  flex-shrink: 0;
+  border: 1.5px solid var(--border);
+  border-radius: 50%;
+  background: #1a1f2b;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.network-save-modes .radio-option input[type="radio"]:hover {
+  border-color: #4a7dd4;
+  background: var(--panel-2);
+}
+
+.network-save-modes .radio-option input[type="radio"]:checked {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.network-save-modes .radio-option input[type="radio"]:checked::after {
+  content: "✓";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.network-save-modes .radio-option span {
+  font-size: 0.9rem;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.network-save-modes button {
+  margin-left: auto;
+}
+
 /* Responsive adjustments */
 @media (max-width: 900px) {
   .settings-pane[data-pane="programs"] .row {

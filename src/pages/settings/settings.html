@@ -525,51 +525,39 @@
                 />
               </label>
 
-              <div
-                style="
-                  display: flex;
-                  gap: 12px;
-                  align-items: center;
-                  flex-wrap: wrap;
-                  margin-top: 8px;
-                "
-              >
-                <span class="muted" style="min-width: 110px">Save to</span>
-                <label style="display: flex; gap: 6px; align-items: center">
-                  <input
-                    type="radio"
-                    name="network-save-mode"
-                    id="network-save-local"
-                    value="local"
-                  />
-                  <span class="muted">Local only</span>
-                </label>
-                <label style="display: flex; gap: 6px; align-items: center">
-                  <input
-                    type="radio"
-                    name="network-save-mode"
-                    id="network-save-network"
-                    value="network"
-                  />
-                  <span class="muted">Network only</span>
-                </label>
-                <label style="display: flex; gap: 6px; align-items: center">
-                  <input
-                    type="radio"
-                    name="network-save-mode"
-                    id="network-save-both"
-                    value="both"
-                    checked
-                  />
-                  <span class="muted">Both (recommended)</span>
-                </label>
-
-                <button
-                  type="button"
-                  id="network-test-btn"
-                  class="ghost"
-                  style="margin-left: auto"
-                >
+              <div class="network-save-modes">
+                <span class="muted">Save to</span>
+                <div class="radio-group">
+                  <label class="radio-option">
+                    <input
+                      type="radio"
+                      name="network-save-mode"
+                      id="network-save-local"
+                      value="local"
+                    />
+                    <span>Local only</span>
+                  </label>
+                  <label class="radio-option">
+                    <input
+                      type="radio"
+                      name="network-save-mode"
+                      id="network-save-network"
+                      value="network"
+                    />
+                    <span>Network only</span>
+                  </label>
+                  <label class="radio-option">
+                    <input
+                      type="radio"
+                      name="network-save-mode"
+                      id="network-save-both"
+                      value="both"
+                      checked
+                    />
+                    <span>Both (recommended)</span>
+                  </label>
+                </div>
+                <button type="button" id="network-test-btn" class="ghost">
                   <i class="ph ph-plug-charging"></i> Test Connection
                 </button>
               </div>
