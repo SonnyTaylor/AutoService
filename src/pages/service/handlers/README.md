@@ -342,7 +342,17 @@ Test through the full workflow:
 
 ## Migration Status
 
-Current status: Phase 2 (CSS injection) implemented. Handlers will be migrated service-by-service in Phase 3.
+Current status: Phase 2 (CSS injection) implemented.
+
+Phase 3 progress (service-specific `viewCSS` migrated from `service.css`):
+
+- ping_test (card.ping)
+- speedtest (card.speedtest)
+- smartctl_report (drive list/card styles)
+- disk_space_report (card.disk-space)
+- battery_health_report (card.battery-health)
+
+Next candidates: windows_update, winsat_disk, kvrt_scan, adwcleaner_clean, ai_* services.
 
 ## Service Categories
 
