@@ -11,6 +11,7 @@ import {
   buildCustomerPrintDocumentHtml,
   waitForChartsRendered,
 } from "./print.js";
+import { isAutoSaveEnabled } from "../../../utils/reports.js";
 
 /**
  * Render the summary header for a report
@@ -87,6 +88,19 @@ export async function initPage() {
   } else {
     // Show save button for fresh reports
     if (saveBtn) saveBtn.hidden = false;
+
+    // Check if auto-save is enabled and update button accordingly
+    const autoSaveEnabled = await isAutoSaveEnabled();
+    if (autoSaveEnabled && saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.classList.add("disabled");
+      saveBtn.innerHTML = `
+        <i class="ph ph-check-circle" style="margin-right: 6px; vertical-align: -2px;"></i>
+        Autosave enabled
+      `;
+      saveBtn.title =
+        "Autosave is enabled in settings. Reports are saved automatically.";
+    }
 
     // Ensure back button says "Back to Runner"
     if (backBtn) {
