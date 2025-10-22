@@ -188,6 +188,7 @@
   position: relative;
   padding-left: 16px;
   margin: 0;
+  margin-bottom: 6px;
 }
 
 [data-page="service"] .preset-card ul.summary li::before {
