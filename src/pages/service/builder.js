@@ -42,7 +42,13 @@ import {
   toolKeysForService,
 } from "./catalog.js";
 import { getHandler } from "./handlers/index.js";
-import { PRESET_MAP, GPU_PARENT_ID, isGpuChild } from "./handlers/presets.js";
+import {
+  PRESET_MAP,
+  GPU_PARENT_ID,
+  isGpuChild,
+  getPresetServiceParams,
+  getPresetAllServiceParams,
+} from "./handlers/presets.js";
 
 /**
  * @typedef {Object} ToolStatus
@@ -208,6 +214,51 @@ class ServiceQueueBuilder {
     base.forEach((id) => {
       this.selection.add(id);
       this.order.push(id);
+    });
+    // Apply preset parameters (including GPU) after adding selection/order
+    this.applyPresetParams(presetName);
+  }
+
+  /**
+   * Apply only the parameter overrides from a preset without changing selection/order
+   */
+  applyPresetParams(presetName) {
+    if (!presetName) return;
+    const presetParams = getPresetAllServiceParams(presetName);
+    Object.entries(presetParams).forEach(([serviceId, params]) => {
+      if (serviceId === GPU_PARENT_ID) {
+        // GPU parent: merge booleans and durations
+        if (Object.prototype.hasOwnProperty.call(params, "furmark")) {
+          this.gpuConfig.subs.furmark = !!params.furmark;
+        }
+        if (Object.prototype.hasOwnProperty.call(params, "heavyload")) {
+          this.gpuConfig.subs.heavyload = !!params.heavyload;
+        }
+        if (
+          Object.prototype.hasOwnProperty.call(params, "furmarkMinutes") &&
+          Number.isFinite(Number(params.furmarkMinutes))
+        ) {
+          this.gpuConfig.params.furmarkMinutes = Number(params.furmarkMinutes);
+        }
+        if (
+          Object.prototype.hasOwnProperty.call(params, "heavyloadMinutes") &&
+          Number.isFinite(Number(params.heavyloadMinutes))
+        ) {
+          this.gpuConfig.params.heavyloadMinutes = Number(
+            params.heavyloadMinutes
+          );
+        }
+        return;
+      }
+
+      // Regular service parameters go to taskParams
+      if (!this.taskParams[serviceId]) {
+        this.taskParams[serviceId] = { params: {} };
+      }
+      this.taskParams[serviceId].params = {
+        ...this.taskParams[serviceId].params,
+        ...params,
+      };
     });
   }
 
@@ -1177,6 +1228,9 @@ export async function initPage() {
     builder.applyPreset(preset || mode);
   }
   builder.initializeDefaultParams();
+
+  // Always overlay current preset parameters (GPU, etc.) even if restored
+  builder.applyPresetParams(preset || mode);
 
   // Load tool statuses
   await builder.loadToolStatuses();
