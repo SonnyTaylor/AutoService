@@ -768,3 +768,38 @@ export const printCSS = `
   }
 }
 `;
+
+// =============================================================================
+// VIEW CSS (Technician web view)
+// =============================================================================
+
+export const viewCSS = `
+/* AI Startup Optimizer (technician screen styles) */
+.card.ai-startup-optimizer { display: flex; flex-direction: column; gap: 16px; }
+.card.ai-startup-optimizer .subheader { color: #a3adbf; font-size: 13px; margin-top: -8px; }
+.card.ai-startup-optimizer .section-title { font-size: 16px; font-weight: 600; color: #e3e9f8; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
+.card.ai-startup-optimizer .startup-detection-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; margin-top: 12px; }
+.card.ai-startup-optimizer .startup-detection { background: rgba(36, 48, 68, 0.45); border: 1px solid var(--border); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 10px; transition: all 0.2s ease; }
+.card.ai-startup-optimizer .startup-detection:hover { border-color: #4f8cff; background: rgba(36, 48, 68, 0.65); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }
+.card.ai-startup-optimizer .startup-detection.keep-enabled { border-color: #10b981; background: rgba(16, 185, 129, 0.1); }
+.card.ai-startup-optimizer .startup-detection.keep-enabled:hover { border-color: #34d399; background: rgba(16, 185, 129, 0.15); }
+.card.ai-startup-optimizer .startup-detection-head { padding-bottom: 10px; border-bottom: 1px solid rgba(203, 213, 225, 0.15); }
+.card.ai-startup-optimizer .startup-name-block { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+.card.ai-startup-optimizer .startup-name { font-weight: 600; color: #f6d8a5; word-break: break-word; line-height: 1.4; font-size: 14px; }
+.card.ai-startup-optimizer .startup-name strong { color: #a3adbf; margin-right: 6px; font-weight: 700; }
+.card.ai-startup-optimizer .item-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.card.ai-startup-optimizer .startup-detection-body { display: flex; flex-direction: column; gap: 8px; }
+.card.ai-startup-optimizer .detail-row { font-size: 13px; line-height: 1.5; color: #cbd5e1; }
+.card.ai-startup-optimizer .detail-label { font-weight: 600; color: #94a3b8; margin-right: 6px; }
+.card.ai-startup-optimizer .detail-value { color: #e3e9f8; }
+.card.ai-startup-optimizer .summary-box { background: rgba(36, 48, 68, 0.45); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-top: 8px; }
+.card.ai-startup-optimizer .summary-item { margin-bottom: 8px; font-size: 13px; line-height: 1.6; color: #cbd5e1; }
+.card.ai-startup-optimizer .summary-item strong { color: #e3e9f8; font-weight: 600; }
+.card.ai-startup-optimizer .error-list { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 14px; margin-top: 12px; }
+.card.ai-startup-optimizer .error-item { margin-bottom: 10px; padding: 10px; background: rgba(0, 0, 0, 0.3); border-radius: 6px; font-size: 13px; line-height: 1.5; }
+.card.ai-startup-optimizer .all-items-table { max-height: 500px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; margin-top: 12px; }
+.card.ai-startup-optimizer details { margin-top: 16px; }
+.card.ai-startup-optimizer details summary { cursor: pointer; user-select: none; padding: 10px; background: rgba(36, 48, 68, 0.35); border-radius: 6px; font-weight: 500; color: #e3e9f8; transition: background 0.2s ease; }
+.card.ai-startup-optimizer details summary:hover { background: rgba(36, 48, 68, 0.55); }
+.card.ai-startup-optimizer details[open] summary { margin-bottom: 12px; border-bottom: 1px solid var(--border); border-radius: 6px 6px 0 0; }
+`;

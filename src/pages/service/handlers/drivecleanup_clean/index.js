@@ -296,3 +296,16 @@ export function renderParamControls({ params, updateParam }) {
 
   return wrap;
 }
+
+// =============================================================================
+// VIEW CSS (Technician web view)
+// =============================================================================
+
+export const viewCSS = `
+/* DriveCleanup (technician screen styles) */
+.drivecleanup .removed-items { margin-top: 8px; }
+.drivecleanup .removed-grid { display: grid; grid-template-columns: 1fr; gap: 6px; }
+.drivecleanup .removed-item { background: #0f172a0d; border: 1px solid #1e293b; border-radius: 6px; padding: 8px; }
+.drivecleanup .removed-item .cat { font-size: 9pt; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+.drivecleanup .removed-item .id { font-family: Consolas, Monaco, monospace; font-size: 9pt; color: #cbd5e1; word-break: break-all; }
+`;
