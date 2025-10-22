@@ -480,36 +480,90 @@ function renderErrorHints(errorType, errorMessage) {
  * Extract customer-friendly metrics from AI startup optimizer results.
  *
  * @param {CustomerMetricsContext} context - Extraction context
- * @returns {CustomerMetric | null} Customer metric or null
+ * @returns {Array<CustomerMetric>} Array of customer metrics
  */
 export function extractCustomerMetrics({ result }) {
   const { summary, status } = result;
 
-  if (status === "error") return null;
+  if (status === "error") return [];
 
   const hr = summary?.human_readable || {};
   const results = summary?.results || {};
 
+  const totalItems = hr.total_items ?? hr.items_enumerated ?? 0;
   const recommendations = hr.recommendations || 0;
   const disabled = hr.items_disabled || 0;
   const bootTimeSaving = hr.estimated_boot_time_saving || "Unknown";
 
-  // Only show metric if there were recommendations
-  if (recommendations === 0) return null;
+  // Always show a metric, even if nothing was enumerated
+  if (totalItems === 0) {
+    if (!results.applied) {
+      return [
+        buildMetric({
+          icon: "⚡",
+          label: "Startup Optimization",
+          value: "0 things could be fixed",
+          detail: "0 startup items analyzed",
+          variant: "info",
+        }),
+      ];
+    }
+    return [
+      buildMetric({
+        icon: "⚡",
+        label: "Startup Optimization",
+        value: "All optimized",
+        detail: "0 startup items analyzed",
+        variant: "success",
+      }),
+    ];
+  }
+
+  // If no recommendations, show clean result in applied mode
+  if (recommendations === 0 && results.applied) {
+    return [
+      buildMetric({
+        icon: "⚡",
+        label: "Startup Optimization",
+        value: "All optimized",
+        detail: `${totalItems} startup item${
+          totalItems !== 1 ? "s" : ""
+        } checked - no changes needed`,
+        variant: "success",
+      }),
+    ];
+  }
+
+  // In preview mode with no recommendations, show as diagnostic
+  if (recommendations === 0 && !results.applied) {
+    return [
+      buildMetric({
+        icon: "⚡",
+        label: "Startup Optimization",
+        value: "0 things could be fixed",
+        detail: `${totalItems} startup item${
+          totalItems !== 1 ? "s" : ""
+        } analyzed - all appear necessary`,
+        variant: "info",
+      }),
+    ];
+  }
 
   const value = results.applied
     ? `${disabled} apps disabled`
-    : `${recommendations} apps can be optimized`;
+    : `${recommendations} things could be fixed`;
 
   const detail = `Estimated boot time improvement: ${bootTimeSaving}`;
 
-  return buildMetric({
-    icon: "⚡",
-    label: "Startup Optimization",
-    value: value,
-    detail: detail,
-    variant: results.applied ? "success" : "info",
-  });
+  return [
+    buildMetric({
+      icon: "⚡",
+      label: "Startup Optimization",
+      value: value,
+      detail: detail,
+      variant: results.applied ? "success" : "info",
+    }),
+  ];
 }
 
 // =============================================================================

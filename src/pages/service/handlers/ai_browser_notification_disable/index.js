@@ -440,11 +440,33 @@ export function extractCustomerMetrics({ result }) {
   const disabled = hr.notifications_disabled || 0;
   const estimatedReduction = hr.estimated_reduction || "Unknown";
 
-  // Only show metric if there were any notifications analyzed
-  if (totalNotifications === 0) return [];
+  // Always show a metric, even if nothing was enumerated
+  if (totalNotifications === 0) {
+    if (!results.applied) {
+      return [
+        buildMetric({
+          icon: "🔔",
+          label: "Browser Notifications",
+          value: "0 things could be fixed",
+          detail: "0 notifications analyzed",
+          variant: "info",
+        }),
+      ];
+    }
+    // Applied mode but nothing enumerated
+    return [
+      buildMetric({
+        icon: "🔔",
+        label: "Browser Notifications",
+        value: "All clean",
+        detail: "0 notifications analyzed",
+        variant: "success",
+      }),
+    ];
+  }
 
-  // If no recommendations, show clean result
-  if (recommendations === 0) {
+  // If no recommendations, show clean result in applied mode
+  if (recommendations === 0 && results.applied) {
     return [
       buildMetric({
         icon: "🔔",
@@ -459,7 +481,7 @@ export function extractCustomerMetrics({ result }) {
   }
 
   // Build detail items showing what was found
-  const items = [];
+  const detailItems = [];
   const toDisable = results.to_disable || [];
 
   // Group by category
@@ -471,18 +493,33 @@ export function extractCustomerMetrics({ result }) {
   });
 
   // Create items from categories
-  Object.entries(categoryGroups).forEach(([category, items]) => {
+  Object.entries(categoryGroups).forEach(([category, categoryItems]) => {
     const catLabel = formatKey(category);
-    items.forEach((item) => {
+    categoryItems.forEach((item) => {
       const origin = cleanOrigin(item.origin);
       const browser = item.browser || "Unknown";
-      items.push(`${catLabel}: ${origin} (${browser})`);
+      detailItems.push(`${catLabel}: ${origin} (${browser})`);
     });
   });
 
+  // In preview mode with no recommendations, show as diagnostic
+  if (recommendations === 0 && !results.applied) {
+    return [
+      buildMetric({
+        icon: "🔔",
+        label: "Browser Notifications",
+        value: "0 things could be fixed",
+        detail: `${totalNotifications} notification${
+          totalNotifications !== 1 ? "s" : ""
+        } analyzed - all appear safe`,
+        variant: "info",
+      }),
+    ];
+  }
+
   const value = results.applied
     ? `${disabled} disabled`
-    : `${recommendations} can be optimized`;
+    : `${recommendations} things could be fixed`;
 
   return [
     buildMetric({
@@ -491,7 +528,7 @@ export function extractCustomerMetrics({ result }) {
       value: value,
       detail: estimatedReduction,
       variant: results.applied ? "success" : "info",
-      items: items.length > 0 ? items : undefined,
+      items: detailItems.length > 0 ? detailItems : undefined,
     }),
   ];
 }
