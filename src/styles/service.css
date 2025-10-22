@@ -1320,11 +1320,6 @@
   background-color: #e9ecef;
   color: #6c757d;
 }
-
-[data-page="service-report"] .card .mb-3 {
-  margin-bottom: 12px;
-}
-
 /* Battery Health card-specific styles migrated to handler viewCSS */
 
 /* AI Browser Notification Optimizer screen styles migrated to handler viewCSS */
