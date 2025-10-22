@@ -227,3 +227,20 @@ export const viewCSS = `
   }
   .card.smartctl .drive-model { font-weight: 600; }
 `;
+
+// =============================================================================
+// PRINT CSS (tech PDF)
+// =============================================================================
+
+export const printCSS = `
+  .smartctl .drive-list { display: grid; gap: 12px; }
+  .smartctl .drive-card {
+    background: #ffffff;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 12px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .smartctl .drive-head { margin-bottom: 8px; }
+`;
