@@ -42,12 +42,20 @@ const PRESETS = {
       "adwcleaner_clean",
       "kvrt_scan",
       "bleachbit_clean",
+      "drivecleanup_clean",
+      "ai_browser_notification_disable",
+      "ai_startup_disable",
 
       // DIAGNOSTICS:
       "smartctl_report",
+      "disk_space_report",
+      "winsat_disk",
+      "battery_health_report",
       "speedtest",
       "whynotwin11_check",
       "disk_space_report",
+      "ping_test",
+      { id: "iperf_test", params: { minutes: 1 } },
     ],
   },
 
@@ -56,14 +64,15 @@ const PRESETS = {
     services: [
       // Security & Cleanup
       "adwcleaner_clean",
-      "bleachbit_clean",
       "kvrt_scan",
+      "bleachbit_clean",
       "drivecleanup_clean",
       // System Integrity
       "sfc_scan",
       "dism_health_check",
       "chkdsk_scan",
       "smartctl_report",
+      "winsat_disk",
       // Diagnostics
       "disk_space_report",
       "windows_update",
@@ -72,20 +81,24 @@ const PRESETS = {
       // Network & Performance
       "ping_test",
       "speedtest",
-      "winsat_disk",
+      { id: "iperf_test", params: { minutes: 10 } },
+      // AI Optimizations
+      "ai_browser_notification_disable",
+      "ai_startup_disable",
+
       // Stress Tests (using GPU parent)
       // GPU params: furmarkMinutes, heavyloadMinutes, furmark (true/false), heavyload (true/false)
-      {
-        id: GPU_PARENT_ID,
-        params: {
-          furmarkMinutes: 5,
-          heavyloadMinutes: 2,
-          furmark: true, // Enable FurMark
-          heavyload: true, // Enable HeavyLoad
-        },
-      },
-      { id: "heavyload_stress_cpu", params: { minutes: 5 } },
-      { id: "heavyload_stress_memory", params: { minutes: 5 } },
+      // {
+      //   id: GPU_PARENT_ID,
+      //   params: {
+      //     furmarkMinutes: 5,
+      //     heavyloadMinutes: 2,
+      //     furmark: true, // Enable FurMark
+      //     heavyload: true, // Enable HeavyLoad
+      //   },
+      // },
+      // { id: "heavyload_stress_cpu", params: { minutes: 5 } },
+      // { id: "heavyload_stress_memory", params: { minutes: 5 } },
     ],
   },
 
