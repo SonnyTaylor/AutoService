@@ -25,11 +25,14 @@ export const GPU_CHILDREN = ["furmark_stress_test", "heavyload_stress_gpu"];
 // =============================================================================
 
 /**
- * Preset service lists.
+ * Preset service lists with optional per-service parameters.
  * Simply add/remove service IDs to customize each preset.
  * Use GPU_PARENT_ID instead of individual GPU stress tests.
  *
- * @type {Record<string, {description: string, services: string[]}>}
+ * Service params override defaults and allow customizing durations, modes, etc.
+ * Example: { id: "iperf_test", params: { minutes: 1 } }
+ *
+ * @type {Record<string, {description: string, services: (string|{id: string, params: Record<string, any>})[]}>}
  */
 const PRESETS = {
   general: {
@@ -119,10 +122,11 @@ export function getPresetNames() {
 /**
  * Get services for a preset.
  * @param {string} presetName - Name of preset
- * @returns {string[]} Array of service IDs
+ * @returns {string[]} Array of service IDs (normalized, params removed)
  */
 export function getPresetServices(presetName) {
-  return PRESETS[presetName]?.services ?? [];
+  const services = PRESETS[presetName]?.services ?? [];
+  return services.map((item) => (typeof item === "string" ? item : item.id));
 }
 
 /**
@@ -171,19 +175,58 @@ export function isGpuChild(id) {
 }
 
 /**
+ * Get service parameters for a specific service in a preset.
+ * @param {string} presetName - Name of preset
+ * @param {string} serviceId - Service ID to get params for
+ * @returns {Record<string, any>|null} Service params or null if none defined
+ */
+export function getPresetServiceParams(presetName, serviceId) {
+  const preset = PRESETS[presetName];
+  if (!preset || !preset.services) return null;
+
+  const item = preset.services.find((s) =>
+    typeof s === "string" ? s === serviceId : s.id === serviceId
+  );
+
+  if (!item || typeof item === "string") return null;
+  return item.params || null;
+}
+
+/**
+ * Get all service params for a preset.
+ * Returns a map of service IDs to their parameter overrides.
+ * @param {string} presetName - Name of preset
+ * @returns {Record<string, Record<string, any>>} Map of service ID to params
+ */
+export function getPresetAllServiceParams(presetName) {
+  const preset = PRESETS[presetName];
+  if (!preset || !preset.services) return {};
+
+  const result = {};
+  preset.services.forEach((item) => {
+    if (typeof item !== "string" && item.params) {
+      result[item.id] = item.params;
+    }
+  });
+  return result;
+}
+
+/**
  * Legacy preset map for backwards compatibility.
- * Dynamically generates task lists when accessed.
+ * Dynamically generates normalized task lists (service IDs only) when accessed.
+ * For params, use getPresetServiceParams() or getPresetAllServiceParams().
  *
  * @example
  * const generalTasks = PRESET_MAP.general;
  * const completeTasks = PRESET_MAP["complete"];
+ * // To get params, use getPresetAllServiceParams("complete")
  */
 export const PRESET_MAP = new Proxy(
   {},
   {
     get(target, prop) {
       if (typeof prop === "string" && PRESETS[prop]) {
-        return PRESETS[prop].services;
+        return getPresetServices(prop);
       }
       return [];
     },
