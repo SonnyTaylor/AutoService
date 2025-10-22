@@ -25,45 +25,6 @@
 [data-page="service-run"] .gpu-sub input[type="number"] {
   width: 64px;
 }
-/* AI Startup Controls */
-[data-page="service-run"] .ai-startup-controls {
-  display: flex;
-  align-items: flex-end;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-[data-page="service-run"] .ai-startup-controls label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-[data-page="service-run"] .ai-startup-controls select {
-  background: var(--panel-accent);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 10px;
-  color: var(--text);
-  min-height: 38px;
-  cursor: pointer;
-  transition: border-color 0.15s, background-color 0.15s, box-shadow 0.15s;
-}
-[data-page="service-run"] .ai-startup-controls select:focus {
-  border-color: #335d9b;
-  outline: 0;
-  box-shadow: 0 0 0 1px #335d9b;
-}
-[data-page="service-run"] .ai-startup-controls select:hover {
-  background: var(--panel-2);
-}
-[data-page="service-run"] .gpu-sub {
-  display: grid;
-  gap: 6px;
-  margin-left: 28px;
-}
-[data-page="service-run"] .gpu-sub .sep {
-  opacity: 0.5;
-  margin: 0 6px;
-}
 /* Service Report: ensure overlay respects hidden attribute and polish badges */
 [data-page="service-report"] .log-overlay[hidden] {
   display: none !important;
