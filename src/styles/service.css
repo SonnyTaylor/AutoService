@@ -567,6 +567,67 @@
 [data-page="service-run"] .task-row.gpu-parent:hover {
   background: #28364d;
 }
+
+/* ------------------------------------------------------------ */
+/* Service Results: status pill + header layout                 */
+/* Restores rounded status badge at top-right with color states */
+[data-page="service-results"] .result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 10px 0;
+  padding: 4px 0 6px 0; /* add a little top padding so pill doesn't touch top */
+  border-bottom: 1px solid var(--border);
+}
+
+[data-page="service-results"] .result-header h3 {
+  margin: 0;
+  font-size: 14.5px;
+  color: var(--text);
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+/* Base status pill */
+[data-page="service-results"] .result-header .status {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid #2b416b;
+  background: #24314a;
+  color: var(--text);
+  text-transform: capitalize;
+  font-weight: 600;
+}
+
+/* Color variants */
+[data-page="service-results"] .result-header .status.success,
+[data-page="service-results"] .result-header .status.ok {
+  background: #213a2a;
+  border-color: #2f6b4a;
+  color: var(--text);
+}
+
+[data-page="service-results"] .result-header .status.warn,
+[data-page="service-results"] .result-header .status.warning {
+  background: #3a2b24;
+  border-color: #6b422b;
+  color: var(--text);
+}
+
+[data-page="service-results"] .result-header .status.fail,
+[data-page="service-results"] .result-header .status.failure,
+[data-page="service-results"] .result-header .status.error {
+  background: #4a1e1e;
+  border-color: #7a3333;
+  color: var(--text);
+}
+
+[data-page="service-results"] .result-header .status.skipped {
+  background: #1e2b45;
+  border-color: #33507a;
+  color: var(--text);
+}
 [data-page="service-run"] .gpu-sub {
   margin-top: 6px;
   display: grid;
