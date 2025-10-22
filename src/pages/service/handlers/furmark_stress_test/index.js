@@ -100,64 +100,49 @@ export function renderTech({ result, index }) {
       ${renderHeader(result.ui_label || "GPU Stress (FurMark)", result.status)}
 
       <div class="kpi-row">
-        ${kpiBox("API", s.api || "-")}
-        ${kpiBox(
-          "Resolution",
-          s.resolution ? `${s.resolution.width}x${s.resolution.height}` : "-"
-        )}
-        ${kpiBox("Duration", formatDuration(s.duration_ms))}
-        ${kpiBox("Frames", s.frames != null ? String(s.frames) : "-")}
-        ${kpiBox("Avg FPS", s.fps?.avg != null ? String(s.fps.avg) : "-")}
-      </div>
-
-      ${s.gpus && s.gpus.length > 0
-        ? html`
-            <div class="gpu-section">
-              <h4>GPUs Tested</h4>
-              <div class="gpu-grid">
-                ${map(
-                  s.gpus,
-                  (gpu) => html`
-                    <div class="gpu-card">
-                      <div class="gpu-name">${gpu.name}</div>
-                      <div class="gpu-id">ID: ${gpu.id}</div>
-                      ${gpu.max_temperature_c != null
-                        ? html`
-                            <div class="gpu-stat">
-                              <span class="gpu-label">Max Temp:</span>
-                              <span class="gpu-value"
-                                >${gpu.max_temperature_c}°C</span
-                              >
-                            </div>
-                          `
-                        : ""}
-                      ${gpu.max_usage_percent != null
-                        ? html`
-                            <div class="gpu-stat">
-                              <span class="gpu-label">Max Usage:</span>
-                              <span class="gpu-value"
-                                >${gpu.max_usage_percent}%</span
-                              >
-                            </div>
-                          `
-                        : ""}
-                      ${gpu.max_core_clock_mhz != null
-                        ? html`
-                            <div class="gpu-stat">
-                              <span class="gpu-label">Max Clock:</span>
-                              <span class="gpu-value"
-                                >${gpu.max_core_clock_mhz} MHz</span
-                              >
-                            </div>
-                          `
-                        : ""}
-                    </div>
-                  `
+        ${s.gpus && s.gpus.length > 0
+          ? map(
+              s.gpus,
+              (gpu) => html`
+                ${kpiBox("GPU", gpu.name)}
+                ${kpiBox("Duration", formatDuration(s.duration_ms))}
+                ${gpu.max_temperature_c != null
+                  ? kpiBox("Max Temp", `${gpu.max_temperature_c}°C`)
+                  : ""}
+                ${gpu.max_core_clock_mhz != null
+                  ? kpiBox("Max Clock", `${gpu.max_core_clock_mhz} MHz`)
+                  : ""}
+                ${gpu.max_usage_percent != null
+                  ? kpiBox("Max Usage", `${gpu.max_usage_percent}%`)
+                  : ""}
+                ${kpiBox(
+                  "Avg FPS",
+                  s.fps?.avg != null ? String(s.fps.avg) : "-"
                 )}
-              </div>
-            </div>
-          `
-        : ""}
+                ${kpiBox("Frames", s.frames != null ? String(s.frames) : "-")}
+                ${kpiBox("API", s.api || "-")}
+                ${kpiBox(
+                  "Resolution",
+                  s.resolution
+                    ? `${s.resolution.width}x${s.resolution.height}`
+                    : "-"
+                )}
+                ${kpiBox("GPU ID", gpu.id)}
+              `
+            )
+          : html`
+              ${kpiBox("API", s.api || "-")}
+              ${kpiBox(
+                "Resolution",
+                s.resolution
+                  ? `${s.resolution.width}x${s.resolution.height}`
+                  : "-"
+              )}
+              ${kpiBox("Duration", formatDuration(s.duration_ms))}
+              ${kpiBox("Frames", s.frames != null ? String(s.frames) : "-")}
+              ${kpiBox("Avg FPS", s.fps?.avg != null ? String(s.fps.avg) : "-")}
+            `}
+      </div>
     </div>
   `;
 }
@@ -175,66 +160,13 @@ export const printCSS = `
     page-break-inside: avoid;
   }
 
-  .card.furmark .gpu-section {
-    margin-top: 16px;
-  }
-
-  .card.furmark .gpu-section h4 {
-    margin: 0 0 12px;
-    font-size: 14px;
-    font-weight: 600;
-    color: #e3e9f8;
-  }
-
-  .card.furmark .gpu-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 12px;
-  }
-
-  .card.furmark .gpu-card {
-    background: var(--panel-accent, #24304a);
-    border: 1px solid var(--border, #2a3b55);
-    border-radius: 8px;
-    padding: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .card.furmark .gpu-name {
-    font-weight: 600;
-    color: #f6d8a5;
-    font-size: 13px;
-  }
-
-  .card.furmark .gpu-id {
-    font-size: 11px;
-    color: #a3adbf;
-    font-family: monospace;
-  }
-
-  .card.furmark .gpu-stat {
-    display: flex;
-    justify-content: space-between;
-    font-size: 12px;
-    line-height: 1.5;
-  }
-
-  .card.furmark .gpu-label {
-    color: #a3adbf;
-    font-weight: 500;
-  }
-
-  .card.furmark .gpu-value {
-    color: #e3e9f8;
-    font-weight: 600;
-    font-family: monospace;
+  .card.furmark .gpu-metrics {
+    display: contents;
   }
 
   @media print {
-    .card.furmark .gpu-grid {
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    .card.furmark .kpi-row {
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     }
   }
 `;
