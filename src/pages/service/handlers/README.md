@@ -51,7 +51,7 @@ Previously, service logic was scattered across multiple files (catalog, tech ren
 
 ## Directory Structure
 
-```
+```text
 
 handlers/
 ├── index.js              # Handler registry (imports and exports all handlers)
@@ -68,7 +68,7 @@ handlers/
     ├── README.md         # Service-specific documentation
     └── fixtures/         # Test data
         ├── test_success.json
-        ├── test_error.json
+  ├── test_error.json
         └── ...
 
 ```
