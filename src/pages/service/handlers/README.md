@@ -361,6 +361,14 @@ Phase 3 progress (service-specific `viewCSS` migrated from `service.css`):
 - drivecleanup_clean (card.drivecleanup removed-items grid)
 - whynotwin11_check (card.wn11)
 
+Recent cleanup:
+
+- Removed remaining AI Startup Optimizer service-specific CSS from `src/styles/service.css` (both service-results and service-report blocks). Styling now lives entirely in handler `viewCSS`/`printCSS`.
+
+Print CSS coverage updates:
+
+- Added basic `printCSS` for `smartctl_report` (card layout + page-break control)
+
 ## Service Categories
 
 - Diagnostics: System health checks (battery, SMART, disk space, WinSAT)
