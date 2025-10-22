@@ -1,12 +1,8 @@
 /**
  * Service Presets Configuration
  * ---------------------------------------------------------------------------
- * Defines preset task configurations for common service run scenarios.
- * Uses dynamic queries based on service metadata (groups, categories, toolKeys)
- * instead of hardcoded service ID lists.
- *
- * This makes presets maintainable - new services automatically appear in
- * appropriate presets based on their handler definitions.
+ * Simplified preset system for easy management of service selections.
+ * Define presets by explicitly listing services, with optional filtering.
  */
 
 import { listHandlerIds, getHandler } from "./index.js";
@@ -24,142 +20,145 @@ export const GPU_PARENT_ID = "gpu_stress_parent";
  */
 export const GPU_CHILDREN = ["furmark_stress_test", "heavyload_stress_gpu"];
 
+// =============================================================================
+// PRESET DEFINITIONS - EASY TO MODIFY
+// =============================================================================
+
 /**
- * Preset configurations for common service run scenarios.
- * Each preset defines inclusion rules based on service metadata.
+ * Preset service lists.
+ * Simply add/remove service IDs to customize each preset.
+ * Use GPU_PARENT_ID instead of individual GPU stress tests.
  *
- * @typedef {Object} PresetConfig
- * @property {string} description - Human-readable preset description
- * @property {Object} include - Inclusion rules for this preset
- * @property {string[]} [include.groups] - Service groups to include
- * @property {string[]} [include.exclude] - Service IDs to explicitly exclude
- * @property {Function} [include.filter] - Custom filter function
- * @property {string[]} [include.addSpecial] - Special items to add (like GPU parent)
- * @property {boolean} [include.none] - If true, start with empty selection
+ * @type {Record<string, {description: string, services: string[]}>}
  */
-const PRESET_CONFIGS = {
+const PRESETS = {
   general: {
     description: "Common maintenance and diagnostics",
-    include: {
-      groups: ["Security", "Cleanup", "System Integrity", "Diagnostics"],
-      // Only include commonly used services
-      filter: (def) => {
-        const commonServices = [
-          "adwcleaner_clean",
-          "bleachbit_clean",
-          "sfc_scan",
-          "dism_health_check",
-          "smartctl_report",
-          "speedtest",
-        ];
-        return commonServices.includes(def.id);
-      },
-    },
+    services: [
+      // SERVICES:
+      "adwcleaner_clean",
+      "kvrt_scan",
+      "bleachbit_clean",
+
+      // DIAGNOSTICS:
+      "smartctl_report",
+      "speedtest",
+      "whynotwin11_check",
+      "disk_space_report",
+    ],
   },
 
   complete: {
     description: "Full diagnostic suite with stress tests",
-    include: {
-      groups: [
-        "Security",
-        "Cleanup",
-        "System Integrity",
-        "Diagnostics",
-        "Stress",
-        "Network",
-      ],
-      // Exclude specialized/advanced tools
-      exclude: ["whynotwin11_check", "iperf_test"],
-      // Include GPU parent instead of individual GPU stress tests
-      addSpecial: [GPU_PARENT_ID],
-    },
+    services: [
+      // Security & Cleanup
+      "adwcleaner_clean",
+      "bleachbit_clean",
+      "kvrt_scan",
+      "drivecleanup_clean",
+      // System Integrity
+      "sfc_scan",
+      "dism_health_check",
+      "chkdsk_scan",
+      "smartctl_report",
+      // Diagnostics
+      "disk_space_report",
+      "windows_update",
+      "battery_health_report",
+      "whynotwin11_check",
+      // Network & Performance
+      "ping_test",
+      "speedtest",
+      "winsat_disk",
+      // Stress Tests (using GPU parent)
+      GPU_PARENT_ID,
+      "heavyload_stress_cpu",
+      "heavyload_stress_memory",
+    ],
   },
 
   diagnostics: {
-    description: "System health checks only",
-    include: {
-      groups: ["System Integrity", "Diagnostics"],
-      // Only built-in Windows tools for quick diagnostics
-      filter: (def) => {
-        return !def.toolKeys || def.toolKeys.length === 0;
-      },
-    },
+    description: "System health checks only (built-in tools)",
+    services: [
+      "smartctl_report",
+      "disk_space_report",
+      "winsat_disk",
+      "battery_health_report",
+      // Hide integrity tests for now, they take too long
+      // "sfc_scan",
+      // "dism_health_check",
+      // "chkdsk_scan",
+      "whynotwin11_check",
+      "ping_test",
+      "speedtest",
+
+      // Hide iperf test for now, until we can add option to pass in time duration
+      // TODO: Add feature to pass in params from presets
+      //"iperf_test",
+    ],
   },
 
   custom: {
     description: "Start with empty selection",
-    include: { none: true },
+    services: [],
   },
 };
 
-/**
- * Build preset task list dynamically from service definitions.
- * Queries handlers based on preset rules and generates service ID array.
- *
- * @param {string} presetName - Name of preset from PRESET_CONFIGS
- * @returns {string[]} Array of service IDs to include in preset
- *
- * @example
- * const tasks = buildPresetTaskList("general");
- * // Returns: ["adwcleaner_clean", "bleachbit_clean", "sfc_scan", ...]
- */
-export function buildPresetTaskList(presetName) {
-  const config = PRESET_CONFIGS[presetName];
-  if (!config) return [];
-
-  const include = config.include || {};
-
-  // Empty preset (custom mode)
-  if (include.none) return [];
-
-  const result = [];
-  const allHandlerIds = listHandlerIds();
-
-  // Add services matching criteria
-  for (const id of allHandlerIds) {
-    const handler = getHandler(id);
-    if (!handler || !handler.definition) continue;
-
-    const def = handler.definition;
-
-    // Skip GPU children (they're accessed via GPU parent meta-service)
-    if (GPU_CHILDREN.includes(id)) continue;
-
-    // Check group inclusion
-    if (include.groups && !include.groups.includes(def.group)) continue;
-
-    // Check exclusion list
-    if (include.exclude && include.exclude.includes(id)) continue;
-
-    // Apply custom filter function
-    if (include.filter && !include.filter(def)) continue;
-
-    result.push(id);
-  }
-
-  // Add special items (like GPU parent)
-  if (include.addSpecial) {
-    result.push(...include.addSpecial);
-  }
-
-  return result;
-}
+// =============================================================================
+// PUBLIC API - SIMPLE & DIRECT
+// =============================================================================
 
 /**
  * Get all available preset names.
  * @returns {string[]} Array of preset names
  */
 export function getPresetNames() {
-  return Object.keys(PRESET_CONFIGS);
+  return Object.keys(PRESETS);
 }
 
 /**
- * Get preset configuration by name.
+ * Get services for a preset.
  * @param {string} presetName - Name of preset
- * @returns {PresetConfig|null} Preset configuration or null
+ * @returns {string[]} Array of service IDs
  */
-export function getPresetConfig(presetName) {
-  return PRESET_CONFIGS[presetName] || null;
+export function getPresetServices(presetName) {
+  return PRESETS[presetName]?.services ?? [];
+}
+
+/**
+ * Get preset description.
+ * @param {string} presetName - Name of preset
+ * @returns {string} Description of preset
+ */
+export function getPresetDescription(presetName) {
+  return PRESETS[presetName]?.description ?? "";
+}
+
+/**
+ * Get complete preset info.
+ * @param {string} presetName - Name of preset
+ * @returns {Object|null} Preset object or null
+ */
+export function getPreset(presetName) {
+  return PRESETS[presetName] ?? null;
+}
+
+/**
+ * Add or update a preset.
+ * @param {string} presetName - Name of preset
+ * @param {string} description - Preset description
+ * @param {string[]} services - Array of service IDs
+ */
+export function setPreset(presetName, description, services) {
+  PRESETS[presetName] = { description, services };
+}
+
+/**
+ * Remove a preset.
+ * @param {string} presetName - Name of preset
+ */
+export function removePreset(presetName) {
+  delete PRESETS[presetName];
 }
 
 /**
@@ -183,8 +182,8 @@ export const PRESET_MAP = new Proxy(
   {},
   {
     get(target, prop) {
-      if (typeof prop === "string" && PRESET_CONFIGS[prop]) {
-        return buildPresetTaskList(prop);
+      if (typeof prop === "string" && PRESETS[prop]) {
+        return PRESETS[prop].services;
       }
       return [];
     },
