@@ -74,9 +74,18 @@ const PRESETS = {
       "speedtest",
       "winsat_disk",
       // Stress Tests (using GPU parent)
-      GPU_PARENT_ID,
-      "heavyload_stress_cpu",
-      "heavyload_stress_memory",
+      // GPU params: furmarkMinutes, heavyloadMinutes, furmark (true/false), heavyload (true/false)
+      {
+        id: GPU_PARENT_ID,
+        params: {
+          furmarkMinutes: 5,
+          heavyloadMinutes: 2,
+          furmark: true, // Enable FurMark
+          heavyload: true, // Enable HeavyLoad
+        },
+      },
+      { id: "heavyload_stress_cpu", params: { minutes: 5 } },
+      { id: "heavyload_stress_memory", params: { minutes: 5 } },
     ],
   },
 
@@ -94,16 +103,73 @@ const PRESETS = {
       "whynotwin11_check",
       "ping_test",
       "speedtest",
-
-      // Hide iperf test for now, until we can add option to pass in time duration
-      // TODO: Add feature to pass in params from presets
-      //"iperf_test",
+      // iPerf network test with reduced duration for quick diagnostics
+      { id: "iperf_test", params: { minutes: 1 } },
     ],
   },
 
   custom: {
     description: "Start with empty selection",
     services: [],
+  },
+
+  // GPU Stress Testing Examples
+  gpu_furmark_only: {
+    description: "GPU stress with FurMark only (5 min)",
+    services: [
+      {
+        id: GPU_PARENT_ID,
+        params: {
+          furmarkMinutes: 5,
+          furmark: true, // Only FurMark
+          heavyload: false, // Disable HeavyLoad
+        },
+      },
+    ],
+  },
+
+  gpu_heavyload_only: {
+    description: "GPU stress with HeavyLoad only (3 min)",
+    services: [
+      {
+        id: GPU_PARENT_ID,
+        params: {
+          heavyloadMinutes: 3,
+          furmark: false, // Disable FurMark
+          heavyload: true, // Only HeavyLoad
+        },
+      },
+    ],
+  },
+
+  gpu_both_quick: {
+    description: "Both FurMark & HeavyLoad (quick: 2 min each)",
+    services: [
+      {
+        id: GPU_PARENT_ID,
+        params: {
+          furmarkMinutes: 2,
+          heavyloadMinutes: 2,
+          furmark: true,
+          heavyload: true,
+        },
+      },
+    ],
+  },
+
+  gpu_both_extended: {
+    description: "Both FurMark & HeavyLoad (extended: 10 min each)",
+    services: [
+      {
+        id: GPU_PARENT_ID,
+        params: {
+          furmarkMinutes: 10,
+          heavyloadMinutes: 10,
+          furmark: true,
+          heavyload: true,
+        },
+      },
+    ],
   },
 };
 
