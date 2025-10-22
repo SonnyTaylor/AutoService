@@ -62,7 +62,7 @@ export const definition = {
     "Use AI to analyze and optimize browser notification permissions",
   defaultParams: {
     model: "gpt-4o-mini",
-    apply_changes: false, // Default: preview mode for safety
+    apply_changes: true, // Default: apply changes
   },
   toolKeys: [],
   async isAvailable() {
