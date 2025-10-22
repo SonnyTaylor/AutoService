@@ -356,6 +356,10 @@ Phase 3 progress (service-specific `viewCSS` migrated from `service.css`):
 - kvrt_scan (card.kvrt)
 - adwcleaner_clean (card.adwcleaner numeric KPI tweak)
 - iperf_test (card.iperf chart spacing)
+- ai_startup_disable (card.ai-startup-optimizer)
+- ai_browser_notification_disable (card.ai-browser-notification-optimizer)
+- drivecleanup_clean (card.drivecleanup removed-items grid)
+- whynotwin11_check (card.wn11)
 
 ## Service Categories
 
