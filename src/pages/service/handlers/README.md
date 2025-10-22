@@ -351,8 +351,11 @@ Phase 3 progress (service-specific `viewCSS` migrated from `service.css`):
 - smartctl_report (drive list/card styles)
 - disk_space_report (card.disk-space)
 - battery_health_report (card.battery-health)
-
-Next candidates: windows_update, winsat_disk, kvrt_scan, adwcleaner_clean, ai_* services.
+- windows_update (card.windows-update)
+- winsat_disk (card.winsat, incl. responsive media query)
+- kvrt_scan (card.kvrt)
+- adwcleaner_clean (card.adwcleaner numeric KPI tweak)
+- iperf_test (card.iperf chart spacing)
 
 ## Service Categories
 
