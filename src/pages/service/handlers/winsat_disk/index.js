@@ -374,6 +374,30 @@ export const printCSS = `
 `;
 
 // =============================================================================
+// VIEW CSS (service-specific styles for technician web view)
+// =============================================================================
+
+export const viewCSS = `
+  .card.winsat { display: flex; flex-direction: column; gap: 16px; }
+  .card.winsat .winsat-layout { display: grid; grid-template-columns: minmax(280px, 400px) 1fr; gap: 20px; align-items: stretch; }
+  .card.winsat .winsat-kpis { display: flex; flex-direction: column; gap: 12px; align-self: stretch; }
+  .card.winsat .winsat-meta { display: grid; gap: 6px; padding: 8px 10px; background: rgba(36, 48, 68, 0.55); border: 1px solid var(--border); border-radius: 8px; }
+  .card.winsat .winsat-meta-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .card.winsat .winsat-meta-row .lab { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; }
+  .card.winsat .winsat-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; padding: 8px 10px; background: rgba(36, 48, 68, 0.55); border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; }
+  .card.winsat .winsat-chart { background: var(--panel-accent); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px 8px; min-height: 240px; display: flex; align-items: center; justify-content: center; }
+  .card.winsat .winsat-chart > div { width: 100%; }
+  .card.winsat .winsat-latency,
+  .card.winsat .winsat-scores { display: flex; flex-direction: column; gap: 10px; padding: 12px; background: rgba(36, 48, 68, 0.35); border: 1px solid var(--border); border-radius: 8px; }
+  .card.winsat .section-title { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; font-weight: 600; margin-bottom: 4px; }
+  .card.winsat .pill-row { margin-top: 0; }
+  @media (max-width: 900px) {
+    .card.winsat .winsat-layout { grid-template-columns: 1fr; }
+    .card.winsat .winsat-chart { min-height: 220px; }
+  }
+`;
+
+// =============================================================================
 // PARAMETER CONTROLS RENDERER (for builder UI)
 // =============================================================================
 

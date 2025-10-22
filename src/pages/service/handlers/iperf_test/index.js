@@ -293,3 +293,11 @@ export const printCSS = `
     display: none !important;
   }
 `;
+
+// =============================================================================
+// VIEW CSS (service-specific styles for technician web view)
+// =============================================================================
+
+export const viewCSS = `
+  .card.iperf .chart-container { margin-top: 16px; }
+`;

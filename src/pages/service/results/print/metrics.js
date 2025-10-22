@@ -114,10 +114,26 @@ export function extractCustomerMetrics(results, options = {}) {
 export function separateServiceAndDiagnostic(results) {
   const services = [];
   const diagnostics = [];
+  const definitions = getServiceDefinitions();
 
   for (const result of results) {
     const taskType = result.task_type || result.type;
-    if (isTaskTypeDiagnostic(taskType)) {
+    const definition = definitions[taskType];
+
+    // Dynamic diagnostic detection:
+    // Treat tasks as diagnostic if their handler marks them as such OR
+    // if the task was run in preview-only mode (no changes applied).
+    const summary = result?.summary || {};
+    const hr = summary?.human_readable || {};
+    const res = summary?.results || {};
+    const ranInPreview =
+      res?.applied === false || /preview/i.test(String(hr?.mode || ""));
+
+    if (
+      isTaskTypeDiagnostic(taskType) ||
+      definition?.isDiagnostic === true ||
+      ranInPreview
+    ) {
       diagnostics.push(result);
     } else {
       services.push(result);

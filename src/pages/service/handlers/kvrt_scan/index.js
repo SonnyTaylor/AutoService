@@ -295,6 +295,38 @@ export const printCSS = `
 `;
 
 // =============================================================================
+// VIEW CSS (service-specific styles for technician web view)
+// =============================================================================
+
+export const viewCSS = `
+  .card.kvrt { display: flex; flex-direction: column; gap: 12px; }
+  .card.kvrt .kvrt-detections { display: flex; flex-direction: column; gap: 10px; }
+  .card.kvrt .kvrt-detection-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px; }
+  .card.kvrt .kvrt-detection {
+    background: var(--panel-accent);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: border-color 0.2s ease, transform 0.2s ease;
+  }
+  .card.kvrt .kvrt-detection:hover { border-color: #4f8cff; transform: translateY(-1px); }
+  .card.kvrt .kvrt-detection-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .card.kvrt .kvrt-threat { font-weight: 600; color: #f6d8a5; word-break: break-word; }
+  .card.kvrt .kvrt-detection-body { display: flex; flex-direction: column; gap: 4px; }
+  .card.kvrt .pill-row { margin-top: 2px; }
+  .card.kvrt .kvrt-label { text-transform: uppercase; letter-spacing: 0.06em; }
+  .card.kvrt .kvrt-object {
+    font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+    font-size: 13px; line-height: 1.4; color: #e3e9f8; word-break: break-all;
+  }
+  .card.kvrt .kvrt-meta { border-top: 1px solid var(--border); padding-top: 8px; font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace; font-size: 12px; opacity: 0.8; }
+  .card.kvrt .kvrt-empty { margin-top: 4px; }
+`;
+
+// =============================================================================
 // PARAMETER CONTROLS RENDERER (for builder UI)
 // =============================================================================
 

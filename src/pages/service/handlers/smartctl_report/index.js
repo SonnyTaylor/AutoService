@@ -205,3 +205,42 @@ export function extractCustomerMetrics({ result }) {
     }),
   ];
 }
+
+// =============================================================================
+// VIEW CSS (screen styles migrated from service.css)
+// =============================================================================
+
+export const viewCSS = `
+  /* smartctl cards */
+  .card.smartctl .drive-list { display: grid; gap: 10px; }
+  .card.smartctl .drive-card {
+    background: var(--panel-accent);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+  }
+  .card.smartctl .drive-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .card.smartctl .drive-model { font-weight: 600; }
+`;
+
+// =============================================================================
+// PRINT CSS (tech PDF)
+// =============================================================================
+
+export const printCSS = `
+  .smartctl .drive-list { display: grid; gap: 12px; }
+  .smartctl .drive-card {
+    background: #ffffff;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 12px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .smartctl .drive-head { margin-bottom: 8px; }
+`;

@@ -69,5 +69,7 @@
  * @property {function(TechRendererContext): any} renderTech - Technician view renderer (lit-html)
  * @property {function(CustomerMetricsContext): CustomerMetric|CustomerMetric[]|null} [extractCustomerMetrics] - Customer metric extractor (optional)
  * @property {function(ParamControlsContext): HTMLElement|string|null} [renderParamControls] - Optional UI controls for service parameters in builder
- * @property {string} [printCSS] - Optional CSS rules specific to this service's print output
+ * @property {string} [viewCSS] - Optional CSS rules for technician web view (screen)
+ * @property {string} [printCSS] - Optional CSS rules for technician print output (tech PDF)
+ * @property {string} [customerPrintCSS] - Optional CSS rules for customer print output (customer PDF)
  */

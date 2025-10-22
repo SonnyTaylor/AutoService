@@ -136,29 +136,46 @@ export function extractCustomerMetrics({ summary, status }) {
 }
 
 // =============================================================================
-// PRINT CSS (optional - service-specific styles for technician reports)
+// CSS EXPORTS (optional)
 // =============================================================================
 
 /**
- * Optional: Export custom CSS for this service's print output.
- * This CSS is automatically included in technician print reports.
+ * Standardized CSS exports for handlers:
+ * - viewCSS:            Technician web view styles (screen)
+ * - printCSS:           Technician print styles (tech PDF)
+ * - customerPrintCSS:   Customer print styles (customer PDF)
  *
- * Use this for service-specific styling needs. Keep it minimal and focused
- * on print layout improvements. Base print styles are in css.js.
- *
- * @example
- * export const printCSS = `
- *   .template-service .custom-section {
- *     display: grid;
- *     grid-template-columns: repeat(2, 1fr);
- *     gap: 10px;
- *   }
- *
- *   .template-service .highlight-box {
- *     background: #fafbfc;
- *     border: 1px solid #cbd5e1;
- *     border-radius: 6px;
- *     padding: 10px;
- *   }
- * `;
+ * Notes:
+ * - Always scope selectors to the handler card class, e.g. `.card.template-service` or `.template-service`.
+ * - Keep CSS minimal and focused on service-specific needs.
+ * - Base/global styles live in core/service CSS; avoid duplicating them here.
  */
+
+// Technician web view styles (screen)
+export const viewCSS = `
+  /* Scope to this handler's card */
+  .card.template-service {
+    /* Example: add minimal layout tweaks specific to this handler */
+  }
+`;
+
+// Technician print styles (tech PDF)
+export const printCSS = `
+  .template-service .custom-section {
+    /* Example: print layout grid */
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+`;
+
+// Customer print styles (customer PDF)
+export const customerPrintCSS = `
+  .template-service .customer-highlight {
+    /* Example: emphasize key customer-facing sections */
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 8px;
+    background: #fafbfc;
+  }
+`;

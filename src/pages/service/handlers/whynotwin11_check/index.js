@@ -408,3 +408,36 @@ export const printCSS = `
     font-weight: 600;
   }
 `;
+
+// =============================================================================
+// VIEW CSS (Technician web view)
+// =============================================================================
+
+export const viewCSS = `
+/* Windows 11 Compatibility Check (technician screen styles) */
+.card.wn11 { display: flex; flex-direction: column; gap: 12px; }
+.card.wn11 .wn11-status-banner { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 8px; border: 1px solid var(--border); background: rgba(36, 48, 68, 0.35); }
+.card.wn11 .wn11-status-banner.ready { border-color: rgba(74, 222, 128, 0.3); background: rgba(34, 197, 94, 0.08); }
+.card.wn11 .wn11-status-banner.not-ready { border-color: rgba(248, 113, 113, 0.3); background: rgba(239, 68, 68, 0.08); }
+.card.wn11 .wn11-status-icon { font-size: 32px; line-height: 1; flex-shrink: 0; opacity: 0.9; }
+.card.wn11 .wn11-status-banner.ready .wn11-status-icon { color: #4ade80; }
+.card.wn11 .wn11-status-banner.not-ready .wn11-status-icon { color: #f87171; }
+.card.wn11 .wn11-status-content { flex: 1; min-width: 0; }
+.card.wn11 .wn11-status-title { font-size: 14px; font-weight: 600; letter-spacing: 0.01em; margin-bottom: 3px; color: var(--text-primary); }
+.card.wn11 .wn11-status-subtitle { font-size: 12px; opacity: 0.7; color: var(--text-secondary); }
+.card.wn11 .wn11-checks-section { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; background: rgba(36, 48, 68, 0.35); border: 1px solid var(--border); border-radius: 8px; }
+.card.wn11 .wn11-checks-section .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; display: flex; align-items: center; gap: 6px; }
+.card.wn11 .wn11-checks-section .section-title i { font-size: 14px; }
+.card.wn11 .wn11-check-group { display: flex; flex-direction: column; gap: 6px; }
+.card.wn11 .wn11-check-group-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; margin-top: 2px; }
+.card.wn11 .wn11-passing-details { margin-top: 4px; cursor: pointer; }
+.card.wn11 .wn11-passing-details summary { font-size: 12px; font-weight: 500; opacity: 0.8; cursor: pointer; user-select: none; padding: 6px 10px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 6px; transition: all 0.2s ease; }
+.card.wn11 .wn11-passing-details summary:hover { background: rgba(59, 130, 246, 0.12); border-color: rgba(59, 130, 246, 0.35); }
+.card.wn11 .wn11-passing-details[open] summary { margin-bottom: 8px; }
+.card.wn11 .wn11-recommendations { padding: 12px 14px; background: rgba(251, 191, 36, 0.08); border: 1px solid rgba(251, 191, 36, 0.25); border-radius: 8px; }
+.card.wn11 .wn11-rec-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #fbbf24; opacity: 0.9; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+.card.wn11 .wn11-rec-title i { font-size: 14px; }
+.card.wn11 .wn11-rec-list { margin: 0; padding-left: 20px; list-style: disc; }
+.card.wn11 .wn11-rec-list li { margin: 6px 0; font-size: 12px; line-height: 1.5; color: var(--text-secondary); opacity: 0.9; }
+.card.wn11 .wn11-rec-list li strong { color: var(--text-primary); font-weight: 600; }
+`;

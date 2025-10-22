@@ -177,3 +177,79 @@ export function extractCustomerMetrics({ result }) {
     items: metricItems.length > 0 ? metricItems : undefined,
   });
 }
+
+// =============================================================================
+// VIEW CSS (screen styles migrated from service.css)
+// =============================================================================
+
+export const viewCSS = `
+  /* Disk Space Report */
+  .card.disk-space .disk-space-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .card.disk-space .disk-drives {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .card.disk-space .drive-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    background: rgba(36, 48, 68, 0.35);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .card.disk-space .drive-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  .card.disk-space .drive-bar {
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .card.disk-space .drive-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+  }
+  .card.disk-space .drive-bar-fill.ok { background: #4ade80; }
+  .card.disk-space .drive-bar-fill.warn { background: #fbbf24; }
+  .card.disk-space .drive-bar-fill.fail { background: #f87171; }
+  .card.disk-space .drive-stats {
+    font-size: 12px;
+    color: var(--text-secondary);
+    opacity: 0.8;
+  }
+  .card.disk-space .warnings {
+    padding: 12px;
+    background: rgba(251, 191, 36, 0.08);
+    border: 1px solid rgba(251, 191, 36, 0.25);
+    border-radius: 8px;
+  }
+  .card.disk-space .warnings h4 {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #fbbf24;
+  }
+  .card.disk-space .warnings ul { margin: 0; padding-left: 20px; list-style: disc; }
+  .card.disk-space .warnings li {
+    margin: 4px 0;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .card.disk-space .no-data {
+    padding: 20px;
+    text-align: center;
+    color: var(--text-secondary);
+    opacity: 0.7;
+    font-style: italic;
+  }
+`;

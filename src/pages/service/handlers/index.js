@@ -169,6 +169,43 @@ export function getHandlerPrintCSS() {
 }
 
 /**
+ * Get all view CSS (technician web view) from registered handlers.
+ * Returns a concatenated string of all service-specific screen CSS rules.
+ * @returns {string} Combined CSS string
+ */
+export function getHandlerViewCSS() {
+  const cssChunks = [];
+  for (const [id, handler] of Object.entries(HANDLERS)) {
+    if (handler.viewCSS && typeof handler.viewCSS === "string") {
+      cssChunks.push(`/* View CSS from handler: ${id} */`);
+      cssChunks.push(handler.viewCSS);
+      cssChunks.push("");
+    }
+  }
+  return cssChunks.join("\n");
+}
+
+/**
+ * Get all customer print CSS from registered handlers.
+ * Returns a concatenated string of all service-specific customer print rules.
+ * @returns {string} Combined CSS string
+ */
+export function getHandlerCustomerPrintCSS() {
+  const cssChunks = [];
+  for (const [id, handler] of Object.entries(HANDLERS)) {
+    if (
+      handler.customerPrintCSS &&
+      typeof handler.customerPrintCSS === "string"
+    ) {
+      cssChunks.push(`/* Customer Print CSS from handler: ${id} */`);
+      cssChunks.push(handler.customerPrintCSS);
+      cssChunks.push("");
+    }
+  }
+  return cssChunks.join("\n");
+}
+
+/**
  * Check if a handler is registered.
  * @param {string} id - Service handler ID
  * @returns {boolean} True if handler exists

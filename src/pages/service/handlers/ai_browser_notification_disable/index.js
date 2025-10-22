@@ -440,11 +440,33 @@ export function extractCustomerMetrics({ result }) {
   const disabled = hr.notifications_disabled || 0;
   const estimatedReduction = hr.estimated_reduction || "Unknown";
 
-  // Only show metric if there were any notifications analyzed
-  if (totalNotifications === 0) return [];
+  // Always show a metric, even if nothing was enumerated
+  if (totalNotifications === 0) {
+    if (!results.applied) {
+      return [
+        buildMetric({
+          icon: "🔔",
+          label: "Browser Notifications",
+          value: "0 things could be fixed",
+          detail: "0 notifications analyzed",
+          variant: "info",
+        }),
+      ];
+    }
+    // Applied mode but nothing enumerated
+    return [
+      buildMetric({
+        icon: "🔔",
+        label: "Browser Notifications",
+        value: "All clean",
+        detail: "0 notifications analyzed",
+        variant: "success",
+      }),
+    ];
+  }
 
-  // If no recommendations, show clean result
-  if (recommendations === 0) {
+  // If no recommendations, show clean result in applied mode
+  if (recommendations === 0 && results.applied) {
     return [
       buildMetric({
         icon: "🔔",
@@ -459,7 +481,7 @@ export function extractCustomerMetrics({ result }) {
   }
 
   // Build detail items showing what was found
-  const items = [];
+  const detailItems = [];
   const toDisable = results.to_disable || [];
 
   // Group by category
@@ -471,18 +493,33 @@ export function extractCustomerMetrics({ result }) {
   });
 
   // Create items from categories
-  Object.entries(categoryGroups).forEach(([category, items]) => {
+  Object.entries(categoryGroups).forEach(([category, categoryItems]) => {
     const catLabel = formatKey(category);
-    items.forEach((item) => {
+    categoryItems.forEach((item) => {
       const origin = cleanOrigin(item.origin);
       const browser = item.browser || "Unknown";
-      items.push(`${catLabel}: ${origin} (${browser})`);
+      detailItems.push(`${catLabel}: ${origin} (${browser})`);
     });
   });
 
+  // In preview mode with no recommendations, show as diagnostic
+  if (recommendations === 0 && !results.applied) {
+    return [
+      buildMetric({
+        icon: "🔔",
+        label: "Browser Notifications",
+        value: "0 things could be fixed",
+        detail: `${totalNotifications} notification${
+          totalNotifications !== 1 ? "s" : ""
+        } analyzed - all appear safe`,
+        variant: "info",
+      }),
+    ];
+  }
+
   const value = results.applied
     ? `${disabled} disabled`
-    : `${recommendations} can be optimized`;
+    : `${recommendations} things could be fixed`;
 
   return [
     buildMetric({
@@ -491,7 +528,7 @@ export function extractCustomerMetrics({ result }) {
       value: value,
       detail: estimatedReduction,
       variant: results.applied ? "success" : "info",
-      items: items.length > 0 ? items : undefined,
+      items: detailItems.length > 0 ? detailItems : undefined,
     }),
   ];
 }
@@ -751,4 +788,50 @@ export const printCSS = `
     padding: 4px 0;
   }
 }
+`;
+
+// =============================================================================
+// VIEW CSS (Technician web view)
+// =============================================================================
+
+export const viewCSS = `
+/* AI Browser Notification Optimizer (technician screen styles) */
+.card.ai-browser-notification-optimizer { display: flex; flex-direction: column; gap: 16px; }
+.card.ai-browser-notification-optimizer .section-title { font-size: 16px; font-weight: 600; color: #e3e9f8; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid var(--border); }
+.card.ai-browser-notification-optimizer .mb-3 { margin-bottom: 12px !important; }
+.card.ai-browser-notification-optimizer .kpi-row { margin-bottom: 0; }
+.card.ai-browser-notification-optimizer .mt-4 { margin-top: 0; }
+.card.ai-browser-notification-optimizer h4 { font-size: 14px; font-weight: 600; color: #a3adbf; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 0.03em; }
+.card.ai-browser-notification-optimizer .summary-box { background: rgba(36, 48, 68, 0.45); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+.card.ai-browser-notification-optimizer .summary-item { margin-bottom: 6px; font-size: 13px; line-height: 1.5; color: #cbd5e1; }
+.card.ai-browser-notification-optimizer .summary-item strong { color: #e3e9f8; font-weight: 600; margin-right: 6px; }
+.card.ai-browser-notification-optimizer .notification-detection-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; margin-top: 14px; }
+.card.ai-browser-notification-optimizer .notification-detection { background: rgba(36, 48, 68, 0.5); border: 1px solid var(--border); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 10px; transition: all 0.2s ease; }
+.card.ai-browser-notification-optimizer .notification-detection:hover { border-color: #4f8cff; background: rgba(36, 48, 68, 0.7); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }
+.card.ai-browser-notification-optimizer .notification-detection.keep-enabled { border-color: #10b981; background: rgba(16, 185, 129, 0.12); }
+.card.ai-browser-notification-optimizer .notification-detection.keep-enabled:hover { border-color: #34d399; background: rgba(16, 185, 129, 0.18); }
+.card.ai-browser-notification-optimizer .notification-detection-head { padding-bottom: 8px; border-bottom: 1px solid rgba(203, 213, 225, 0.15); }
+.card.ai-browser-notification-optimizer .notification-name-block { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.card.ai-browser-notification-optimizer .notification-origin { font-weight: 600; color: #f6d8a5; word-break: break-all; line-height: 1.5; font-size: 14px; }
+.card.ai-browser-notification-optimizer .notification-origin strong { color: #a3adbf; margin-right: 8px; font-weight: 700; }
+.card.ai-browser-notification-optimizer .item-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.card.ai-browser-notification-optimizer .notification-detection-body { display: flex; flex-direction: column; gap: 8px; }
+.card.ai-browser-notification-optimizer .detail-row { font-size: 13px; line-height: 1.6; color: #cbd5e1; }
+.card.ai-browser-notification-optimizer .detail-label { font-weight: 600; color: #94a3b8; margin-right: 8px; }
+.card.ai-browser-notification-optimizer .detail-value { color: #e3e9f8; }
+.card.ai-browser-notification-optimizer .alert.alert-success { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 14px; color: #e3e9f8; line-height: 1.6; }
+.card.ai-browser-notification-optimizer .alert.alert-success strong { color: #34d399; }
+.card.ai-browser-notification-optimizer .error-list { background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 14px; margin-top: 14px; }
+.card.ai-browser-notification-optimizer .error-item { margin-bottom: 10px; padding: 10px; background: rgba(0, 0, 0, 0.3); border-radius: 6px; font-size: 13px; line-height: 1.6; color: #fecaca; }
+.card.ai-browser-notification-optimizer .error-item strong { color: #fef2f2; font-weight: 600; }
+.card.ai-browser-notification-optimizer .all-notifications-table { max-height: 480px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; margin-top: 12px; background: rgba(36, 48, 68, 0.3); }
+.card.ai-browser-notification-optimizer .all-notifications-table table { width: 100%; border-collapse: collapse; }
+.card.ai-browser-notification-optimizer .all-notifications-table th, .card.ai-browser-notification-optimizer .all-notifications-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid rgba(203, 213, 225, 0.1); }
+.card.ai-browser-notification-optimizer .all-notifications-table th { background: rgba(36, 48, 68, 0.5); font-weight: 600; color: #e3e9f8; position: sticky; top: 0; z-index: 1; }
+.card.ai-browser-notification-optimizer .all-notifications-table tr:last-child td { border-bottom: none; }
+.card.ai-browser-notification-optimizer details { margin-top: 16px; }
+.card.ai-browser-notification-optimizer details summary { cursor: pointer; user-select: none; padding: 10px 14px; background: rgba(36, 48, 68, 0.4); border: 1px solid var(--border); border-radius: 6px; font-weight: 600; font-size: 15px; color: #e3e9f8; transition: all 0.2s ease; }
+.card.ai-browser-notification-optimizer details summary:hover { background: rgba(36, 48, 68, 0.6); border-color: #4a5568; }
+.card.ai-browser-notification-optimizer details[open] summary { margin-bottom: 12px; border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom: none; }
+.card.ai-browser-notification-optimizer details summary h4 { display: inline; font-size: inherit; font-weight: inherit; margin: 0; }
 `;

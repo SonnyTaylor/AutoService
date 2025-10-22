@@ -30,7 +30,29 @@ The handler system solves this by **co-locating all service-specific logic** in 
 
 ## Directory Structure
 
-```
+```text
+handlers/
+# Service Handlers
+
+This directory contains the unified handler system for AutoService service tasks.
+
+## What is a Handler?
+
+A handler is a self-contained module that defines everything about a service task:
+
+- Service catalog definition (ID, label, parameters, build function)
+- Technician view renderer (detailed technical results)
+- Customer metrics extractor (customer-friendly summary)
+- Documentation, test fixtures, and business logic
+
+## Why Handlers?
+
+Previously, service logic was scattered across multiple files (catalog, tech renderers, customer metrics), making changes hard. Handlers co-locate all service-specific logic in one place.
+
+## Directory Structure
+
+```text
+
 handlers/
 ├── index.js              # Handler registry (imports and exports all handlers)
 ├── types.js              # Type definitions for handlers
@@ -41,18 +63,19 @@ handlers/
 │   ├── index.js          # Complete handler template
 │   ├── README.md         # Documentation template
 │   └── fixtures/         # Test fixture template
-└── [service_id]/         # Individual service handlers (created during migration)
+└── [service_id]/         # Individual service handlers
     ├── index.js          # Handler implementation
     ├── README.md         # Service-specific documentation
     └── fixtures/         # Test data
         ├── test_success.json
-        ├── test_error.json
+  ├── test_error.json
         └── ...
+
 ```
 
 ## Handler Structure
 
-Each handler exports three main components:
+Each handler exports these components:
 
 ### 1. Service Definition
 
@@ -95,16 +118,30 @@ export function extractCustomerMetrics({ summary, status }) {
 }
 ```
 
-### 4. Print CSS (Optional)
+### 4. CSS Exports (Optional, Standardized)
+
+Handlers use standardized CSS exports:
+
+- `viewCSS` – Technician web view (screen) styles
+- `printCSS` – Technician print styles (tech PDF)
+- `customerPrintCSS` – Customer print styles (customer PDF)
+
+Examples:
 
 ```javascript
+export const viewCSS = `
+  .card.speedtest { /* screen tweaks */ }
+`;
+
 export const printCSS = `
-  /* Service-specific print styles for technician reports */
-  .speedtest-layout { display: block; }
+  /* Technician print styles */
   .speedtest-kpis { display: grid; grid-template-columns: repeat(2, 1fr); }
-  
-  /* Hide charts in print */
   .speedtest-chart { display: none !important; }
+`;
+
+export const customerPrintCSS = `
+  /* Customer print styles */
+  .speedtest-summary { border: 1px solid #cbd5e1; padding: 8px; }
 `;
 ```
 
@@ -112,48 +149,50 @@ export const printCSS = `
 
 ### Option 1: During Migration (Recommended)
 
-Follow the comprehensive guide: `docs/HANDLER_MIGRATION_GUIDE.md`
+See `docs/HANDLER_MIGRATION_GUIDE.md`.
 
 ### Option 2: New Service from Scratch
 
-1. **Copy the template**:
+1. Copy the template:
 
-   ```bash
-   cp -r handlers/_TEMPLATE handlers/my_service
-   ```
+```bash
+cp -r handlers/_TEMPLATE handlers/my_service
+```
 
-2. **Edit `handlers/my_service/index.js`**:
+1. Edit `handlers/my_service/index.js`:
 
-   - Update the service definition
-   - Implement the tech renderer
-   - Implement the customer metrics extractor (optional)
+- Update the service definition
+- Implement the tech renderer
+- Implement the customer metrics extractor (optional)
+- Add CSS exports (viewCSS at minimum)
 
-3. **Register the handler in `handlers/index.js`**:
+1. Register the handler in `handlers/index.js`:
 
-   ```javascript
-   import * as myService from "./my_service/index.js";
+```javascript
+import * as myService from "./my_service/index.js";
 
-   const HANDLERS = {
-     my_service: myService,
-   };
-   ```
+const HANDLERS = {
+  my_service: myService,
+};
+```
 
-4. **Document in `handlers/my_service/README.md`**:
+1. Document in `handlers/my_service/README.md`:
 
-   - Service overview
-   - Parameters
-   - Python handler contract
-   - Rendering details
-   - Testing instructions
+- Service overview
+- Parameters
+- Python handler contract
+- Rendering details
+- Testing instructions
 
-5. **Create test fixtures in `handlers/my_service/fixtures/`**:
-   - `test_success.json` - Successful execution
-   - `test_error.json` - Error case
-   - Additional edge cases as needed
+1. Create test fixtures in `handlers/my_service/fixtures/`:
+
+- `test_success.json` - Successful execution
+- `test_error.json` - Error case
+- Additional edge cases as needed
 
 ## Common Utilities
 
-Handlers have access to shared utilities:
+Handlers have access to shared utilities.
 
 ### UI Utilities (`common/ui.js`)
 
@@ -182,105 +221,94 @@ The registry (`index.js`) provides these functions:
 - `getServiceDefinitions()` - Get all service catalog definitions
 - `getTechRenderers()` - Get all tech renderer functions
 - `getCustomerMetricExtractors()` - Get all customer metric extractors
-- `getHandlerPrintCSS()` - Get concatenated print CSS from all handlers
+- `getHandlerViewCSS()` - Get concatenated screen CSS (`viewCSS`) from all handlers
+- `getHandlerPrintCSS()` - Get concatenated technician print CSS (`printCSS`) from handlers
+- `getHandlerCustomerPrintCSS()` - Get concatenated customer print CSS (`customerPrintCSS`) from handlers
 - `hasHandler(id)` - Check if handler is registered
 - `listHandlerIds()` - Get list of all handler IDs
 
 ## Print CSS System
 
-Handlers can optionally export service-specific print CSS for technician reports.
+Handlers can export service-specific print CSS for technician reports, and customer print CSS for customer PDFs.
 
 ### Why Use Print CSS?
 
-Print CSS is needed when:
+Use print CSS when:
 
-- ✅ Your service has custom layouts (grids, flexbox)
-- ✅ Charts/visualizations need hiding in print
-- ✅ Service-specific components need print styling
-- ❌ **Not needed** if using only common components (`.card`, `.kpi-row`, `.pill-row`)
+- Your service has custom layouts (grids, flexbox)
+- Charts/visualizations need hiding in print
+- Service-specific components need print styling
 
 ### How It Works
 
 ```javascript
-// 1. Export CSS in your handler
-export const printCSS = `
-  .my-service .custom-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-  }
-  
-  /* Hide chart in print */
-  .my-service-chart { display: none !important; }
-`;
+// 1) Export CSS in your handler using standardized names
+export const viewCSS = ` .my-service { } `;
+export const printCSS = ` .my-service { } `; // Technician print
+export const customerPrintCSS = ` .my-service { } `; // Customer print
 
-// 2. CSS automatically included in print documents
-// No additional configuration needed!
+// 2) Injection (implemented)
+// - Technician web view: viewCSS is injected on the results page automatically.
+// - Technician print: printCSS is bundled into the print document via getTechPrintCSS().
+// - Customer print: customerPrintCSS is bundled into the customer print document.
 ```
 
 ### Best Practices
 
-**✅ Do:**
+Do:
 
 - Scope CSS with service class: `.my-service .custom { }`
 - Focus on print-specific needs (layout, hiding charts)
-- Use comments to document sections
 - Keep it minimal
 
-**❌ Don't:**
+Don't:
 
 - Use global selectors (affects all services)
 - Duplicate base styles (cards, KPIs already styled)
-- Include screen-only styles (put in component CSS instead)
+- Include screen-only styles in print CSS
 
-### Example
+### Examples
+
+Technician print:
 
 ```javascript
 export const printCSS = `
   /* Detection grid layout */
-  .kvrt-detection-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-  
+  .kvrt-detection-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
   /* Detection card styling */
-  .kvrt-detection {
-    background: #fafbfc;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    padding: 10px;
-    page-break-inside: avoid;
-  }
-  
+  .kvrt-detection { background: #fafbfc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px; page-break-inside: avoid; }
   /* Hide interactive elements in print */
   .kvrt-chart { display: none !important; }
 `;
 ```
 
-### Documentation
+Customer print:
 
-See `CSS_MIGRATION_GUIDE.md` for:
+```javascript
+export const customerPrintCSS = `
+  .kvrt-summary { border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; }
+`;
+```
 
-- Complete print CSS system overview
-- Migration steps for existing services
-- Examples and troubleshooting
+## Handler Review Checklist (CSS)
+
+- [ ] Exports `viewCSS` (at minimum)
+- [ ] Exports `printCSS` if technician print needs service-specific styles
+- [ ] Exports `customerPrintCSS` if customer print needs service-specific styles
+- [ ] All selectors scoped to handler (e.g., `.card.my-service`)
+- [ ] No duplication of base styles
 
 ## Integration
 
 Handlers automatically integrate with:
 
-1. **Catalog** (`src/pages/service/catalog.js`) - Service definitions merge into SERVICES object
-2. **Renderers** (`src/pages/service/results/renderers/tasks.js`) - Tech renderers merge into RENDERERS object
-3. **Metrics** (`src/pages/service/results/print/metrics.js`) - Extractors called before legacy processing
-
-See integration points in those files (marked with "HANDLER INTEGRATION" comments).
+1. Catalog (`src/pages/service/catalog.js`) – Service definitions
+2. Renderers (`src/pages/service/results/renderers/tasks.js`) – Tech renderers
+3. Metrics (`src/pages/service/results/print/metrics.js`) – Customer metrics
 
 ## Testing
 
 ### Unit Tests
-
-Test handlers in isolation using fixtures:
 
 ```javascript
 import { extractCustomerMetrics } from "./handlers/speedtest/index.js";
@@ -299,61 +327,69 @@ console.assert(metrics.icon === "🌐", "Should have correct icon");
 
 Test through the full workflow:
 
-1. Builder UI - Service appears and is configurable
-2. Runner - Task executes and streams logs
-3. Results - Tech view renders correctly
-4. Print Tech - Technician PDF generates
-5. Print Customer - Customer summary generates
+1. Builder UI – Service appears and is configurable
+2. Runner – Task executes and streams logs
+3. Results – Tech view renders correctly
+4. Print Tech – Technician PDF generates
+5. Print Customer – Customer summary generates
 
 ## Documentation
 
-- **Full Migration Guide**: `docs/HANDLER_MIGRATION_GUIDE.md` (1000+ lines)
-- **Quick Reference**: `docs/HANDLER_QUICK_REFERENCE.md` (cheat sheet)
-- **Infrastructure Summary**: `docs/HANDLER_INFRASTRUCTURE_SUMMARY.md`
-- **Migration Progress**: `docs/HANDLER_MIGRATION_PROGRESS.md` (tracker)
+- Full Migration Guide: `docs/HANDLER_MIGRATION_GUIDE.md`
+- Quick Reference: `docs/HANDLER_QUICK_REFERENCE.md`
+- Infrastructure Summary: `docs/HANDLER_INFRASTRUCTURE_SUMMARY.md`
+- Migration Progress: `docs/HANDLER_MIGRATION_PROGRESS.md`
 
 ## Migration Status
 
-**Current Status**: Infrastructure ready, handlers to be migrated
+Current status: Phase 2 (CSS injection) implemented.
 
-See `docs/HANDLER_MIGRATION_PROGRESS.md` for detailed tracking.
+Phase 3 progress (service-specific `viewCSS` migrated from `service.css`):
 
-**Total Services**: 17  
-**Migrated**: 0  
-**Remaining**: 17
+- ping_test (card.ping)
+- speedtest (card.speedtest)
+- smartctl_report (drive list/card styles)
+- disk_space_report (card.disk-space)
+- battery_health_report (card.battery-health)
+- windows_update (card.windows-update)
+- winsat_disk (card.winsat, incl. responsive media query)
+- kvrt_scan (card.kvrt)
+- adwcleaner_clean (card.adwcleaner numeric KPI tweak)
+- iperf_test (card.iperf chart spacing)
+- ai_startup_disable (card.ai-startup-optimizer)
+- ai_browser_notification_disable (card.ai-browser-notification-optimizer)
+- drivecleanup_clean (card.drivecleanup removed-items grid)
+- whynotwin11_check (card.wn11)
+
+Recent cleanup:
+
+- Removed remaining AI Startup Optimizer service-specific CSS from `src/styles/service.css` (both service-results and service-report blocks). Styling now lives entirely in handler `viewCSS`/`printCSS`.
+
+Print CSS coverage updates:
+
+- Added basic `printCSS` for `smartctl_report` (card layout + page-break control)
 
 ## Service Categories
 
-Handlers are organized by category in the UI:
-
-- **Diagnostics**: System health checks (battery, SMART, disk space, WinSAT)
-- **Security**: Antivirus and malware removal (KVRT, AdwCleaner)
-- **Cleanup**: Maintenance tasks (BleachBit, disk cleanup)
-- **Network**: Connectivity tests (speedtest, ping, iPerf)
-- **Stress**: Hardware stress testing (FurMark, HeavyLoad)
-- **System Integrity**: Windows health (SFC, DISM, Windows Update)
+- Diagnostics: System health checks (battery, SMART, disk space, WinSAT)
+- Security: Antivirus and malware removal (KVRT, AdwCleaner)
+- Cleanup: Maintenance tasks (BleachBit, disk cleanup)
+- Network: Connectivity tests (speedtest, ping, iPerf)
+- Stress: Hardware stress testing (FurMark, HeavyLoad)
+- System Integrity: Windows health (SFC, DISM, Windows Update)
 
 ## Contributing
 
 When creating or migrating a handler:
 
-1. ✅ Follow the template structure
-2. ✅ Use common utilities (DRY)
-3. ✅ Document thoroughly in README.md
-4. ✅ Create test fixtures
-5. ✅ Test all three views (builder, tech, customer)
-6. ✅ Update migration progress tracker
-7. ✅ Commit with clear message
-
-## Questions?
-
-Refer to the documentation:
-
-- New to handlers? Start with `docs/HANDLER_MIGRATION_GUIDE.md`
-- Need quick lookup? Use `docs/HANDLER_QUICK_REFERENCE.md`
-- Creating new service? Use `_TEMPLATE/` as starting point
-- Stuck? Check existing migrated handlers as examples
+1. Follow the template structure
+2. Use common utilities (DRY)
+3. Document thoroughly in README.md
+4. Create test fixtures
+5. Test all three views (builder, tech, customer)
+6. Update migration progress tracker
+7. Commit with a clear message
 
 ---
 
-**Let's make AutoService more maintainable, one handler at a time!** 🚀
+Let's make AutoService more maintainable, one handler at a time! 🚀

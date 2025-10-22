@@ -384,3 +384,67 @@ export const printCSS = `
     display: none !important;
   }
 `;
+
+// =============================================================================
+// VIEW CSS (screen styles migrated from service.css)
+// =============================================================================
+
+export const viewCSS = `
+  .card.speedtest { display: flex; flex-direction: column; gap: 16px; }
+  .card.speedtest .speedtest-layout {
+    display: grid;
+    grid-template-columns: minmax(260px, 0.65fr) 1fr;
+    gap: 20px;
+    align-items: stretch;
+  }
+  .card.speedtest .speedtest-kpis {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-self: stretch;
+  }
+  .card.speedtest .speedtest-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+    padding: 8px 10px;
+    background: rgba(36, 48, 68, 0.55);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-sizing: border-box;
+  }
+  .card.speedtest .speedtest-meta {
+    display: grid;
+    gap: 6px;
+    padding: 8px 10px;
+    background: rgba(36, 48, 68, 0.55);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .card.speedtest .speedtest-meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .card.speedtest .speedtest-meta-row .lab {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .card.speedtest .speedtest-chart {
+    background: var(--panel-accent);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px 8px;
+    min-height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .card.speedtest .speedtest-chart > div { width: 100%; }
+  .card.speedtest .pill-row { margin-top: 0; }
+  @media (max-width: 900px) {
+    .card.speedtest .speedtest-layout { grid-template-columns: 1fr; }
+    .card.speedtest .speedtest-chart { min-height: 200px; }
+  }
+`;

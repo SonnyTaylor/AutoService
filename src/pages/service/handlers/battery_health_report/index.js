@@ -393,3 +393,69 @@ export const printCSS = `
     padding: 10px;
   }
 `;
+
+// =============================================================================
+// VIEW CSS (screen styles migrated from service.css)
+// =============================================================================
+
+export const viewCSS = `
+  /* Battery Health Report */
+  .card.battery-health { display: flex; flex-direction: column; gap: 12px; }
+  .card.battery-health .battery-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .card.battery-health .battery-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .card.battery-health .battery-icon {
+    font-size: 48px;
+    color: #22c55e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .card.battery-health .battery-title h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .card.battery-health .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
+  }
+  .card.battery-health .battery-time-estimates {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 12px 16px;
+    background: var(--panel-accent);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .card.battery-health .time-estimate {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--text);
+  }
+  .card.battery-health .time-estimate i { font-size: 20px; color: #3b82f6; }
+  .card.battery-health .no-battery-message {
+    text-align: center;
+    padding: 32px 16px;
+    color: var(--text-muted);
+  }
+  .card.battery-health .no-battery-message i { display: block; margin-bottom: 12px; }
+  .card.battery-health .error-message { padding: 12px; }
+  @media (max-width: 900px) {
+    .card.battery-health .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+`;
