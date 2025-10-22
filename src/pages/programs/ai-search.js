@@ -11,6 +11,7 @@ import { openEditor } from "./editor.js";
 
 const BTN_ID = "program-ai-search-btn";
 const MODAL_ID = "ai-search-modal";
+let resultsClickHandler = null;
 
 /** Initialize AI Search: button + modal wiring */
 export function initAISearch() {
@@ -131,64 +132,70 @@ export function initAISearch() {
   // React to settings changes
   window.addEventListener("ai-settings-updated", () => updateButtonState(btn));
 
-  // Wire result actions once
-  results?.addEventListener("click", async (e) => {
-    const btn = /** @type {HTMLElement|null} */ (
-      e.target instanceof HTMLElement
-        ? e.target.closest("button[data-action]")
-        : null
-    );
-    if (!btn) return;
-    const row = /** @type {HTMLElement|null} */ (btn.closest(".program-row"));
-    const id = row?.getAttribute("data-id");
-    if (!id) return;
-    const prog = state.all.find((p) => p.id === id);
-    if (!prog) return;
-    const action = btn.getAttribute("data-action");
-    if (action === "launch") {
-      /** @type {HTMLButtonElement} */ (btn).disabled = true;
-      try {
-        await invoke("launch_program", { program: prog });
-        // notify main list to refresh counts
-        window.dispatchEvent(new CustomEvent("programs-updated"));
-      } catch (error) {
-        console.error("Launch failed:", error);
-        // Optionally show error to user
-        showError(`Failed to launch ${prog.name}: ${error}`);
-      } finally {
-        /** @type {HTMLButtonElement} */ (btn).disabled = false;
-      }
-      return;
+  // Wire result actions: remove old handler if it exists to prevent duplicates
+  if (results) {
+    if (resultsClickHandler) {
+      results.removeEventListener("click", resultsClickHandler);
     }
-    if (action === "edit") {
-      openEditor(prog);
-      return;
-    }
-    if (action === "remove") {
-      // Re-use view's confirmation if available; otherwise fall back
-      const tauriConfirm = window.__TAURI__?.dialog?.confirm;
-      let ok = true;
-      if (tauriConfirm) {
+    resultsClickHandler = async (e) => {
+      const btn = /** @type {HTMLElement|null} */ (
+        e.target instanceof HTMLElement
+          ? e.target.closest("button[data-action]")
+          : null
+      );
+      if (!btn) return;
+      const row = /** @type {HTMLElement|null} */ (btn.closest(".program-row"));
+      const id = row?.getAttribute("data-id");
+      if (!id) return;
+      const prog = state.all.find((p) => p.id === id);
+      if (!prog) return;
+      const action = btn.getAttribute("data-action");
+      if (action === "launch") {
+        /** @type {HTMLButtonElement} */ (btn).disabled = true;
         try {
-          ok = await tauriConfirm(`Remove ${prog.name}?`, {
-            title: "Confirm",
-            type: "warning",
-          });
-        } catch {
+          await invoke("launch_program", { program: prog });
+          // notify main list to refresh counts
+          window.dispatchEvent(new CustomEvent("programs-updated"));
+        } catch (error) {
+          console.error("Launch failed:", error);
+          // Optionally show error to user
+          showError(`Failed to launch ${prog.name}: ${error}`);
+        } finally {
+          /** @type {HTMLButtonElement} */ (btn).disabled = false;
+        }
+        return;
+      }
+      if (action === "edit") {
+        openEditor(prog);
+        return;
+      }
+      if (action === "remove") {
+        // Re-use view's confirmation if available; otherwise fall back
+        const tauriConfirm = window.__TAURI__?.dialog?.confirm;
+        let ok = true;
+        if (tauriConfirm) {
+          try {
+            ok = await tauriConfirm(`Remove ${prog.name}?`, {
+              title: "Confirm",
+              type: "warning",
+            });
+          } catch {
+            ok = window.confirm(`Remove ${prog.name}?`);
+          }
+        } else {
           ok = window.confirm(`Remove ${prog.name}?`);
         }
-      } else {
-        ok = window.confirm(`Remove ${prog.name}?`);
+        if (!ok) return;
+        await invoke("remove_program", { id: prog.id });
+        // update local state and remove row
+        const idx = state.all.findIndex((p) => p.id === prog.id);
+        if (idx >= 0) state.all.splice(idx, 1);
+        row?.remove();
+        window.dispatchEvent(new CustomEvent("programs-updated"));
       }
-      if (!ok) return;
-      await invoke("remove_program", { id: prog.id });
-      // update local state and remove row
-      const idx = state.all.findIndex((p) => p.id === prog.id);
-      if (idx >= 0) state.all.splice(idx, 1);
-      row?.remove();
-      window.dispatchEvent(new CustomEvent("programs-updated"));
-    }
-  });
+    };
+    results.addEventListener("click", resultsClickHandler);
+  }
 
   function openModal() {
     if (!modal?.open) modal?.showModal();
