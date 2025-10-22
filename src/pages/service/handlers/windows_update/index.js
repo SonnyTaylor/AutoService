@@ -312,6 +312,40 @@ export function renderTech({ result, index }) {
 }
 
 // =============================================================================
+// VIEW CSS (service-specific styles for technician web view)
+// =============================================================================
+
+export const viewCSS = `
+  .card.windows-update { display: flex; flex-direction: column; gap: 16px; }
+  .card.windows-update .update-items { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+  .card.windows-update .update-item {
+    background: rgba(36, 48, 68, 0.45);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    transition: all 0.15s ease;
+  }
+  .card.windows-update .update-item:hover { background: rgba(36, 48, 68, 0.65); border-color: #4a5568; }
+  .card.windows-update .update-item-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+  .card.windows-update .update-title { font-size: 14px; font-weight: 500; color: #e3e9f8; flex: 1; line-height: 1.4; }
+  .card.windows-update .update-item-details { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 12px; color: #a3adbf; }
+  .card.windows-update .update-kb,
+  .card.windows-update .update-category,
+  .card.windows-update .update-size {
+    display: inline-flex; align-items: center; padding: 2px 8px; background: rgba(79, 140, 255, 0.12);
+    border-radius: 4px; font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace; font-size: 11px;
+  }
+  .card.windows-update .update-kb { background: rgba(139, 209, 124, 0.12); color: #8bd17c; }
+  .card.windows-update .info-box { background: rgba(79, 140, 255, 0.12); border-left: 3px solid #4f8cff; border-radius: 6px; padding: 12px 14px; margin-top: 8px; }
+  .card.windows-update .info-box p { margin: 0; color: #e3e9f8; font-size: 14px; line-height: 1.6; }
+  .card.windows-update .info-box p + p { margin-top: 6px; }
+  .card.windows-update .error-list { display: flex; flex-direction: column; gap: 10px; }
+  .card.windows-update .error-item { background: rgba(239, 68, 68, 0.08); border-left: 3px solid #ef4444; border-radius: 6px; padding: 10px 12px; }
+  .card.windows-update .error-item strong { color: #ef4444; font-size: 13px; display: block; margin-bottom: 6px; }
+  .card.windows-update .error-item pre { margin: 0; font-size: 12px; line-height: 1.5; color: #e3e9f8; white-space: pre-wrap; word-break: break-word; }
+`;
+
+// =============================================================================
 // CUSTOMER METRICS EXTRACTOR
 // =============================================================================
 
