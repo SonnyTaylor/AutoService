@@ -135,6 +135,8 @@ export function renderTech({ result, index }) {
 
   // Build KPI boxes
   const kpis = [
+    kpiBox("Mode", mode),
+    kpiBox("Duration", duration > 0 ? `${duration.toFixed(2)}s` : "-"),
     kpiBox("Total Notifications", totalNotifications),
     kpiBox("Recommendations", recommendations),
     kpiBox("Est. Reduction", estimatedReduction),
@@ -151,16 +153,6 @@ export function renderTech({ result, index }) {
   return html`
     <div class="card ai-browser-notification-optimizer">
       ${renderHeader("AI Browser Notification Optimizer", result.status)}
-
-      <!-- Mode Badge -->
-      <div class="mb-3">
-        ${pill(mode, results.applied ? "info" : "warning")}
-        ${duration
-          ? html`<span class="text-muted ms-2"
-              >(completed in ${duration.toFixed(2)}s)</span
-            >`
-          : ""}
-      </div>
 
       <!-- KPI Overview -->
       <div class="kpi-row">${kpis}</div>
