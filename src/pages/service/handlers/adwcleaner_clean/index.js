@@ -189,3 +189,12 @@ export function extractCustomerMetrics({ result }) {
     }),
   ];
 }
+
+// =============================================================================
+// VIEW CSS (service-specific styles for technician web view)
+// =============================================================================
+
+export const viewCSS = `
+  /* Numeric alignment tweak for KPIs in AdwCleaner card */
+  .card.adwcleaner .kpi .val { font-variant-numeric: tabular-nums; }
+`;
