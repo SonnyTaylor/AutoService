@@ -13,6 +13,7 @@ try:
     from sentry_config import (
         init_sentry,
         capture_task_exception,
+        capture_task_failure,
         create_task_span,
         add_breadcrumb,
     )
@@ -27,6 +28,11 @@ except ImportError:
 
     def capture_task_exception(
         exception, task_type, task_data=None, extra_context=None
+    ):
+        return None
+
+    def capture_task_failure(
+        task_type, failure_reason, task_data=None, extra_context=None
     ):
         return None
 
@@ -335,12 +341,25 @@ def main():
 
                     if status == "failure":
                         overall_success = False
+                        failure_reason = result.get("summary", {}).get(
+                            "reason"
+                        ) or result.get("summary", {}).get("error", "Unknown error")
                         logging.error(
                             "TASK_FAIL:%d:%s - %s",
                             idx,
                             task_type,
-                            result.get("summary", {}).get("reason")
-                            or result.get("summary", {}).get("error", "Unknown error"),
+                            failure_reason,
+                        )
+                        # Capture task failure in Sentry with proper fingerprinting
+                        capture_task_failure(
+                            task_type=task_type,
+                            failure_reason=failure_reason,
+                            task_data=task,
+                            extra_context={
+                                "task_index": idx,
+                                "total_tasks": len(tasks),
+                                "result_summary": result.get("summary", {}),
+                            },
                         )
                         # Add breadcrumb for task failure (not exception, just failure status)
                         add_breadcrumb(
@@ -348,9 +367,7 @@ def main():
                             category="task",
                             level="error",
                             task_type=task_type,
-                            reason=result.get("summary", {}).get(
-                                "reason", "Unknown error"
-                            ),
+                            reason=failure_reason,
                         )
                     elif status == "skipped":
                         logging.warning(

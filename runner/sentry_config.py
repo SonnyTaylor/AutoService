@@ -413,6 +413,69 @@ def create_task_span(
         yield None
 
 
+def capture_task_failure(
+    task_type: str,
+    failure_reason: str,
+    task_data: Optional[Dict[str, Any]] = None,
+    extra_context: Optional[Dict[str, Any]] = None,
+) -> Optional[str]:
+    """Capture a non-exception task failure with rich context and proper fingerprinting.
+
+    Use this when a task fails with status="failure" but doesn't raise an exception.
+    This ensures failures are properly grouped by task type in Sentry.
+
+    Args:
+        task_type: Type of task that failed (e.g., 'ping_test', 'battery_health_report')
+        failure_reason: Human-readable reason for the failure
+        task_data: The task configuration/parameters that were being executed
+        extra_context: Additional context to attach to the error report
+
+    Returns:
+        Optional[str]: Event ID if failure was captured, None otherwise
+    """
+    if not SENTRY_ENABLED or not _sentry_initialized:
+        return None
+
+    try:
+        import sentry_sdk
+
+        # Set task-specific context
+        with sentry_sdk.push_scope() as scope:
+            # Set fingerprint based on task_type to ensure different task types
+            # are grouped separately in Sentry
+            scope.fingerprint = [task_type, "task_failure"]
+
+            # Add task information as context
+            if task_data:
+                scope.set_context(
+                    "task",
+                    {
+                        "type": task_type,
+                        "data": task_data,
+                    },
+                )
+
+            # Add any extra context provided
+            if extra_context:
+                for key, value in extra_context.items():
+                    scope.set_context(key, value)
+
+            # Set tags for easy filtering in Sentry
+            scope.set_tag("task_type", task_type)
+            scope.set_tag("failure_type", "task_status_failure")
+
+            # Capture as a message event with error level
+            event_id = sentry_sdk.capture_message(
+                f"{task_type}: {failure_reason}", level="error"
+            )
+            logger.debug(f"Captured task failure for {task_type}: {event_id}")
+            return event_id
+
+    except Exception as e:
+        logger.error(f"Failed to capture task failure: {e}")
+        return None
+
+
 def add_breadcrumb(message: str, category: str = "info", level: str = "info", **data):
     """Add a breadcrumb to the current Sentry scope for debugging context.
 

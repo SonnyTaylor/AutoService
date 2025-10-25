@@ -9,6 +9,7 @@ The AutoService Python runner now includes comprehensive Sentry error tracking a
 ### ✅ Implemented
 
 - **Error Tracking**: All exceptions during task execution are automatically captured with full context
+- **Failure Tracking**: Non-exception failures (status="failure") are also captured with proper fingerprinting
 - **Performance Monitoring**: Each task execution is tracked as a Sentry transaction with timing data
 - **Rich Context**: System information (OS, CPU, memory, disks, Python version, etc.) is automatically attached to all events
 - **Task Fingerprinting**: Errors from different services (e.g., ping_test vs battery_health_report) are grouped separately in Sentry
@@ -67,7 +68,20 @@ Errors from different task types are automatically grouped separately in Sentry 
 - ❌ **Before**: All task errors mixed together
 - ✅ **After**: Separate issue groups for each task type (ping_test, battery_health_report, etc.)
 
-The fingerprint is set based on: `[task_type, exception_class_name]`
+### Two Types of Failures
+
+1. **Exception-based failures**: Python exceptions raised during execution
+   - Fingerprint: `[task_type, exception_class_name]`
+   - Example: `["ping_test", "ConnectionError"]`
+
+2. **Status-based failures**: Tasks that return `status="failure"` without raising an exception
+   - Fingerprint: `[task_type, "task_failure"]`
+   - Example: `["battery_health_report", "task_failure"]`
+
+This ensures that:
+- A `ping_test` error is never grouped with a `battery_health_report` error
+- Exception-based and status-based failures are tracked separately
+- Similar errors from the same task type are grouped together for easier triage
 
 ## Usage in Code
 
@@ -84,6 +98,21 @@ except Exception as e:
         task_type="ping_test",
         task_data={"host": "8.8.8.8", "count": 4},
         extra_context={"additional": "context"}
+    )
+```
+
+### Capturing Non-Exception Failures
+
+```python
+from sentry_config import capture_task_failure
+
+result = some_task_operation()
+if result.get("status") == "failure":
+    capture_task_failure(
+        task_type="battery_health_report",
+        failure_reason="No batteries found",
+        task_data=task_config,
+        extra_context={"result_summary": result.get("summary", {})}
     )
 ```
 
