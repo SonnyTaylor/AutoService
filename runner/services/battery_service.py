@@ -203,7 +203,7 @@ def run_battery_health_report(task: Dict[str, Any]) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        logger.exception("Battery health report failed")
+        logger.error("Battery health report failed")
         error_msg = str(e)
 
         # Check if this is a "no battery" error

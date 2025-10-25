@@ -266,9 +266,6 @@ def init_sentry() -> bool:
         _sentry_initialized = True
         logger.info(f"Sentry initialized successfully in {environment} environment")
 
-        # Set initial context
-        sentry_sdk.set_context("system", system_context)
-
         return True
 
     except ImportError:

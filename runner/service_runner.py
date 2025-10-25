@@ -339,7 +339,8 @@ def main():
                             "TASK_FAIL:%d:%s - %s",
                             idx,
                             task_type,
-                            result.get("summary", {}).get("reason", "Unknown error"),
+                            result.get("summary", {}).get("reason")
+                            or result.get("summary", {}).get("error", "Unknown error"),
                         )
                         # Add breadcrumb for task failure (not exception, just failure status)
                         add_breadcrumb(
