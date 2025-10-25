@@ -42,6 +42,17 @@ from typing import Dict, Any, List, Tuple
 
 logger = logging.getLogger(__name__)
 
+# Sentry integration for breadcrumbs
+try:
+    from sentry_config import add_breadcrumb
+
+    SENTRY_AVAILABLE = True
+except ImportError:
+    SENTRY_AVAILABLE = False
+
+    def add_breadcrumb(*args, **kwargs):
+        pass
+
 
 def _build_heavyload_command(task: Dict[str, Any]) -> Dict[str, Any]:
     """Build command list and capture a normalized summary of intent.
@@ -162,6 +173,15 @@ def run_heavyload_stress_test(task: Dict[str, Any]) -> Dict[str, Any]:
     is used; we therefore mainly return the echoed parameters, exit code, and
     a trimmed stdout/stderr excerpt for diagnostics.
     """
+    add_breadcrumb(
+        "Starting HeavyLoad stress test",
+        category="task",
+        level="info",
+        data={
+            "duration_minutes": task.get("duration_minutes"),
+            "headless": task.get("headless", True),
+        },
+    )
 
     build = _build_heavyload_command(task)
     if "error" in build:
@@ -175,6 +195,18 @@ def run_heavyload_stress_test(task: Dict[str, Any]) -> Dict[str, Any]:
     summary = build["summary"]
 
     logger.info("Running HeavyLoad: %s", " ".join(command))
+
+    add_breadcrumb(
+        "Executing HeavyLoad",
+        category="subprocess",
+        level="info",
+        data={
+            "stress_cpu": summary.get("stress_cpu"),
+            "stress_memory": summary.get("stress_memory"),
+            "stress_disk": summary.get("stress_disk"),
+            "stress_gpu": summary.get("stress_gpu"),
+        },
+    )
 
     try:
         proc = subprocess.run(
@@ -215,6 +247,13 @@ def run_heavyload_stress_test(task: Dict[str, Any]) -> Dict[str, Any]:
         }
 
     # Success path
+    add_breadcrumb(
+        "HeavyLoad stress test completed successfully",
+        category="task",
+        level="info",
+        data={"duration_minutes": summary.get("duration_minutes")},
+    )
+
     result_summary = {
         **summary,
         "exit_code": proc.returncode,

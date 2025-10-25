@@ -32,6 +32,20 @@ import os
 import subprocess
 import tempfile
 from typing import Any, Dict, List, Optional
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Sentry integration for breadcrumbs
+try:
+    from sentry_config import add_breadcrumb
+
+    SENTRY_AVAILABLE = True
+except ImportError:
+    SENTRY_AVAILABLE = False
+
+    def add_breadcrumb(*args, **kwargs):
+        pass
 
 
 def _bool_from_str(s: str) -> Optional[bool]:
@@ -65,6 +79,10 @@ def _read_csv_flex(path: str) -> Dict[str, List[str]]:
 
 
 def run_whynotwin11_check(task: Dict[str, Any]) -> Dict[str, Any]:
+    add_breadcrumb(
+        "Starting WhyNotWin11 compatibility check", category="task", level="info"
+    )
+
     exec_path = task.get("executable_path")
     working_dir = task.get("working_dir")
     output_csv = task.get("output_csv")
@@ -107,6 +125,8 @@ def run_whynotwin11_check(task: Dict[str, Any]) -> Dict[str, Any]:
 
         # WhyNotWin11 Portable supports: /export CSV <file> /silent
         command = [abs_exec, "/export", "CSV", csv_path, "/silent"]
+
+        add_breadcrumb("Executing WhyNotWin11", category="subprocess", level="info")
 
         proc = subprocess.run(
             command,
@@ -193,6 +213,18 @@ def run_whynotwin11_check(task: Dict[str, Any]) -> Dict[str, Any]:
                     failing.append(name)
 
         ready = len(failing) == 0 and any(name in checks for name in known_bool_cols)
+
+        add_breadcrumb(
+            "Win11 compatibility check completed",
+            category="task",
+            level="info",
+            data={
+                "ready": ready,
+                "failing_count": len(failing),
+                "passing_count": len(passing),
+            },
+        )
+
         hostname = None
         if header and row and header[0].strip().lower() == "hostname":
             try:

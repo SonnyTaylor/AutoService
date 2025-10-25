@@ -36,6 +36,17 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
+# Sentry integration for breadcrumbs
+try:
+    from sentry_config import add_breadcrumb
+
+    SENTRY_AVAILABLE = True
+except ImportError:
+    SENTRY_AVAILABLE = False
+
+    def add_breadcrumb(*args, **kwargs):
+        pass
+
 
 def _safe_int(value: Any) -> Optional[int]:
     try:
@@ -57,11 +68,24 @@ def _to_mbps(bits_per_second: Optional[float]) -> Optional[float]:
 
 def run_speedtest(task: Dict[str, Any]) -> Dict[str, Any]:
     """Execute a Speedtest.net measurement using the speedtest-cli library."""
+    add_breadcrumb(
+        "Starting speedtest",
+        category="task",
+        level="info",
+        data={
+            "skip_download": task.get("skip_download", False),
+            "skip_upload": task.get("skip_upload", False),
+        },
+    )
+
     start_time = time.time()
 
     try:
         import speedtest  # type: ignore
     except Exception as e:  # noqa: BLE001
+        add_breadcrumb(
+            "speedtest-cli library not available", category="task", level="error"
+        )
         return {
             "task_type": "speedtest",
             "status": "failure",
@@ -106,10 +130,26 @@ def run_speedtest(task: Dict[str, Any]) -> Dict[str, Any]:
         st.get_servers(servers or [])
         best_server = st.get_best_server()  # dict with selected server info
 
+        add_breadcrumb(
+            "Selected speedtest server",
+            category="task",
+            level="info",
+            data={
+                "server_name": best_server.get("name")
+                if isinstance(best_server, dict)
+                else None,
+                "server_country": best_server.get("country")
+                if isinstance(best_server, dict)
+                else None,
+            },
+        )
+
         # Perform tests
         if not skip_download:
+            add_breadcrumb("Starting download test", category="task", level="info")
             st.download(threads=threads_value)
         if not skip_upload:
+            add_breadcrumb("Starting upload test", category="task", level="info")
             st.upload(threads=threads_value)
 
         # Optionally generate share image URL
@@ -194,6 +234,20 @@ def run_speedtest(task: Dict[str, Any]) -> Dict[str, Any]:
             rating_stars = 1
 
         duration_seconds = round(time.time() - start_time, 2)
+
+        add_breadcrumb(
+            "Speedtest completed",
+            category="task",
+            level="info",
+            data={
+                "download_mbps": download_mbps,
+                "upload_mbps": upload_mbps,
+                "ping_ms": ping_ms,
+                "score": round(score, 1),
+                "verdict": verdict,
+                "duration_seconds": duration_seconds,
+            },
+        )
 
         summary: Dict[str, Any] = {
             "duration_seconds": duration_seconds,

@@ -37,6 +37,17 @@ from typing import Dict, Any, List
 
 logger = logging.getLogger(__name__)
 
+# Sentry integration for breadcrumbs
+try:
+    from sentry_config import add_breadcrumb
+
+    SENTRY_AVAILABLE = True
+except ImportError:
+    SENTRY_AVAILABLE = False
+
+    def add_breadcrumb(*args, **kwargs):
+        pass
+
 
 def _get_drive_type(drive: str) -> int:
     """Get the drive type using Windows API.
@@ -58,6 +69,8 @@ def _get_drive_type(drive: str) -> int:
 
 def run_disk_space_report(task: Dict[str, Any]) -> Dict[str, Any]:
     """Run disk space report for all drives, excluding USB and network drives."""
+    add_breadcrumb("Starting disk space report", category="task", level="info")
+
     try:
         drives = []
         warnings = []
@@ -93,7 +106,17 @@ def run_disk_space_report(task: Dict[str, Any]) -> Dict[str, Any]:
                 # Drive not accessible or doesn't exist
                 continue
 
+        add_breadcrumb(
+            f"Enumerated {len(drives)} drives",
+            category="task",
+            level="info",
+            data={"drive_count": len(drives)},
+        )
+
         if not drives:
+            add_breadcrumb(
+                "No drives found or accessible", category="task", level="warning"
+            )
             return {
                 "task_type": "disk_space_report",
                 "status": "failure",
@@ -115,12 +138,31 @@ def run_disk_space_report(task: Dict[str, Any]) -> Dict[str, Any]:
                 warnings.append(
                     f"Drive {drive} is critically low on space ({percent:.1f}% used)"
                 )
+                add_breadcrumb(
+                    f"Critical disk space warning",
+                    category="task",
+                    level="warning",
+                    data={"drive": drive, "usage_percent": percent},
+                )
             elif percent > 80:
                 warnings.append(
                     f"Drive {drive} is running low on space ({percent:.1f}% used)"
                 )
+                add_breadcrumb(
+                    f"Low disk space warning",
+                    category="task",
+                    level="warning",
+                    data={"drive": drive, "usage_percent": percent},
+                )
 
         summary = "\n".join(summary_lines)
+
+        add_breadcrumb(
+            "Disk space report completed successfully",
+            category="task",
+            level="info",
+            data={"drive_count": len(drives), "warning_count": len(warnings)},
+        )
 
         return {
             "task_type": "disk_space_report",

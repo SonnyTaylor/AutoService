@@ -21,6 +21,17 @@ from typing import Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
 
+# Sentry integration for breadcrumbs
+try:
+    from sentry_config import add_breadcrumb
+
+    SENTRY_AVAILABLE = True
+except ImportError:
+    SENTRY_AVAILABLE = False
+
+    def add_breadcrumb(*args, **kwargs):
+        pass
+
 
 def _normalize_drive(drive: str) -> str:
     d = (drive or "C:").strip().replace("/", "\\")
@@ -146,6 +157,13 @@ def run_chkdsk_scan(task: Dict[str, Any]) -> Dict[str, Any]:
     mode = task.get("mode", "read_only")
     schedule_if_busy = bool(task.get("schedule_if_busy", False))
 
+    add_breadcrumb(
+        "Starting CHKDSK scan",
+        category="task",
+        level="info",
+        data={"drive": drive, "mode": mode, "schedule_if_busy": schedule_if_busy},
+    )
+
     if mode not in {"read_only", "fix_errors", "comprehensive"}:
         return {
             "task_type": "chkdsk_scan",
@@ -158,6 +176,13 @@ def run_chkdsk_scan(task: Dict[str, Any]) -> Dict[str, Any]:
     command = _build_chkdsk_command(drive, mode)
     logger.info("Executing CHKDSK command: %s", " ".join(command))
     sys.stderr.flush()
+
+    add_breadcrumb(
+        f"Executing CHKDSK on {drive}",
+        category="subprocess",
+        level="info",
+        data={"mode": mode},
+    )
 
     started = time.time()
     try:
@@ -203,6 +228,18 @@ def run_chkdsk_scan(task: Dict[str, Any]) -> Dict[str, Any]:
     output = (proc.stdout or "") + ("\n" + proc.stderr if proc.stderr else "")
     parsed = parse_chkdsk_output(output)
     parsed["return_code"] = proc.returncode
+
+    add_breadcrumb(
+        "CHKDSK execution completed",
+        category="task",
+        level="info",
+        data={
+            "return_code": proc.returncode,
+            "duration_seconds": round(ended - started, 2),
+            "errors_found": parsed.get("errors_found"),
+            "made_corrections": parsed.get("made_corrections"),
+        },
+    )
     parsed["drive"] = drive
     parsed["mode"] = mode
     parsed.setdefault("duration_seconds", round(ended - started, 3))
@@ -263,6 +300,22 @@ def run_chkdsk_scan(task: Dict[str, Any]) -> Dict[str, Any]:
     else:
         status = "error"
         parsed["error"] = f"CHKDSK failed with exit code {proc.returncode}."
+
+    add_breadcrumb(
+        f"CHKDSK scan finished with status: {status}",
+        category="task",
+        level="info"
+        if status == "success"
+        else "warning"
+        if status == "warning"
+        else "error",
+        data={
+            "drive": drive,
+            "mode": mode,
+            "scheduled": parsed.get("scheduled", False),
+            "volume_in_use": parsed.get("volume_in_use", False),
+        },
+    )
 
     return {
         "task_type": "chkdsk_scan",

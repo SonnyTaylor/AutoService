@@ -12,6 +12,17 @@ import os
 
 logger = logging.getLogger(__name__)
 
+# Sentry integration for breadcrumbs
+try:
+    from sentry_config import add_breadcrumb
+
+    SENTRY_AVAILABLE = True
+except ImportError:
+    SENTRY_AVAILABLE = False
+
+    def add_breadcrumb(*args, **kwargs):
+        pass
+
 
 def parse_bleachbit_output(output: str) -> Dict[str, Any]:
     """Parse stdout from bleachbit_console.exe to extract structured data.
@@ -104,6 +115,13 @@ def _resolve_bleachbit_console_path(exec_path: str) -> Optional[str]:
 
 def run_bleachbit_clean(task: Dict[str, Any]) -> Dict[str, Any]:
     """Execute the BleachBit cleaning task and return structured result."""
+    add_breadcrumb(
+        "Starting BleachBit clean",
+        category="task",
+        level="info",
+        data={"cleaner_count": len(task.get("options", []))},
+    )
+
     logger.info("Starting BleachBit task.")
     provided_exec_path: Optional[str] = task.get("executable_path")
     options: List[str] = task.get("options", [])  # cleaners to run
@@ -130,6 +148,13 @@ def run_bleachbit_clean(task: Dict[str, Any]) -> Dict[str, Any]:
 
     command = [exec_path, "--clean", *options]
     logger.info(f"Executing command: {' '.join(command)}")
+
+    add_breadcrumb(
+        "Executing BleachBit",
+        category="subprocess",
+        level="info",
+        data={"cleaner_count": len(options)},
+    )
 
     try:
         process = subprocess.run(
@@ -169,6 +194,19 @@ def run_bleachbit_clean(task: Dict[str, Any]) -> Dict[str, Any]:
 
         logger.info("BleachBit task completed successfully.")
         summary_data = parse_bleachbit_output(stdout)
+
+        add_breadcrumb(
+            "BleachBit completed",
+            category="task",
+            level="info",
+            data={
+                "space_recovered_mb": summary_data.get("space_recovered_bytes", 0)
+                / (1024**2),
+                "files_deleted": summary_data.get("files_deleted", 0),
+                "errors": summary_data.get("errors", 0),
+            },
+        )
+
         return {
             "task_type": "bleachbit_clean",
             "status": "success",

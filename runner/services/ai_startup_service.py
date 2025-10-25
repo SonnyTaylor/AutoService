@@ -34,6 +34,18 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+# Sentry integration for breadcrumbs
+try:
+    from sentry_config import add_breadcrumb
+
+    SENTRY_AVAILABLE = True
+except ImportError:
+    SENTRY_AVAILABLE = False
+
+    def add_breadcrumb(*args, **kwargs):
+        pass
+
+
 # Prefer requests for HTTP if available; fall back to urllib otherwise.
 try:  # lightweight optional dependency
     import requests  # type: ignore
@@ -668,6 +680,16 @@ def run_ai_startup_disable(task: Dict[str, Any]) -> Dict[str, Any]:
       apply_changes: bool (optional, default False - if True, actually disables items)
       dry_run: bool (optional, default True - same as apply_changes=False)
     """
+    add_breadcrumb(
+        "Starting AI startup optimizer",
+        category="task",
+        level="info",
+        data={
+            "model": task.get("model"),
+            "apply_changes": task.get("apply_changes", False),
+        },
+    )
+
     start_time = time.time()
 
     api_key = task.get("api_key")
@@ -721,6 +743,8 @@ def run_ai_startup_disable(task: Dict[str, Any]) -> Dict[str, Any]:
     sys.stderr.flush()
 
     # Enumerate all startup items
+    add_breadcrumb("Enumerating startup items", category="task", level="info")
+
     try:
         items = enumerate_startup_items()
     except Exception as e:  # noqa: BLE001
@@ -761,6 +785,13 @@ def run_ai_startup_disable(task: Dict[str, Any]) -> Dict[str, Any]:
     # Call AI model for analysis
     logger.info(f"Analyzing {len(items)} startup items with AI...")
     sys.stderr.flush()
+
+    add_breadcrumb(
+        "Calling AI model for startup analysis",
+        category="task",
+        level="info",
+        data={"model": model, "item_count": len(items)},
+    )
 
     ai_response = call_chat_model(api_key, model, items, base_url)
 
@@ -812,6 +843,13 @@ def run_ai_startup_disable(task: Dict[str, Any]) -> Dict[str, Any]:
     if apply_changes and suggestions:
         logger.info("APPLYING CHANGES - Disabling recommended items...")
         sys.stderr.flush()
+
+        add_breadcrumb(
+            "Applying AI recommendations to disable startup items",
+            category="task",
+            level="info",
+            data={"items_to_disable": len(suggestions)},
+        )
 
         for idx, entry in enumerate(suggestions, 1):
             sid = entry.get("id")
@@ -898,6 +936,23 @@ def run_ai_startup_disable(task: Dict[str, Any]) -> Dict[str, Any]:
     status = "success"
     if apply_changes and errors:
         status = "warning" if disabled else "error"
+
+    add_breadcrumb(
+        f"AI startup optimizer completed: {status}",
+        category="task",
+        level="info"
+        if status == "success"
+        else "warning"
+        if status == "warning"
+        else "error",
+        data={
+            "total_items": len(items),
+            "recommendations": len(suggestions),
+            "disabled": len(disabled) if apply_changes else 0,
+            "errors": len(errors) if apply_changes else 0,
+            "duration_seconds": round(duration, 2),
+        },
+    )
 
     return {
         "task_type": "ai_startup_disable",

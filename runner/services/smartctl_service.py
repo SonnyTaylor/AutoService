@@ -36,6 +36,17 @@ from typing import Dict, Any, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
+# Sentry integration for breadcrumbs
+try:
+    from sentry_config import add_breadcrumb
+
+    SENTRY_AVAILABLE = True
+except ImportError:
+    SENTRY_AVAILABLE = False
+
+    def add_breadcrumb(*args, **kwargs):
+        pass
+
 
 def _run_smartctl(exec_path: str, args: List[str]) -> Dict[str, Any]:
     """Run smartctl with the given args (excluding executable) and parse JSON.
@@ -262,6 +273,9 @@ def run_smartctl_report(task: Dict[str, Any]) -> Dict[str, Any]:
 
     Provides either basic summaries or full raw JSON per device.
     """
+    add_breadcrumb(
+        "Starting smartctl drive health report", category="task", level="info"
+    )
 
     exec_path = task.get("executable_path")
     if not exec_path:
@@ -292,6 +306,13 @@ def run_smartctl_report(task: Dict[str, Any]) -> Dict[str, Any]:
 
     scan_data = scan_res["data"]
     devices = scan_data.get("devices", []) if isinstance(scan_data, dict) else []
+
+    add_breadcrumb(
+        f"Scanned {len(devices)} potential devices",
+        category="task",
+        level="info",
+        data={"device_count": len(devices)},
+    )
 
     available_names: List[str] = []
     skipped_devices: List[Dict[str, str]] = []
@@ -341,6 +362,13 @@ def run_smartctl_report(task: Dict[str, Any]) -> Dict[str, Any]:
 
     results: List[Dict[str, Any]] = []
     errors: List[Dict[str, Any]] = []
+
+    add_breadcrumb(
+        f"Querying {len(device_names)} devices",
+        category="task",
+        level="info",
+        data={"device_count": len(device_names)},
+    )
 
     for name in device_names:
         # Ensure name is a str for type checker
@@ -396,6 +424,18 @@ def run_smartctl_report(task: Dict[str, Any]) -> Dict[str, Any]:
             results.append(basic)
 
     status = "success" if results else "failure"
+
+    add_breadcrumb(
+        f"smartctl report completed: {status}",
+        category="task",
+        level="info" if status == "success" else "warning",
+        data={
+            "drives_reported": len(results),
+            "skipped": len(skipped_devices),
+            "errors": len(errors),
+        },
+    )
+
     summary: Dict[str, Any] = {
         "drives": results,
         "queried_devices": len(device_names),

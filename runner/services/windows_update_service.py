@@ -56,6 +56,17 @@ from typing import Any, Dict, List, Optional
 # Use the same logger as service_runner for consistent real-time streaming
 logger = logging.getLogger(__name__)
 
+# Sentry integration for breadcrumbs
+try:
+    from sentry_config import add_breadcrumb
+
+    SENTRY_AVAILABLE = True
+except ImportError:
+    SENTRY_AVAILABLE = False
+
+    def add_breadcrumb(*args, **kwargs):
+        pass
+
 
 def _powershell_json(script_text: str) -> Dict[str, Any]:
     """Run a PowerShell script file and parse its JSON stdout.
@@ -687,6 +698,16 @@ def run_windows_update(task: Dict[str, Any]) -> Dict[str, Any]:
 
     Streams real-time progress to stderr for UI feedback and returns structured results.
     """
+    add_breadcrumb(
+        "Starting Windows Update",
+        category="task",
+        level="info",
+        data={
+            "microsoft_update": task.get("microsoft_update", True),
+            "accept_all": task.get("accept_all", True),
+        },
+    )
+
     start_time = time.time()
 
     if os.name != "nt":
@@ -715,6 +736,12 @@ def run_windows_update(task: Dict[str, Any]) -> Dict[str, Any]:
 
     logger.info("Executing Windows Update PowerShell script...")
     _flush_stderr()
+
+    add_breadcrumb(
+        "Executing Windows Update (may take several minutes)",
+        category="subprocess",
+        level="info",
+    )
 
     res = _powershell_json(script)
 
@@ -812,6 +839,22 @@ def run_windows_update(task: Dict[str, Any]) -> Dict[str, Any]:
         _flush_stderr()
     except Exception:
         pass
+
+    add_breadcrumb(
+        f"Windows Update completed: {status}",
+        category="task",
+        level="info"
+        if status == "success"
+        else "warning"
+        if status == "completed_with_errors"
+        else "error",
+        data={
+            "installed_count": data.get("install", {}).get("count_installed", 0),
+            "failed_count": data.get("install", {}).get("count_failed", 0),
+            "reboot_required": data.get("reboot_required", False),
+            "duration_seconds": round(duration, 1),
+        },
+    )
 
     return {
         "task_type": "windows_update",

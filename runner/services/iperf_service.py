@@ -51,6 +51,17 @@ from typing import Dict, Any, List, Optional
 
 logger = logging.getLogger(__name__)
 
+# Sentry integration for breadcrumbs
+try:
+    from sentry_config import add_breadcrumb
+
+    SENTRY_AVAILABLE = True
+except ImportError:
+    SENTRY_AVAILABLE = False
+
+    def add_breadcrumb(*args, **kwargs):
+        pass
+
 
 def _to_mbps(bits_per_second: Optional[float]) -> Optional[float]:
     if bits_per_second is None:
@@ -428,6 +439,17 @@ def _summarize_iperf_json(
 
 def run_iperf_test(task: Dict[str, Any]) -> Dict[str, Any]:
     """Execute an iperf3 client test for long-term stability assessment."""
+    add_breadcrumb(
+        "Starting iperf3 network test",
+        category="task",
+        level="info",
+        data={
+            "server": task.get("server"),
+            "duration_minutes": task.get("duration_minutes"),
+            "protocol": task.get("protocol", "tcp"),
+        },
+    )
+
     build = _build_iperf_command(task)
     if "error" in build:
         return {
@@ -440,6 +462,13 @@ def run_iperf_test(task: Dict[str, Any]) -> Dict[str, Any]:
     summary_base = build["summary"]
 
     logger.info("Running iperf3: %s", " ".join(command))
+
+    add_breadcrumb(
+        "Executing iperf3 (long-running test)",
+        category="subprocess",
+        level="info",
+        data={"duration_seconds": summary_base.get("duration_seconds")},
+    )
 
     try:
         proc = subprocess.run(
@@ -540,6 +569,18 @@ def run_iperf_test(task: Dict[str, Any]) -> Dict[str, Any]:
         else:
             final_summary["reason"] = f"iperf3 exited with code {proc.returncode}"
         final_summary["stdout_excerpt"] = stdout_text[:1000]
+
+    add_breadcrumb(
+        f"iperf3 test completed: {status}",
+        category="task",
+        level="info" if status == "success" else "warning",
+        data={
+            "protocol": summary_base.get("protocol"),
+            "stability_score": final_summary.get("human_readable", {}).get(
+                "stability_score"
+            ),
+        },
+    )
 
     return {
         "task_type": "iperf_test",

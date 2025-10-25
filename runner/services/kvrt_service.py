@@ -50,6 +50,17 @@ from typing import Dict, Any, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
+# Sentry integration for breadcrumbs
+try:
+    from sentry_config import add_breadcrumb
+
+    SENTRY_AVAILABLE = True
+except ImportError:
+    SENTRY_AVAILABLE = False
+
+    def add_breadcrumb(*args, **kwargs):
+        pass
+
 
 def _resolve_kvrt_path(executable_path: Optional[str]) -> Optional[str]:
     """Resolve the path to KVRT.exe.
@@ -272,6 +283,8 @@ def parse_kvrt_output(output: str) -> Dict[str, Any]:
 
 def run_kvrt_scan(task: Dict[str, Any]) -> Dict[str, Any]:
     """Execute KVRT scan according to task configuration and parse results."""
+    add_breadcrumb("Starting KVRT antivirus scan", category="task", level="info")
+
     build = _build_kvrt_command(task)
     if "error" in build:
         return {
@@ -285,6 +298,10 @@ def run_kvrt_scan(task: Dict[str, Any]) -> Dict[str, Any]:
     exec_path: str = build.get("exec_path", "")
 
     logger.info("Running KVRT: %s", " ".join(command))
+
+    add_breadcrumb(
+        "Executing KVRT (may take several minutes)", category="subprocess", level="info"
+    )
 
     try:
         proc = subprocess.run(
@@ -324,6 +341,16 @@ def run_kvrt_scan(task: Dict[str, Any]) -> Dict[str, Any]:
     }
 
     status = "success" if proc.returncode == 0 else "failure"
+
+    add_breadcrumb(
+        f"KVRT scan completed: {status}",
+        category="task",
+        level="info" if status == "success" else "warning",
+        data={
+            "detected": parsed.get("detected", 0),
+            "removed_count": parsed.get("removed_count", 0),
+        },
+    )
 
     return {
         "task_type": "kvrt_scan",

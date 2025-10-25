@@ -11,6 +11,17 @@ from typing import Dict, Any, List
 
 logger = logging.getLogger(__name__)
 
+# Sentry integration for breadcrumbs
+try:
+    from sentry_config import add_breadcrumb
+
+    SENTRY_AVAILABLE = True
+except ImportError:
+    SENTRY_AVAILABLE = False
+
+    def add_breadcrumb(*args, **kwargs):
+        pass
+
 
 FURMARK_DEMO_DEFAULT = "furmark-gl"
 
@@ -150,6 +161,12 @@ def run_furmark_test(task: Dict[str, Any]) -> Dict[str, Any]:
       extra_args: List[str] (optional) pass-through additional args
     Returns structured result with parsed metrics.
     """
+    add_breadcrumb(
+        "Starting FurMark GPU stress test",
+        category="task",
+        level="info",
+        data={"duration_seconds": task.get("duration_seconds")},
+    )
 
     exec_path = task.get("executable_path")
     duration = task.get("duration_seconds")
@@ -184,6 +201,13 @@ def run_furmark_test(task: Dict[str, Any]) -> Dict[str, Any]:
     ] + extra_args
 
     logger.info(f"Running FurMark: {' '.join(command)}")
+
+    add_breadcrumb(
+        "Executing FurMark",
+        category="subprocess",
+        level="info",
+        data={"duration_seconds": int(duration), "resolution": f"{width}x{height}"},
+    )
 
     try:
         proc = subprocess.run(
@@ -220,6 +244,20 @@ def run_furmark_test(task: Dict[str, Any]) -> Dict[str, Any]:
         }
 
     parsed = parse_furmark_output(proc.stdout)
+
+    add_breadcrumb(
+        "FurMark stress test completed",
+        category="task",
+        level="info",
+        data={
+            "frames": parsed.get("frames"),
+            "fps_avg": parsed.get("fps", {}).get("avg"),
+            "max_temp": parsed.get("gpus", [{}])[0].get("max_temperature_c")
+            if parsed.get("gpus")
+            else None,
+        },
+    )
+
     return {
         "task_type": "furmark_stress_test",
         "status": "success",

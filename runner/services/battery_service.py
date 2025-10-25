@@ -42,6 +42,18 @@ from typing import Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
 
+# Sentry integration for breadcrumbs
+try:
+    from sentry_config import add_breadcrumb
+
+    SENTRY_AVAILABLE = True
+except ImportError:
+    SENTRY_AVAILABLE = False
+
+    def add_breadcrumb(*args, **kwargs):
+        pass
+
+
 try:
     import batteryinfo
 
@@ -68,8 +80,17 @@ def run_battery_health_report(task: Dict[str, Any]) -> Dict[str, Any]:
     Returns structured battery health data including capacity, wear level,
     cycle count, temperature, and charge state.
     """
+    add_breadcrumb(
+        "Starting battery health report",
+        category="task",
+        level="info",
+        data={"battery_index": task.get("index", 0)},
+    )
 
     if not BATTERYINFO_AVAILABLE:
+        add_breadcrumb(
+            "batteryinfo module not available", category="task", level="error"
+        )
         return {
             "task_type": "battery_health_report",
             "status": "failure",
@@ -175,6 +196,18 @@ def run_battery_health_report(task: Dict[str, Any]) -> Dict[str, Any]:
 
         human_readable = "\n".join(human_readable_parts)
 
+        add_breadcrumb(
+            "Battery health report completed",
+            category="task",
+            level="info",
+            data={
+                "health_verdict": health_verdict,
+                "capacity_percent": capacity_percent,
+                "cycle_count": cycle_count,
+                "state": state,
+            },
+        )
+
         summary = {
             "vendor": vendor,
             "model": model,
@@ -208,6 +241,7 @@ def run_battery_health_report(task: Dict[str, Any]) -> Dict[str, Any]:
 
         # Check if this is a "no battery" error
         if "no battery" in error_msg.lower() or "not found" in error_msg.lower():
+            add_breadcrumb("No battery detected", category="task", level="warning")
             return {
                 "task_type": "battery_health_report",
                 "status": "skipped",

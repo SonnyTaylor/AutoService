@@ -36,6 +36,17 @@ from typing import Dict, Any, List, Optional
 
 logger = logging.getLogger(__name__)
 
+# Sentry integration for breadcrumbs
+try:
+    from sentry_config import add_breadcrumb
+
+    SENTRY_AVAILABLE = True
+except ImportError:
+    SENTRY_AVAILABLE = False
+
+    def add_breadcrumb(*args, **kwargs):
+        pass
+
 
 def parse_ping_output(output: str) -> Dict[str, Any]:
     """Parse `ping` stdout into structured data for Windows and Linux.
@@ -205,6 +216,13 @@ def run_ping_test(task: Dict[str, Any]) -> Dict[str, Any]:
     """
     host = task.get("host")
     count = task.get("count", 4)
+
+    add_breadcrumb(
+        "Starting ping test",
+        category="task",
+        level="info",
+        data={"host": host, "count": count},
+    )
     try:
         count = int(count)
     except Exception:
@@ -251,6 +269,13 @@ def run_ping_test(task: Dict[str, Any]) -> Dict[str, Any]:
         command.append(str(host))
     logger.info(f"Executing ping command: {' '.join(command)}")
 
+    add_breadcrumb(
+        "Executing ping command",
+        category="subprocess",
+        level="info",
+        data={"host": host, "count": count},
+    )
+
     try:
         process = subprocess.run(
             command,
@@ -267,6 +292,16 @@ def run_ping_test(task: Dict[str, Any]) -> Dict[str, Any]:
 
         logger.info("Ping test completed.")
         parsed = parse_ping_output(process.stdout or "")
+
+        add_breadcrumb(
+            "Ping output parsed",
+            category="task",
+            level="info",
+            data={
+                "success": parsed.get("success"),
+                "loss_percent": parsed.get("packets", {}).get("loss_percent"),
+            },
+        )
 
         # Build human-readable verdict
         packets = parsed.get("packets") or {}
@@ -329,6 +364,17 @@ def run_ping_test(task: Dict[str, Any]) -> Dict[str, Any]:
         }
 
         status = "success" if parsed.get("success") else "failure"
+
+        add_breadcrumb(
+            f"Ping test {status}",
+            category="task",
+            level="info" if status == "success" else "warning",
+            data={
+                "stability_score": human.get("stability_score"),
+                "verdict": human.get("verdict"),
+                "average_latency_ms": parsed.get("average_latency_ms"),
+            },
+        )
 
         return {
             "task_type": "ping_test",
