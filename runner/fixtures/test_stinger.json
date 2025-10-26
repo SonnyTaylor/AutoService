@@ -1,0 +1,15 @@
+{
+  "tasks": [
+    {
+      "type": "trellix_stinger_scan",
+      "executable_path": "Z:/Projects/AutoService/data/programs/Trellix Stinger - 13.0.0.553/stinger64.exe",
+      "action": "delete",
+      "include_pups": true
+    }
+  ],
+  "metadata": {
+    "test_name": "Trellix Stinger Full Scan Test",
+    "description": "Tests Trellix Stinger scan with delete action and PUP detection enabled"
+  }
+}
+

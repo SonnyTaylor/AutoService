@@ -1,0 +1,16 @@
+{
+  "tasks": [
+    {
+      "type": "trellix_stinger_scan",
+      "executable_path": "Z:/Projects/AutoService/data/programs/Trellix Stinger - 13.0.0.553/stinger64.exe",
+      "action": "report",
+      "scan_path": "C:\\Users\\Public\\Documents",
+      "include_pups": false
+    }
+  ],
+  "metadata": {
+    "test_name": "Trellix Stinger Report-Only Test",
+    "description": "Tests Trellix Stinger scan with report-only action on a specific folder"
+  }
+}
+
