@@ -10,6 +10,7 @@ Task schema (dict expected):
   include_pups: bool (optional, default False) - detect potentially unwanted programs
   report_path: str (optional) - custom directory for HTML log output
   scan_path: str (optional) - specific folder to scan (defaults to all local drives)
+  scan_subdirectories: bool (optional, default True) - scan subdirectories when scan_path is specified
   additional_args: List[str] (optional) - extra raw args appended as-is
 
 Return dict structure:
@@ -17,7 +18,7 @@ Return dict structure:
     task_type: "trellix_stinger_scan",
     status: "success" | "failure",
     summary: {
-      intent: { action, include_pups, scan_path, ... },
+      intent: { action, include_pups, scan_path, scan_subdirectories, ... },
       version: str | None,
       engine_version: str | None,
       virus_data_version: str | None,
@@ -118,7 +119,7 @@ def _build_stinger_command(task: Dict[str, Any]) -> Dict[str, Any]:
     # Determine report directory (where logs will be written)
     if report_path:
         report_dir = str(report_path)
-        cmd.append(f"--REPORTPATH={report_dir}")
+        cmd.append(f'--REPORTPATH="{report_dir}"')
         intent["report_path"] = report_dir
     else:
         # Default to Stinger's directory
@@ -128,14 +129,22 @@ def _build_stinger_command(task: Dict[str, Any]) -> Dict[str, Any]:
     # Scan scope
     if scan_path:
         scan_path_str = str(scan_path)
-        cmd.append(f"--SCANPATH={scan_path_str}")
+        cmd.append(f'--SCANPATH="{scan_path_str}"')
         intent["scan_path"] = scan_path_str
 
         # Disable system-wide scans when scanning specific path
+        # Note: --NOROOTKIT disables rootkit scanning (enabled by default)
+        # For folder scans, we disable it for better performance
         cmd.extend(
             ["--NOBOOT", "--NOPROCESS", "--NOREGISTRY", "--NOROOTKIT", "--NOWMI"]
         )
         intent["folder_scan_only"] = True
+
+        # Optionally disable subdirectory scanning for faster results
+        scan_subdirectories = task.get("scan_subdirectories", True)
+        if not scan_subdirectories:
+            cmd.append("--NOSUB")
+            intent["scan_subdirectories"] = False
     else:
         # Default: scan all local drives
         cmd.append("--ADL")

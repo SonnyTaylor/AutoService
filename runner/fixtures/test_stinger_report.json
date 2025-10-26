@@ -5,6 +5,7 @@
       "executable_path": "Z:/Projects/AutoService/data/programs/Trellix Stinger - 13.0.0.553/stinger64.exe",
       "action": "report",
       "scan_path": "C:\\Users\\Public\\Documents",
+      "scan_subdirectories": false,
       "include_pups": false
     }
   ],
