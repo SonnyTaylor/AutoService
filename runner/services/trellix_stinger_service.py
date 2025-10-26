@@ -111,6 +111,10 @@ def _build_stinger_command(task: Dict[str, Any]) -> Dict[str, Any]:
     # Always add --GO for CLI mode (required)
     cmd.append("--GO")
 
+    # Always add --SILENT to prevent UI windows and ensure no user intervention needed
+    cmd.append("--SILENT")
+    intent["silent"] = True
+
     # Determine report directory (where logs will be written)
     if report_path:
         report_dir = str(report_path)
