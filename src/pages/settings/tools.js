@@ -34,6 +34,13 @@ export const REQUIRED_TOOLS = [
     hint: "bleachbit.exe",
     icon: "ph ph-broom",
   },
+  {
+    key: "trellix_stinger",
+    name: "Trellix Stinger",
+    match: ["trellix_stinger", "stinger64.exe"],
+    hint: "stinger64.exe",
+    icon: "ph ph-shield-check",
+  },
   // Prefer the CLI smartctl.exe explicitly; avoid matching gsmartcontrol.exe
   {
     key: "smartctl",

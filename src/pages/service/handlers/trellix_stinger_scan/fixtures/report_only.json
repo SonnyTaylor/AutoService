@@ -1,0 +1,48 @@
+{
+  "task_type": "trellix_stinger_scan",
+  "status": "success",
+  "summary": {
+    "intent": {
+      "silent": true,
+      "action": "report",
+      "scan_path": "C:\\Users\\Public\\Documents",
+      "folder_scan_only": true,
+      "scan_subdirectories": false
+    },
+    "version": "13.0.0.553",
+    "engine_version": "v6820.10831",
+    "virus_data_version": "v9999.0",
+    "virus_count": 10068,
+    "scan_start_time": "Sunday, October 26, 2025 15:00:00",
+    "scan_end_time": "Sunday, October 26, 2025 15:01:30",
+    "total_files": 125,
+    "clean_files": 124,
+    "not_scanned": 0,
+    "infected_files": 1,
+    "infections": [
+      {
+        "file_path": "C:\\Users\\Public\\Documents\\suspicious.exe",
+        "md5": "d5ab09fc95db9a6610acb882770929f9",
+        "threat_name": "Artemis!D5AB09FC95DB"
+      }
+    ],
+    "log_file": "Z:\\Projects\\AutoService\\data\\programs\\Trellix Stinger - 13.0.0.553\\Stinger_26102025_150130.html",
+    "exit_code": 0,
+    "stdout_excerpt": "",
+    "stderr_excerpt": ""
+  },
+  "command": [
+    "stinger64.exe",
+    "--GO",
+    "--SILENT",
+    "--SCANPATH=\"C:\\Users\\Public\\Documents\"",
+    "--NOSUB",
+    "--NOBOOT",
+    "--NOPROCESS",
+    "--NOREGISTRY",
+    "--NOROOTKIT",
+    "--NOWMI",
+    "--REPORTONLY"
+  ]
+}
+
