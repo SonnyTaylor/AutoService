@@ -160,7 +160,6 @@
   margin: 0;
   color: var(--muted);
   line-height: 1.4;
-  min-height: 3.2em;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
