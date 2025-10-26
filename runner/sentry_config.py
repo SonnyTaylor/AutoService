@@ -220,6 +220,15 @@ def init_sentry() -> bool:
 
         def before_send(event, hint):
             """Hook to enrich all events with system context before sending to Sentry."""
+            # Filter out duplicate TASK_FAIL/TASK_OK/TASK_START log messages
+            # These are already captured via explicit capture_task_failure() calls
+            if "logentry" in event:
+                message = event["logentry"].get("formatted", "")
+                # Drop log messages that match our task lifecycle markers
+                if message.startswith(("TASK_FAIL:", "TASK_OK:", "TASK_START:")):
+                    logger.debug(f"Filtering out duplicate log message: {message}")
+                    return None  # Drop this event
+
             # Add system context to every event
             if "contexts" not in event:
                 event["contexts"] = {}
