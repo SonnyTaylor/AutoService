@@ -14,7 +14,7 @@
     "@tauri-apps/api": "^2.9.0",
     "@tauri-apps/cli": "^2.9.1",
     "@tauri-apps/plugin-dialog": "^2.4.0",
-    "vite": "^7.1.11"
+    "vite": "^7.1.12"
   },
   "dependencies": {
     "@phosphor-icons/web": "^2.1.2",
