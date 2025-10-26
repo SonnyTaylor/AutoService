@@ -340,6 +340,29 @@ def run_trellix_stinger_scan(task: Dict[str, Any]) -> Dict[str, Any]:
 
     logger.info(f"Executing command: {' '.join(command)}")
 
+    # Delete Stinger.opt file if it exists (prevents issues from previous runs)
+    stinger_dir = os.path.dirname(exec_path)
+    stinger_opt_path = os.path.join(stinger_dir, "Stinger.opt")
+    if os.path.exists(stinger_opt_path):
+        try:
+            # Remove read-only attribute if present (Windows)
+            if os.name == "nt":
+                os.chmod(stinger_opt_path, 0o666)
+            os.remove(stinger_opt_path)
+            logger.info(f"Deleted Stinger.opt file: {stinger_opt_path}")
+            add_breadcrumb(
+                "Deleted Stinger.opt file to prevent configuration conflicts",
+                category="filesystem",
+                level="info",
+            )
+        except Exception as e:
+            logger.warning(f"Failed to delete Stinger.opt: {e}")
+            add_breadcrumb(
+                f"Could not delete Stinger.opt: {e}",
+                category="filesystem",
+                level="warning",
+            )
+
     add_breadcrumb(
         "Executing Trellix Stinger (may take several minutes)",
         category="subprocess",
