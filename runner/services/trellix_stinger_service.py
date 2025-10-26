@@ -120,7 +120,25 @@ def _build_stinger_command(task: Dict[str, Any]) -> Dict[str, Any]:
     if logs_dir:
         logs_dir_path = str(logs_dir)
         # Create logs directory if it doesn't exist
-        os.makedirs(logs_dir_path, exist_ok=True)
+        try:
+            os.makedirs(logs_dir_path, exist_ok=True)
+            logger.info(f"Logs directory ready: {logs_dir_path}")
+            add_breadcrumb(
+                f"Created/verified logs directory: {logs_dir_path}",
+                category="filesystem",
+                level="info",
+            )
+        except Exception as e:
+            logger.error(f"Failed to create logs directory '{logs_dir_path}': {e}")
+            add_breadcrumb(
+                f"Failed to create logs directory: {logs_dir_path}",
+                category="filesystem",
+                level="error",
+                data={"error": str(e)},
+            )
+            return {
+                "error": f"Could not create logs directory: {logs_dir_path} - {str(e)}"
+            }
         cmd.append(f'--REPORTPATH="{logs_dir_path}"')
         intent["logs_dir"] = logs_dir_path
     else:
