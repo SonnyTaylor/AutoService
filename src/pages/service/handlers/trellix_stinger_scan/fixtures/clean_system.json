@@ -1,0 +1,34 @@
+{
+  "task_type": "trellix_stinger_scan",
+  "status": "success",
+  "summary": {
+    "intent": {
+      "silent": true,
+      "logs_dir": "Z:\\Projects\\AutoService\\data\\logs\\Stinger",
+      "action": "delete",
+      "scan_scope": "smart_scan"
+    },
+    "version": "13.0.0.553",
+    "engine_version": "v6820.10831",
+    "virus_data_version": "v9999.0",
+    "virus_count": 10068,
+    "scan_start_time": "Sunday, October 26, 2025 14:43:41",
+    "scan_end_time": "Sunday, October 26, 2025 14:47:10",
+    "total_files": 4067,
+    "clean_files": 4067,
+    "not_scanned": 0,
+    "infected_files": 0,
+    "infections": [],
+    "log_file": "Z:\\Projects\\AutoService\\data\\logs\\Stinger\\Stinger_26102025_144341.html",
+    "exit_code": 0,
+    "stdout_excerpt": "",
+    "stderr_excerpt": ""
+  },
+  "command": [
+    "stinger64.exe",
+    "--GO",
+    "--SILENT",
+    "--DELETE"
+  ]
+}
+

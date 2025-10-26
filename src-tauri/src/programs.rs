@@ -181,6 +181,7 @@ pub fn get_tool_statuses(state: tauri::State<AppState>) -> Result<Vec<ToolStatus
         ("adwcleaner", "AdwCleaner", "adwcleaner.exe"),
         ("clamav", "ClamAV", "clamscan.exe"),
         ("kvrt", "KVRT", "KVRT.exe"),
+        ("trellix_stinger", "Trellix Stinger", "stinger64.exe"),
         ("defender", "Windows Defender (MpCmdRun)", "MpCmdRun.exe"),
         ("furmark2", "Furmark 2", "FurMark.exe"),
         ("smartctl", "smartctl", "smartctl.exe"),

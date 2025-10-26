@@ -47,6 +47,7 @@ import * as aiStartupDisable from "./ai_startup_disable/index.js";
 import * as aiBrowserNotificationDisable from "./ai_browser_notification_disable/index.js";
 import * as batteryHealthReport from "./battery_health_report/index.js";
 import * as drivecleanupClean from "./drivecleanup_clean/index.js";
+import * as trellixStingerScan from "./trellix_stinger_scan/index.js";
 
 // =============================================================================
 // REGISTRY CONSTRUCTION
@@ -83,6 +84,7 @@ const HANDLERS = {
   ai_browser_notification_disable: aiBrowserNotificationDisable,
   battery_health_report: batteryHealthReport,
   drivecleanup_clean: drivecleanupClean,
+  trellix_stinger_scan: trellixStingerScan,
 };
 
 // =============================================================================
