@@ -198,7 +198,7 @@ def init_sentry() -> bool:
     Returns:
         bool: True if Sentry was successfully initialized, False otherwise
     """
-    global _sentry_initialized
+    global _sentry_initialized  # CRITICAL: Must declare global to modify module-level variable
 
     if not SENTRY_ENABLED:
         logger.info("Sentry is disabled via SENTRY_ENABLED flag")
@@ -220,15 +220,6 @@ def init_sentry() -> bool:
 
         def before_send(event, hint):
             """Hook to enrich all events with system context before sending to Sentry."""
-            # Filter out duplicate TASK_FAIL/TASK_OK/TASK_START log messages
-            # These are already captured via explicit capture_task_failure() calls
-            if "logentry" in event:
-                message = event["logentry"].get("formatted", "")
-                # Drop log messages that match our task lifecycle markers
-                if message.startswith(("TASK_FAIL:", "TASK_OK:", "TASK_START:")):
-                    logger.debug(f"Filtering out duplicate log message: {message}")
-                    return None  # Drop this event
-
             # Add system context to every event
             if "contexts" not in event:
                 event["contexts"] = {}
@@ -279,9 +270,6 @@ def init_sentry() -> bool:
                     ]  # Limit length to avoid too granular grouping
 
                     event["fingerprint"] = [task_type, error_pattern]
-                    logger.debug(
-                        f"Set fingerprint for {task_type}: {event['fingerprint']}"
-                    )
 
             return event
 
@@ -300,8 +288,8 @@ def init_sentry() -> bool:
             # Logging integration
             integrations=[
                 LoggingIntegration(
-                    level=logging.INFO,  # Capture info and above
-                    event_level=logging.ERROR,  # Send errors as events
+                    level=logging.INFO,  # Capture breadcrumbs for context
+                    event_level=None,  # Don't auto-send any logs as events
                 ),
             ],
             # Release tracking (can be enhanced with version info later)
@@ -374,7 +362,6 @@ def capture_task_exception(
 
             # Capture the exception
             event_id = sentry_sdk.capture_exception(exception)
-            logger.debug(f"Captured exception for {task_type}: {event_id}")
             return event_id
 
     except Exception as e:
@@ -513,7 +500,6 @@ def capture_task_failure(
             event_id = sentry_sdk.capture_message(
                 f"{task_type}: {failure_reason}", level="error"
             )
-            logger.debug(f"Captured task failure for {task_type}: {event_id}")
             return event_id
 
     except Exception as e:

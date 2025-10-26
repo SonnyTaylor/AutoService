@@ -18,6 +18,7 @@ fn main() {
     println!("cargo:warning=build.rs STARTING EXECUTION");
     // Ensure cargo rebuilds when the runner or its services change
     println!("cargo:rerun-if-changed=../runner/service_runner.py");
+    println!("cargo:rerun-if-changed=../runner/sentry_config.py");
     // Watch all service modules (shallow) – if this becomes too broad we can refine
     if let Ok(read_dir) = std::fs::read_dir("../runner/services") {
         for entry in read_dir.flatten() {
@@ -189,8 +190,12 @@ fn main() {
         latest
     }
 
-    // Collect Python sources to consider for rebuild: runner/service_runner.py, runner/requirements.txt, and all files under runner/services (recursive)
+    // Collect Python sources to consider for rebuild: runner/service_runner.py, runner/sentry_config.py, runner/requirements.txt, and all files under runner/services (recursive)
     let mut py_sources: Vec<PathBuf> = vec![py_src.clone()];
+    let sentry_config = repo_root.join("runner").join("sentry_config.py");
+    if sentry_config.exists() {
+        py_sources.push(sentry_config);
+    }
     let requirements = repo_root.join("runner").join("requirements.txt");
     if requirements.exists() {
         py_sources.push(requirements);

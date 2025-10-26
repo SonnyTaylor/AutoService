@@ -8,14 +8,15 @@ The AutoService Python runner now includes comprehensive Sentry error tracking a
 
 ### ✅ Implemented
 
-- **Error Tracking**: All exceptions during task execution are automatically captured with full context
-- **Failure Tracking**: Non-exception failures (status="failure") are also captured with proper fingerprinting
+- **Error Tracking**: Exceptions during task execution are captured via explicit `capture_task_exception()` calls with full context
+- **Failure Tracking**: Non-exception failures (status="failure") are captured via explicit `capture_task_failure()` calls with proper fingerprinting
 - **Performance Monitoring**: Each task execution is tracked as a Sentry transaction with timing data
 - **Rich Context**: System information (OS, CPU, memory, disks, Python version, etc.) is automatically attached to all events
 - **Task Fingerprinting**: Errors from different services (e.g., ping_test vs battery_health_report) are grouped separately in Sentry
-- **Breadcrumbs**: Detailed trail of events leading up to errors for easier debugging
+- **Breadcrumbs**: Detailed trail of events leading up to errors for easier debugging (captured from INFO-level logs)
 - **Environment Detection**: Automatically detects development vs production based on build path
 - **Easy Toggle**: Single `SENTRY_ENABLED` flag to enable/disable all tracking
+- **No Log Duplication**: Logging integration captures breadcrumbs only, not events, preventing duplicate error reports
 
 ### System Context Collected
 
@@ -82,6 +83,28 @@ This ensures that:
 - A `ping_test` error is never grouped with a `battery_health_report` error
 - Exception-based and status-based failures are tracked separately
 - Similar errors from the same task type are grouped together for easier triage
+
+## Design Decisions
+
+### Why Explicit Capture Only (No Auto-Logging)?
+
+The Sentry `LoggingIntegration` is configured with `event_level=None`, meaning it **does not automatically capture ERROR-level logs as Sentry events**. Instead:
+
+✅ **What happens:**
+- `logging.info()` and `logging.error()` calls still write to stderr normally
+- Frontend receives real-time log markers (`TASK_START`, `TASK_FAIL`, etc.) for UI updates
+- Only explicit `capture_task_exception()` and `capture_task_failure()` calls send events to Sentry
+- INFO-level logs are captured as breadcrumbs for debugging context
+
+❌ **What doesn't happen:**
+- ERROR-level logs are NOT automatically sent to Sentry as events
+- No duplicate error reports from the same failure
+
+**Why this approach?**
+1. **No Duplicates**: Prevents the same failure from appearing twice in Sentry (once from `logging.error()`, once from explicit capture)
+2. **Better Context**: Explicit calls provide richer task context and proper fingerprinting
+3. **Frontend Compatible**: Logs still stream to stderr for real-time UI updates
+4. **Clean Architecture**: Separates "logging for UI" from "error tracking for Sentry"
 
 ## Usage in Code
 
