@@ -36,12 +36,16 @@ export const definition = {
       .replace(/[\\/]+$/, "");
     const logsDir = `${dataRoot}\\logs\\Stinger`;
 
+    // Mark as diagnostic when in report-only mode (no system changes)
+    const isDiagnostic = action === "report";
+
     const task = {
       type: "trellix_stinger_scan",
       executable_path: p,
       logs_dir: logsDir,
       action,
       include_pups: includePups,
+      isDiagnostic,
       ui_label: `Antivirus Scan (Trellix Stinger${
         action === "report" ? ": report only" : ""
       })`,

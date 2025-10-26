@@ -26,6 +26,7 @@ Trellix Stinger is a specialized standalone antivirus scanner designed to detect
 ### Optional
 
 - `action`: `"delete"` (default) or `"report"` - Action to take on detected threats
+  - When set to `"report"`, the task is marked as `isDiagnostic: true` (read-only, no system changes)
 - `include_pups`: `boolean` (default: `false`) - Detect Potentially Unwanted Programs
 - `scan_path`: `string` - Specific folder to scan (defaults to Smart Scan mode)
 - `scan_subdirectories`: `boolean` (default: `true`) - Scan subdirectories when `scan_path` is set
@@ -209,6 +210,7 @@ Save as `eicar.txt` in a test folder and run a scan.
 ## Notes
 
 - **Smart Scan is the default** - Stinger automatically targets common infection areas without scanning all drives, making it faster and more efficient
+- **Diagnostic Mode** - When `action` is set to `"report"`, the service is marked as diagnostic (read-only, no system modifications)
 - Stinger is updated frequently by Trellix with new virus definitions
 - The tool is designed for on-demand scanning, not real-time protection
 - Scans can take several minutes depending on scope and system size
