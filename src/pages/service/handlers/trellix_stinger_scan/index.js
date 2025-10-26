@@ -88,8 +88,8 @@ export function renderTech({ result, index }) {
     if (intent.scan_subdirectories === false) {
       flagPills.push(pill("No Subdirs", "info"));
     }
-  } else if (intent.scan_scope === "all_local_drives") {
-    flagPills.push(pill("All Local Drives", "info"));
+  } else if (intent.scan_scope === "smart_scan") {
+    flagPills.push(pill("Smart Scan", "info"));
   }
 
   return html`

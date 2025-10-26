@@ -148,9 +148,9 @@ def _build_stinger_command(task: Dict[str, Any]) -> Dict[str, Any]:
             cmd.append("--NOSUB")
             intent["scan_subdirectories"] = False
     else:
-        # Default: scan all local drives
-        cmd.append("--ADL")
-        intent["scan_scope"] = "all_local_drives"
+        # Default: Smart Scan (Stinger's default behavior without --ADL)
+        # Smart Scan targets common infection areas (faster than --ADL)
+        intent["scan_scope"] = "smart_scan"
 
     # Action on threats
     if action == "delete":

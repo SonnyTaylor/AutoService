@@ -8,11 +8,12 @@ Trellix Stinger is a specialized standalone antivirus scanner designed to detect
 
 ## Features
 
+- **Smart Scan**: By default, uses Stinger's Smart Scan mode which targets common infection areas
 - **Fast Scanning**: Optimized for detecting prevalent threats
 - **Portable**: No installation required, perfect for USB drive deployment
 - **Two Modes**: Report-only or automatic deletion
 - **PUP Detection**: Optional detection of Potentially Unwanted Programs
-- **Flexible Scope**: Scan all drives or specific folders
+- **Flexible Scope**: Smart Scan (default) or specific folders
 - **HTML Reports**: Generates detailed HTML logs for each scan
 
 ## Task Parameters
@@ -26,7 +27,7 @@ Trellix Stinger is a specialized standalone antivirus scanner designed to detect
 
 - `action`: `"delete"` (default) or `"report"` - Action to take on detected threats
 - `include_pups`: `boolean` (default: `false`) - Detect Potentially Unwanted Programs
-- `scan_path`: `string` - Specific folder to scan (defaults to all local drives)
+- `scan_path`: `string` - Specific folder to scan (defaults to Smart Scan mode)
 - `scan_subdirectories`: `boolean` (default: `true`) - Scan subdirectories when `scan_path` is set
 - `logs_dir`: `string` - Directory for HTML log output (defaults to `data/logs/Stinger/`)
 - `additional_args`: `string[]` - Extra command-line arguments
@@ -118,22 +119,22 @@ Key Stinger options used by the service:
 |--------|-------------|
 | `--GO` | Start scanning immediately (required for CLI) |
 | `--SILENT` | Silent mode (no UI, essential for automation) |
-| `--ADL` | Scan all local drives |
+| *(none)* | **Default: Smart Scan** - Targets common infection areas when no scan scope specified |
+| `--SCANPATH=` | Scan specific directory |
 | `--DELETE` | Delete infected files automatically |
 | `--REPORTONLY` | Report infections without taking action |
 | `--PROGRAM` | Detect Potentially Unwanted Programs |
-| `--SCANPATH=` | Scan specific directory |
 | `--NOSUB` | Don't scan subdirectories |
 | `--REPORTPATH=` | Custom log output directory |
-| `--NOBOOT` | Don't scan boot sectors |
-| `--NOPROCESS` | Don't scan processes |
-| `--NOREGISTRY` | Don't scan registry |
-| `--NOROOTKIT` | Don't scan for rootkits |
-| `--NOWMI` | Don't scan WMI |
+| `--NOBOOT` | Don't scan boot sectors (used with --SCANPATH) |
+| `--NOPROCESS` | Don't scan processes (used with --SCANPATH) |
+| `--NOREGISTRY` | Don't scan registry (used with --SCANPATH) |
+| `--NOROOTKIT` | Don't scan for rootkits (used with --SCANPATH) |
+| `--NOWMI` | Don't scan WMI (used with --SCANPATH) |
 
 ## Usage Examples
 
-### Full System Scan with Deletion
+### Smart Scan with Deletion (Default)
 
 ```json
 {
@@ -192,6 +193,7 @@ Save as `eicar.txt` in a test folder and run a scan.
 
 ## Notes
 
+- **Smart Scan is the default** - Stinger automatically targets common infection areas without scanning all drives, making it faster and more efficient
 - Stinger is updated frequently by Trellix with new virus definitions
 - The tool is designed for on-demand scanning, not real-time protection
 - Scans can take several minutes depending on scope and system size
