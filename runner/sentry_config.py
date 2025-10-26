@@ -238,6 +238,42 @@ def init_sentry() -> bool:
                 "version", "unknown"
             )
 
+            # Fix fingerprinting for task-related events
+            # This ensures different task types don't get grouped together
+            if "fingerprint" not in event or event.get("fingerprint") == [
+                "{{ default }}"
+            ]:
+                # Extract task type from transaction if this is a task event
+                transaction = event.get("transaction", "")
+                if transaction.startswith("task."):
+                    task_type = transaction.replace("task.", "")
+
+                    # Get the message to include in fingerprint for better grouping
+                    message = ""
+                    if "logentry" in event:
+                        message = event["logentry"].get("formatted", "")
+                    elif "message" in event:
+                        message = event["message"]
+                    elif "exception" in event and "values" in event["exception"]:
+                        # For exceptions, use the exception type
+                        exc_values = event["exception"]["values"]
+                        if exc_values:
+                            message = exc_values[-1].get("type", "")
+
+                    # Create a stable fingerprint based on task type and error pattern
+                    # Strip out dynamic parts like paths and line numbers for better grouping
+                    error_pattern = (
+                        message.split(" - ")[-1] if " - " in message else message
+                    )
+                    error_pattern = error_pattern[
+                        :100
+                    ]  # Limit length to avoid too granular grouping
+
+                    event["fingerprint"] = [task_type, error_pattern]
+                    logger.debug(
+                        f"Set fingerprint for {task_type}: {event['fingerprint']}"
+                    )
+
             return event
 
         # Initialize Sentry with comprehensive configuration
