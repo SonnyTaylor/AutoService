@@ -34,6 +34,18 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+# Sentry integration for breadcrumbs
+try:
+    from sentry_config import add_breadcrumb
+
+    SENTRY_AVAILABLE = True
+except ImportError:
+    SENTRY_AVAILABLE = False
+
+    def add_breadcrumb(*args, **kwargs):
+        pass
+
+
 # Prefer requests for HTTP if available; fall back to urllib otherwise.
 try:
     import requests  # type: ignore
@@ -614,6 +626,16 @@ def run_ai_browser_notification_disable(task: Dict[str, Any]) -> Dict[str, Any]:
       apply_changes: bool (optional, default False - if True, actually disables notifications)
       preview_mode: bool (optional, default True - same as apply_changes=False)
     """
+    add_breadcrumb(
+        "Starting AI browser notification optimizer",
+        category="task",
+        level="info",
+        data={
+            "model": task.get("model"),
+            "apply_changes": task.get("apply_changes", False),
+        },
+    )
+
     start_time = time.time()
 
     api_key = task.get("api_key")
@@ -660,6 +682,8 @@ def run_ai_browser_notification_disable(task: Dict[str, Any]) -> Dict[str, Any]:
     logger.info("=" * 60)
     sys.stderr.flush()
 
+    add_breadcrumb("Enumerating browser notifications", category="task", level="info")
+
     notifications = enumerate_browser_notifications()
 
     if not notifications:
@@ -700,6 +724,13 @@ def run_ai_browser_notification_disable(task: Dict[str, Any]) -> Dict[str, Any]:
     logger.info("CONSULTING AI FOR RECOMMENDATIONS")
     logger.info("=" * 60)
     sys.stderr.flush()
+
+    add_breadcrumb(
+        "Calling AI model for notification analysis",
+        category="task",
+        level="info",
+        data={"model": model, "notification_count": len(notifications)},
+    )
 
     ai_response = _call_openai_api(api_key, model, notifications, base_url)
 
@@ -760,6 +791,13 @@ def run_ai_browser_notification_disable(task: Dict[str, Any]) -> Dict[str, Any]:
         logger.info("APPLYING CHANGES - Disabling recommended notifications...")
         logger.info("=" * 60)
         sys.stderr.flush()
+
+        add_breadcrumb(
+            "Applying AI recommendations to disable browser notifications",
+            category="task",
+            level="info",
+            data={"notifications_to_disable": len(suggestions)},
+        )
 
         for idx, entry in enumerate(suggestions, 1):
             nid = entry.get("id")
@@ -835,6 +873,23 @@ def run_ai_browser_notification_disable(task: Dict[str, Any]) -> Dict[str, Any]:
     status = "success"
     if apply_changes and errors:
         status = "warning" if disabled else "error"
+
+    add_breadcrumb(
+        f"AI browser notification optimizer completed: {status}",
+        category="task",
+        level="info"
+        if status == "success"
+        else "warning"
+        if status == "warning"
+        else "error",
+        data={
+            "total_notifications": len(notifications),
+            "recommendations": len(suggestions),
+            "disabled": len(disabled) if apply_changes else 0,
+            "errors": len(errors) if apply_changes else 0,
+            "duration_seconds": round(duration, 2),
+        },
+    )
 
     return {
         "task_type": "ai_browser_notification_disable",

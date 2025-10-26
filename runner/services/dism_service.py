@@ -12,6 +12,17 @@ from typing import Dict, Any, List, Callable, Optional, TypedDict
 
 logger = logging.getLogger(__name__)
 
+# Sentry integration for breadcrumbs
+try:
+    from sentry_config import add_breadcrumb
+
+    SENTRY_AVAILABLE = True
+except ImportError:
+    SENTRY_AVAILABLE = False
+
+    def add_breadcrumb(*args, **kwargs):
+        pass
+
 
 # Light type aliases to document intent.
 Task = Dict[str, Any]
@@ -128,6 +139,13 @@ def run_dism_health_check(task: Task) -> TaskResult:
     if not run_sequence:
         run_sequence = ["checkhealth"]
 
+    add_breadcrumb(
+        "Starting DISM health check",
+        category="task",
+        level="info",
+        data={"actions": run_sequence},
+    )
+
     aggregate: Dict[str, Any] = {"steps": []}
     overall_success = True
     last_parsed: Optional[Dict[str, Any]] = None
@@ -152,6 +170,13 @@ def run_dism_health_check(task: Task) -> TaskResult:
 
         logger.info("Running DISM step: %s", " ".join(cmd))
         sys.stderr.flush()
+
+        add_breadcrumb(
+            f"Executing DISM {action}",
+            category="subprocess",
+            level="info",
+            data={"action": action},
+        )
 
         try:
             # RestoreHealth can take a long time
@@ -193,6 +218,17 @@ def run_dism_health_check(task: Task) -> TaskResult:
 
         parsed = parse_dism_output(proc.stdout)
         parsed["return_code"] = proc.returncode
+
+        add_breadcrumb(
+            f"DISM {action} completed",
+            category="task",
+            level="info",
+            data={
+                "return_code": proc.returncode,
+                "health_state": parsed.get("health_state"),
+                "corruption_detected": parsed.get("corruption_detected"),
+            },
+        )
 
         # Track corruption status across steps
         if parsed.get("corruption_detected"):
@@ -285,6 +321,21 @@ def run_dism_health_check(task: Task) -> TaskResult:
     else:
         status = "success"
         summary["verdict"] = "DISM health check completed successfully."
+
+    add_breadcrumb(
+        f"DISM health check finished with status: {status}",
+        category="task",
+        level="info"
+        if status == "success"
+        else "warning"
+        if status == "warning"
+        else "error",
+        data={
+            "had_corruption": had_corruption,
+            "corruption_repaired": corruption_repaired,
+            "steps_completed": len(aggregate["steps"]),
+        },
+    )
 
     return {
         "task_type": "dism_health_check",

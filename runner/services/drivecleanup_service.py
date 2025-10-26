@@ -66,6 +66,17 @@ from typing import Dict, Any, List, Optional
 
 logger = logging.getLogger(__name__)
 
+# Sentry integration for breadcrumbs
+try:
+    from sentry_config import add_breadcrumb
+
+    SENTRY_AVAILABLE = True
+except ImportError:
+    SENTRY_AVAILABLE = False
+
+    def add_breadcrumb(*args, **kwargs):
+        pass
+
 
 def _resolve_exec_path(executable_path: Optional[str]) -> Optional[str]:
     """Resolve DriveCleanup.exe path from a file or containing directory."""
@@ -292,6 +303,13 @@ def parse_drivecleanup_output(
 
 def run_drivecleanup_clean(task: Dict[str, Any]) -> Dict[str, Any]:
     """Execute DriveCleanup with requested flags and parse the outcome."""
+    add_breadcrumb(
+        "Starting DriveCleanup",
+        category="task",
+        level="info",
+        data={"test_only": task.get("test_only", False)},
+    )
+
     build = _build_command(task)
     if "error" in build:
         return {
@@ -309,6 +327,8 @@ def run_drivecleanup_clean(task: Dict[str, Any]) -> Dict[str, Any]:
     include_full_output = bool(task.get("include_full_output", False))
 
     logger.info("Running DriveCleanup: %s", " ".join(command))
+
+    add_breadcrumb("Executing DriveCleanup", category="subprocess", level="info")
 
     try:
         proc = subprocess.run(
@@ -368,6 +388,16 @@ def run_drivecleanup_clean(task: Dict[str, Any]) -> Dict[str, Any]:
         all_none = all(v is None for v in counts_dict.values()) if counts_dict else True
         if looks_like_usage and all_none:
             status = "success"
+
+    add_breadcrumb(
+        f"DriveCleanup finished: {status}",
+        category="task",
+        level="info" if status == "success" else "warning",
+        data={
+            "removed_items_total": summary.get("removed_items_total", 0),
+            "exit_code": proc.returncode,
+        },
+    )
 
     return {
         "task_type": "drivecleanup_clean",

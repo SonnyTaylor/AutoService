@@ -8,6 +8,46 @@ report to stdout. Windows elevation is requested automatically when needed.
 import sys, os, ctypes, json, subprocess, argparse, logging, time
 from typing import List, Dict, Any, Callable
 
+# Import Sentry configuration early for error tracking
+try:
+    from sentry_config import (
+        init_sentry,
+        capture_task_exception,
+        capture_task_failure,
+        create_task_span,
+        add_breadcrumb,
+    )
+
+    SENTRY_AVAILABLE = True
+except ImportError:
+    SENTRY_AVAILABLE = False
+
+    # Define no-op fallbacks if sentry_config is not available
+    def init_sentry():
+        return False
+
+    def capture_task_exception(
+        exception, task_type, task_data=None, extra_context=None
+    ):
+        return None
+
+    def capture_task_failure(
+        task_type, failure_reason, task_data=None, extra_context=None
+    ):
+        return None
+
+    def create_task_span(task_type, task_index, total_tasks, task_data=None):
+        from contextlib import contextmanager
+
+        @contextmanager
+        def _noop():
+            yield None
+
+        return _noop()
+
+    def add_breadcrumb(message, category="info", level="info", **data):
+        pass
+
 
 def is_admin():
     """Return True if the current process is running with administrator rights.
@@ -175,6 +215,11 @@ def main():
     - Optionally writes a live log to a file and/or writes the final report to a file
     - On Windows, auto-prompts for elevation if not already running as admin
     """
+    # Initialize Sentry for error tracking and performance monitoring
+    sentry_initialized = init_sentry()
+    if sentry_initialized:
+        add_breadcrumb("Service runner starting", category="lifecycle", level="info")
+
     parser = argparse.ArgumentParser(description="AutoService Automation Runner")
     parser.add_argument(
         "json_input",
@@ -278,99 +323,181 @@ def main():
             logging.info("Starting task %d/%d: %s", idx + 1, len(tasks), task_type)
             flush_logs()
 
-            try:
-                result = handler(task)
-                status = result.get("status", "unknown")
+            # Add Sentry breadcrumb for task start
+            add_breadcrumb(
+                f"Starting task: {task_type}",
+                category="task",
+                level="info",
+                task_type=task_type,
+                task_index=idx,
+                total_tasks=len(tasks),
+            )
 
-                if status == "failure":
+            # Wrap task execution in Sentry span for performance tracking
+            with create_task_span(task_type, idx, len(tasks), task) as span:
+                try:
+                    result = handler(task)
+                    status = result.get("status", "unknown")
+
+                    if status == "failure":
+                        overall_success = False
+                        failure_reason = result.get("summary", {}).get(
+                            "reason"
+                        ) or result.get("summary", {}).get("error", "Unknown error")
+                        logging.error(
+                            "TASK_FAIL:%d:%s - %s",
+                            idx,
+                            task_type,
+                            failure_reason,
+                        )
+                        # Capture task failure in Sentry with proper fingerprinting
+                        capture_task_failure(
+                            task_type=task_type,
+                            failure_reason=failure_reason,
+                            task_data=task,
+                            extra_context={
+                                "task_index": idx,
+                                "total_tasks": len(tasks),
+                                "result_summary": result.get("summary", {}),
+                            },
+                        )
+                        # Add breadcrumb for task failure (not exception, just failure status)
+                        add_breadcrumb(
+                            f"Task failed: {task_type}",
+                            category="task",
+                            level="error",
+                            task_type=task_type,
+                            reason=failure_reason,
+                        )
+                    elif status == "skipped":
+                        logging.warning(
+                            "TASK_SKIP:%d:%s - %s",
+                            idx,
+                            task_type,
+                            result.get("summary", {}).get("reason", "Skipped"),
+                        )
+                        add_breadcrumb(
+                            f"Task skipped: {task_type}",
+                            category="task",
+                            level="warning",
+                            task_type=task_type,
+                            reason=result.get("summary", {}).get("reason", "Skipped"),
+                        )
+                    else:
+                        logging.info("TASK_OK:%d:%s", idx, task_type)
+                        add_breadcrumb(
+                            f"Task completed successfully: {task_type}",
+                            category="task",
+                            level="info",
+                            task_type=task_type,
+                        )
+
+                        # Set success status on span if available
+                        if span:
+                            span.set_tag("status", "success")
+
+                    flush_logs()
+
+                    # Log additional details if available
+                    summary = result.get("summary", {})
+                    if summary and isinstance(summary, dict):
+                        if "output" in summary:
+                            out_text = str(summary["output"])  # ensure sliceable string
+                            logging.info(
+                                "Task %s completed with output: %s",
+                                task_type,
+                                out_text[:MAX_LOG_SNIPPET] + "..."
+                                if len(out_text) > MAX_LOG_SNIPPET
+                                else out_text,
+                            )
+                            flush_logs()
+                        if "duration_seconds" in summary:
+                            logging.info(
+                                "Task %s took %.2f seconds",
+                                task_type,
+                                summary["duration_seconds"],
+                            )
+                            flush_logs()
+                            # Add duration to span if available
+                            if span:
+                                span.set_data(
+                                    "duration_seconds", summary["duration_seconds"]
+                                )
+
+                    all_results.append(result)
+                    # Emit incremental progress JSON line for UI consumption
+                    try:
+                        progress_obj = {
+                            "type": "progress",
+                            "completed": len(all_results),
+                            "total": len(tasks),
+                            "last_result": result,
+                            "results": all_results,
+                            "overall_status": "success"
+                            if overall_success
+                            else "completed_with_errors",
+                        }
+                        logging.info("PROGRESS_JSON:%s", json.dumps(progress_obj))
+                        flush_logs()
+                    except Exception:
+                        pass
+
+                except Exception as e:
                     overall_success = False
                     logging.error(
-                        "TASK_FAIL:%d:%s - %s",
-                        idx,
-                        task_type,
-                        result.get("summary", {}).get("reason", "Unknown error"),
+                        "TASK_FAIL:%d:%s - Exception: %s", idx, task_type, str(e)
                     )
-                elif status == "skipped":
-                    logging.warning(
-                        "TASK_SKIP:%d:%s - %s",
-                        idx,
-                        task_type,
-                        result.get("summary", {}).get("reason", "Skipped"),
+                    flush_logs()
+
+                    # Capture exception with Sentry with proper fingerprinting
+                    capture_task_exception(
+                        e,
+                        task_type=task_type,
+                        task_data=task,
+                        extra_context={
+                            "task_index": idx,
+                            "total_tasks": len(tasks),
+                        },
                     )
-                else:
-                    logging.info("TASK_OK:%d:%s", idx, task_type)
-                flush_logs()
 
-                # Log additional details if available
-                summary = result.get("summary", {})
-                if summary and isinstance(summary, dict):
-                    if "output" in summary:
-                        out_text = str(summary["output"])  # ensure sliceable string
-                        logging.info(
-                            "Task %s completed with output: %s",
-                            task_type,
-                            out_text[:MAX_LOG_SNIPPET] + "..."
-                            if len(out_text) > MAX_LOG_SNIPPET
-                            else out_text,
-                        )
-                        flush_logs()
-                    if "duration_seconds" in summary:
-                        logging.info(
-                            "Task %s took %.2f seconds",
-                            task_type,
-                            summary["duration_seconds"],
-                        )
-                        flush_logs()
+                    # Set error status on span if available
+                    if span:
+                        span.set_tag("status", "error")
+                        span.set_tag("error", True)
 
-                all_results.append(result)
-                # Emit incremental progress JSON line for UI consumption
-                try:
-                    progress_obj = {
-                        "type": "progress",
-                        "completed": len(all_results),
-                        "total": len(tasks),
-                        "last_result": result,
-                        "results": all_results,
-                        "overall_status": "success"
-                        if overall_success
-                        else "completed_with_errors",
+                    failure_result = {
+                        "task_type": task_type,
+                        "status": "failure",
+                        "summary": {"reason": f"Exception during execution: {str(e)}"},
                     }
-                    logging.info("PROGRESS_JSON:%s", json.dumps(progress_obj))
-                    flush_logs()
-                except Exception:
-                    pass
-
-            except Exception as e:
-                overall_success = False
-                logging.error("TASK_FAIL:%d:%s - Exception: %s", idx, task_type, str(e))
-                flush_logs()
-                failure_result = {
-                    "task_type": task_type,
-                    "status": "failure",
-                    "summary": {"reason": f"Exception during execution: {str(e)}"},
-                }
-                all_results.append(failure_result)
-                try:
-                    progress_obj = {
-                        "type": "progress",
-                        "completed": len(all_results),
-                        "total": len(tasks),
-                        "last_result": failure_result,
-                        "results": all_results,
-                        "overall_status": "success"
-                        if overall_success
-                        else "completed_with_errors",
-                    }
-                    logging.info("PROGRESS_JSON:%s", json.dumps(progress_obj))
-                    flush_logs()
-                except Exception:
-                    pass
+                    all_results.append(failure_result)
+                    try:
+                        progress_obj = {
+                            "type": "progress",
+                            "completed": len(all_results),
+                            "total": len(tasks),
+                            "last_result": failure_result,
+                            "results": all_results,
+                            "overall_status": "success"
+                            if overall_success
+                            else "completed_with_errors",
+                        }
+                        logging.info("PROGRESS_JSON:%s", json.dumps(progress_obj))
+                        flush_logs()
+                    except Exception:
+                        pass
 
         else:
             logging.warning(
                 "TASK_SKIP:%d:%s - No handler found for task type", idx, task_type
             )
             flush_logs()
+            add_breadcrumb(
+                f"No handler found for task type: {task_type}",
+                category="task",
+                level="warning",
+                task_type=task_type,
+            )
             skipped_result = {
                 "task_type": task_type,
                 "status": "skipped",
@@ -415,6 +542,16 @@ def main():
         "results": all_results,
         "metadata": system_metadata,
     }
+
+    # Add final breadcrumb
+    add_breadcrumb(
+        f"Service run completed: {final_report['overall_status']}",
+        category="lifecycle",
+        level="info" if overall_success else "warning",
+        total_tasks=len(tasks),
+        completed_tasks=len(all_results),
+        overall_status=final_report["overall_status"],
+    )
 
     # Print the final JSON report to stdout for the parent process (AutoService) to capture.
     report_json = json.dumps(final_report, indent=2)

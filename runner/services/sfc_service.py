@@ -12,6 +12,17 @@ from typing import Dict, Any, List, Tuple, Optional
 
 logger = logging.getLogger(__name__)
 
+# Sentry integration for breadcrumbs
+try:
+    from sentry_config import add_breadcrumb
+
+    SENTRY_AVAILABLE = True
+except ImportError:
+    SENTRY_AVAILABLE = False
+
+    def add_breadcrumb(*args, **kwargs):
+        pass
+
 
 def parse_sfc_output(output: str) -> Dict[str, Any]:
     """Parse the output from `sfc /scannow` into structured data.
@@ -107,9 +118,17 @@ def run_sfc_scan(task: Dict[str, Any]) -> Dict[str, Any]:
       type: "sfc_scan"
       (no additional fields currently)
     """
+    add_breadcrumb("Starting SFC scan", category="task", level="info")
+
     command = ["sfc", "/scannow"]
     logger.info("Running SFC scan: %s", " ".join(command))
     sys.stderr.flush()
+
+    add_breadcrumb(
+        "Executing SFC command (may take several minutes)",
+        category="subprocess",
+        level="info",
+    )
 
     try:
         # Capture raw bytes so we can detect and decode UTF-16LE (sfc often
@@ -170,6 +189,13 @@ def run_sfc_scan(task: Dict[str, Any]) -> Dict[str, Any]:
     stdout_text = _decode_bytes(proc.stdout or b"")
     stderr_text = _decode_bytes(proc.stderr or b"")
 
+    add_breadcrumb(
+        "Parsing SFC output",
+        category="task",
+        level="info",
+        data={"return_code": proc.returncode},
+    )
+
     parsed = parse_sfc_output(stdout_text)
     parsed["return_code"] = proc.returncode
 
@@ -219,6 +245,21 @@ def run_sfc_scan(task: Dict[str, Any]) -> Dict[str, Any]:
     else:
         status = "error"
         parsed["error"] = f"SFC scan failed with exit code {proc.returncode}."
+
+    add_breadcrumb(
+        f"SFC scan completed with status: {status}",
+        category="task",
+        level="info"
+        if status == "success"
+        else "warning"
+        if status == "warning"
+        else "error",
+        data={
+            "integrity_violations": parsed.get("integrity_violations"),
+            "repairs_successful": parsed.get("repairs_successful"),
+            "verification_complete": parsed.get("verification_complete"),
+        },
+    )
 
     result: Dict[str, Any] = {
         "task_type": "sfc_scan",

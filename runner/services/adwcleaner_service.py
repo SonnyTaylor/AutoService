@@ -14,6 +14,17 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+# Sentry integration for breadcrumbs
+try:
+    from sentry_config import add_breadcrumb
+
+    SENTRY_AVAILABLE = True
+except ImportError:
+    SENTRY_AVAILABLE = False
+
+    def add_breadcrumb(*args, **kwargs):
+        pass
+
 
 def parse_adwcleaner_log(log_path: str) -> Dict[str, Any]:
     """Parse the latest AdwCleaner log file and return structured data."""
@@ -111,6 +122,13 @@ def find_latest_log(log_dir: str) -> str:
 
 def run_adwcleaner_clean(task: Dict[str, Any]) -> Dict[str, Any]:
     """Run AdwCleaner with given options and parse the latest log."""
+    add_breadcrumb(
+        "Starting AdwCleaner clean",
+        category="task",
+        level="info",
+        data={"clean_preinstalled": task.get("clean_preinstalled", False)},
+    )
+
     logger.info("Starting AdwCleaner task.")
     exec_path = task.get("executable_path")
     working_path = task.get("working_path")
@@ -137,6 +155,13 @@ def run_adwcleaner_clean(task: Dict[str, Any]) -> Dict[str, Any]:
         command.append("/preinstalled")
 
     logger.info(f"Executing command: {' '.join(command)}")
+
+    add_breadcrumb(
+        "Executing AdwCleaner",
+        category="subprocess",
+        level="info",
+        data={"command": " ".join(command[:3])},  # Don't log full paths
+    )
 
     try:
         process = subprocess.run(
@@ -175,6 +200,17 @@ def run_adwcleaner_clean(task: Dict[str, Any]) -> Dict[str, Any]:
             }
 
         parsed_summary = parse_adwcleaner_log(latest_log)
+
+        add_breadcrumb(
+            "AdwCleaner completed",
+            category="task",
+            level="info",
+            data={
+                "cleaned": parsed_summary.get("cleaned", 0),
+                "failed": parsed_summary.get("failed", 0),
+            },
+        )
+
         logger.info("AdwCleaner task completed successfully.")
         return {
             "task_type": "adwcleaner_clean",
