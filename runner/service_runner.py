@@ -341,7 +341,8 @@ def main():
                     result = handler(task)
                     status = result.get("status", "unknown")
 
-                    if status == "failure":
+                    # Handle both "failure" and "error" as error conditions
+                    if status in ("failure", "error"):
                         overall_success = False
                         failure_reason = result.get("summary", {}).get(
                             "reason"
@@ -361,15 +362,17 @@ def main():
                                 "task_index": idx,
                                 "total_tasks": len(tasks),
                                 "result_summary": result.get("summary", {}),
+                                "status_type": status,  # Track whether it was "failure" or "error"
                             },
                         )
-                        # Add breadcrumb for task failure (not exception, just failure status)
+                        # Add breadcrumb for task failure (not exception, just failure/error status)
                         add_breadcrumb(
                             f"Task failed: {task_type}",
                             category="task",
                             level="error",
                             task_type=task_type,
                             reason=failure_reason,
+                            status=status,
                         )
                     elif status == "skipped":
                         logging.warning(
