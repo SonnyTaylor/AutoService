@@ -2,6 +2,7 @@
  * Network settings management (e.g., iperf server) for the settings page.
  */
 
+import validator from "validator";
 const { invoke } = window.__TAURI__.core || {};
 
 /**
@@ -38,6 +39,35 @@ export async function initializeNetworkSettings(root) {
   // Ensure container for future network keys
   if (!appSettings.network) appSettings.network = {};
 
+  /**
+   * Validates if a value is a valid IPv4 or IPv6 address, or empty (for optional fields)
+   * @param {string} value - The value to validate
+   * @param {boolean} allowEmpty - Whether to allow empty values
+   * @returns {boolean} - True if valid or empty (if allowed)
+   */
+  function isValidIPOrEmpty(value, allowEmpty = true) {
+    if (allowEmpty && (!value || value.trim() === "")) {
+      return true;
+    }
+    return validator.isIP(value.trim());
+  }
+
+  /**
+   * Shows validation error message
+   * @param {HTMLElement} statusElement - The status element to update
+   * @param {string} fieldName - The name of the field being validated
+   */
+  function showValidationError(statusElement, fieldName) {
+    if (statusElement) {
+      statusElement.className = "settings-status error";
+      statusElement.textContent = `✕ Please enter a valid IPv4 or IPv6 address for ${fieldName}.`;
+      setTimeout(() => {
+        statusElement.textContent = "";
+        statusElement.className = "";
+      }, 4000);
+    }
+  }
+
   // Populate current value
   input.value = appSettings.network.iperf_server || "";
   if (!appSettings.network.ping_host) appSettings.network.ping_host = "8.8.8.8";
@@ -46,6 +76,13 @@ export async function initializeNetworkSettings(root) {
   form?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const value = (input.value || "").toString().trim();
+
+    // Validate the input
+    if (!isValidIPOrEmpty(value, true)) {
+      showValidationError(status, "iPerf server");
+      return;
+    }
+
     appSettings.network.iperf_server = value;
     try {
       await saveSettings();
@@ -72,6 +109,13 @@ export async function initializeNetworkSettings(root) {
   pingForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const value = (pingInput?.value || "").toString().trim() || "8.8.8.8";
+
+    // Validate the input (ping host should not be empty)
+    if (!isValidIPOrEmpty(value, false)) {
+      showValidationError(pingStatus, "Ping host");
+      return;
+    }
+
     appSettings.network.ping_host = value;
     try {
       await saveSettings();
