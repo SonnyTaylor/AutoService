@@ -292,8 +292,10 @@ def init_sentry(
             # Environment settings
             environment=environment,
             # Performance monitoring
+            # Always enable tracing infrastructure, but use sample rate to control transaction capture
+            # Setting sample rate to 0.0 will still allow error events to be sent
             traces_sample_rate=traces_sample_rate,  # Configurable performance tracking
-            enable_tracing=traces_sample_rate > 0.0,  # Only enable if sample rate > 0
+            enable_tracing=True,  # Always enable to ensure error events work properly
             # Privacy settings
             send_default_pii=send_pii,  # Configurable PII collection
             # Event enrichment
