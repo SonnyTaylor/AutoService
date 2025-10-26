@@ -205,7 +205,7 @@ _RE_VIRUS_DATA = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 _RE_SCAN_START = re.compile(
-    r"Custom scan initiated on\s+(.+?)$", re.IGNORECASE | re.MULTILINE
+    r"(?:Custom )?[Ss]can initiated on\s+(.+?)$", re.IGNORECASE | re.MULTILINE
 )
 _RE_SCAN_END = re.compile(r"Scan completed on\s+(.+?)$", re.IGNORECASE | re.MULTILINE)
 _RE_INFECTION = re.compile(
