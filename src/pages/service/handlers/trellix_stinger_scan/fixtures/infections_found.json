@@ -4,6 +4,7 @@
   "summary": {
     "intent": {
       "silent": true,
+      "logs_dir": "Z:\\Projects\\AutoService\\data\\logs\\Stinger",
       "action": "delete",
       "scan_path": "C:\\Users\\Sonny Taylor\\Documents\\EICARTest",
       "folder_scan_only": true,
@@ -26,7 +27,7 @@
         "threat_name": "EICAR test file"
       }
     ],
-    "log_file": "Z:\\Projects\\AutoService\\data\\programs\\Trellix Stinger - 13.0.0.553\\Stinger_26102025_144158.html",
+    "log_file": "Z:\\Projects\\AutoService\\data\\logs\\Stinger\\Stinger_26102025_144158.html",
     "exit_code": 0,
     "stdout_excerpt": "",
     "stderr_excerpt": ""

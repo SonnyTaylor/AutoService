@@ -8,7 +8,7 @@ Task schema (dict expected):
   executable_path: str (required) - path to stinger64.exe or folder containing it
   action: str (optional, default "delete") - "report" or "delete"
   include_pups: bool (optional, default False) - detect potentially unwanted programs
-  report_path: str (optional) - custom directory for HTML log output
+  logs_dir: str (optional) - directory for HTML log output (defaults to data/logs/Stinger/)
   scan_path: str (optional) - specific folder to scan (defaults to all local drives)
   scan_subdirectories: bool (optional, default True) - scan subdirectories when scan_path is specified
   additional_args: List[str] (optional) - extra raw args appended as-is
@@ -98,7 +98,7 @@ def _build_stinger_command(task: Dict[str, Any]) -> Dict[str, Any]:
     # Parse parameters
     action = str(task.get("action", "delete")).lower()
     include_pups = bool(task.get("include_pups", False))
-    report_path = task.get("report_path")
+    logs_dir = task.get("logs_dir")
     scan_path = task.get("scan_path")
     additional_args: List[str] = task.get("additional_args", [])
 
@@ -116,15 +116,17 @@ def _build_stinger_command(task: Dict[str, Any]) -> Dict[str, Any]:
     cmd.append("--SILENT")
     intent["silent"] = True
 
-    # Determine report directory (where logs will be written)
-    if report_path:
-        report_dir = str(report_path)
-        cmd.append(f'--REPORTPATH="{report_dir}"')
-        intent["report_path"] = report_dir
+    # Determine logs directory (where HTML reports will be written)
+    if logs_dir:
+        logs_dir_path = str(logs_dir)
+        # Create logs directory if it doesn't exist
+        os.makedirs(logs_dir_path, exist_ok=True)
+        cmd.append(f'--REPORTPATH="{logs_dir_path}"')
+        intent["logs_dir"] = logs_dir_path
     else:
-        # Default to Stinger's directory
-        report_dir = os.path.dirname(exec_path)
-        intent["report_path"] = report_dir
+        # Fallback to Stinger's directory (not recommended)
+        logs_dir_path = os.path.dirname(exec_path)
+        intent["logs_dir"] = logs_dir_path
 
     # Scan scope
     if scan_path:
@@ -172,7 +174,7 @@ def _build_stinger_command(task: Dict[str, Any]) -> Dict[str, Any]:
         "command": cmd,
         "intent": intent,
         "exec_path": exec_path,
-        "report_dir": report_dir,
+        "logs_dir": logs_dir_path,
     }
 
 
@@ -336,9 +338,10 @@ def run_trellix_stinger_scan(task: Dict[str, Any]) -> Dict[str, Any]:
     command: List[str] = build["command"]
     intent: Dict[str, Any] = build.get("intent", {})
     exec_path: str = build.get("exec_path", "")
-    report_dir: str = build.get("report_dir", "")
+    logs_dir: str = build.get("logs_dir", "")
 
     logger.info(f"Executing command: {' '.join(command)}")
+    logger.info(f"Logs will be saved to: {logs_dir}")
 
     # Delete Stinger.opt file if it exists (prevents issues from previous runs)
     stinger_dir = os.path.dirname(exec_path)
@@ -399,14 +402,14 @@ def run_trellix_stinger_scan(task: Dict[str, Any]) -> Dict[str, Any]:
     stderr = proc.stderr or ""
 
     # Locate the latest log file
-    latest_log = _find_latest_stinger_log(report_dir)
+    latest_log = _find_latest_stinger_log(logs_dir)
     if not latest_log:
-        logger.error("No Stinger log file found.")
+        logger.error(f"No Stinger log file found in {logs_dir}")
         return {
             "task_type": "trellix_stinger_scan",
             "status": "failure",
             "summary": {
-                "error": "No log file was generated.",
+                "error": f"No log file was generated in {logs_dir}",
                 "exit_code": proc.returncode,
                 "stdout_excerpt": stdout[-1200:],
                 "stderr_excerpt": stderr[-1200:],

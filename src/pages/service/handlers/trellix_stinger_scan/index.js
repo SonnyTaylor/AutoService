@@ -24,14 +24,22 @@ export const definition = {
     include_pups: false,
   },
   toolKeys: ["trellix_stinger"],
-  async build({ params, resolveToolPath }) {
+  async build({ params, resolveToolPath, getDataDirs }) {
     const p = await resolveToolPath(["trellix_stinger"]);
     const action = params?.action || "delete";
     const includePups = !!params?.include_pups;
 
+    // Get data directory for log storage
+    const dirs = (await getDataDirs()) || {};
+    const dataRoot = (dirs.data || "..\\data")
+      .toString()
+      .replace(/[\\/]+$/, "");
+    const logsDir = `${dataRoot}\\logs\\Stinger`;
+
     const task = {
       type: "trellix_stinger_scan",
       executable_path: p,
+      logs_dir: logsDir,
       action,
       include_pups: includePups,
       ui_label: `Antivirus Scan (Trellix Stinger${

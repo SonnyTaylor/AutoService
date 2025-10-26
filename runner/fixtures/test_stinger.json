@@ -3,6 +3,7 @@
     {
       "type": "trellix_stinger_scan",
       "executable_path": "Z:/Projects/AutoService/data/programs/Trellix Stinger - 13.0.0.553/stinger64.exe",
+      "logs_dir": "Z:/Projects/AutoService/data/logs/Stinger",
       "action": "delete",
       "include_pups": true
     }

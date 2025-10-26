@@ -28,7 +28,7 @@ Trellix Stinger is a specialized standalone antivirus scanner designed to detect
 - `include_pups`: `boolean` (default: `false`) - Detect Potentially Unwanted Programs
 - `scan_path`: `string` - Specific folder to scan (defaults to all local drives)
 - `scan_subdirectories`: `boolean` (default: `true`) - Scan subdirectories when `scan_path` is set
-- `report_path`: `string` - Custom directory for HTML log output
+- `logs_dir`: `string` - Directory for HTML log output (defaults to `data/logs/Stinger/`)
 - `additional_args`: `string[]` - Extra command-line arguments
 
 ## Python Service
@@ -66,7 +66,7 @@ Trellix Stinger is a specialized standalone antivirus scanner designed to detect
         "threat_name": "EICAR test file"
       }
     ],
-    "log_file": "path\\to\\Stinger_DDMMYYYY_HHMMSS.html",
+    "log_file": "Z:\\Projects\\AutoService\\data\\logs\\Stinger\\Stinger_DDMMYYYY_HHMMSS.html",
     "exit_code": 0
   }
 }
@@ -85,6 +85,7 @@ Trellix Stinger is a specialized standalone antivirus scanner designed to detect
 ### Tech Renderer (`renderTech`)
 
 Displays:
+
 - Version information (Stinger, engine, virus definitions)
 - Scan statistics (total files, clean, infected)
 - Scan configuration flags (mode, PUP detection, scope)
@@ -95,6 +96,7 @@ Displays:
 ### Customer Metrics (`extractCustomerMetrics`)
 
 Extracts customer-friendly metrics when infections are found and deleted:
+
 - Icon: 🛡️
 - Label: "Security Threats Removed"
 - Value: Number of infections removed
@@ -104,6 +106,7 @@ Extracts customer-friendly metrics when infections are found and deleted:
 ### Parameter Controls (`renderParamControls`)
 
 Builder UI controls:
+
 - **Action**: Dropdown (Delete threats / Report only)
 - **Detect PUPs**: Checkbox
 
@@ -136,6 +139,7 @@ Key Stinger options used by the service:
 {
   "type": "trellix_stinger_scan",
   "executable_path": "data/programs/Trellix Stinger - 13.0.0.553",
+  "logs_dir": "data/logs/Stinger",
   "action": "delete",
   "include_pups": true
 }
@@ -147,6 +151,7 @@ Key Stinger options used by the service:
 {
   "type": "trellix_stinger_scan",
   "executable_path": "data/programs/Trellix Stinger - 13.0.0.553",
+  "logs_dir": "data/logs/Stinger",
   "action": "report",
   "scan_path": "C:\\Users\\Public\\Downloads",
   "scan_subdirectories": false
@@ -157,11 +162,15 @@ Key Stinger options used by the service:
 
 Stinger generates HTML logs with the naming pattern: `Stinger_DDMMYYYY_HHMMSS.html`
 
+**Log Location**: By default, logs are saved to `data/logs/Stinger/` for centralized log management. This keeps the Stinger executable directory clean and makes log review easier.
+
 The service automatically:
-1. Finds the newest log file in the report directory
-2. Parses version information, scan times, and statistics
-3. Extracts infection details (file path, MD5, threat name)
-4. Returns structured data for UI rendering
+
+1. Creates the logs directory if it doesn't exist
+2. Finds the newest log file in the logs directory
+3. Parses version information, scan times, and statistics
+4. Extracts infection details (file path, MD5, threat name)
+5. Returns structured data for UI rendering
 
 ## Testing
 
@@ -175,7 +184,7 @@ The service automatically:
 
 Use the EICAR test file to verify detection without actual malware:
 
-```
+```text
 X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
 ```
 
@@ -186,11 +195,11 @@ Save as `eicar.txt` in a test folder and run a scan.
 - Stinger is updated frequently by Trellix with new virus definitions
 - The tool is designed for on-demand scanning, not real-time protection
 - Scans can take several minutes depending on scope and system size
-- Log files accumulate in the Stinger directory; consider periodic cleanup
+- Log files accumulate in `data/logs/Stinger/`; consider periodic cleanup
 - Exit code 0 is returned even when threats are found and successfully removed
+- The `Stinger.opt` configuration file is automatically deleted before each scan to prevent issues from previous runs
 
 ## Related Documentation
 
 - [Trellix Stinger Official Documentation](https://www.trellix.com/en-us/downloads/free-tools/stinger.html)
 - [Stinger CLI Options Reference](../../../../../../docs/trellix-stinger-cli.md)
-
