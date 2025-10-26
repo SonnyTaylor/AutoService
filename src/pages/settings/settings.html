@@ -17,6 +17,7 @@
         <button class="shortcut-btn" data-target="ai">AI / API</button>
         <button class="shortcut-btn" data-target="business">Business</button>
         <button class="shortcut-btn" data-target="reports">Reports</button>
+        <button class="shortcut-btn" data-target="sentry">Sentry</button>
       </nav>
     </aside>
 
@@ -569,6 +570,73 @@
               style="margin-top: 8px"
             ></div>
           </div>
+        </div>
+      </div>
+
+      <!-- Sentry pane -->
+      <div class="card settings-pane" data-pane="sentry" style="display: none">
+        <div class="card-title"><span>Sentry Error Tracking</span></div>
+        <div class="card-body">
+          <p class="muted">
+            Configure error tracking and performance monitoring for the Python
+            service runner. These settings help improve AutoService by reporting
+            errors and performance data to Sentry.
+          </p>
+
+          <!-- Master Toggle -->
+          <label class="business-settings-toggle">
+            <input type="checkbox" id="sentry-enabled-toggle" />
+            <div class="toggle-text">
+              <div class="toggle-title">Enable Sentry</div>
+              <div class="muted toggle-description">
+                Master toggle to enable/disable all error tracking and
+                performance monitoring
+              </div>
+            </div>
+          </label>
+
+          <hr />
+
+          <!-- PII Toggle -->
+          <label class="business-settings-toggle">
+            <input type="checkbox" id="sentry-pii-toggle" />
+            <div class="toggle-text">
+              <div class="toggle-title">Send PII Data</div>
+              <div class="muted toggle-description">
+                Include hostname and username in error reports (helps identify
+                which PC had issues)
+              </div>
+            </div>
+          </label>
+
+          <hr />
+
+          <!-- Performance Monitoring Toggle -->
+          <label class="business-settings-toggle">
+            <input type="checkbox" id="sentry-performance-toggle" />
+            <div class="toggle-text">
+              <div class="toggle-title">Performance Monitoring</div>
+              <div class="muted toggle-description">
+                Enable transaction and trace sampling to track performance
+                metrics
+              </div>
+            </div>
+          </label>
+
+          <hr />
+
+          <!-- System Info Toggle -->
+          <label class="business-settings-toggle">
+            <input type="checkbox" id="sentry-system-info-toggle" />
+            <div class="toggle-text">
+              <div class="toggle-title">System Information</div>
+              <div class="muted toggle-description">
+                Include system information (CPU, memory, disk) in error reports
+              </div>
+            </div>
+          </label>
+
+          <div id="sentry-settings-status" class="muted"></div>
         </div>
       </div>
     </div>

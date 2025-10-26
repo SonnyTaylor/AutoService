@@ -189,19 +189,31 @@ def get_system_context() -> Dict[str, Any]:
     return context
 
 
-def init_sentry() -> bool:
+def init_sentry(
+    enabled: bool = True,
+    send_pii: bool = True,
+    traces_sample_rate: float = 1.0,
+    send_system_info: bool = True,
+) -> bool:
     """Initialize Sentry SDK with AutoService configuration.
 
     Configures Sentry with performance monitoring, error tracking, and system context.
     Safe to call multiple times - will only initialize once.
+
+    Args:
+        enabled: Whether to enable Sentry tracking (default: True)
+        send_pii: Whether to include PII like hostname/username (default: True)
+        traces_sample_rate: Performance monitoring sample rate, 0.0-1.0 (default: 1.0)
+        send_system_info: Whether to include system info in error reports (default: True)
 
     Returns:
         bool: True if Sentry was successfully initialized, False otherwise
     """
     global _sentry_initialized  # CRITICAL: Must declare global to modify module-level variable
 
-    if not SENTRY_ENABLED:
-        logger.info("Sentry is disabled via SENTRY_ENABLED flag")
+    # Check both the hardcoded kill-switch and the runtime parameter
+    if not SENTRY_ENABLED or not enabled:
+        logger.info("Sentry is disabled")
         return False
 
     if _sentry_initialized:
@@ -215,28 +227,29 @@ def init_sentry() -> bool:
         # Detect environment
         environment = detect_environment()
 
-        # Get system context once for the before_send hook
-        system_context = get_system_context()
+        # Get system context once for the before_send hook (if enabled)
+        system_context = get_system_context() if send_system_info else {}
 
         def before_send(event, hint):
             """Hook to enrich all events with system context before sending to Sentry."""
-            # Add system context to every event
-            if "contexts" not in event:
-                event["contexts"] = {}
-            event["contexts"]["system_info"] = system_context
+            # Add system context to every event (if enabled)
+            if send_system_info and system_context:
+                if "contexts" not in event:
+                    event["contexts"] = {}
+                event["contexts"]["system_info"] = system_context
 
-            # Add environment info to tags for easy filtering
-            if "tags" not in event:
-                event["tags"] = {}
-            event["tags"]["environment_detected"] = system_context.get(
-                "environment", {}
-            ).get("detected", "unknown")
-            event["tags"]["os_name"] = system_context.get("os", {}).get(
-                "name", "unknown"
-            )
-            event["tags"]["python_version"] = system_context.get("python", {}).get(
-                "version", "unknown"
-            )
+                # Add environment info to tags for easy filtering
+                if "tags" not in event:
+                    event["tags"] = {}
+                event["tags"]["environment_detected"] = system_context.get(
+                    "environment", {}
+                ).get("detected", "unknown")
+                event["tags"]["os_name"] = system_context.get("os", {}).get(
+                    "name", "unknown"
+                )
+                event["tags"]["python_version"] = system_context.get("python", {}).get(
+                    "version", "unknown"
+                )
 
             # Fix fingerprinting for task-related events
             # This ensures different task types don't get grouped together
@@ -279,10 +292,10 @@ def init_sentry() -> bool:
             # Environment settings
             environment=environment,
             # Performance monitoring
-            traces_sample_rate=1.0,  # 100% of transactions for performance tracking
-            enable_tracing=True,
+            traces_sample_rate=traces_sample_rate,  # Configurable performance tracking
+            enable_tracing=traces_sample_rate > 0.0,  # Only enable if sample rate > 0
             # Privacy settings
-            send_default_pii=True,  # Include user context (hostname, username, etc.)
+            send_default_pii=send_pii,  # Configurable PII collection
             # Event enrichment
             before_send=before_send,
             # Logging integration

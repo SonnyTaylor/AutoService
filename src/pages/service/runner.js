@@ -367,6 +367,31 @@ export async function initPage() {
         };
       }
 
+      // Add Sentry configuration from settings
+      try {
+        const settings = await invoke("load_app_settings");
+        const sentryEnabled = settings?.sentry_enabled !== false; // default true
+        const sentryPii = settings?.sentry?.send_default_pii !== false; // default true
+        const sentryPerformance = settings?.sentry?.traces_sample_rate !== 0.0; // default true (1.0)
+        const sentrySystemInfo = settings?.sentry?.send_system_info !== false; // default true
+
+        runPlanPayload.sentry_config = {
+          enabled: sentryEnabled,
+          send_default_pii: sentryPii,
+          traces_sample_rate: sentryPerformance ? 1.0 : 0.0,
+          send_system_info: sentrySystemInfo,
+        };
+      } catch (err) {
+        console.warn("Failed to load Sentry settings, using defaults:", err);
+        // Fallback to defaults (all enabled)
+        runPlanPayload.sentry_config = {
+          enabled: true,
+          send_default_pii: true,
+          traces_sample_rate: 1.0,
+          send_system_info: true,
+        };
+      }
+
       const jsonArg = JSON.stringify(runPlanPayload);
       // Try native streaming command first
       if (invoke) {

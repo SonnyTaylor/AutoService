@@ -217,11 +217,6 @@ def main():
     - Optionally writes a live log to a file and/or writes the final report to a file
     - On Windows, auto-prompts for elevation if not already running as admin
     """
-    # Initialize Sentry for error tracking and performance monitoring
-    sentry_initialized = init_sentry()
-    if sentry_initialized:
-        add_breadcrumb("Service runner starting", category="lifecycle", level="info")
-
     parser = argparse.ArgumentParser(description="AutoService Automation Runner")
     parser.add_argument(
         "json_input",
@@ -294,6 +289,27 @@ def main():
             }
             print(json.dumps(final_report, indent=2))
             sys.exit(1)
+
+    # Extract Sentry configuration from input (if provided)
+    sentry_config = {}
+    if isinstance(input_data, dict):
+        sentry_config = input_data.get("sentry_config", {})
+
+    # Initialize Sentry with configuration from frontend
+    sentry_enabled = sentry_config.get("enabled", True)  # default True
+    sentry_pii = sentry_config.get("send_default_pii", True)  # default True
+    sentry_traces = sentry_config.get("traces_sample_rate", 1.0)  # default 1.0
+    sentry_system_info = sentry_config.get("send_system_info", True)  # default True
+
+    sentry_initialized = init_sentry(
+        enabled=sentry_enabled,
+        send_pii=sentry_pii,
+        traces_sample_rate=sentry_traces,
+        send_system_info=sentry_system_info,
+    )
+    if sentry_initialized:
+        add_breadcrumb("Service runner starting", category="lifecycle", level="info")
+
     # Extract/normalize tasks: accept {"tasks": [...]}, a single task dict, or a list of tasks.
     tasks: List[Task] = []
     try:
