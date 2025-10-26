@@ -139,7 +139,7 @@ def _build_stinger_command(task: Dict[str, Any]) -> Dict[str, Any]:
             return {
                 "error": f"Could not create logs directory: {logs_dir_path} - {str(e)}"
             }
-        cmd.append(f'--REPORTPATH="{logs_dir_path}"')
+        cmd.append(f"--REPORTPATH={logs_dir_path}")
         intent["logs_dir"] = logs_dir_path
     else:
         # Fallback to Stinger's directory (not recommended)
@@ -149,7 +149,7 @@ def _build_stinger_command(task: Dict[str, Any]) -> Dict[str, Any]:
     # Scan scope
     if scan_path:
         scan_path_str = str(scan_path)
-        cmd.append(f'--SCANPATH="{scan_path_str}"')
+        cmd.append(f"--SCANPATH={scan_path_str}")
         intent["scan_path"] = scan_path_str
 
         # Disable system-wide scans when scanning specific path
