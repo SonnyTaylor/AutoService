@@ -12,6 +12,9 @@ export async function initializeSentrySettings(root) {
   if (!root || !invoke) return;
 
   const sentryEnabledToggle = root.querySelector("#sentry-enabled-toggle");
+  const sentryEnvironmentSelect = root.querySelector(
+    "#sentry-environment-select"
+  );
   const sentryPiiToggle = root.querySelector("#sentry-pii-toggle");
   const sentryPerformanceToggle = root.querySelector(
     "#sentry-performance-toggle"
@@ -82,17 +85,29 @@ export async function initializeSentrySettings(root) {
   sentrySystemInfoToggle.checked =
     appSettings.sentry.send_system_info !== false;
 
+  // Set environment (default to production for fresh users)
+  const currentEnvironment = appSettings.sentry.environment || "production";
+  sentryEnvironmentSelect.value = currentEnvironment;
+
+  // Save default environment for fresh users
+  if (!appSettings.sentry.environment) {
+    appSettings.sentry.environment = "production";
+    await saveSettings();
+  }
+
   /**
    * Update disabled state of sub-toggles based on master toggle.
    */
   function updateSubTogglesState() {
     const masterEnabled = sentryEnabledToggle.checked;
+    sentryEnvironmentSelect.disabled = !masterEnabled;
     sentryPiiToggle.disabled = !masterEnabled;
     sentryPerformanceToggle.disabled = !masterEnabled;
     sentrySystemInfoToggle.disabled = !masterEnabled;
 
     // Visual indication when disabled
     const labels = [
+      sentryEnvironmentSelect.closest("label"),
       sentryPiiToggle.closest("label"),
       sentryPerformanceToggle.closest("label"),
       sentrySystemInfoToggle.closest("label"),
@@ -112,6 +127,12 @@ export async function initializeSentrySettings(root) {
   sentryEnabledToggle.addEventListener("change", async () => {
     appSettings.sentry_enabled = sentryEnabledToggle.checked;
     updateSubTogglesState();
+    await saveSettings();
+  });
+
+  // Listen for changes on environment select
+  sentryEnvironmentSelect.addEventListener("change", async () => {
+    appSettings.sentry.environment = sentryEnvironmentSelect.value;
     await saveSettings();
   });
 

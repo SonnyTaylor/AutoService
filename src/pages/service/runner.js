@@ -374,21 +374,24 @@ export async function initPage() {
         const sentryPii = settings?.sentry?.send_default_pii !== false; // default true
         const sentryPerformance = settings?.sentry?.traces_sample_rate !== 0.0; // default true (1.0)
         const sentrySystemInfo = settings?.sentry?.send_system_info !== false; // default true
+        const sentryEnvironment = settings?.sentry?.environment || "production"; // default production
 
         runPlanPayload.sentry_config = {
           enabled: sentryEnabled,
           send_default_pii: sentryPii,
           traces_sample_rate: sentryPerformance ? 1.0 : 0.0,
           send_system_info: sentrySystemInfo,
+          environment: sentryEnvironment,
         };
       } catch (err) {
         console.warn("Failed to load Sentry settings, using defaults:", err);
-        // Fallback to defaults (all enabled)
+        // Fallback to defaults (all enabled, production environment)
         runPlanPayload.sentry_config = {
           enabled: true,
           send_default_pii: true,
           traces_sample_rate: 1.0,
           send_system_info: true,
+          environment: "production",
         };
       }
 

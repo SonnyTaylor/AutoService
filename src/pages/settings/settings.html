@@ -597,6 +597,25 @@
 
           <hr />
 
+          <!-- Environment Selection -->
+          <label class="sentry-environment-label">
+            <span class="muted">Environment</span>
+            <select
+              id="sentry-environment-select"
+              aria-label="Sentry environment"
+            >
+              <option value="production">Production</option>
+              <option value="development">Development</option>
+              <option value="staging">Staging</option>
+            </select>
+            <span class="muted field-hint">
+              Select the environment for error tracking and performance
+              monitoring
+            </span>
+          </label>
+
+          <hr />
+
           <!-- PII Toggle -->
           <label class="business-settings-toggle">
             <input type="checkbox" id="sentry-pii-toggle" />

@@ -306,6 +306,7 @@ def main():
         send_pii=sentry_pii,
         traces_sample_rate=sentry_traces,
         send_system_info=sentry_system_info,
+        environment=sentry_config.get("environment"),
     )
     if sentry_initialized:
         add_breadcrumb("Service runner starting", category="lifecycle", level="info")

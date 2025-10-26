@@ -194,6 +194,7 @@ def init_sentry(
     send_pii: bool = True,
     traces_sample_rate: float = 1.0,
     send_system_info: bool = True,
+    environment: Optional[str] = None,
 ) -> bool:
     """Initialize Sentry SDK with AutoService configuration.
 
@@ -205,6 +206,7 @@ def init_sentry(
         send_pii: Whether to include PII like hostname/username (default: True)
         traces_sample_rate: Performance monitoring sample rate, 0.0-1.0 (default: 1.0)
         send_system_info: Whether to include system info in error reports (default: True)
+        environment: Override environment detection (default: None - auto-detect)
 
     Returns:
         bool: True if Sentry was successfully initialized, False otherwise
@@ -224,8 +226,30 @@ def init_sentry(
         import sentry_sdk
         from sentry_sdk.integrations.logging import LoggingIntegration
 
-        # Detect environment
-        environment = detect_environment()
+        # Detect environment (use provided environment or auto-detect)
+        if environment:
+            # Validate provided environment
+            if environment.lower() in (
+                "development",
+                "dev",
+                "staging",
+                "production",
+                "prod",
+            ):
+                final_environment = environment.lower()
+                if final_environment == "dev":
+                    final_environment = "development"
+                elif final_environment == "prod":
+                    final_environment = "production"
+            else:
+                logger.warning(
+                    f"Invalid environment '{environment}', falling back to auto-detection"
+                )
+                final_environment = detect_environment()
+        else:
+            final_environment = detect_environment()
+
+        environment = final_environment
 
         # Get system context once for the before_send hook (if enabled)
         system_context = get_system_context() if send_system_info else {}
