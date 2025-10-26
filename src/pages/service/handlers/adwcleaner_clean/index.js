@@ -127,67 +127,87 @@ export function renderTech({ result, index }) {
 export function extractCustomerMetrics({ result }) {
   const { summary, status } = result;
 
+  // Only show metrics if scan completed successfully
+  if (status !== "success") return [];
+
   const cleaned = summary.cleaned || 0;
 
-  if (cleaned === 0) return [];
+  // Case 1: Threats found and removed
+  if (cleaned > 0) {
+    // Count items in each category
+    const getLen = (arr) => (Array.isArray(arr) ? arr.length : 0);
 
-  // Count items in each category
-  const getLen = (arr) => (Array.isArray(arr) ? arr.length : 0);
+    const browserHits = summary.browsers
+      ? Object.values(summary.browsers).reduce(
+          (sum, v) => sum + (Array.isArray(v) ? v.length : 0),
+          0
+        )
+      : 0;
 
-  const browserHits = summary.browsers
-    ? Object.values(summary.browsers).reduce(
-        (sum, v) => sum + (Array.isArray(v) ? v.length : 0),
-        0
-      )
-    : 0;
+    // Build category breakdown
+    const categories = [];
+    const registryCount = getLen(summary.registry);
+    const filesCount = getLen(summary.files);
+    const foldersCount = getLen(summary.folders);
+    const servicesCount = getLen(summary.services);
+    const tasksCount = getLen(summary.tasks);
+    const shortcutsCount = getLen(summary.shortcuts);
+    const dllsCount = getLen(summary.dlls);
+    const wmiCount = getLen(summary.wmi);
+    const preinstalledCount = getLen(summary.preinstalled);
 
-  // Build category breakdown
-  const categories = [];
-  const registryCount = getLen(summary.registry);
-  const filesCount = getLen(summary.files);
-  const foldersCount = getLen(summary.folders);
-  const servicesCount = getLen(summary.services);
-  const tasksCount = getLen(summary.tasks);
-  const shortcutsCount = getLen(summary.shortcuts);
-  const dllsCount = getLen(summary.dlls);
-  const wmiCount = getLen(summary.wmi);
-  const preinstalledCount = getLen(summary.preinstalled);
+    // Add categories with friendly names
+    if (registryCount > 0)
+      categories.push({ label: "Registry entries", count: registryCount });
+    if (filesCount > 0) categories.push({ label: "Files", count: filesCount });
+    if (foldersCount > 0)
+      categories.push({ label: "Programs/folders", count: foldersCount });
+    if (servicesCount > 0)
+      categories.push({ label: "Services", count: servicesCount });
+    if (tasksCount > 0)
+      categories.push({ label: "Scheduled tasks", count: tasksCount });
+    if (shortcutsCount > 0)
+      categories.push({ label: "Shortcuts", count: shortcutsCount });
+    if (dllsCount > 0)
+      categories.push({ label: "System files", count: dllsCount });
+    if (wmiCount > 0)
+      categories.push({ label: "System entries", count: wmiCount });
+    if (browserHits > 0)
+      categories.push({ label: "Browser extensions", count: browserHits });
+    if (preinstalledCount > 0)
+      categories.push({ label: "Unwanted apps", count: preinstalledCount });
 
-  // Add categories with friendly names
-  if (registryCount > 0)
-    categories.push({ label: "Registry entries", count: registryCount });
-  if (filesCount > 0) categories.push({ label: "Files", count: filesCount });
-  if (foldersCount > 0)
-    categories.push({ label: "Programs/folders", count: foldersCount });
-  if (servicesCount > 0)
-    categories.push({ label: "Services", count: servicesCount });
-  if (tasksCount > 0)
-    categories.push({ label: "Scheduled tasks", count: tasksCount });
-  if (shortcutsCount > 0)
-    categories.push({ label: "Shortcuts", count: shortcutsCount });
-  if (dllsCount > 0)
-    categories.push({ label: "System files", count: dllsCount });
-  if (wmiCount > 0)
-    categories.push({ label: "System entries", count: wmiCount });
-  if (browserHits > 0)
-    categories.push({ label: "Browser extensions", count: browserHits });
-  if (preinstalledCount > 0)
-    categories.push({ label: "Unwanted apps", count: preinstalledCount });
+    const items = categories.map(
+      (cat) => `${cat.label}: ${cat.count.toLocaleString()}`
+    );
 
-  const items = categories.map(
-    (cat) => `${cat.label}: ${cat.count.toLocaleString()}`
-  );
+    return [
+      buildMetric({
+        icon: "🛡️",
+        label: "Security Threats Removed",
+        value: cleaned.toString(),
+        detail: "Adware & PUP Removal",
+        variant: "success",
+        items: items.length > 0 ? items : undefined,
+      }),
+    ];
+  }
 
-  return [
-    buildMetric({
-      icon: "🛡️",
-      label: "Security Threats Removed",
-      value: cleaned.toString(),
-      detail: "Adware & PUP Removal",
-      variant: "success",
-      items: items.length > 0 ? items : undefined,
-    }),
-  ];
+  // Case 2: No threats found (clean system)
+  if (cleaned === 0) {
+    return [
+      buildMetric({
+        icon: "✅",
+        label: "Adware Scan",
+        value: "Clean",
+        detail: "AdwCleaner",
+        variant: "success",
+        items: ["No adware or unwanted programs detected"],
+      }),
+    ];
+  }
+
+  return [];
 }
 
 // =============================================================================

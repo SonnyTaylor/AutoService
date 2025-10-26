@@ -96,13 +96,28 @@ Displays:
 
 ### Customer Metrics (`extractCustomerMetrics`)
 
-Extracts customer-friendly metrics when infections are found and deleted:
+Extracts customer-friendly metrics based on scan results:
 
+**Clean System (no threats found):**
+- Icon: ✅
+- Label: "Antivirus Scan"
+- Value: "Clean"
+- Detail: "Trellix Stinger"
+- Items: Files scanned count, scan scope
+
+**Threats Removed (delete mode):**
 - Icon: 🛡️
 - Label: "Security Threats Removed"
 - Value: Number of infections removed
 - Detail: "Trellix Stinger Scan"
 - Items: List of threat types found
+
+**Threats Detected (report-only mode):**
+- Icon: ⚠️
+- Label: "Security Threats Detected"
+- Value: Number of threats found
+- Detail: "Trellix Stinger (Report Only)"
+- Items: Manual action required note
 
 ### Parameter Controls (`renderParamControls`)
 

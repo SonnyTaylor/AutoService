@@ -225,51 +225,106 @@ export function renderTech({ result, index }) {
 export function extractCustomerMetrics({ result }) {
   const { summary, status } = result;
 
+  // Only show metrics if scan completed successfully
+  if (status !== "success") return [];
+
   const infections = Array.isArray(summary.infections)
     ? summary.infections
     : [];
-
-  // Only show metric if infections were found and action was delete
   const action = summary.intent?.action || "delete";
-  if (infections.length === 0 || action !== "delete") return [];
+  const totalFiles = summary.total_files || 0;
 
-  // Extract threat types
-  const items = [];
-  const detectionTypes = new Set();
+  // Case 1: Threats found and removed
+  if (infections.length > 0 && action === "delete") {
+    // Extract threat types
+    const items = [];
+    const detectionTypes = new Set();
 
-  infections.forEach((inf) => {
-    const threat = inf?.threat_name || "";
-    // Extract type from threat name (e.g., "EICAR", "Artemis", "Trojan")
-    const match = threat.match(/^([^!.:]+)/);
-    if (match) {
-      detectionTypes.add(match[1]);
+    infections.forEach((inf) => {
+      const threat = inf?.threat_name || "";
+      // Extract type from threat name (e.g., "EICAR", "Artemis", "Trojan")
+      const match = threat.match(/^([^!.:]+)/);
+      if (match) {
+        detectionTypes.add(match[1]);
+      }
+    });
+
+    if (detectionTypes.size > 0) {
+      items.push(
+        `${infections.length} ${Array.from(detectionTypes).join(", ")} threat${
+          infections.length !== 1 ? "s" : ""
+        } removed`
+      );
+    } else {
+      items.push(
+        `${infections.length} threat${
+          infections.length !== 1 ? "s" : ""
+        } detected and removed`
+      );
     }
-  });
 
-  if (detectionTypes.size > 0) {
-    items.push(
-      `${infections.length} ${Array.from(detectionTypes).join(", ")} threat${
-        infections.length !== 1 ? "s" : ""
-      }`
-    );
-  } else {
-    items.push(
-      `${infections.length} threat${
-        infections.length !== 1 ? "s" : ""
-      } detected and removed`
-    );
+    return [
+      buildMetric({
+        icon: "🛡️",
+        label: "Security Threats Removed",
+        value: infections.length.toString(),
+        detail: "Trellix Stinger Scan",
+        variant: "success",
+        items: items.length > 0 ? items : undefined,
+      }),
+    ];
   }
 
-  return [
-    buildMetric({
-      icon: "🛡️",
-      label: "Security Threats Removed",
-      value: infections.length.toString(),
-      detail: "Trellix Stinger Scan",
-      variant: "success",
-      items: items.length > 0 ? items : undefined,
-    }),
-  ];
+  // Case 2: No threats found (clean system)
+  if (infections.length === 0) {
+    const items = [];
+
+    if (totalFiles > 0) {
+      items.push(`Scanned ${totalFiles.toLocaleString()} files`);
+    }
+
+    const scanScope = summary.intent?.scan_scope;
+    const scanPath = summary.intent?.scan_path;
+
+    if (scanPath) {
+      items.push(`Folder scan completed`);
+    } else if (scanScope === "smart_scan") {
+      items.push(`Smart scan completed`);
+    } else {
+      items.push(`Full system scan completed`);
+    }
+
+    return [
+      buildMetric({
+        icon: "✅",
+        label: "Antivirus Scan",
+        value: "Clean",
+        detail: "Trellix Stinger",
+        variant: "success",
+        items: items.length > 0 ? items : undefined,
+      }),
+    ];
+  }
+
+  // Case 3: Threats found but report-only mode
+  if (infections.length > 0 && action === "report") {
+    return [
+      buildMetric({
+        icon: "⚠️",
+        label: "Security Threats Detected",
+        value: infections.length.toString(),
+        detail: "Trellix Stinger (Report Only)",
+        variant: "info",
+        items: [
+          `${infections.length} threat${
+            infections.length !== 1 ? "s" : ""
+          } found - manual action required`,
+        ],
+      }),
+    ];
+  }
+
+  return [];
 }
 
 // =============================================================================

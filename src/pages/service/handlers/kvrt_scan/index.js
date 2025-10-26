@@ -213,6 +213,9 @@ export function renderTech({ result, index }) {
 export function extractCustomerMetrics({ result }) {
   const { summary, status } = result;
 
+  // Only show metrics if scan completed successfully
+  if (status !== "success") return [];
+
   const detections = Array.isArray(summary.detections)
     ? summary.detections
     : [];
@@ -226,45 +229,72 @@ export function extractCustomerMetrics({ result }) {
     return true;
   });
 
-  if (removedDetections.length === 0) return [];
+  const processed = summary.processed || 0;
 
-  // Extract threat types
-  const items = [];
-  const detectionTypes = new Set();
+  // Case 1: Threats found and removed
+  if (removedDetections.length > 0) {
+    // Extract threat types
+    const items = [];
+    const detectionTypes = new Set();
 
-  removedDetections.forEach((d) => {
-    const threat = d?.threat || "";
-    // Extract type from threat name (e.g., "Trojan", "Backdoor", "Adware")
-    const match = threat.match(/^([^.:]+)/);
-    if (match) {
-      detectionTypes.add(match[1]);
+    removedDetections.forEach((d) => {
+      const threat = d?.threat || "";
+      // Extract type from threat name (e.g., "Trojan", "Backdoor", "Adware")
+      const match = threat.match(/^([^.:]+)/);
+      if (match) {
+        detectionTypes.add(match[1]);
+      }
+    });
+
+    if (detectionTypes.size > 0) {
+      items.push(
+        `${removedDetections.length} ${Array.from(detectionTypes).join(
+          ", "
+        )} threat${removedDetections.length !== 1 ? "s" : ""} removed`
+      );
+    } else {
+      items.push(
+        `${removedDetections.length} threat${
+          removedDetections.length !== 1 ? "s" : ""
+        } detected and removed`
+      );
     }
-  });
 
-  if (detectionTypes.size > 0) {
-    items.push(
-      `${removedDetections.length} ${Array.from(detectionTypes).join(
-        ", "
-      )} threat${removedDetections.length !== 1 ? "s" : ""}`
-    );
-  } else {
-    items.push(
-      `${removedDetections.length} threat${
-        removedDetections.length !== 1 ? "s" : ""
-      } detected and removed`
-    );
+    return [
+      buildMetric({
+        icon: "🛡️",
+        label: "Security Threats Removed",
+        value: removedDetections.length.toString(),
+        detail: "Virus Scan",
+        variant: "success",
+        items: items.length > 0 ? items : undefined,
+      }),
+    ];
   }
 
-  return [
-    buildMetric({
-      icon: "🛡️",
-      label: "Security Threats Removed",
-      value: removedDetections.length.toString(),
-      detail: "Virus Scan",
-      variant: "success",
-      items: items.length > 0 ? items : undefined,
-    }),
-  ];
+  // Case 2: No threats found (clean system)
+  if (removedDetections.length === 0) {
+    const items = [];
+
+    if (processed > 0) {
+      items.push(`Scanned ${processed.toLocaleString()} objects`);
+    }
+
+    items.push("No malware detected");
+
+    return [
+      buildMetric({
+        icon: "✅",
+        label: "Malware Scan",
+        value: "Clean",
+        detail: "Kaspersky KVRT",
+        variant: "success",
+        items: items.length > 0 ? items : undefined,
+      }),
+    ];
+  }
+
+  return [];
 }
 
 // =============================================================================
