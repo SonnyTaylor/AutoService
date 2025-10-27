@@ -58,3 +58,6 @@ __pycache__/
 # Ignore compiled Python runner and any other files placed in the top-level binaries folder
 binaries/
 
+# Ignore mkdocs build files
+site/
+
