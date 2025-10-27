@@ -1,17 +1,49 @@
-# Welcome to MkDocs
+# AutoService Documentation
 
-For full documentation visit [mkdocs.org](https://www.mkdocs.org).
+Welcome to the AutoService documentation! This is your complete guide to using and developing AutoService, a Windows diagnostic toolkit built with Tauri (Rust backend) + vanilla JavaScript frontend.
 
-## Commands
+## What is AutoService?
 
-* `mkdocs new [dir-name]` - Create a new project.
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs -h` - Print help message and exit.
+AutoService is a portable, USB-friendly Windows diagnostic and maintenance toolkit designed for computer repair technicians and power users. It automates cleanup tasks, runs diagnostics, executes stress tests, and generates comprehensive reports—all from a single executable.
 
-## Project layout
+### Key Features
 
-    mkdocs.yml    # The configuration file.
-    docs/
-        index.md  # The documentation homepage.
-        ...       # Other markdown pages, images and other files.
+- **Automation First**: Orchestrate tools like AdwCleaner, BleachBit, SFC, DISM, smartctl, HeavyLoad, and FurMark with minimal clicks
+- **Run Queue Builder**: Build an ordered list of maintenance tasks directly from the UI
+- **Portable & Extensible**: Add your own programs and scripts without code changes
+- **System Diagnostics**: Comprehensive hardware and OS information collection
+- **Component Testing**: Test cameras, microphones, speakers, displays, and network connectivity
+- **Detailed Reports**: Generate technical and customer-friendly reports
+
+## Quick Navigation
+
+### For Users
+
+If you're using AutoService to maintain or diagnose systems:
+
+- **[User Guide Overview](user-guide/overview.md)** - Understand what AutoService can do
+- **[Getting Started](user-guide/getting-started.md)** - First-time setup and basic usage
+- **[Service Tab](user-guide/service-tab.md)** - Run automation tasks and cleanup tools
+- **[Programs Tab](user-guide/programs-tab.md)** - Manage and launch portable tools
+- **[System Info Tab](user-guide/system-info-tab.md)** - View detailed hardware and OS information
+- **[Settings Tab](user-guide/settings-tab.md)** - Configure AutoService behavior
+
+### For Developers
+
+If you're contributing to AutoService development:
+
+- **[Developer Overview](developer-guide/overview.md)** - Architecture and key concepts
+- **[Development Setup](developer-guide/dev-setup.md)** - Set up your development environment
+- **[Adding a Service](developer-guide/adding-service.md)** - Create a new diagnostic or maintenance service
+- **[Architecture](developer-guide/architecture.md)** - Deep dive into the three-layer design
+- **[Frontend Development](developer-guide/frontend-dev.md)** - Vanilla JS + Vite patterns
+- **[Backend Development](developer-guide/backend-dev.md)** - Tauri commands and Rust patterns
+
+## Support & Contributing
+
+- **Issues**: Report bugs or request features on [GitHub](https://github.com/SonnyTaylor/AutoService/issues)
+- **License**: GNU General Public License v3.0
+
+---
+
+**Version**: 0.4.0 | **Last Updated**: October 2025

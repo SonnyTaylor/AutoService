@@ -1,3 +1,45 @@
 site_name: AutoService Docs
 theme:
   name: material
+  features:
+    - navigation.tabs
+    - navigation.top
+    - content.code.copy
+    - search.suggest
+    - search.highlight
+
+nav:
+  - Home: index.md
+  - User Guide:
+      - Overview: user-guide/overview.md
+      - Getting Started: user-guide/getting-started.md
+      - Service Tab: user-guide/service-tab.md
+      - Programs Tab: user-guide/programs-tab.md
+      - Scripts Tab: user-guide/scripts-tab.md
+      - System Info Tab: user-guide/system-info-tab.md
+      - Reports Tab: user-guide/reports-tab.md
+      - Component Tests: user-guide/component-tests.md
+      - Settings Tab: user-guide/settings-tab.md
+      - Shortcuts Tab: user-guide/shortcuts-tab.md
+  - Developer Guide:
+      - Overview: developer-guide/overview.md
+      - Architecture: developer-guide/architecture.md
+      - Development Setup: developer-guide/dev-setup.md
+      - Adding a Service: developer-guide/adding-service.md
+      - Frontend Development: developer-guide/frontend-dev.md
+      - Backend Development: developer-guide/backend-dev.md
+      - Python Runner: developer-guide/python-runner.md
+      - Portable Layout: developer-guide/portable-layout.md
+      - Contributing: developer-guide/contributing.md
+
+markdown_extensions:
+  - def_list
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
