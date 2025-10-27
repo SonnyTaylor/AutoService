@@ -2,11 +2,11 @@
 
 ## Initial Setup
 
-### Prerequisites
+!!! info "Prerequisites"
 
-- Windows 10 or later
-- Administrator access (required for some diagnostic and maintenance tasks)
-- At least 100 MB free disk space for the application and logs
+    - Windows 10 or later
+    - Administrator access (required for some diagnostic and maintenance tasks)
+    - At least 100 MB free disk space for the application and logs
 
 ### Download & Extract
 
@@ -18,6 +18,9 @@
 
 ### First Launch
 
+!!! warning "Administrator Privileges Required"
+AutoService requires administrator privileges for most diagnostic tasks. Right-click `autoservice.exe` and select "Run as administrator" if UAC prompts don't appear automatically.
+
 1. Run autoservice.exe and accept any UAC prompts
    - Some features require elevated privileges for system access
 2. The application will launch and perform initial setup
@@ -27,16 +30,16 @@
 
 AutoService uses a tab-based interface for organization:
 
-| Tab | Purpose |
-|-----|---------|
-| Service | Run automated maintenance and diagnostics |
-| System Info | View hardware and OS details |
-| Component Test | Test hardware components |
-| Shortcuts | Quick links to Windows tools |
-| Programs | Manage and launch portable tools |
-| Scripts | Execute cmd scripts |
-| Reports | Access previous reports |
-| Settings | Configure AutoService |
+| Tab            | Purpose                                   |
+| -------------- | ----------------------------------------- |
+| Service        | Run automated maintenance and diagnostics |
+| System Info    | View hardware and OS details              |
+| Component Test | Test hardware components                  |
+| Shortcuts      | Quick links to Windows tools              |
+| Programs       | Manage and launch portable tools          |
+| Scripts        | Execute cmd scripts                       |
+| Reports        | Access previous reports                   |
+| Settings       | Configure AutoService                     |
 
 ## Your First Maintenance Run
 
@@ -137,47 +140,47 @@ When the queue completes, AutoService displays results:
 
 ## Tips & Best Practices
 
-### Before Running on a Client System
+!!! warning "Before Running on a Client System"
 
-- **Backup Important Data**: Always ensure client data is backed up
-- **Communicate Your Plan**: Inform the client what tasks you'll run
-- **Note Initial State**: Take screenshots or notes of the starting condition
-- **Read Task Descriptions**: Understand what each task does before running
+    - **Backup Important Data**: Always ensure client data is backed up
+    - **Communicate Your Plan**: Inform the client what tasks you'll run
+    - **Note Initial State**: Take screenshots or notes of the starting condition
+    - **Read Task Descriptions**: Understand what each task does before running
 
-### During Execution
+!!! tip "During Execution"
 
-- **Don't Force Quit**: Let tasks complete naturally (some take time)
-- **Monitor Performance**: Watch CPU/Memory usage during stress tests
-- **Keep AutoService Open**: Closing the window may interrupt task execution
-- **Check Network Connection**: For online tests (speed tests, updates)
+    - **Don't Force Quit**: Let tasks complete naturally (some take time)
+    - **Monitor Performance**: Watch CPU/Memory usage during stress tests
+    - **Keep AutoService Open**: Closing the window may interrupt task execution
+    - **Check Network Connection**: For online tests (speed tests, updates)
 
-### After Completion
+!!! tip "After Completion"
 
-- **Review Both Report Types**: Check both technical and customer views
-- **Save Reports**: Store reports for records or customer handoff
-- **Note Any Warnings**: Flag unusual findings for further investigation
-- **Verify Improvements**: Compare to initial state if appropriate
+    - **Review Both Report Types**: Check both technical and customer views
+    - **Save Reports**: Store reports for records or customer handoff
+    - **Note Any Warnings**: Flag unusual findings for further investigation
+    - **Verify Improvements**: Compare to initial state if appropriate
 
 ## Troubleshooting
 
-### AutoService Won't Start
+!!! failure "AutoService Won't Start"
 
-- **Check admin privileges**: Right-click and select "Run as administrator"
-- **Check Windows version**: AutoService requires Windows 10 or later
-- **Verify data folder**: Ensure the `data/` folder exists alongside the EXE
+    - **Check admin privileges**: Right-click and select "Run as administrator"
+    - **Check Windows version**: AutoService requires Windows 10 or later
+    - **Verify data folder**: Ensure the `data/` folder exists alongside the EXE
 
-### Tasks Keep Failing
+!!! warning "Tasks Keep Failing"
 
-- **Check tool availability**: Go to Settings → Tools to verify required tools are present
-- **Update tools**: Some tools may need newer versions
-- **Check permissions**: Some tasks require administrator access
-- **Review logs**: Check `data/logs/` for detailed error messages
+    - **Check tool availability**: Go to Settings → Tools to verify required tools are present
+    - **Update tools**: Some tools may need newer versions
+    - **Check permissions**: Some tasks require administrator access
+    - **Review logs**: Check `data/logs/` for detailed error messages
 
-### Reports Not Generating
+!!! error "Reports Not Generating"
 
-- **Check disk space**: Ensure you have space in the data folder
-- **Verify permissions**: Check file write permissions in the data directory
-- **Check reports folder**: Look in `data/reports/` for saved reports
+    - **Check disk space**: Ensure you have space in the data folder
+    - **Verify permissions**: Check file write permissions in the data directory
+    - **Check reports folder**: Look in `data/reports/` for saved reports
 
 ## Next Steps
 

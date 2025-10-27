@@ -2,23 +2,23 @@
 
 Get your development environment ready for AutoService.
 
-## Prerequisites
+!!! info "Prerequisites"
 
-### Required Software
+    ### Required Software
 
-- **Windows 10 or later** - Primary development target
-- **Node.js 18+** - Download from [nodejs.org](https://nodejs.org/)
-- **pnpm** - Package manager (install globally: `npm install -g pnpm`)
-- **Rust** - Install from [rustup.rs](https://rustup.rs/)
-- **Python 3.9+** - Download from [python.org](https://www.python.org/)
-- **Git** - Download from [git-scm.com](https://git-scm.com/)
+    - **Windows 10 or later** - Primary development target
+    - **Node.js 18+** - Download from [nodejs.org](https://nodejs.org/)
+    - **pnpm** - Package manager (install globally: `npm install -g pnpm`)
+    - **Rust** - Install from [rustup.rs](https://rustup.rs/)
+    - **Python 3.9+** - Download from [python.org](https://www.python.org/)
+    - **Git** - Download from [git-scm.com](https://git-scm.com/)
 
-### Optional but Recommended
+    ### Optional but Recommended
 
-- **Visual Studio Code** - Code editor
-- **Cargo-watch** - Auto-recompile on changes (`cargo install cargo-watch`)
-- **PyCharm Community** - Python IDE
-- **Windows Subsystem for Linux (WSL2)** - If you prefer Linux-like environment
+    - **Visual Studio Code** - Code editor
+    - **Cargo-watch** - Auto-recompile on changes (`cargo install cargo-watch`)
+    - **PyCharm Community** - Python IDE
+    - **Windows Subsystem for Linux (WSL2)** - If you prefer Linux-like environment
 
 ## Clone and Install
 
@@ -66,15 +66,12 @@ Starts Vite dev server on `http://localhost:5173`. Frontend only, no backend.
 
 ### Full App with Tauri (Recommended)
 
+!!! warning "Administrator Terminal Required"
+You **must** run this command in an administrator terminal. Tauri requires elevated privileges for system access and many AutoService features need admin rights.
+
 ```powershell
 pnpm tauri dev
 ```
-
-**Important**: Must run in an **admin terminal** because:
-
-- Tauri requires elevated privileges
-- Many AutoService commands need admin access
-- Some system information is admin-only
 
 This command:
 
@@ -241,25 +238,25 @@ python -m pdb runner/service_runner.py runner/fixtures/test_bleachbit.json
 
 ## Common Issues
 
-### Error: "Tauri requires admin privileges"
+!!! failure "Error: 'Tauri requires admin privileges'"
 
-**Solution**: Run terminal as Administrator before `pnpm tauri dev`
+    **Solution**: Run terminal as Administrator before `pnpm tauri dev`
 
-### Error: "Rust toolchain not found"
+!!! failure "Error: 'Rust toolchain not found'"
 
-**Solution**: Install Rust from [rustup.rs](https://rustup.rs/) and restart terminal
+    **Solution**: Install Rust from [rustup.rs](https://rustup.rs/) and restart terminal
 
-### Error: "Python not found"
+!!! failure "Error: 'Python not found'"
 
-**Solution**: Ensure Python is installed and in PATH; restart terminal after installation
+    **Solution**: Ensure Python is installed and in PATH; restart terminal after installation
 
-### Error: "pnpm: command not found"
+!!! failure "Error: 'pnpm: command not found'"
 
-**Solution**: Install pnpm globally: `npm install -g pnpm`
+    **Solution**: Install pnpm globally: `npm install -g pnpm`
 
-### Hot-reload not working
+!!! warning "Hot-reload not working"
 
-**Solution**: Ensure you're running `pnpm tauri dev` from admin terminal, not `pnpm dev`
+    **Solution**: Ensure you're running `pnpm tauri dev` from admin terminal, not `pnpm dev`
 
 ## Next Steps
 

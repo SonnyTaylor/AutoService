@@ -18,6 +18,7 @@ The Service tab consists of three main views:
 The left side shows available services organized by category:
 
 - **Diagnostics**
+
   - Disk Space Report - Analyze disk usage and free space
   - SMART Drive Report - Drive health and S.M.A.R.T. data
   - CHKDSK Scan - Check disk for errors
@@ -25,12 +26,14 @@ The left side shows available services organized by category:
   - WINSAT Disk - Disk performance benchmarking
 
 - **System Maintenance**
+
   - SFC Scan - Verify system file integrity
   - DISM Health Check - System image health check
   - Windows Update - Install available updates
   - Why Not Win11 - Check Windows 11 compatibility
 
 - **Cleanup & Security**
+
   - BleachBit Clean - Remove temporary files and cache
   - AdwCleaner Clean - Remove adware and PUPs
   - Drive Cleanup - Remove large unnecessary files
@@ -38,12 +41,14 @@ The left side shows available services organized by category:
   - Trellix Stinger - McAfee malware removal
 
 - **Stress Testing**
+
   - HeavyLoad CPU Stress - CPU load testing
   - HeavyLoad Memory Stress - RAM stress testing
   - HeavyLoad GPU Stress - GPU load testing
   - FurMark Stress Test - Graphics stress testing
 
 - **Network & Connectivity**
+
   - Ping Test - ICMP connectivity test
   - Speed Test - Internet speed benchmark
   - iPerf Test - Network performance testing
@@ -109,12 +114,12 @@ To use a preset:
 
 ## Running Your Queue
 
-### Before You Start
+!!! warning "Before You Start"
 
-- **Save your work** on the target system
-- **Close other applications** to prevent interference
-- **Ensure admin privileges** (UAC prompt may appear)
-- **Plan for time**: Check estimated duration
+    - **Save your work** on the target system
+    - **Close other applications** to prevent interference
+    - **Ensure admin privileges** (UAC prompt may appear)
+    - **Plan for time**: Check estimated duration
 
 ### Starting Execution
 
@@ -143,13 +148,14 @@ During execution, you see:
 
 ## Canceling Execution
 
+!!! warning "Interrupting Tasks"
+Some tasks may take a moment to shut down gracefully. Avoid force-closing AutoService during execution.
+
 If you need to stop the queue:
 
 - Click the **"Cancel"** or **"Stop"** button
 - Currently executing task will be interrupted
 - Already completed tasks are saved
-
-**Note**: Some tasks may take a moment to shut down gracefully.
 
 ## Viewing Results
 
@@ -234,57 +240,51 @@ From the results view, you can:
 5. Run and monitor system stability
 6. Review temperatures and results
 
-## Tips for Efficient Runs
+!!! tip "Tips for Efficient Runs"
 
-- **Group similar tasks** - Do diagnostics first, then cleanup, then stress tests
-- **Run overnight** for long maintenance routines (if UAC will allow it)
-- **Check tool availability** before queuing - If a tool is missing, the task will fail
-- **Generate both reports** - Technical for reference, customer for handoff
-- **Save results** - Store reports for future reference or comparison
+    - **Group similar tasks** - Do diagnostics first, then cleanup, then stress tests
+    - **Run overnight** for long maintenance routines (if UAC will allow it)
+    - **Check tool availability** before queuing - If a tool is missing, the task will fail
+    - **Generate both reports** - Technical for reference, customer for handoff
+    - **Save results** - Store reports for future reference or comparison
 
 ## Troubleshooting
 
-### Tasks Fail Immediately
+!!! failure "Tasks Fail Immediately"
 
-**Causes:**
+    **Causes:**
+    - Required tool is missing or not in PATH
+    - Task requires administrator privileges but run without elevation
+    - System doesn't meet task requirements
 
-- Required tool is missing or not in PATH
-- Task requires administrator privileges but run without elevation
-- System doesn't meet task requirements
+    **Solution:**
+    - Check Settings → Tools for missing tools
+    - Re-run AutoService as administrator
+    - Check logs in `data/logs/` for specific error
 
-**Solution:**
+!!! warning "Progress Seems Stuck"
 
-- Check Settings → Tools for missing tools
-- Re-run AutoService as administrator
-- Check logs in `data/logs/` for specific error
+    **Causes:**
+    - Long-running task (SFC, DISM can take 15+ minutes)
+    - Tool is responding but not showing output
+    - System is busy with other processes
 
-### Progress Seems Stuck
+    **Solution:**
+    - Wait longer before canceling (check system resource usage)
+    - Check Windows Task Manager for tool processes
+    - Close other applications to free resources
 
-**Causes:**
+!!! info "Some Tasks Skipped"
 
-- Long-running task (SFC, DISM can take 15+ minutes)
-- Tool is responding but not showing output
-- System is busy with other processes
+    **Causes:**
+    - Tool not available on this system
+    - Task requirements not met
+    - System configuration prevents execution
 
-**Solution:**
-
-- Wait longer before canceling (check system resource usage)
-- Check Windows Task Manager for tool processes
-- Close other applications to free resources
-
-### Some Tasks Skipped
-
-**Causes:**
-
-- Tool not available on this system
-- Task requirements not met
-- System configuration prevents execution
-
-**Solution:**
-
-- Check skip reason in results
-- Install missing tools via Programs tab
-- Verify system configuration
+    **Solution:**
+    - Check skip reason in results
+    - Install missing tools via Programs tab
+    - Verify system configuration
 
 ---
 

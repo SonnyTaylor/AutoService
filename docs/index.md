@@ -15,6 +15,12 @@ AutoService is a portable, USB-friendly Windows diagnostic and maintenance toolk
 - **Component Testing**: Test cameras, microphones, speakers, displays, and network connectivity
 - **Detailed Reports**: Generate technical and customer-friendly reports
 
+!!! info "Portable Design"
+AutoService is designed to run from USB drives alongside a `data/` folder. Keep the executable and data folder together for full functionality.
+
+!!! warning "System Requirements"
+AutoService requires Windows 10 or later and administrator privileges for most diagnostic tasks.
+
 ## Quick Navigation
 
 ### For Users
@@ -45,5 +51,8 @@ If you're contributing to AutoService development:
 - **License**: GNU General Public License v3.0
 
 ---
+
+!!! tip "Getting Help"
+Need assistance? Check the [GitHub Issues](https://github.com/SonnyTaylor/AutoService/issues) page for common questions, or open a new issue for bugs and feature requests.
 
 **Version**: 0.4.0 | **Last Updated**: October 2025

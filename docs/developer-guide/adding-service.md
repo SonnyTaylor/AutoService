@@ -2,14 +2,13 @@
 
 Learn how to create a new diagnostic or maintenance service in AutoService.
 
-## Overview
+!!! info "Overview"
+Adding a service requires changes in **two places** that must use the same ID:
 
-Adding a service requires changes in two places:
+    1. **Python Backend** (`runner/services/`) - Implement task logic
+    2. **Frontend** (`src/pages/service/handlers/`) - UI and display logic
 
-1. **Python Backend** (`runner/services/`) - Implement task logic
-2. **Frontend** (`src/pages/service/handlers/`) - UI and display logic
-
-Both are coordinated by ID (e.g., `bleachbit_clean`, `sfc_scan`).
+    Both components are coordinated by a shared service ID (e.g., `bleachbit_clean`, `sfc_scan`).
 
 ## Step 1: Python Service Implementation
 
@@ -25,20 +24,20 @@ from typing import Dict, Any
 def run_my_service(task: Dict[str, Any]) -> Dict[str, Any]:
     """
     Execute my_service task.
-    
+
     Args:
         task: Task definition with parameters
-        
+
     Returns:
         Standard result dictionary
     """
     try:
         # Get task parameters
         params = task.get("params", {})
-        
+
         # Execute your service logic
         result = execute_my_logic(params)
-        
+
         return {
             "task_type": "my_service",
             "status": "success",
@@ -99,34 +98,34 @@ cp src/pages/service/handlers/_TEMPLATE/index.js src/pages/service/handlers/my_s
 Edit `src/pages/service/handlers/my_service/index.js`:
 
 ```javascript
-import { html } from 'lit-html';
-import { kpiBox, buildMetric } from '../common/ui.js';
+import { html } from "lit-html";
+import { kpiBox, buildMetric } from "../common/ui.js";
 
 /**
  * Service definition for my_service
  */
 export const definition = {
-  id: "my_service",                           // Matches Python handler
-  label: "My Service",                        // Display name
-  group: "Diagnostics",                       // Category
-  toolKeys: ["my-tool"],                      // Required tools
-  
+  id: "my_service", // Matches Python handler
+  label: "My Service", // Display name
+  group: "Diagnostics", // Category
+  toolKeys: ["my-tool"], // Required tools
+
   async build({ params, resolveToolPath }) {
     // Resolve required tools
     const toolPath = await resolveToolPath("my-tool");
     if (!toolPath) {
       throw new Error("my-tool not found");
     }
-    
+
     // Return task definition for Python runner
     return {
       type: "my_service",
       executable_path: toolPath,
       params: {
-        my_param: params?.my_param || "default_value"
-      }
+        my_param: params?.my_param || "default_value",
+      },
     };
-  }
+  },
 };
 
 /**
@@ -134,18 +133,23 @@ export const definition = {
  */
 export function renderTech({ result, index }) {
   const { summary, status } = result;
-  
+
   return html`
     <div class="card">
       <div class="card-header">
         <h3>My Service #${index + 1}</h3>
       </div>
       <div class="card-body">
-        ${kpiBox("Status", status)}
-        ${kpiBox("Items Processed", summary.human_readable?.items_processed ?? 'N/A')}
-        ${summary.results ? html`
-          <pre class="output">${JSON.stringify(summary.results, null, 2)}</pre>
-        ` : ''}
+        ${kpiBox("Status", status)} ${kpiBox(
+          "Items Processed",
+          summary.human_readable?.items_processed ?? "N/A"
+        )} ${summary.results
+          ? html`
+              <pre class="output">
+${JSON.stringify(summary.results, null, 2)}</pre
+              >
+            `
+          : ""}
       </div>
     </div>
   `;
@@ -156,13 +160,13 @@ export function renderTech({ result, index }) {
  */
 export function extractCustomerMetrics({ summary, status }) {
   if (status !== "success") return null;
-  
+
   return buildMetric({
     icon: "✓",
     label: "Service Status",
     value: "Complete",
     detail: `Processed ${summary.human_readable?.items_processed ?? 0} items`,
-    variant: "success"
+    variant: "success",
   });
 }
 
@@ -200,7 +204,7 @@ async build({ params, resolveToolPath, getDataDirs }) {
   // params are passed from the UI
   const duration = params?.duration || 5;
   const verbose = params?.verbose ?? true;
-  
+
   return {
     type: "my_service",
     duration_minutes: duration,
@@ -219,7 +223,7 @@ export const definition = {
   label: "My Service",
   group: "Diagnostics",
   toolKeys: [],
-  
+
   // Parameter UI configuration
   params: [
     {
@@ -228,24 +232,29 @@ export const definition = {
       type: "number",
       default: 5,
       min: 1,
-      max: 60
+      max: 60,
     },
     {
       id: "verbose",
       label: "Verbose Output",
       type: "checkbox",
-      default: true
-    }
+      default: true,
+    },
   ],
-  
+
   async build({ params, resolveToolPath }) {
     // Use params.duration, params.verbose, etc.
-    return { /* ... */ };
-  }
+    return {
+      /* ... */
+    };
+  },
 };
 ```
 
 ## Step 4: Return Value Schema
+
+!!! warning "Critical: Exact Schema Required"
+All Python services **must** return this exact structure. Deviations will break the frontend and reporting system.
 
 All Python services must return this structure:
 
@@ -315,7 +324,7 @@ def run_disk_check(task):
             text=True,
             timeout=300
         )
-        
+
         return {
             "task_type": "disk_check",
             "status": "success" if result.returncode == 0 else "warning",
@@ -344,26 +353,26 @@ def run_disk_check(task):
 
 ### Frontend Handler (similar to example above)
 
-## Best Practices
+!!! tip "Best Practices"
 
-1. **Error handling** - Always return proper status and error messages
-2. **Logging** - Use stderr markers for progress updates
-3. **Performance** - Include realistic duration estimates
-4. **Validation** - Check parameters before execution
-5. **Documentation** - Comment your code clearly
-6. **Testing** - Test both Python and frontend components
-7. **User feedback** - Provide clear status and next steps
+    1. **Error handling** - Always return proper status and error messages
+    2. **Logging** - Use stderr markers for progress updates
+    3. **Performance** - Include realistic duration estimates
+    4. **Validation** - Check parameters before execution
+    5. **Documentation** - Comment your code clearly
+    6. **Testing** - Test both Python and frontend components
+    7. **User feedback** - Provide clear status and next steps
 
-## Checklist
+!!! info "Implementation Checklist"
 
-- [ ] Python service created in `runner/services/my_service.py`
-- [ ] Service registered in `runner/service_runner.py`
-- [ ] Frontend handler created in `src/pages/service/handlers/my_service/`
-- [ ] Handler registered in `src/pages/service/handlers/index.js`
-- [ ] Service tested with Python fixtures
-- [ ] Service tested in AutoService UI
-- [ ] Both technical and customer views display correctly
-- [ ] Documentation added (README in handler folder)
+    - [ ] Python service created in `runner/services/my_service.py`
+    - [ ] Service registered in `runner/service_runner.py`
+    - [ ] Frontend handler created in `src/pages/service/handlers/my_service/`
+    - [ ] Handler registered in `src/pages/service/handlers/index.js`
+    - [ ] Service tested with Python fixtures
+    - [ ] Service tested in AutoService UI
+    - [ ] Both technical and customer views display correctly
+    - [ ] Documentation added (README in handler folder)
 
 ---
 

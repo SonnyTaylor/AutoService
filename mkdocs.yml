@@ -41,6 +41,9 @@ nav:
       - Contributing: developer-guide/contributing.md
 
 markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
   - def_list
   - pymdownx.tasklist:
       custom_checkbox: true
@@ -50,4 +53,3 @@ markdown_extensions:
       pygments_lang_class: true
   - pymdownx.inlinehilite
   - pymdownx.snippets
-  - pymdownx.superfences

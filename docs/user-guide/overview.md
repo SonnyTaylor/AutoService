@@ -59,37 +59,35 @@ After running maintenance tasks, AutoService generates two types of reports:
 
 AutoService is organized into tabs across the top of the window:
 
-| Tab | Purpose |
-|-----|---------|
-| **Service** | Run automated maintenance and diagnostic tasks using the queue builder |
-| **System Info** | View detailed hardware and OS information |
-| **Component Test** | Test individual hardware components |
-| **Shortcuts** | Quick links to Windows management tools |
-| **Programs** | Launch portable tools and utilities |
-| **Scripts** | Run and manage PowerShell/CMD scripts |
-| **Reports** | Access previously generated reports |
-| **Settings** | Configure AutoService behavior and preferences |
+| Tab                | Purpose                                                                |
+| ------------------ | ---------------------------------------------------------------------- |
+| **Service**        | Run automated maintenance and diagnostic tasks using the queue builder |
+| **System Info**    | View detailed hardware and OS information                              |
+| **Component Test** | Test individual hardware components                                    |
+| **Shortcuts**      | Quick links to Windows management tools                                |
+| **Programs**       | Launch portable tools and utilities                                    |
+| **Scripts**        | Run and manage PowerShell/CMD scripts                                  |
+| **Reports**        | Access previously generated reports                                    |
+| **Settings**       | Configure AutoService behavior and preferences                         |
 
-## Portable Design
+!!! info "Portable Design"
+AutoService is designed to work from a USB drive or any location alongside a `data/` folder. Keep the executable and data folder together for full functionality.
 
-AutoService is designed to work from a USB drive or any location alongside a `data/` folder:
+    ```text
+    AutoService.exe            # Main application
+    data/
+    ├── programs/              # Your portable tools
+    ├── resources/             # Autoservice executables and assets
+    ├── settings/              # Configuration files
+    ├── reports/               # Generated reports
+    └── logs/                  # Execution logs from AutoService and other tools
+    ```
 
-```text
-AutoService.exe            # Main application
-data/
-├── programs/              # Your portable tools
-├── resources/             # Autoservice executables and assets
-├── settings/              # Configuration files
-├── reports/               # Generated reports
-└── logs/                  # Execution logs from AutoService and other tools
-```
-
-This portability means:
-
-- Run from USB on any Windows system
-- Configurations and tools travel with the executable
-- No installation required
-- Leave no traces on the host system
+    This portability means:
+    - Run from USB on any Windows system
+    - Configurations and tools travel with the executable
+    - No installation required
+    - Leave no traces on the host system
 
 ## Typical Workflow
 
@@ -103,19 +101,19 @@ A typical technician workflow looks like this:
 6. **Review results** with detailed technical or customer-friendly reports
 7. **Save or export the report** for records or customer handoff
 
-## What You'll Need
+!!! info "What You'll Need"
 
-### Minimum Requirements
+    ### Minimum Requirements
 
-- Windows 10 or later
-- Administrator access for some tasks (UAC prompt will appear as needed)
-- The `data/` folder alongside the AutoService executable
+    - Windows 10 or later
+    - Administrator access for some tasks (UAC prompt will appear as needed)
+    - The `data/` folder alongside the AutoService executable
 
-### Recommended
+    ### Recommended
 
-- 4GB RAM for stress testing
-- Portable tools installed in `data/programs/` (setup during initialization)
-- Network connection for online tests and updates
+    - 4GB RAM for stress testing
+    - Portable tools installed in `data/programs/` (setup during initialization)
+    - Network connection for online tests and updates
 
 ## Getting Help
 
