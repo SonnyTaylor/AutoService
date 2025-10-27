@@ -19,7 +19,8 @@
 ### First Launch
 
 !!! warning "Administrator Privileges Required"
-AutoService requires administrator privileges for most diagnostic tasks. Right-click `autoservice.exe` and select "Run as administrator" if UAC prompts don't appear automatically.
+
+    AutoService requires administrator privileges for most diagnostic tasks. Right-click `autoservice.exe` and select "Run as administrator" if UAC prompts don't appear automatically.
 
 1. Run autoservice.exe and accept any UAC prompts
    - Some features require elevated privileges for system access

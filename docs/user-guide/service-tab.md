@@ -149,7 +149,8 @@ During execution, you see:
 ## Canceling Execution
 
 !!! warning "Interrupting Tasks"
-Some tasks may take a moment to shut down gracefully. Avoid force-closing AutoService during execution.
+
+    Some tasks may take a moment to shut down gracefully. Avoid force-closing AutoService during execution.
 
 If you need to stop the queue:
 

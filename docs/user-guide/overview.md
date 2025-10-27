@@ -68,10 +68,11 @@ AutoService is organized into tabs across the top of the window:
 | **Programs**       | Launch portable tools and utilities                                    |
 | **Scripts**        | Run and manage PowerShell/CMD scripts                                  |
 | **Reports**        | Access previously generated reports                                    |
-| **Settings**       | Configure AutoService behavior and preferences                         |
+| **Settings**        | Configure AutoService behavior and preferences                         |
 
 !!! info "Portable Design"
-AutoService is designed to work from a USB drive or any location alongside a `data/` folder. Keep the executable and data folder together for full functionality.
+
+    AutoService is designed to work from a USB drive or any location alongside a `data/` folder. Keep the executable and data folder together for full functionality.
 
     ```text
     AutoService.exe            # Main application

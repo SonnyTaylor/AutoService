@@ -3,12 +3,12 @@
 Learn how to create a new diagnostic or maintenance service in AutoService.
 
 !!! info "Overview"
-Adding a service requires changes in **two places** that must use the same ID:
+  Adding a service requires changes in **two places** that must use the same ID:
 
-    1. **Python Backend** (`runner/services/`) - Implement task logic
-    2. **Frontend** (`src/pages/service/handlers/`) - UI and display logic
+      1. **Python Backend** (`runner/services/`) - Implement task logic
+      2. **Frontend** (`src/pages/service/handlers/`) - UI and display logic
 
-    Both components are coordinated by a shared service ID (e.g., `bleachbit_clean`, `sfc_scan`).
+      Both components are coordinated by a shared service ID (e.g., `bleachbit_clean`, `sfc_scan`).
 
 ## Step 1: Python Service Implementation
 
@@ -254,25 +254,25 @@ export const definition = {
 ## Step 4: Return Value Schema
 
 !!! warning "Critical: Exact Schema Required"
-All Python services **must** return this exact structure. Deviations will break the frontend and reporting system.
+  All Python services **must** return this exact structure. Deviations will break the frontend and reporting system.
 
-All Python services must return this structure:
+  All Python services must return this structure:
 
-```python
-{
-    "task_type": "my_service",                  # Matches service ID
-    "status": "success" | "error" | "warning",  # Task status
-    "summary": {
-        "human_readable": {                     # User-friendly data
-            "key": "value"
-        },
-        "results": {                            # Raw technical data
-            "key": "value"
-        }
-    },
-    "duration_seconds": 12.34
-}
-```
+  ```python
+  {
+      "task_type": "my_service",                  # Matches service ID
+      "status": "success" | "error" | "warning",  # Task status
+      "summary": {
+          "human_readable": {                     # User-friendly data
+              "key": "value"
+          },
+          "results": {                            # Raw technical data
+              "key": "value"
+          }
+      },
+      "duration_seconds": 12.34
+  }
+  ```
 
 ## Step 5: Testing
 

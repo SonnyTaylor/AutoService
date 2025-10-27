@@ -67,7 +67,8 @@ Starts Vite dev server on `http://localhost:5173`. Frontend only, no backend.
 ### Full App with Tauri (Recommended)
 
 !!! warning "Administrator Terminal Required"
-You **must** run this command in an administrator terminal. Tauri requires elevated privileges for system access and many AutoService features need admin rights.
+
+    You **must** run this command in an administrator terminal. Tauri requires elevated privileges for system access and many AutoService features need admin rights.
 
 ```powershell
 pnpm tauri dev
