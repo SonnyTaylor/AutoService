@@ -9,6 +9,8 @@ theme:
     - search.suggest
     - search.highlight
     - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.instant.progress
     - search
     - search.suggest
 
