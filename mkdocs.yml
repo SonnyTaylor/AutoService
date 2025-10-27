@@ -9,6 +9,8 @@ theme:
     - search.suggest
     - search.highlight
     - navigation.instant
+    - search
+    - search.suggest
 
 nav:
   - Home: index.md
