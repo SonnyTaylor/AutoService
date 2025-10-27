@@ -78,27 +78,39 @@ data/                      # Portable data folder
 
 ### Three-Layer Design
 
-```
-┌─────────────────────────────────────┐
-│   Frontend (Vanilla JS + Vite)      │
-│  - Hash-based router                │
-│  - Service queue builder            │
-│  - Report rendering                 │
-└─────────────┬───────────────────────┘
-              │ IPC (Tauri)
-┌─────────────▼───────────────────────┐
-│   Backend (Rust + Tauri)            │
-│  - File I/O                         │
-│  - System information               │
-│  - Process management               │
-└─────────────┬───────────────────────┘
-              │ Subprocess
-┌─────────────▼───────────────────────┐
-│  Service Runner (Python)            │
-│  - Execute tasks sequentially       │
-│  - Stream progress to frontend      │
-│  - Generate reports                 │
-└─────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph Frontend["🖥️ Frontend<br/>Vanilla JS + Vite"]
+        A["Hash Router<br/>main.js"]
+        B["Service Builder<br/>UI Components"]
+        C["Report Rendering<br/>Print System"]
+    end
+    
+    subgraph Backend["⚙️ Backend<br/>Rust + Tauri"]
+        D["IPC Command<br/>Handlers"]
+        E["File I/O<br/>System Info"]
+        F["Process<br/>Management"]
+    end
+    
+    subgraph Runner["🐍 Service Runner<br/>Python Executor"]
+        G["Task Dispatcher"]
+        H["Service Modules"]
+        I["Report Builder"]
+    end
+    
+    A -->|Hash Routes| B
+    B -->|Tauri Invoke| D
+    D -->|Spawn Process| F
+    F -->|Execute| G
+    G -->|Run Tasks| H
+    H -->|Generate| I
+    I -->|JSON Report| D
+    D -->|Tauri Events| C
+    C -->|Display| A
+    
+    style Frontend fill:#e1f5ff,stroke:#01579b
+    style Backend fill:#f3e5f5,stroke:#4a148c
+    style Runner fill:#e8f5e9,stroke:#1b5e20
 ```
 
 ### Data Flow: Running a Service
@@ -111,6 +123,7 @@ data/                      # Portable data folder
 6. **Frontend listens** for progress events
 7. **Python returns final** report to stdout
 8. **Frontend displays** results in Results view
+
 
 ## Development Workflow
 

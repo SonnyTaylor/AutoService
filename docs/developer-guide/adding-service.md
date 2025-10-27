@@ -2,13 +2,20 @@
 
 Learn how to create a new diagnostic or maintenance service in AutoService.
 
-!!! info "Overview"
-  Adding a service requires changes in **two places** that must use the same ID:
-
-      1. **Python Backend** (`runner/services/`) - Implement task logic
-      2. **Frontend** (`src/pages/service/handlers/`) - UI and display logic
-
-      Both components are coordinated by a shared service ID (e.g., `bleachbit_clean`, `sfc_scan`).
+!!! tip "Service Architecture"
+    Adding a service requires changes in **exactly two places** that must share the same ID:
+    
+    === "Python Backend"
+        **Location**: `runner/services/`  
+        **Responsibility**: Implement task execution logic  
+        **Example**: `runner/services/my_service.py`
+    
+    === "Frontend"
+        **Location**: `src/pages/service/handlers/`  
+        **Responsibility**: UI display and parameter building  
+        **Example**: `src/pages/service/handlers/my_service/index.js`
+    
+    Both components are coordinated by a shared service ID (e.g., `bleachbit_clean`, `sfc_scan`).
 
 ## Step 1: Python Service Implementation
 
@@ -20,35 +27,26 @@ Create `runner/services/my_service.py`:
 import subprocess
 import json
 from typing import Dict, Any
+import time  # (1)!
 
 def run_my_service(task: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Execute my_service task.
-
-    Args:
-        task: Task definition with parameters
-
-    Returns:
-        Standard result dictionary
-    """
+    """Execute my_service task."""
+    start_time = time.time()
     try:
-        # Get task parameters
-        params = task.get("params", {})
-
-        # Execute your service logic
-        result = execute_my_logic(params)
+        params = task.get("params", {})  # (2)!
+        result = execute_my_logic(params)  # (3)!
 
         return {
-            "task_type": "my_service",
+            "task_type": "my_service",  # (4)!
             "status": "success",
             "summary": {
-                "human_readable": {
+                "human_readable": {  # (5)!
                     "status": "Service completed",
                     "items_processed": result["count"]
                 },
-                "results": result
+                "results": result  # (6)!
             },
-            "duration_seconds": 12.34
+            "duration_seconds": time.time() - start_time
         }
     except Exception as e:
         return {
@@ -58,13 +56,20 @@ def run_my_service(task: Dict[str, Any]) -> Dict[str, Any]:
                 "human_readable": {"error": str(e)},
                 "results": {}
             },
-            "duration_seconds": 0
+            "duration_seconds": time.time() - start_time
         }
 
 def execute_my_logic(params):
-    # Your implementation here
+    """Your service logic here."""
     return {"count": 42}
 ```
+
+1. Import `time` to measure execution duration
+2. Extract parameters passed from the frontend
+3. Execute your custom service logic
+4. Must match the frontend handler ID exactly
+5. Human-readable data for UI display
+6. Raw technical data for detailed reports
 
 ### Register in Service Runner
 
@@ -75,23 +80,27 @@ from services.my_service import run_my_service
 
 TASK_HANDLERS = {
     # ... existing handlers ...
-    "my_service": run_my_service,
+    "my_service": run_my_service,  # (1)!
 }
 ```
 
+1. The key must match the `id` in the frontend handler definition
+
 ## Step 2: Frontend Handler
 
-### Create Handler Directory
+### Setup
 
-```powershell
-mkdir src/pages/service/handlers/my_service
-```
+=== "Create Directory"
 
-### Copy and Modify Template
+    ```powershell
+    mkdir src/pages/service/handlers/my_service
+    ```
 
-```powershell
-cp src/pages/service/handlers/_TEMPLATE/index.js src/pages/service/handlers/my_service/index.js
-```
+=== "Copy Template"
+
+    ```powershell
+    cp src/pages/service/handlers/_TEMPLATE/index.js src/pages/service/handlers/my_service/index.js
+    ```
 
 ### Implement Handler
 
@@ -105,19 +114,17 @@ import { kpiBox, buildMetric } from "../common/ui.js";
  * Service definition for my_service
  */
 export const definition = {
-  id: "my_service", // Matches Python handler
-  label: "My Service", // Display name
-  group: "Diagnostics", // Category
-  toolKeys: ["my-tool"], // Required tools
+  id: "my_service",                     // (1)!
+  label: "My Service",                  // (2)!
+  group: "Diagnostics",                 // (3)!
+  toolKeys: ["my-tool"],                // (4)!
 
   async build({ params, resolveToolPath }) {
-    // Resolve required tools
-    const toolPath = await resolveToolPath("my-tool");
+    const toolPath = await resolveToolPath("my-tool");  // (5)!
     if (!toolPath) {
       throw new Error("my-tool not found");
     }
 
-    // Return task definition for Python runner
     return {
       type: "my_service",
       executable_path: toolPath,
@@ -131,7 +138,7 @@ export const definition = {
 /**
  * Render technical report view
  */
-export function renderTech({ result, index }) {
+export function renderTech({ result, index }) {  // (6)!
   const { summary, status } = result;
 
   return html`
@@ -140,16 +147,9 @@ export function renderTech({ result, index }) {
         <h3>My Service #${index + 1}</h3>
       </div>
       <div class="card-body">
-        ${kpiBox("Status", status)} ${kpiBox(
-          "Items Processed",
-          summary.human_readable?.items_processed ?? "N/A"
-        )} ${summary.results
-          ? html`
-              <pre class="output">
-${JSON.stringify(summary.results, null, 2)}</pre
-              >
-            `
-          : ""}
+        ${kpiBox("Status", status)} 
+        ${kpiBox("Items Processed", summary.human_readable?.items_processed ?? "N/A")} 
+        ${summary.results ? html`<pre class="output">${JSON.stringify(summary.results, null, 2)}</pre>` : ""}
       </div>
     </div>
   `;
@@ -158,7 +158,7 @@ ${JSON.stringify(summary.results, null, 2)}</pre
 /**
  * Extract customer-friendly metrics (optional)
  */
-export function extractCustomerMetrics({ summary, status }) {
+export function extractCustomerMetrics({ summary, status }) {  // (7)!
   if (status !== "success") return null;
 
   return buildMetric({
@@ -180,6 +180,14 @@ export const printCSS = `
 `;
 ```
 
+1. Must match Python handler ID exactly
+2. Display name in the UI service catalog
+3. Category for grouping services in the UI
+4. List of required external tools (e.g., `["bleachbit", "furmark"]`)
+5. Resolve tool paths dynamically for USB portability
+6. Required - renders detailed technical view
+7. Optional - extracts metrics for customer-friendly report
+
 ### Register Handler
 
 Edit `src/pages/service/handlers/index.js`:
@@ -189,43 +197,26 @@ import * as myService from "./my_service/index.js";
 
 const HANDLERS = {
   // ... existing handlers ...
-  my_service: myService,
+  my_service: myService,  // (1)!
 };
 ```
 
+1. Key must match the `id` from the handler definition
+
 ## Step 3: Configurable Parameters
 
-### Add Parameters to Task Builder
+### Add Parameters to Definition
 
-Modify the handler's `build()` function to accept UI parameters:
-
-```javascript
-async build({ params, resolveToolPath, getDataDirs }) {
-  // params are passed from the UI
-  const duration = params?.duration || 5;
-  const verbose = params?.verbose ?? true;
-
-  return {
-    type: "my_service",
-    duration_minutes: duration,
-    verbose: verbose
-  };
-}
-```
-
-### Define UI Parameters
-
-Add parameter definitions to `definition`:
+Update the frontend handler to support user-configurable parameters:
 
 ```javascript
 export const definition = {
   id: "my_service",
   label: "My Service",
   group: "Diagnostics",
-  toolKeys: [],
-
-  // Parameter UI configuration
-  params: [
+  
+  // Parameter UI configuration  
+  params: [  // (1)!
     {
       id: "duration",
       label: "Duration (minutes)",
@@ -243,36 +234,142 @@ export const definition = {
   ],
 
   async build({ params, resolveToolPath }) {
-    // Use params.duration, params.verbose, etc.
+    // params.duration and params.verbose are now available  // (2)!
     return {
-      /* ... */
+      type: "my_service",
+      duration_minutes: params?.duration || 5,
+      verbose: params?.verbose ?? true
     };
   },
 };
 ```
 
+1. Array of parameter definitions that appear in the UI
+2. Parameters are passed to `build()` from user selections
+
+### Parameter Types Supported
+
+=== "Number Input"
+
+    ```javascript
+    {
+      id: "threshold",
+      label: "Threshold Value",
+      type: "number",
+      default: 50,
+      min: 0,
+      max: 100,
+      step: 5
+    }
+    ```
+
+=== "Checkbox"
+
+    ```javascript
+    {
+      id: "enable_deep_scan",
+      label: "Enable Deep Scan",
+      type: "checkbox",
+      default: false
+    }
+    ```
+
+=== "Text Input"
+
+    ```javascript
+    {
+      id: "custom_path",
+      label: "Custom Path",
+      type: "text",
+      default: "C:\\",
+      placeholder: "Enter directory path"
+    }
+    ```
+
+=== "Select Dropdown"
+
+    ```javascript
+    {
+      id: "priority",
+      label: "Priority Level",
+      type: "select",
+      default: "normal",
+      options: [
+        { value: "low", label: "Low" },
+        { value: "normal", label: "Normal" },
+        { value: "high", label: "High" }
+      ]
+    }
+    ```
+
 ## Step 4: Return Value Schema
 
 !!! warning "Critical: Exact Schema Required"
-  All Python services **must** return this exact structure. Deviations will break the frontend and reporting system.
+    All Python services **must** return this exact structure. Deviations will break the frontend and reporting system.
 
-  All Python services must return this structure:
+=== "Successful Response"
 
-  ```python
-  {
-      "task_type": "my_service",                  # Matches service ID
-      "status": "success" | "error" | "warning",  # Task status
-      "summary": {
-          "human_readable": {                     # User-friendly data
-              "key": "value"
-          },
-          "results": {                            # Raw technical data
-              "key": "value"
-          }
-      },
-      "duration_seconds": 12.34
-  }
-  ```
+    ```python
+    {
+        "task_type": "my_service",                  # (1)!
+        "status": "success",                        # (2)!
+        "summary": {
+            "human_readable": {                     # (3)!
+                "key": "User-friendly value",
+                "status": "Completed"
+            },
+            "results": {                            # (4)!
+                "technical_data": 42,
+                "raw_output": "..."
+            }
+        },
+        "duration_seconds": 12.34                   # (5)!
+    }
+    ```
+
+    1. Must match service ID exactly
+    2. Use: `"success"`, `"error"`, or `"warning"`
+    3. Data displayed in customer-friendly report
+    4. Raw technical data for technician report
+    5. Execution time in seconds
+
+=== "Error Response"
+
+    ```python
+    {
+        "task_type": "my_service",
+        "status": "error",
+        "summary": {
+            "human_readable": {
+                "error": "User-friendly error message"
+            },
+            "results": {
+                "exception": "Full traceback or details"
+            }
+        },
+        "duration_seconds": 2.5
+    }
+    ```
+
+=== "Warning Response"
+
+    ```python
+    {
+        "task_type": "my_service",
+        "status": "warning",
+        "summary": {
+            "human_readable": {
+                "status": "Partial success",
+                "warning": "Some files could not be processed"
+            },
+            "results": {
+                "processed": 95,
+                "failed": 5
+            }
+        },
+        "duration_seconds": 8.75
+    }
+    ```
 
 ## Step 5: Testing
 

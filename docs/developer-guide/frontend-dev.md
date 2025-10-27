@@ -77,62 +77,75 @@ src/
 
 ### Invoke Tauri Commands
 
-Call Rust backend from frontend:
+Call Rust backend from frontend using the Tauri IPC bridge:
 
-```javascript
-// Basic invoke
-const result = await window.__TAURI__.core.invoke("command_name");
+=== "Basic Invoke"
 
-// With parameters
-const result = await window.__TAURI__.core.invoke("command_name", {
-  param1: "value1",
-  param2: 42
-});
+    ```javascript
+    const result = await window.__TAURI__.core.invoke("command_name");
+    ```
 
-// Error handling
-try {
-  const result = await window.__TAURI__.core.invoke("command_name");
-} catch (error) {
-  console.error("Command failed:", error);
-}
-```
+=== "With Parameters"
+
+    ```javascript
+    const result = await window.__TAURI__.core.invoke("command_name", {
+      param1: "value1",
+      param2: 42
+    });
+    ```
+
+=== "Error Handling"
+
+    ```javascript
+    try {
+      const result = await window.__TAURI__.core.invoke("command_name");
+    } catch (error) {
+      console.error("Command failed:", error);
+    }
+    ```
 
 ### Listen to Events
 
 Receive updates from Rust backend:
 
 ```javascript
-// Listen for event
+// Listen for event  // (1)!
 window.__TAURI__.event.listen("event_name", (event) => {
   console.log("Event payload:", event.payload);
 });
 
-// Listen once
+// Listen once  // (2)!
 window.__TAURI__.event.once("event_name", (event) => {
   console.log("One-time event");
 });
 
-// Unlisten
+// Stop listening  // (3)!
 const unlisten = await window.__TAURI__.event.listen("event_name", listener);
-unlisten(); // Stop listening
+unlisten();
 ```
+
+1. Continuous listener - fires every time event is emitted
+2. One-shot listener - fires only the first time
+3. Call the returned function to stop listening
 
 ## Working with Services
 
 ### Service Handler Structure
 
-Each service has a self-contained handler:
+Each service is a self-contained module with four optional exports:
 
 ```javascript
 // src/pages/service/handlers/my_service/index.js
+import { html } from 'lit-html';
+import { kpiBox, buildMetric } from "../common/ui.js";
 
-export const definition = {
+export const definition = {  // (1)!
   id: "my_service",
   label: "My Service",
   group: "Diagnostics",
   toolKeys: [],
-  async build({ params, resolveToolPath, getDataDirs }) {
-    // Build task definition
+  
+  async build({ params, resolveToolPath, getDataDirs }) {  // (2)!
     return {
       type: "my_service",
       params: params
@@ -140,36 +153,45 @@ export const definition = {
   }
 };
 
-export function renderTech({ result, index }) {
-  // Render technical view
-  const { html } = await import('lit-html');
-  return html`<div>Result: ${result.status}</div>`;
+export function renderTech({ result, index }) {  // (3)!
+  const { status, summary } = result;
+  return html`
+    <div class="card">
+      <h3>My Service Result</h3>
+      ${kpiBox("Status", status)}
+    </div>
+  `;
 }
 
-export function extractCustomerMetrics({ summary, status }) {
-  // Extract customer-friendly metrics (optional)
+export function extractCustomerMetrics({ summary, status }) {  // (4)!
   if (status !== "success") return null;
-  return {
+  return buildMetric({
     icon: "✓",
     label: "Status",
     value: "OK"
-  };
+  });
 }
 
-export const printCSS = `/* Print styles */`;
+export const printCSS = `/* Print styles */`;  // (5)!
 ```
+
+1. **Definition** (required) - Service metadata, UI label, dependencies, task builder
+2. **Build Function** (required) - Generates JSON task sent to Python runner
+3. **Technical Renderer** (required) - Renders detailed technical report view
+4. **Customer Metrics** (optional) - Extracts data for customer-friendly report
+5. **Print CSS** (optional) - Service-specific print styles
 
 ## Templating with lit-html
 
-AutoService uses `lit-html` for efficient DOM updates:
+AutoService uses `lit-html` for efficient DOM updates and rendering:
 
 ```javascript
-import { html } from 'lit-html';
+import { html, render } from 'lit-html';
 
 const name = "AutoService";
 const count = 42;
 
-// Create template
+// Create template with interpolation  // (1)!
 const template = html`
   <div>
     <h1>${name}</h1>
@@ -178,84 +200,170 @@ const template = html`
   </div>
 `;
 
-// Render to element
-import { render } from 'lit-html';
+// Render to element  // (2)!
 render(template, document.getElementById('container'));
 
-// Event handling
-const handleClick = (e) => console.log(e);
+// Event handling  // (3)!
+const handleClick = (e) => console.log("Clicked!");
 const template2 = html`
   <button @click=${handleClick}>Click me</button>
 `;
 ```
 
+1. Use `${}` for expressions, full HTML templates for conditional content
+2. `render()` updates the DOM efficiently
+3. Use `@eventName` syntax for event listeners
+
+### Common Patterns
+
+=== "Loops"
+
+    ```javascript
+    const items = ["Apple", "Banana", "Cherry"];
+    
+    const template = html`
+      <ul>
+        ${items.map(item => html`<li>${item}</li>`)}
+      </ul>
+    `;
+    ```
+
+=== "Conditionals"
+
+    ```javascript
+    const isLoading = true;
+    
+    const template = html`
+      ${isLoading 
+        ? html`<div>Loading...</div>`
+        : html`<div>Loaded!</div>`
+      }
+    `;
+    ```
+
+=== "Class Binding"
+
+    ```javascript
+    const isActive = true;
+    
+    const template = html`
+      <div class=${"item " + (isActive ? "active" : "")}>
+        Content
+      </div>
+    `;
+    ```
+
 ## DOM Manipulation
 
 Vanilla JS patterns for common tasks:
 
-```javascript
-// Query elements
-const element = document.getElementById("my-id");
-const elements = document.querySelectorAll(".my-class");
+=== "Query Elements"
 
-// Create elements
-const div = document.createElement("div");
-div.textContent = "Hello";
-div.className = "my-class";
-div.setAttribute("data-id", "123");
+    ```javascript
+    const element = document.getElementById("my-id");  // (1)!
+    const elements = document.querySelectorAll(".my-class");  // (2)!
+    const first = document.querySelector(".my-class");  // (3)!
+    ```
 
-// Add to DOM
-parent.appendChild(div);
-parent.insertBefore(div, sibling);
+    1. Get single element by ID
+    2. Get all matching elements as NodeList
+    3. Get first matching element
 
-// Remove from DOM
-element.remove();
-parent.removeChild(child);
+=== "Create & Modify"
 
-// Event listeners
-element.addEventListener("click", (event) => {
-  console.log("Clicked!");
-});
+    ```javascript
+    const div = document.createElement("div");  // (1)!
+    div.textContent = "Hello";
+    div.className = "my-class";
+    div.setAttribute("data-id", "123");  // (2)!
+    div.style.color = "red";  // (3)!
+    ```
 
-element.addEventListener("change", (event) => {
-  console.log("Value:", event.target.value);
-});
+    1. Create new DOM element
+    2. Set custom attributes
+    3. Apply inline styles
 
-// Remove listeners
-element.removeEventListener("click", handler);
-```
+=== "Add/Remove from DOM"
+
+    ```javascript
+    parent.appendChild(div);  // (1)!
+    parent.insertBefore(div, sibling);  // (2)!
+    element.remove();  // (3)!
+    parent.removeChild(child);
+    ```
+
+    1. Add to end of parent
+    2. Insert before specific sibling
+    3. Remove element from DOM
+
+=== "Event Listeners"
+
+    ```javascript
+    // Add listener  // (1)!
+    element.addEventListener("click", (event) => {
+      console.log("Clicked!");
+    });
+
+    // Input change  // (2)!
+    input.addEventListener("change", (event) => {
+      console.log("Value:", event.target.value);
+    });
+
+    // Remove listener  // (3)!
+    element.removeEventListener("click", handler);
+    ```
+
+    1. Click events
+    2. Input value changes  
+    3. Stop listening to events
 
 ## State Management
 
 ### SessionStorage (Transient)
 
-Cleared when tab closes:
+Cleared when tab closes - perfect for runtime data like pending runs and reports:
 
 ```javascript
-// Save data
-sessionStorage.setItem("key", JSON.stringify(data));
+// Save data  // (1)!
+sessionStorage.setItem("service.pendingRun", JSON.stringify(taskQueue));
 
-// Retrieve data
-const data = JSON.parse(sessionStorage.getItem("key") || "null");
+// Retrieve data  // (2)!
+const taskQueue = JSON.parse(sessionStorage.getItem("service.pendingRun") || "null");
 
-// Clear data
-sessionStorage.removeItem("key");
+// Clear data  // (3)!
+sessionStorage.removeItem("service.pendingRun");
 ```
+
+1. Store any JSON-serializable data
+2. Parse string back to JavaScript object - use default `"null"` to prevent parsing errors
+3. Delete a specific key
 
 ### LocalStorage (Persistent)
 
-Persists across sessions:
+Persists across sessions - for user preferences and fallback report storage:
 
 ```javascript
 // Save data
-localStorage.setItem("key", JSON.stringify(data));
+localStorage.setItem("app.settings", JSON.stringify(settings));
 
 // Retrieve data
-const data = JSON.parse(localStorage.getItem("key") || "null");
+const settings = JSON.parse(localStorage.getItem("app.settings") || "null");
 
 // Clear all
 localStorage.clear();
 ```
+
+!!! tip "Storage Keys in AutoService"
+    The app uses these standard keys:
+    
+    === "SessionStorage Keys"
+        - `service.pendingRun` - Queued tasks
+        - `service.finalReport` - Completed run results
+        - `tool.statuses.v1` - Cached tool availability
+    
+    === "LocalStorage Keys"
+        - `service.finalReport` - Backup report storage
+        - Business settings and app configuration
 
 ## Running Services
 

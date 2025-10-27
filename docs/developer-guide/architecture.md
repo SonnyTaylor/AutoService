@@ -73,77 +73,78 @@ AutoService uses a clean separation of concerns across three layers:
 
 ## Data Flow: Running a Service
 
-### User Initiates Run
+### Complete Service Execution Flow
 
-```
-┌─────────────────────────────────────────────────────────┐
-│ Frontend: User builds queue in Service → Builder        │
-│                                                         │
-│ Tasks: [SFC Scan, Disk Cleanup, BleachBit Clean]       │
-└─────────────────┬───────────────────────────────────────┘
-                  │ Generate JSON plan
-                  ▼
-```
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant Frontend
+    participant Rust Backend
+    participant Python Runner
 
-### Frontend Calls Backend
-
-```
-┌─────────────────────────────────────────────────────────┐
-│ Frontend: Invoke Tauri command                          │
-│ window.__TAURI__.core.invoke("start_service_run", plan)│
-└─────────────────┬───────────────────────────────────────┘
-                  │ IPC (Tauri bridge)
-                  ▼
-┌─────────────────────────────────────────────────────────┐
-│ Rust Backend: Handle command                            │
-│ Spawn subprocess: python runner/service_runner.py plan  │
-└─────────────────┬───────────────────────────────────────┘
-                  │ Pass JSON to stdin
-                  ▼
-```
-
-### Runner Executes Tasks
-
-```
-┌─────────────────────────────────────────────────────────┐
-│ Python Runner: Parse plan and execute                   │
-│                                                         │
-│ TASK_START: sfc_scan                                    │
-│ [... executing SFC ...]                                 │
-│ TASK_OK: sfc_scan | success                             │
-│                                                         │
-│ TASK_START: disk_cleanup                                │
-│ [... executing cleanup ...]                             │
-│ TASK_OK: disk_cleanup | success                         │
-│                                                         │
-│ PROGRESS_JSON_FINAL: { tasks: [...], status: "ok" }    │
-└─────────────────┬───────────────────────────────────────┘
-                  │ Output to stdout
-                  │ Progress markers to stderr
-                  ▼
+    User->>Frontend: Build task queue (3 tasks)
+    Frontend->>Frontend: Generate JSON plan
+    Frontend->>Rust Backend: invoke("start_service_run", plan)
+    Rust Backend->>Python Runner: Spawn subprocess
+    Rust Backend->>Python Runner: Pass plan to stdin
+    
+    Python Runner->>Python Runner: Parse plan
+    
+    Note over Python Runner: TASK_START: sfc_scan
+    Python Runner->>Python Runner: Execute SFC
+    Python Runner->>Rust Backend: stderr: TASK_OK: sfc_scan
+    Rust Backend->>Frontend: Emit progress event
+    Frontend->>Frontend: Update UI
+    
+    Note over Python Runner: TASK_START: disk_cleanup
+    Python Runner->>Python Runner: Execute cleanup
+    Python Runner->>Rust Backend: stderr: TASK_OK: disk_cleanup
+    Rust Backend->>Frontend: Emit progress event
+    Frontend->>Frontend: Update UI
+    
+    Note over Python Runner: TASK_START: bleachbit_clean
+    Python Runner->>Python Runner: Execute clean
+    Python Runner->>Rust Backend: stderr: TASK_OK: bleachbit_clean
+    Rust Backend->>Frontend: Emit progress event
+    Frontend->>Frontend: Update UI
+    
+    Python Runner->>Rust Backend: stdout: FINAL JSON report
+    Rust Backend->>Frontend: Emit completion event
+    Frontend->>Frontend: Parse report
+    Frontend->>Frontend: Store in sessionStorage
+    Frontend->>User: Display results & reports
 ```
 
-### Frontend Receives Results
+### Architecture Layers
 
-```
-┌─────────────────────────────────────────────────────────┐
-│ Rust Backend: Listen to process stdout/stderr           │
-│ Emit Tauri events for progress markers                  │
-└─────────────────┬───────────────────────────────────────┘
-                  │ Tauri events
-                  ▼
-┌─────────────────────────────────────────────────────────┐
-│ Frontend: Listen to events in runner.js                 │
-│ Update UI with live progress                            │
-│ Parse final report from runner stdout                   │
-└─────────────────┬───────────────────────────────────────┘
-                  │ Store in sessionStorage
-                  ▼
-┌─────────────────────────────────────────────────────────┐
-│ Frontend: Display results                               │
-│ Show technical and customer reports                     │
-│ Allow export/printing                                   │
-└─────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph Frontend["🖥️ Frontend Layer"]
+        Router["Hash Router<br/>main.js"]
+        Pages["Page Modules<br/>src/pages/*"]
+        State["State Management<br/>sessionStorage"]
+        IPC["IPC Bridge<br/>window.__TAURI__"]
+    end
+    
+    subgraph Backend["⚙️ Backend Layer"]
+        Commands["Tauri Commands<br/>lib.rs"]
+        FileIO["File I/O<br/>programs.rs"]
+        System["System Info<br/>system.rs"]
+        Process["Process Mgmt<br/>Tokio"]
+    end
+    
+    subgraph Runner["🐍 Python Runner Layer"]
+        Dispatcher["Task Dispatcher<br/>service_runner.py"]
+        Services["Service Modules<br/>services/*.py"]
+        Output["Progress Streaming<br/>stderr/stdout"]
+    end
+    
+    Frontend -->|IPC Invoke| Backend
+    Backend -->|Spawn Subprocess| Runner
+    Backend -->|Tauri Events| Frontend
+    Services -->|Stream Logs| Output
+    Output -->|Emit Events| Backend
 ```
 
 ## IPC Communication Patterns
