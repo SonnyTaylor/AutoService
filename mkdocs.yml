@@ -3,16 +3,18 @@ repo_url: https://github.com/SonnyTaylor/AutoService
 theme:
   name: material
   features:
+    # Navigation features
     - navigation.tabs
     - navigation.top
-    - content.code.copy
-    - search.suggest
-    - search.highlight
     - navigation.instant
     - navigation.instant.prefetch
     - navigation.instant.progress
+    # Content features
+    - content.code.copy
+    # Search features
     - search
     - search.suggest
+    - search.highlight
 
 nav:
   - Home: index.md
