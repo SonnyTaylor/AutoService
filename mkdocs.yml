@@ -8,6 +8,7 @@ theme:
     - content.code.copy
     - search.suggest
     - search.highlight
+    - navigation.instant
 
 nav:
   - Home: index.md
