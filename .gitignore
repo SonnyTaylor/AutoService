@@ -61,3 +61,5 @@ binaries/
 # Ignore mkdocs build files
 site/
 
+# Ignore rust analyzer target folder
+/target
