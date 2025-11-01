@@ -49,6 +49,7 @@ nav:
       - Adding a Service: developer-guide/adding-service.md
       - Frontend Development: developer-guide/frontend-dev.md
       - Backend Development: developer-guide/backend-dev.md
+      - Settings Management: developer-guide/settings-management.md
       - Python Runner: developer-guide/python-runner.md
       - Portable Layout: developer-guide/portable-layout.md
       - Contributing: developer-guide/contributing.md

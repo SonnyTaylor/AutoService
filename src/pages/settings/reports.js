@@ -7,6 +7,7 @@ import {
   getSoundById,
   ensureToneStarted,
 } from "../../utils/notification-sounds.js";
+import { settingsManager } from "../../utils/settings-manager.js";
 
 const { invoke } = window.__TAURI__.core;
 
@@ -55,9 +56,8 @@ export async function initializeReportsSettings(root) {
 
   // Load current settings
   try {
-    const settings = await invoke("load_app_settings");
-    const reports = settings.reports || {};
-    const network = settings.network_sharing || {};
+    const reports = await settingsManager.get("reports");
+    const network = await settingsManager.get("network_sharing");
 
     // Set toggle state (default to false if not set)
     autoSaveToggle.checked = reports.auto_save === true;
@@ -132,17 +132,10 @@ export async function initializeReportsSettings(root) {
   }
 
   async function saveNetworkSettings(patch) {
-    const settings = await invoke("load_app_settings");
-    const next = { ...settings };
-    const existing = next.network_sharing || {};
-    next.network_sharing = {
-      enabled: false,
-      unc_path: "",
-      save_mode: "both",
-      ...existing,
-      ...patch,
-    };
-    await invoke("save_app_settings", { data: next });
+    await settingsManager.batch((draft) => {
+      // Merge patch into network_sharing
+      Object.assign(draft.network_sharing, patch);
+    });
   }
 
   /**
@@ -214,10 +207,7 @@ export async function initializeReportsSettings(root) {
     soundSelect.addEventListener("change", async () => {
       const selectedSoundId = soundSelect.value;
       try {
-        const settings = await invoke("load_app_settings");
-        settings.reports = settings.reports || {};
-        settings.reports.sound_id = selectedSoundId;
-        await invoke("save_app_settings", { data: settings });
+        await settingsManager.set("reports.sound_id", selectedSoundId);
         const sound = getSoundById(selectedSoundId);
         showStatus(
           sound ? `Sound changed to: ${sound.name}` : "Sound selection saved",
@@ -235,10 +225,7 @@ export async function initializeReportsSettings(root) {
     soundRepeat.addEventListener("change", async () => {
       try {
         const rep = Math.max(1, Math.min(10, Number(soundRepeat.value)));
-        const settings = await invoke("load_app_settings");
-        settings.reports = settings.reports || {};
-        settings.reports.sound_repeat = rep;
-        await invoke("save_app_settings", { data: settings });
+        await settingsManager.set("reports.sound_repeat", rep);
         showStatus("Repeat count saved", "success");
       } catch (err) {
         console.error("Failed to save repeat count:", err);
@@ -253,10 +240,7 @@ export async function initializeReportsSettings(root) {
 
     // Save auto-save state
     try {
-      const settings = await invoke("load_app_settings");
-      settings.reports = settings.reports || {};
-      settings.reports.auto_save = enabled;
-      await invoke("save_app_settings", { data: settings });
+      await settingsManager.set("reports.auto_save", enabled, true);
       showStatus(
         enabled
           ? "Auto-save enabled - reports will save automatically"
@@ -276,10 +260,7 @@ export async function initializeReportsSettings(root) {
     notificationsToggle.addEventListener("change", async () => {
       const enabled = notificationsToggle.checked;
       try {
-        const settings = await invoke("load_app_settings");
-        settings.reports = settings.reports || {};
-        settings.reports.notifications_enabled = enabled;
-        await invoke("save_app_settings", { data: settings });
+        await settingsManager.set("reports.notifications_enabled", enabled);
         showStatus(
           enabled
             ? "Notifications enabled - you'll get a toast when services finish"
@@ -308,15 +289,14 @@ export async function initializeReportsSettings(root) {
     soundToggle.addEventListener("change", async () => {
       const enabled = soundToggle.checked;
       try {
-        const settings = await invoke("load_app_settings");
-        settings.reports = settings.reports || {};
-        settings.reports.sound_enabled = enabled;
-        // Preserve volume when toggling
-        if (soundVolume) {
-          const vol = Math.max(0, Math.min(100, Number(soundVolume.value)));
-          settings.reports.sound_volume = vol;
-        }
-        await invoke("save_app_settings", { data: settings });
+        await settingsManager.batch((draft) => {
+          draft.reports.sound_enabled = enabled;
+          // Preserve volume when toggling
+          if (soundVolume) {
+            const vol = Math.max(0, Math.min(100, Number(soundVolume.value)));
+            draft.reports.sound_volume = vol;
+          }
+        });
         showStatus(
           enabled ? "Completion sound enabled" : "Completion sound disabled",
           "success"
@@ -334,10 +314,7 @@ export async function initializeReportsSettings(root) {
     soundVolume.addEventListener("change", async () => {
       try {
         const vol = Math.max(0, Math.min(100, Number(soundVolume.value)));
-        const settings = await invoke("load_app_settings");
-        settings.reports = settings.reports || {};
-        settings.reports.sound_volume = vol;
-        await invoke("save_app_settings", { data: settings });
+        await settingsManager.set("reports.sound_volume", vol);
         showStatus("Sound volume saved", "success");
       } catch (err) {
         console.error("Failed to save sound volume:", err);

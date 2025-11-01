@@ -2,6 +2,8 @@
  * Sentry settings management for error tracking and performance monitoring.
  */
 
+import { settingsManager } from "../../utils/settings-manager.js";
+
 const { invoke } = window.__TAURI__.core || {};
 
 /**
@@ -29,33 +31,6 @@ export async function initializeSentrySettings(root) {
     return;
   }
 
-  let appSettings = {};
-
-  /**
-   * Load current settings from backend.
-   */
-  async function loadSettings() {
-    try {
-      appSettings = await invoke("load_app_settings");
-    } catch (err) {
-      console.error("Failed to load Sentry settings:", err);
-      appSettings = {};
-    }
-  }
-
-  /**
-   * Save settings to backend.
-   */
-  async function saveSettings() {
-    try {
-      await invoke("save_app_settings", { data: appSettings });
-      showStatus("✓ Sentry settings saved successfully", "success");
-    } catch (err) {
-      console.error("Failed to save Sentry settings:", err);
-      showStatus("✕ Failed to save Sentry settings", "error");
-    }
-  }
-
   /**
    * Show status message to user.
    * @param {string} message - Status message to display.
@@ -72,28 +47,18 @@ export async function initializeSentrySettings(root) {
   }
 
   // Load current settings
-  await loadSettings();
-
-  // Ensure sentry object exists
-  if (!appSettings.sentry) appSettings.sentry = {};
+  const sentryEnabled = await settingsManager.get("sentry_enabled");
+  const sentry = await settingsManager.get("sentry");
 
   // Set toggle states (default to true if not set)
-  sentryEnabledToggle.checked = appSettings.sentry_enabled !== false;
-  sentryPiiToggle.checked = appSettings.sentry.send_default_pii !== false;
-  sentryPerformanceToggle.checked =
-    appSettings.sentry.traces_sample_rate !== 0.0;
-  sentrySystemInfoToggle.checked =
-    appSettings.sentry.send_system_info !== false;
+  sentryEnabledToggle.checked = sentryEnabled !== false;
+  sentryPiiToggle.checked = sentry.send_default_pii !== false;
+  sentryPerformanceToggle.checked = sentry.traces_sample_rate !== 0.0;
+  sentrySystemInfoToggle.checked = sentry.send_system_info !== false;
 
   // Set environment (default to production for fresh users)
-  const currentEnvironment = appSettings.sentry.environment || "production";
+  const currentEnvironment = sentry.environment || "production";
   sentryEnvironmentSelect.value = currentEnvironment;
-
-  // Save default environment for fresh users
-  if (!appSettings.sentry.environment) {
-    appSettings.sentry.environment = "production";
-    await saveSettings();
-  }
 
   /**
    * Update disabled state of sub-toggles based on master toggle.
@@ -125,35 +90,79 @@ export async function initializeSentrySettings(root) {
 
   // Listen for changes on master toggle
   sentryEnabledToggle.addEventListener("change", async () => {
-    appSettings.sentry_enabled = sentryEnabledToggle.checked;
-    updateSubTogglesState();
-    await saveSettings();
+    try {
+      await settingsManager.set(
+        "sentry_enabled",
+        sentryEnabledToggle.checked,
+        true
+      );
+      updateSubTogglesState();
+      showStatus("✓ Sentry settings saved successfully", "success");
+    } catch (err) {
+      console.error("Failed to save Sentry settings:", err);
+      showStatus("✕ Failed to save Sentry settings", "error");
+    }
   });
 
   // Listen for changes on environment select
   sentryEnvironmentSelect.addEventListener("change", async () => {
-    appSettings.sentry.environment = sentryEnvironmentSelect.value;
-    await saveSettings();
+    try {
+      await settingsManager.set(
+        "sentry.environment",
+        sentryEnvironmentSelect.value,
+        true
+      );
+      showStatus("✓ Sentry settings saved successfully", "success");
+    } catch (err) {
+      console.error("Failed to save Sentry settings:", err);
+      showStatus("✕ Failed to save Sentry settings", "error");
+    }
   });
 
   // Listen for changes on PII toggle
   sentryPiiToggle.addEventListener("change", async () => {
-    appSettings.sentry.send_default_pii = sentryPiiToggle.checked;
-    await saveSettings();
+    try {
+      await settingsManager.set(
+        "sentry.send_default_pii",
+        sentryPiiToggle.checked,
+        true
+      );
+      showStatus("✓ Sentry settings saved successfully", "success");
+    } catch (err) {
+      console.error("Failed to save Sentry settings:", err);
+      showStatus("✕ Failed to save Sentry settings", "error");
+    }
   });
 
   // Listen for changes on performance toggle
   sentryPerformanceToggle.addEventListener("change", async () => {
-    // Convert boolean to traces_sample_rate (1.0 = enabled, 0.0 = disabled)
-    appSettings.sentry.traces_sample_rate = sentryPerformanceToggle.checked
-      ? 1.0
-      : 0.0;
-    await saveSettings();
+    try {
+      // Convert boolean to traces_sample_rate (1.0 = enabled, 0.0 = disabled)
+      const tracesSampleRate = sentryPerformanceToggle.checked ? 1.0 : 0.0;
+      await settingsManager.set(
+        "sentry.traces_sample_rate",
+        tracesSampleRate,
+        true
+      );
+      showStatus("✓ Sentry settings saved successfully", "success");
+    } catch (err) {
+      console.error("Failed to save Sentry settings:", err);
+      showStatus("✕ Failed to save Sentry settings", "error");
+    }
   });
 
   // Listen for changes on system info toggle
   sentrySystemInfoToggle.addEventListener("change", async () => {
-    appSettings.sentry.send_system_info = sentrySystemInfoToggle.checked;
-    await saveSettings();
+    try {
+      await settingsManager.set(
+        "sentry.send_system_info",
+        sentrySystemInfoToggle.checked,
+        true
+      );
+      showStatus("✓ Sentry settings saved successfully", "success");
+    } catch (err) {
+      console.error("Failed to save Sentry settings:", err);
+      showStatus("✕ Failed to save Sentry settings", "error");
+    }
   });
 }

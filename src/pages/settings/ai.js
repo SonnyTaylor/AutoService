@@ -2,6 +2,8 @@
  * AI/API settings management for the settings page.
  */
 
+import { settingsManager } from "../../utils/settings-manager.js";
+
 const { invoke } = window.__TAURI__.core || {};
 
 /**
@@ -11,31 +13,13 @@ const { invoke } = window.__TAURI__.core || {};
 export async function initializeAISettings(root) {
   if (!root || !invoke) return;
 
-  let appSettings = {};
-
-  async function loadSettings() {
-    try {
-      appSettings = await invoke("load_app_settings");
-    } catch {
-      appSettings = {};
-    }
-  }
-
-  function saveSettings() {
-    return invoke("save_app_settings", { data: appSettings });
-  }
-
-  await loadSettings();
-
   const form = root.querySelector("#openai-settings-form");
   const input = root.querySelector("#openai-api-key-input");
   const status = root.querySelector("#openai-settings-status");
 
-  // Ensure container for AI keys
-  if (!appSettings.ai) appSettings.ai = {};
-
-  // Populate current value (mask for security)
-  const currentKey = appSettings.ai.openai_api_key || "";
+  // Load current value
+  const ai = await settingsManager.get("ai");
+  const currentKey = ai.openai_api_key || "";
   if (currentKey && input) {
     // Show masked version
     input.value = "sk-..." + currentKey.slice(-4);
@@ -59,10 +43,8 @@ export async function initializeAISettings(root) {
       return;
     }
 
-    appSettings.ai.openai_api_key = value;
-
     try {
-      await saveSettings();
+      await settingsManager.set("ai.openai_api_key", value, true);
       if (status) {
         status.className = "settings-status success";
         status.textContent = value

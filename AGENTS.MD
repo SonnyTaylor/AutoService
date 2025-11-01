@@ -270,15 +270,83 @@ if (!toolPath) {
 
 Backend checks existence of key tools (bleachbit, furmark, heavyload, sfc, dism, smartctl, etc.) and returns paths + hints for missing tools.
 
-## State Management
+## Settings Management
 
-### SessionStorage (transient, cleared on tab close)
+### Centralized Settings System
+
+**Location**: `src/utils/settings-manager.js`
+
+AutoService uses a centralized, type-safe settings management system with:
+
+- **Zod schema validation** - Automatic validation of all settings
+- **Automatic caching** - 60-second cache with manual invalidation
+- **Event-driven updates** - Subscribe to setting changes via pub-sub
+- **Debounced writes** - 500ms debounce to batch rapid changes
+- **Automatic rollback** - Reverts changes if save fails
+
+**Usage**:
+
+```javascript
+import { settingsManager } from '@/utils/settings-manager.js';
+
+// Read settings
+const business = await settingsManager.get('business');
+const autoSave = await settingsManager.get('reports.auto_save');
+
+// Write settings (debounced)
+await settingsManager.set('business.name', 'New Name');
+
+// Write immediately (skip debouncing)
+await settingsManager.set('business.name', 'New Name', true);
+
+// Batch updates (single save)
+await settingsManager.batch((draft) => {
+  draft.business.name = 'New Name';
+  draft.business.phone = '555-1234';
+});
+
+// Subscribe to changes
+const unsubscribe = settingsManager.on('business.name', (newValue) => {
+  console.log('Name changed:', newValue);
+});
+
+// Clear cache
+settingsManager.clearCache();
+```
+
+**Settings Structure**:
+
+- `business` - Business/technician mode settings
+- `reports` - Auto-save, notifications, completion sounds
+- `network_sharing` - Network path for shared report storage
+- `network` - iperf server, ping host
+- `ai` - OpenAI API key
+- `sentry` - Error tracking configuration
+- `sentry_enabled` - Master telemetry toggle
+
+**Migration from Old Pattern**:
+
+```javascript
+// ❌ Old: Manual load/modify/save (duplicated everywhere)
+const settings = await invoke('load_app_settings');
+settings.business = settings.business || {};
+settings.business.name = newName;
+await invoke('save_app_settings', { data: settings });
+clearBusinessCache();
+
+// ✅ New: Centralized manager (60% less code)
+await settingsManager.set('business.name', newName, true);
+```
+
+### State Management
+
+**SessionStorage** (transient, cleared on tab close):
 
 - `service.pendingRun` - Queued tasks from builder page
 - `service.finalReport` - Completed service run results
 - `tool.statuses.v1` - Cached tool availability
 
-### LocalStorage (persistent)
+**LocalStorage** (persistent):
 
 - `service.finalReport` - Fallback for report persistence
 - Business settings and app configuration

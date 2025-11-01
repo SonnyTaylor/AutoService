@@ -1,6 +1,9 @@
 /**
  * Business settings utility for retrieving business/technician mode configuration.
  *
+ * This module now uses the centralized settings manager for improved caching,
+ * validation, and consistency.
+ *
  * Usage:
  * ```javascript
  * import { getBusinessSettings, isBusinessModeEnabled } from '@/utils/business.js';
@@ -18,11 +21,7 @@
  * ```
  */
 
-const { invoke } = window.__TAURI__.core;
-
-/** Cache key for business settings */
-const CACHE_KEY = "business.settings.cache.v1";
-const CACHE_DURATION = 60000; // 1 minute
+import { settingsManager } from "./settings-manager.js";
 
 /**
  * @typedef {Object} BusinessSettings
@@ -39,65 +38,17 @@ const CACHE_DURATION = 60000; // 1 minute
  */
 
 /**
- * Get cached business settings if still valid.
- * @returns {BusinessSettings | null}
- */
-function getCachedSettings() {
-  try {
-    const cached = sessionStorage.getItem(CACHE_KEY);
-    if (!cached) return null;
-
-    const data = JSON.parse(cached);
-    const age = Date.now() - data.timestamp;
-
-    if (age < CACHE_DURATION) {
-      return data.settings;
-    }
-
-    // Expired cache
-    sessionStorage.removeItem(CACHE_KEY);
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Cache business settings for the current session.
- * @param {BusinessSettings} settings
- */
-function cacheSettings(settings) {
-  try {
-    sessionStorage.setItem(
-      CACHE_KEY,
-      JSON.stringify({
-        settings,
-        timestamp: Date.now(),
-      })
-    );
-  } catch {
-    // Silently fail if sessionStorage is unavailable
-  }
-}
-
-/**
  * Get business settings from app settings.
- * Returns normalized business settings with caching.
+ * Returns normalized business settings with caching via settings manager.
  *
  * @param {boolean} [force=false] - When true, bypass cache and refresh.
  * @returns {Promise<BusinessSettings>}
  */
 export async function getBusinessSettings(force = false) {
-  // Try cache first
-  if (!force) {
-    const cached = getCachedSettings();
-    if (cached) return cached;
-  }
-
   try {
-    const settings = await invoke("load_app_settings");
-    const business = settings.business || {};
+    const business = await settingsManager.get("business");
 
+    // Normalize for backwards compatibility
     const normalized = {
       enabled: business.technician_mode === true,
       name: String(business.name || "").trim(),
@@ -113,7 +64,6 @@ export async function getBusinessSettings(force = false) {
         : [],
     };
 
-    cacheSettings(normalized);
     return normalized;
   } catch (err) {
     console.error("Failed to load business settings:", err);
@@ -149,9 +99,5 @@ export async function isBusinessModeEnabled(force = false) {
  * Useful after updating settings to force a refresh.
  */
 export function clearBusinessCache() {
-  try {
-    sessionStorage.removeItem(CACHE_KEY);
-  } catch {
-    // Silently fail
-  }
+  settingsManager.clearCache();
 }

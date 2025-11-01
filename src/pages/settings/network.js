@@ -3,6 +3,8 @@
  */
 
 import validator from "validator";
+import { settingsManager } from "../../utils/settings-manager.js";
+
 const { invoke } = window.__TAURI__.core || {};
 
 /**
@@ -12,22 +14,6 @@ const { invoke } = window.__TAURI__.core || {};
 export async function initializeNetworkSettings(root) {
   if (!root || !invoke) return;
 
-  let appSettings = {};
-
-  async function loadSettings() {
-    try {
-      appSettings = await invoke("load_app_settings");
-    } catch {
-      appSettings = {};
-    }
-  }
-
-  function saveSettings() {
-    return invoke("save_app_settings", { data: appSettings });
-  }
-
-  await loadSettings();
-
   const form = root.querySelector("#iperf-settings-form");
   const input = root.querySelector("#iperf-server-input");
   const status = root.querySelector("#iperf-settings-status");
@@ -35,9 +21,6 @@ export async function initializeNetworkSettings(root) {
   const pingForm = root.querySelector("#ping-settings-form");
   const pingInput = root.querySelector("#ping-host-input");
   const pingStatus = root.querySelector("#ping-settings-status");
-
-  // Ensure container for future network keys
-  if (!appSettings.network) appSettings.network = {};
 
   /**
    * Validates if a value is a valid IPv4 or IPv6 address, or empty (for optional fields)
@@ -68,10 +51,10 @@ export async function initializeNetworkSettings(root) {
     }
   }
 
-  // Populate current value
-  input.value = appSettings.network.iperf_server || "";
-  if (!appSettings.network.ping_host) appSettings.network.ping_host = "8.8.8.8";
-  if (pingInput) pingInput.value = appSettings.network.ping_host || "8.8.8.8";
+  // Load current values
+  const network = await settingsManager.get("network");
+  input.value = network.iperf_server || "";
+  if (pingInput) pingInput.value = network.ping_host || "8.8.8.8";
 
   form?.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -83,9 +66,8 @@ export async function initializeNetworkSettings(root) {
       return;
     }
 
-    appSettings.network.iperf_server = value;
     try {
-      await saveSettings();
+      await settingsManager.set("network.iperf_server", value, true);
       if (status) {
         status.className = "settings-status success";
         status.textContent = value
@@ -116,9 +98,8 @@ export async function initializeNetworkSettings(root) {
       return;
     }
 
-    appSettings.network.ping_host = value;
     try {
-      await saveSettings();
+      await settingsManager.set("network.ping_host", value, true);
       if (pingStatus) {
         pingStatus.className = "settings-status success";
         pingStatus.textContent = `✓ Saved. Using ${value} as Ping host.`;

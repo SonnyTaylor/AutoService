@@ -62,6 +62,14 @@ Welcome to the AutoService developer documentation. This comprehensive guide cov
 
     [:octicons-arrow-right-24: Layout guide](portable-layout.md)
 
+- :material-cog-outline:{ .lg .middle } **Settings Management**
+
+    ---
+
+    Centralized settings system with validation.
+
+    [:octicons-arrow-right-24: Settings guide](settings-management.md)
+
 - :material-heart-multiple:{ .lg .middle } **Contributing**
 
     ---

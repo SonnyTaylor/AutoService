@@ -145,9 +145,9 @@ export async function deleteReport(folderName) {
  */
 export async function isAutoSaveEnabled() {
   try {
-    const { core } = window.__TAURI__;
-    const settings = await core.invoke("load_app_settings");
-    return settings?.reports?.auto_save === true;
+    const { settingsManager } = await import("./settings-manager.js");
+    const reports = await settingsManager.get("reports");
+    return reports?.auto_save === true;
   } catch (err) {
     console.error("Failed to check auto-save setting:", err);
     return false;
@@ -191,10 +191,9 @@ export async function autoSaveReport(report, options = {}) {
     // If local save succeeded and network sharing is enabled, mirror to network
     if (response?.success && response?.report_folder) {
       try {
-        const settings = await core.invoke("load_app_settings");
-        const ns = settings?.network_sharing;
-        const enabled =
-          ns?.enabled !== undefined ? !!ns?.enabled : !!ns?.unc_path;
+        const { settingsManager } = await import("./settings-manager.js");
+        const ns = await settingsManager.get("network_sharing");
+        const enabled = !!ns?.enabled;
         const unc = ns?.unc_path || "";
         const mode = ns?.save_mode || "both";
         const localPath = response.report_folder;

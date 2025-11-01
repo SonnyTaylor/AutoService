@@ -2,7 +2,7 @@
  * Business settings management for technician mode, logo, and business name.
  */
 
-import { clearBusinessCache } from "../../utils/business.js";
+import { settingsManager } from "../../utils/settings-manager.js";
 
 const { invoke } = window.__TAURI__.core;
 
@@ -43,8 +43,7 @@ export async function initializeBusinessSettings(root) {
 
   // Load current settings
   try {
-    const settings = await invoke("load_app_settings");
-    const business = settings.business || {};
+    const business = await settingsManager.get("business");
 
     // Set toggle state
     const techModeEnabled = business.technician_mode === true;
@@ -118,11 +117,7 @@ export async function initializeBusinessSettings(root) {
 
     // Auto-save technician mode state
     try {
-      const settings = await invoke("load_app_settings");
-      settings.business = settings.business || {};
-      settings.business.technician_mode = enabled;
-      await invoke("save_app_settings", { data: settings });
-      clearBusinessCache(); // Clear cache to force refresh elsewhere
+      await settingsManager.set("business.technician_mode", enabled, true);
       showStatus(
         enabled ? "Technician mode enabled" : "Technician mode disabled",
         "success"
@@ -207,20 +202,19 @@ export async function initializeBusinessSettings(root) {
     const abn = abnInput.value.trim();
 
     try {
-      const settings = await invoke("load_app_settings");
-      settings.business = settings.business || {};
-      settings.business.technician_mode = techModeToggle.checked;
-      settings.business.logo = logo;
-      settings.business.name = name;
-      settings.business.address = address;
-      settings.business.phone = phone;
-      settings.business.email = email;
-      settings.business.website = website;
-      settings.business.tfn = tfn;
-      settings.business.abn = abn;
+      // Batch update all fields at once
+      await settingsManager.batch((draft) => {
+        draft.business.technician_mode = techModeToggle.checked;
+        draft.business.logo = logo;
+        draft.business.name = name;
+        draft.business.address = address;
+        draft.business.phone = phone;
+        draft.business.email = email;
+        draft.business.website = website;
+        draft.business.tfn = tfn;
+        draft.business.abn = abn;
+      });
 
-      await invoke("save_app_settings", { data: settings });
-      clearBusinessCache(); // Clear cache to force refresh elsewhere
       showStatus("Business settings saved", "success");
     } catch (err) {
       console.error("Failed to save business settings:", err);
@@ -290,22 +284,19 @@ export async function initializeBusinessSettings(root) {
    */
   async function addTechnicianName(name) {
     try {
-      const settings = await invoke("load_app_settings");
-      settings.business = settings.business || {};
-      settings.business.technician_names =
-        settings.business.technician_names || [];
+      const business = await settingsManager.get("business");
+      const names = business.technician_names || [];
 
       // Check for duplicates
-      if (settings.business.technician_names.includes(name)) {
+      if (names.includes(name)) {
         showStatus("This name already exists", "error");
         return;
       }
 
-      settings.business.technician_names.push(name);
-      await invoke("save_app_settings", { data: settings });
-      clearBusinessCache();
+      names.push(name);
+      await settingsManager.set("business.technician_names", names, true);
 
-      renderTechnicianNames(settings.business.technician_names);
+      renderTechnicianNames(names);
       showStatus("Technician name added", "success");
     } catch (err) {
       console.error("Failed to add technician name:", err);
@@ -319,16 +310,13 @@ export async function initializeBusinessSettings(root) {
    */
   async function removeTechnicianName(index) {
     try {
-      const settings = await invoke("load_app_settings");
-      settings.business = settings.business || {};
-      settings.business.technician_names =
-        settings.business.technician_names || [];
+      const business = await settingsManager.get("business");
+      const names = business.technician_names || [];
 
-      settings.business.technician_names.splice(index, 1);
-      await invoke("save_app_settings", { data: settings });
-      clearBusinessCache();
+      names.splice(index, 1);
+      await settingsManager.set("business.technician_names", names, true);
 
-      renderTechnicianNames(settings.business.technician_names);
+      renderTechnicianNames(names);
       showStatus("Technician name removed", "success");
     } catch (err) {
       console.error("Failed to remove technician name:", err);
