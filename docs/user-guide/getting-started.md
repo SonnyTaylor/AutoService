@@ -61,10 +61,10 @@
 
 !!! success "What Happens on First Launch"
 
-    1. ✅ Application initializes
-    2. ✅ Data folder is validated
-    3. ✅ Default settings are loaded
-    4. ✅ Interface opens with tabs visible
+    1. :heavy_check_mark: Application initializes
+    2. :heavy_check_mark: Data folder is validated
+    3. :heavy_check_mark: Default settings are loaded
+    4. :heavy_check_mark: Interface opens with tabs visible
 
 ## :material-monitor-dashboard: Understanding the Main Interface
 
@@ -139,7 +139,7 @@ Follow these steps to run your first automated maintenance session:
 
     **Live Feedback:**
 
-    - ✅ **Task Progress**: Real-time status for each task
+    - :heavy_check_mark: **Task Progress**: Real-time status for each task
     - 📊 **Duration**: Elapsed and estimated time
     - 📝 **Output**: Live logs from tools
     - 🔔 **Notifications**: Audio alerts on completion

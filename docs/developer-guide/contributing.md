@@ -240,12 +240,12 @@ Documentation files:
 
 ### Do's
 
-- ✅ Write tests for new features
-- ✅ Keep functions focused and small
-- ✅ Comment non-obvious code
-- ✅ Test on actual Windows systems
-- ✅ Follow existing patterns
-- ✅ Ask questions if unsure
+- :heavy_check_mark: Write tests for new features
+- :heavy_check_mark: Keep functions focused and small
+- :heavy_check_mark: Comment non-obvious code
+- :heavy_check_mark: Test on actual Windows systems
+- :heavy_check_mark: Follow existing patterns
+- :heavy_check_mark: Ask questions if unsure
 
 ### Don'ts
 
