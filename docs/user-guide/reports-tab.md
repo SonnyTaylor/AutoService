@@ -60,19 +60,11 @@ Contains a simplified professional summary:
 
 ## Exporting Reports
 
-### Export Options
-
-1. **PDF**: Print-friendly format for sharing
-2. **JSON**: Raw data for analysis or archiving
-3. **HTML**: Standalone web page format
-4. **Copy to Clipboard**: For pasting into documents
-
 ### How to Export
 
 1. Open a report
 2. Click the **"Export"** or **"Download"** button
 3. Choose your desired format
-4. Select location to save (for file downloads)
 
 ## Organizing Reports
 

@@ -1,42 +1,109 @@
 # Developer Guide Overview
 
-Welcome to the AutoService developer documentation. This guide covers architecture, development setup, and contribution guidelines.
+Welcome to the AutoService developer documentation. This comprehensive guide covers architecture, development workflows, and contribution guidelines for building and extending AutoService.
 
-## What You'll Find
+## :material-book-open-page-variant: What You'll Find
 
-This developer guide covers:
+<div class="grid cards" markdown>
 
-- **Architecture** - Three-layer design and component interactions
-- **Development Setup** - Get your environment ready
-- **Adding Services** - Create new diagnostic/maintenance tasks
-- **Frontend Development** - Vanilla JS + Vite patterns
-- **Backend Development** - Tauri commands and Rust
-- **Python Runner** - Service execution engine
-- **Portable Layout** - Data folder organization
-- **Contributing** - Guidelines for contributions
+- :material-graph:{ .lg .middle } **Architecture**
 
-## Key Technologies
+    ---
 
-### Frontend
+    Three-layer design with frontend, backend, and service runner.
 
-- **HTML/CSS/JavaScript** - Vanilla JS, no framework
-- **Vite** - Build tool and dev server
-- **lit-html** - Lightweight templating
-- **Fuse.js** - Fuzzy search
-- **ApexCharts** - Data visualization
+    [:octicons-arrow-right-24: Learn more](architecture.md)
 
-### Backend
+- :material-hammer-wrench:{ .lg .middle } **Development Setup**
 
-- **Rust** - Core application logic
-- **Tauri** - Desktop app framework
-- **Tokio** - Async runtime
-- **sysinfo** - System information collection
-- **wgpu** - GPU detection
+    ---
 
-### Service Runner
+    Configure your environment for AutoService development.
 
-- **Python** - Task execution and automation
-- **PyInstaller** - Package as standalone executable
+    [:octicons-arrow-right-24: Get started](dev-setup.md)
+
+- :material-plus-box:{ .lg .middle } **Adding Services**
+
+    ---
+
+    Create new diagnostic or maintenance services.
+
+    [:octicons-arrow-right-24: Tutorial](adding-service.md)
+
+- :material-code-tags:{ .lg .middle } **Frontend Dev**
+
+    ---
+
+    Vanilla JS patterns with Vite and lit-html.
+
+    [:octicons-arrow-right-24: Frontend guide](frontend-dev.md)
+
+- :material-language-rust:{ .lg .middle } **Backend Dev**
+
+    ---
+
+    Tauri commands and Rust patterns.
+
+    [:octicons-arrow-right-24: Backend guide](backend-dev.md)
+
+- :material-language-python:{ .lg .middle } **Python Runner**
+
+    ---
+
+    Service execution engine architecture.
+
+    [:octicons-arrow-right-24: Runner guide](python-runner.md)
+
+- :material-folder-cog:{ .lg .middle } **Portable Layout**
+
+    ---
+
+    Data folder structure and organization.
+
+    [:octicons-arrow-right-24: Layout guide](portable-layout.md)
+
+- :material-heart-multiple:{ .lg .middle } **Contributing**
+
+    ---
+
+    Guidelines for contributing to the project.
+
+    [:octicons-arrow-right-24: Contribute](contributing.md)
+
+</div>
+
+## :material-cog: Key Technologies
+
+=== ":material-web: Frontend"
+
+    | Technology | Purpose |
+    |------------|---------|
+    | **HTML/CSS/JavaScript** | Vanilla JS, no framework overhead |
+    | **Vite** | Build tool with hot module replacement |
+    | **lit-html** | Lightweight HTML templating |
+    | **Fuse.js** | Fuzzy search functionality |
+    | **ApexCharts** | Data visualization and charts |
+    | **SortableJS** | Drag-and-drop task ordering |
+
+=== ":material-language-rust: Backend"
+
+    | Technology | Purpose |
+    |------------|---------|
+    | **Rust** | Core application logic and safety |
+    | **Tauri 2** | Cross-platform desktop framework |
+    | **Tokio** | Async runtime for non-blocking I/O |
+    | **sysinfo** | System information collection |
+    | **wgpu** | GPU detection and enumeration |
+    | **battery** | Battery health monitoring |
+
+=== ":material-language-python: Service Runner"
+
+    | Technology | Purpose |
+    |------------|---------|
+    | **Python 3.9+** | Task execution and automation |
+    | **PyInstaller** | Package as standalone executable |
+    | **subprocess** | External tool orchestration |
+    | **Sentry SDK** | Error tracking and monitoring |
 
 ## Project Structure
 
@@ -123,7 +190,6 @@ graph TB
 6. **Frontend listens** for progress events
 7. **Python returns final** report to stdout
 8. **Frontend displays** results in Results view
-
 
 ## Development Workflow
 

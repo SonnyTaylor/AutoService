@@ -35,21 +35,9 @@ To add a new portable tool to AutoService:
 1. **Create a folder** in `data/programs/` with the tool name
    - Format: `ToolName - Version` (e.g., `BleachBit - 4.6.0`)
 2. **Copy your tool files** into the new folder
-   - Executables should be directly in this folder or in a `bin/` subfolder
-3. **Optional**: Create a `program.json` file with metadata:
-
-```json
-{
-  "name": "Tool Name",
-  "version": "1.0.0",
-  "description": "What this tool does",
-  "executable": "tool.exe",
-  "icon": "icon.png"
-}
-```
-
-1. **Refresh AutoService** (may require restart in some cases)
-2. Your program should now appear in the Programs tab
+3. Press "Add Program" in the Programs tab
+4. **Browse to the executable** file of the tool you added
+5. Your program should now appear in the Programs tab
 
 ## Program Organization
 

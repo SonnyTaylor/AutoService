@@ -1,10 +1,54 @@
 # Architecture
 
-Deep dive into AutoService's three-layer architecture and data flow patterns.
+Deep dive into AutoService's three-layer architecture, data flow patterns, and design principles.
 
-## Three-Layer Architecture
+## :material-layers: Three-Layer Architecture
 
-AutoService uses a clean separation of concerns across three layers:
+AutoService uses a clean separation of concerns across three independent layers:
+
+<div class="grid" markdown>
+
+<div markdown>
+
+!!! abstract ":material-web: Frontend Layer"
+    **Responsibility**: User interface and state management
+
+    - Hash-based SPA routing
+    - Task queue builder UI
+    - Real-time progress display
+    - Report rendering & printing
+
+</div>
+
+<div markdown>
+
+!!! abstract ":material-language-rust: Backend Layer"
+    **Responsibility**: System operations and IPC
+
+    - File I/O operations
+    - System information collection
+    - Process spawning & management
+    - Event emission to frontend
+
+</div>
+
+<div markdown>
+
+!!! abstract ":material-language-python: Service Runner"
+    **Responsibility**: Task execution
+
+    - Sequential task processing
+    - Real-time log streaming
+    - External tool orchestration
+    - Report generation
+
+</div>
+
+</div>
+
+---
+
+AutoService's architecture enables:
 
 ### Layer 1: Frontend (Vanilla JS + Vite)
 
@@ -79,42 +123,54 @@ AutoService uses a clean separation of concerns across three layers:
 sequenceDiagram
     autonumber
     actor User
-    participant Frontend
-    participant Rust Backend
-    participant Python Runner
+    participant FE as 🖥️ Frontend<br/>(JS)
+    participant BE as ⚙️ Backend<br/>(Rust)
+    participant PR as 🐍 Python<br/>Runner
 
-    User->>Frontend: Build task queue (3 tasks)
-    Frontend->>Frontend: Generate JSON plan
-    Frontend->>Rust Backend: invoke("start_service_run", plan)
-    Rust Backend->>Python Runner: Spawn subprocess
-    Rust Backend->>Python Runner: Pass plan to stdin
+    User->>FE: 1️⃣ Build task queue
+    Note right of FE: User selects:<br/>• SFC Scan<br/>• Disk Cleanup<br/>• BleachBit Clean
     
-    Python Runner->>Python Runner: Parse plan
+    FE->>FE: 2️⃣ Generate JSON plan
+    FE->>BE: 3️⃣ invoke("start_service_run")
     
-    Note over Python Runner: TASK_START: sfc_scan
-    Python Runner->>Python Runner: Execute SFC
-    Python Runner->>Rust Backend: stderr: TASK_OK: sfc_scan
-    Rust Backend->>Frontend: Emit progress event
-    Frontend->>Frontend: Update UI
+    BE->>PR: 4️⃣ Spawn subprocess
+    Note right of BE: Pass JSON via stdin
     
-    Note over Python Runner: TASK_START: disk_cleanup
-    Python Runner->>Python Runner: Execute cleanup
-    Python Runner->>Rust Backend: stderr: TASK_OK: disk_cleanup
-    Rust Backend->>Frontend: Emit progress event
-    Frontend->>Frontend: Update UI
+    rect rgb(230, 245, 255)
+        Note over PR: 🔄 Task Execution Loop
+        
+        PR->>PR: 5️⃣ Parse & validate plan
+        
+        Note over PR: TASK_START: sfc_scan
+        PR->>PR: Execute SFC
+        PR->>BE: stderr: TASK_OK ✓
+        BE->>FE: Emit progress event
+        FE->>FE: Update UI (33%)
+        
+        Note over PR: TASK_START: disk_cleanup
+        PR->>PR: Execute cleanup
+        PR->>BE: stderr: TASK_OK ✓
+        BE->>FE: Emit progress event
+        FE->>FE: Update UI (66%)
+        
+        Note over PR: TASK_START: bleachbit_clean
+        PR->>PR: Execute clean
+        PR->>BE: stderr: TASK_OK ✓
+        BE->>FE: Emit progress event
+        FE->>FE: Update UI (100%)
+    end
     
-    Note over Python Runner: TASK_START: bleachbit_clean
-    Python Runner->>Python Runner: Execute clean
-    Python Runner->>Rust Backend: stderr: TASK_OK: bleachbit_clean
-    Rust Backend->>Frontend: Emit progress event
-    Frontend->>Frontend: Update UI
-    
-    Python Runner->>Rust Backend: stdout: FINAL JSON report
-    Rust Backend->>Frontend: Emit completion event
-    Frontend->>Frontend: Parse report
-    Frontend->>Frontend: Store in sessionStorage
-    Frontend->>User: Display results & reports
+    PR->>BE: stdout: 📄 FINAL JSON report
+    BE->>FE: Emit completion event
+    FE->>FE: Parse & store report
+    FE->>User: 📊 Display results
 ```
+
+!!! success "Key Benefits of This Flow"
+    - **Asynchronous**: UI remains responsive during execution
+    - **Real-time feedback**: Users see progress immediately
+    - **Fault-tolerant**: Errors in one task don't block others
+    - **Detailed logging**: Full execution trace for debugging
 
 ### Architecture Layers
 
@@ -147,33 +203,68 @@ graph TB
     Output -->|Emit Events| Backend
 ```
 
-## IPC Communication Patterns
+## :material-connection: IPC Communication Patterns
 
-### Frontend → Rust (Invoke)
+AutoService uses Tauri's IPC (Inter-Process Communication) system for frontend-backend interaction.
 
-```javascript
-// Frontend calls Rust command with data
-const result = await window.__TAURI__.core.invoke("command_name", {
-  arg1: value1,
-  arg2: value2
-});
-```
+=== "Frontend → Rust"
 
-### Rust → Frontend (Events)
+    **Invoke Pattern**: Frontend calls backend commands asynchronously.
 
-```rust
-// Rust emits event to frontend
-app.emit("event_name", payload)?;
-```
+    ```javascript title="src/pages/service/builder.js"
+    // Frontend calls Rust command with arguments
+    const result = await window.__TAURI__.core.invoke("command_name", {
+      arg1: value1,
+      arg2: value2
+    });
+    
+    // Example: Load app settings
+    const settings = await window.__TAURI__.core.invoke("load_app_settings");
+    ```
 
-### Frontend Listens to Events
+    !!! tip "Common Commands"
+        - `load_app_settings` - Load application configuration
+        - `save_program` - Persist program definition
+        - `list_programs` - Get all registered programs
+        - `get_system_info` - Retrieve hardware details
+        - `start_service_run` - Execute service queue
 
-```javascript
-// Frontend listens for events
-window.__TAURI__.event.listen("event_name", (event) => {
-  console.log(event.payload);
-});
-```
+=== "Rust → Frontend"
+
+    **Event Pattern**: Backend emits events that frontend listens to.
+
+    ```rust title="src-tauri/src/lib.rs"
+    // Rust emits event to frontend
+    app.emit("event_name", payload)?;
+    
+    // Example: Stream service runner output
+    app.emit("service_runner_line", LogLine {
+        timestamp: chrono::Utc::now(),
+        message: line,
+    })?;
+    ```
+
+=== "Frontend Event Listener"
+
+    **Listen Pattern**: Subscribe to backend events in frontend.
+
+    ```javascript title="src/pages/service/runner.js"
+    // Frontend listens for events
+    const unlisten = await window.__TAURI__.event.listen("event_name", (event) => {
+      console.log("Received:", event.payload);
+    });
+    
+    // Example: Listen to service progress
+    await window.__TAURI__.event.listen("service_runner_line", (event) => {
+      const { message } = event.payload;
+      if (message.includes("TASK_OK")) {
+        updateProgress(message);
+      }
+    });
+    
+    // Cleanup when done
+    unlisten();
+    ```
 
 ## Key Design Patterns
 

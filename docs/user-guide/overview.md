@@ -1,59 +1,93 @@
+---
+hide:
+  - toc
+---
+
 # User Guide Overview
 
-## What You Can Do With AutoService
+## :material-star-circle: What You Can Do With AutoService
 
 AutoService is a comprehensive toolkit designed to make computer maintenance and diagnostics faster and more consistent. Whether you're a technician servicing multiple systems or a power user maintaining your own machine, AutoService provides a unified interface to run complex maintenance routines.
 
 ### Core Capabilities
 
-#### 1. Run Automated Maintenance Tasks
+<!-- markdownlint-disable MD030 MD007 MD050 MD033 -->
 
-Queue up and run multiple maintenance and diagnostic tools in sequence:
+<div class="grid cards" markdown>
 
-- **Cleanup**: BleachBit, AdwCleaner, Drive Cleanup
-- **System Maintenance**: Windows Update, SFC (System File Checker), DISM (Deployment Image Servicing and Management)
-- **Diagnostics**: Disk checks (CHKDSK), SMART drive reports, battery health checks
-- **Security Scans**: KVRT (Kaspersky Virus Removal Tool), Trellix Stinger
-- **Hardware Stress Testing**: CPU, Memory, and GPU stress tests (HeavyLoad, FurMark)
-- **Network Testing**: Speed tests, ping tests, iPerf testing
+-   :material-broom: **Automated Maintenance**
 
-#### 2. Collect System Information
+    ---
 
-Get a complete snapshot of your system's hardware and software configuration:
+    Queue and execute multiple tools:
 
-- Processor details and capabilities
-- Memory information
-- Storage and drive information
-- Battery status and health
-- Operating system details
-- GPU and display information
-- And more
+    - Cleanup: BleachBit, AdwCleaner, Drive Cleanup
+    - Maintenance: Windows Update, SFC, DISM
+    - Diagnostics: CHKDSK, SMART reports, battery health
+    - Security: KVRT, Trellix Stinger scans
 
-#### 3. Component Testing
+-   :material-chip: **System Information**
 
-Test individual hardware components:
+    ---
 
-- **Camera**: Test webcam functionality
-- **Microphone**: Audio input testing
-- **Speakers**: Audio output testing
-- **Display**: Screen and color testing
-- **Keyboard & Mouse**: Input device testing
-- **Network**: Connectivity verification
+    Complete hardware & software snapshot:
 
-#### 4. Manage Portable Tools
+    - Processor details and capabilities
+    - Memory configuration
+    - Storage and drive information
+    - Battery status and health
+    - Operating system details
+    - GPU and display information
 
-Organize and launch portable applications stored in the `data/programs/` folder. Add your own tools without any code changes—just drop them into the programs folder and they'll appear in AutoService.
+-   :material-test-tube: **Component Testing**
 
-#### 5. Run Scripts
+    ---
 
-Maintain a catalog of PowerShell and CMD scripts. Run frequently used automation scripts directly from the AutoService interface.
+    Validate individual hardware:
 
-#### 6. Generate Reports
+    - Camera: Webcam functionality
+    - Microphone: Audio input testing
+    - Speakers: Audio output validation
+    - Display: Screen and color tests
+    - Input Devices: Keyboard & mouse
+    - Network: Connectivity checks
 
-After running maintenance tasks, AutoService generates two types of reports:
+-   :material-application-brackets: **Portable Tools**
 
-- **Technical Reports**: Detailed findings with full diagnostic data, suitable for technician reference
-- **Customer Reports**: Simplified, customer-friendly summaries highlighting key findings and recommendations
+    ---
+
+    Manage external applications:
+
+    - Launch tools from `data/programs/`
+    - Add custom tools without code changes
+    - Organize by category
+    - Quick access from UI
+
+-   :material-script-text: **Script Management**
+
+    ---
+
+    Execute automation scripts:
+
+    - PowerShell and CMD support
+    - Catalog frequently used scripts
+    - Run directly from interface
+    - Manage script library
+
+-   :material-file-document: **Report Generation**
+
+    ---
+
+    Two report types:
+
+    - Technical: Full diagnostic data
+    - Customer: Simplified summaries
+    - Export as PDF, JSON, or HTML
+    - Auto-save after runs
+
+</div>
+
+<!-- markdownlint-enable MD030 MD007 MD050 MD033 -->
 
 ### Main Interface Areas
 

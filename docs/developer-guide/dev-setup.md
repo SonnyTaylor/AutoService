@@ -115,60 +115,77 @@ AutoService/
 
 ## Development Commands
 
-### Frontend Development
+=== "Frontend"
 
-```powershell
-# Frontend dev server with hot reload
-pnpm dev
+    ```powershell title="Development Server"
+    # Vite dev server (rarely used standalone)
+    pnpm dev
+    ```
 
-# Build frontend for production
-pnpm build
+    ```powershell title="Build Frontend"
+    # Build for production
+    pnpm build
+    ```
 
-# Preview production build
-pnpm preview
-```
+    ```powershell title="Preview Build"
+    # Preview production frontend
+    pnpm preview
+    ```
 
-### Backend Development
+    ```powershell title="Run Tests"
+    # Run Node.js native tests
+    pnpm test
+    ```
 
-```powershell
-# Full Tauri dev (frontend + backend)
-pnpm tauri dev
+=== "Full App (Tauri)"
 
-# Check Rust compilation
-cargo check
+    ```powershell title="Development Mode"
+    # Hot-reload frontend + Rust backend
+    # MUST run in administrator terminal
+    pnpm tauri dev
+    ```
 
-# Run Rust tests
-cargo test
+    ```powershell title="Production Build"
+    # Create optimized executable
+    pnpm tauri build
+    ```
 
-# Watch Rust files for changes
-cargo watch -x "tauri dev"
-```
+=== "Backend (Rust)"
 
-### Python Development
+    ```powershell title="Check Compilation"
+    # Verify Rust code compiles
+    cargo check
+    ```
 
-```powershell
-# Test individual service
-python runner/service_runner.py runner/fixtures/test_bleachbit.json
+    ```powershell title="Run Tests"
+    # Execute Rust tests
+    cargo test
+    ```
 
-# Run specific test
-python -m pytest runner/tests/test_service.py
+    ```powershell title="Build Backend"
+    # Build Rust backend only
+    cargo build
+    ```
 
-# Check Python syntax
-python -m py_compile runner/service_runner.py
-```
+=== "Python Runner"
 
-### Testing
+    ```powershell title="Test Service"
+    # Test individual service with fixture
+    python runner/service_runner.py runner/fixtures/test_bleachbit.json
+    ```
 
-```powershell
-# Run frontend tests
-pnpm test
+    ```powershell title="Verify Syntax"
+    # Check Python syntax
+    python -m py_compile runner/service_runner.py
+    ```
 
-# Run Rust tests
-cargo test
+    ```powershell title="Install Dependencies"
+    # Install Python packages
+    pip install -r runner/requirements.txt
+    ```
 
-# Run Python tests (if available)
-python -m pytest runner/
-```
+!!! note "No cargo watch Required"
+    The `cargo watch` tool is **not** required or configured for this project. Use `pnpm tauri dev` for hot-reload during development.
 
 ## IDE Setup
 

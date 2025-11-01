@@ -1,187 +1,237 @@
 # Getting Started with AutoService
 
-## Initial Setup
+## :material-rocket-launch: Initial Setup
 
 !!! info "Prerequisites"
 
-    - Windows 10 or later
-    - Administrator access (required for some diagnostic and maintenance tasks)
-    - At least 100 MB free disk space for the application and logs
+    === "Operating System"
+        - Windows 10 (20H1 or later)
+        - Windows 11 (all versions)
+
+    === "Permissions"
+        - Administrator access for diagnostic tasks
+        - UAC approval for elevated operations
+
+    === "Disk Space"
+        - 100 MB minimum for app + logs
+        - Additional space for tool downloads
+
+---
 
 ### Download & Extract
 
-1. Download the latest AutoService release from [GitHub Releases](https://github.com/SonnyTaylor/AutoService/releases)
-2. Extract the ZIP file to your preferred location (USB drive recommended for portability)
-3. You should have:
-   - `AutoService.exe` - the main application
-   - `data/` - the data folder containing programs, settings, and resources
+=== "Step 1: Download"
+
+    Download the latest AutoService release:
+
+    [:fontawesome-brands-github: GitHub Releases](https://github.com/SonnyTaylor/AutoService/releases){ .md-button .md-button--primary }
+
+=== "Step 2: Extract"
+
+    Move the .exe to the USB and extract the /data folder alongside it.
+
+=== "Step 3: Verify Structure"
+
+    Ensure you have these files (some may be created on first run):
+
+    ```text title="Expected Directory Structure"
+    📂 AutoService/
+    ├── 📄 AutoService.exe       # Main application
+    └── 📂 data/                 # Data folder
+        ├── 📂 programs/         # External tools
+        ├── 📂 resources/        # App resources
+        ├── 📂 settings/         # Configuration
+        ├── 📂 reports/          # Generated reports
+        └── 📂 logs/             # Execution logs
+    ```
+
+---
 
 ### First Launch
 
 !!! warning "Administrator Privileges Required"
 
-    AutoService requires administrator privileges for most diagnostic tasks. Right-click `autoservice.exe` and select "Run as administrator" if UAC prompts don't appear automatically.
+    AutoService requires administrator privileges for most diagnostic tasks.
 
-1. Run autoservice.exe and accept any UAC prompts
-   - Some features require elevated privileges for system access
-2. The application will launch and perform initial setup
-3. The interface will show several tabs across the top
+    **How to launch:**
 
-## Understanding the Main Interface
+    1. Right-click `AutoService.exe`
+    2. Select **"Run as administrator"**
+    3. Accept the UAC prompt
 
-AutoService uses a tab-based interface for organization:
+!!! success "What Happens on First Launch"
 
-| Tab            | Purpose                                   |
-| -------------- | ----------------------------------------- |
-| Service        | Run automated maintenance and diagnostics |
-| System Info    | View hardware and OS details              |
-| Component Test | Test hardware components                  |
-| Shortcuts      | Quick links to Windows tools              |
-| Programs       | Manage and launch portable tools          |
-| Scripts        | Execute cmd scripts                       |
-| Reports        | Access previous reports                   |
-| Settings       | Configure AutoService                     |
+    1. ✅ Application initializes
+    2. ✅ Data folder is validated
+    3. ✅ Default settings are loaded
+    4. ✅ Interface opens with tabs visible
 
-## Your First Maintenance Run
+## :material-monitor-dashboard: Understanding the Main Interface
 
-### Step 1: Navigate to the Service Tab
+AutoService uses a clean tab-based interface for easy navigation:
 
-Click the **Service** tab at the top of the window. You'll see two main sections:
+<div class="grid" markdown>
 
-- **Left panel**: Available services organized by category
-- **Right panel**: Your task queue
+<div markdown>
 
-### Step 2: Select Services to Run
+| Tab | Purpose |
+|-----|---------|
+| :material-cog: **Service** | Run automated maintenance & diagnostics |
+| :material-information: **System Info** | View hardware and OS details |
+| :material-test-tube: **Component Test** | Test hardware components |
+| :material-link-variant: **Shortcuts** | Quick links to Windows tools |
 
-Browse through the available services:
+</div>
 
-- **Diagnostics**: Disk checks, drive reports, system checks
-- **Cleanup**: File cleanup, registry optimization, temporary file removal
-- **Security**: Virus scans, security checks
-- **Stress Tests**: Hardware performance testing
-- **System Maintenance**: Updates, system file checks
+<div markdown>
 
-Click on a service to add it to your queue.
+| Tab | Purpose |
+|-----|---------|
+| :material-application: **Programs** | Manage portable tools |
+| :material-script-text: **Scripts** | Execute PowerShell/CMD scripts |
+| :material-file-document: **Reports** | Access previous reports |
+| :material-cog-outline: **Settings** | Configure AutoService |
 
-### Step 3: Build Your Queue
+</div>
 
-Services appear in the right panel in the order they'll execute. You can:
+</div>
 
-- **Drag and drop** to reorder tasks
-- **Click the ☑️** to remove a task
-- **Adjust parameters** (like stress test duration) if available
+## :material-play-circle: Your First Maintenance Run
 
-### Step 4: Run Your Queue
+Follow these steps to run your first automated maintenance session:
 
-Click the **"Run"** or **"Start"** button to begin execution. You'll see:
+=== "1. Navigate to Service Tab"
 
-- **Live progress** of each task
-- **Current status** indicators
-- **Task duration** and completion percentage
-- **Real-time output** from the executing tools
+    Click the **Service** tab at the top of the window.
 
-### Step 5: Review Results
+    **Interface Layout:**
 
-When the queue completes, AutoService displays results:
+    - **Left Panel**: Available services organized by category
+    - **Right Panel**: Your task queue (drag to reorder)
+    - **Top Bar**: Run controls and presets
 
-- **Technical view**: Detailed findings and raw data
-- **Customer view**: Simplified, professional summary
-- **Export options**: Save as PDF, JSON, or HTML
+=== "2. Select Services"
 
-## Common Tasks
+    Browse and select services by category:
 
-### Running a Quick System Check
+    | Category | Examples |
+    |----------|----------|
+    | :material-stethoscope: **Diagnostics** | Disk checks, SMART reports, battery health |
+    | :material-broom: **Cleanup** | BleachBit, AdwCleaner, temp files |
+    | :material-shield-check: **Security** | KVRT scan, Stinger scan |
+    | :material-fire: **Stress Tests** | CPU, GPU, memory tests |
+    | :material-update: **Maintenance** | Windows Update, SFC, DISM |
 
-1. Go to **Service** tab
-2. Add these services:
-   - Disk Space Report
-   - SMART Drive Report
-   - System File Check (SFC)
-3. Click **Run**
-4. Review results when complete
+    **Click a service** to add it to your queue.
 
-### Stress Testing Your Hardware
+=== "3. Build Your Queue"
 
-1. Go to **Service** tab
-2. Add stress test services:
-   - HeavyLoad CPU Stress (set duration, e.g., 5 minutes)
-   - HeavyLoad Memory Stress
-   - FurMark GPU Stress
-3. Click **Run**
-4. Monitor system performance during testing
-5. Review results and ensure temperatures are within normal range
+    Customize your task sequence:
 
-### Cleaning Up a System
+    - **Drag & Drop**: Reorder tasks vertically
+    - **Remove**: Click :material-close: to remove a task
+    - **Configure**: Adjust parameters (duration, options)
+    - **Save Preset**: Save queue for reuse
 
-1. Go to **Service** tab
-2. Add cleanup services:
-   - BleachBit Clean
-   - AdwCleaner Clean
-   - Drive Cleanup
-3. Configure cleanup options if available
-4. Click **Run**
-5. Verify the cleanup report for freed disk space
+=== "4. Run Queue"
 
-### Viewing System Information
+    Click **Run** to begin execution.
 
-1. Click the **System Info** tab
-2. Browse through the available information:
-   - Hardware specifications
-   - Storage details
-   - Operating system info
-   - GPU information
-   - Network configuration
+    **Live Feedback:**
 
-### Launching a Portable Tool
+    - ✅ **Task Progress**: Real-time status for each task
+    - 📊 **Duration**: Elapsed and estimated time
+    - 📝 **Output**: Live logs from tools
+    - 🔔 **Notifications**: Audio alerts on completion
 
-1. Click the **Programs** tab
-2. Browse available programs
-3. Click on a program to launch it
-4. The program will open in its own window
+=== "5. Review Results"
 
-## Tips & Best Practices
+    View comprehensive results after completion:
 
-!!! warning "Before Running on a Client System"
+    **Two Report Types:**
 
-    - **Backup Important Data**: Always ensure client data is backed up
-    - **Communicate Your Plan**: Inform the client what tasks you'll run
-    - **Note Initial State**: Take screenshots or notes of the starting condition
-    - **Read Task Descriptions**: Understand what each task does before running
+    | Report Type | Audience | Content |
+    |-------------|----------|---------|
+    | **Technical** | Technicians | Full diagnostic data, raw outputs, detailed findings |
+    | **Customer** | End Users | Simplified summary, recommendations, key metrics |
 
-!!! tip "During Execution"
+## :material-wrench: Troubleshooting
 
-    - **Don't Force Quit**: Let tasks complete naturally (some take time)
-    - **Monitor Performance**: Watch CPU/Memory usage during stress tests
-    - **Keep AutoService Open**: Closing the window may interrupt task execution
-    - **Check Network Connection**: For online tests (speed tests, updates)
+<div class="grid" markdown>
 
-!!! tip "After Completion"
-
-    - **Review Both Report Types**: Check both technical and customer views
-    - **Save Reports**: Store reports for records or customer handoff
-    - **Note Any Warnings**: Flag unusual findings for further investigation
-    - **Verify Improvements**: Compare to initial state if appropriate
-
-## Troubleshooting
+<div markdown>
 
 !!! failure "AutoService Won't Start"
 
-    - **Check admin privileges**: Right-click and select "Run as administrator"
-    - **Check Windows version**: AutoService requires Windows 10 or later
-    - **Verify data folder**: Ensure the `data/` folder exists alongside the EXE
+    **Symptoms**: Double-click does nothing or immediate crash
+
+    **Solutions**:
+
+    1. Right-click → "Run as administrator"
+    2. Verify Windows 10+ (20H1 or later)
+    3. Check `data/` folder exists beside EXE
+    4. Review `data/logs/` for error details
+    5. Temporarily disable antivirus
+    6. Re-extract from original ZIP
 
 !!! warning "Tasks Keep Failing"
 
-    - **Check tool availability**: Go to Settings → Tools to verify required tools are present
-    - **Update tools**: Some tools may need newer versions
-    - **Check permissions**: Some tasks require administrator access
-    - **Review logs**: Check `data/logs/` for detailed error messages
+    **Symptoms**: Tasks show error status repeatedly
+
+    **Solutions**:
+
+    1. Go to Settings → Tools tab
+    2. Verify required tools are installed
+    3. Update outdated tool versions
+    4. Ensure administrator access
+    5. Check `data/logs/` for specifics
+    6. Run individual tools manually to test
+
+</div>
+
+<div markdown>
 
 !!! error "Reports Not Generating"
 
-    - **Check disk space**: Ensure you have space in the data folder
-    - **Verify permissions**: Check file write permissions in the data directory
-    - **Check reports folder**: Look in `data/reports/` for saved reports
+    **Symptoms**: No report after queue completion
+
+    **Solutions**:
+
+    1. Check free disk space (need ≥ 50MB)
+    2. Verify write permissions in `data/`
+    3. Look in `data/reports/` manually
+    4. Check for antivirus quarantine
+    5. Run AutoService as administrator
+    6. Review `data/logs/` for errors
+
+!!! bug "Slow Performance"
+
+    **Symptoms**: UI freezes or tasks take too long
+
+    **Solutions**:
+
+    1. Close other resource-heavy apps
+    2. Check Task Manager for conflicts
+    3. Reduce stress test durations
+    4. Run fewer tasks simultaneously
+    5. Check drive health (SMART report)
+    6. Ensure adequate RAM (4GB+ recommended)
+
+</div>
+
+</div>
+
+!!! question "Still Having Issues?"
+
+    **Get Help:**
+
+    1. Check existing [GitHub Issues](https://github.com/SonnyTaylor/AutoService/issues)
+    2. Search the documentation
+    3. Open a new issue with:
+        - Windows version
+        - AutoService version
+        - Steps to reproduce
+        - Error logs from `data/logs/`
 
 ## Next Steps
 
