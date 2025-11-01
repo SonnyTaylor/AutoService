@@ -13,13 +13,6 @@ Get your development environment ready for AutoService.
     - **Python 3.9+** - Download from [python.org](https://www.python.org/)
     - **Git** - Download from [git-scm.com](https://git-scm.com/)
 
-    ### Optional but Recommended
-
-    - **Visual Studio Code** - Code editor
-    - **Cargo-watch** - Auto-recompile on changes (`cargo install cargo-watch`)
-    - **PyCharm Community** - Python IDE
-    - **Windows Subsystem for Linux (WSL2)** - If you prefer Linux-like environment
-
 ## Clone and Install
 
 ### Step 1: Clone Repository
