@@ -81,8 +81,8 @@ const NetworkSharingSchema = z.object({
  * Network settings schema (iperf, ping)
  */
 const NetworkSchema = z.object({
-  iperf_server: z.string().ip().or(z.literal("")).default(""),
-  ping_host: z.string().ip().default("8.8.8.8"),
+  iperf_server: z.string().or(z.literal("")).default(""),
+  ping_host: z.string().default("8.8.8.8"),
 });
 
 /**
