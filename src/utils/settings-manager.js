@@ -50,7 +50,7 @@ const BusinessSchema = z.object({
   address: z.string().default(""),
   phone: z.string().default(""),
   email: z.string().email().or(z.literal("")).default(""),
-  website: z.string().url().or(z.literal("")).default(""),
+  website: z.string().or(z.literal("")).default(""),
   tfn: z.string().default(""),
   abn: z.string().default(""),
   technician_names: z.array(z.string()).default([]),
