@@ -1,5 +1,6 @@
 // Router and page loader for AutoService frontend
 import "@phosphor-icons/web/regular";
+import { initWidget } from "./components/task-progress-widget.js";
 //
 // Responsibilities:
 // - Maintain a minimal hash-based router: #/<route>[?query]
@@ -188,7 +189,7 @@ function setActiveTab(route) {
 /**
  * Update UI when the hash changes: normalize hash, compute route, set tab, and load page.
  */
-function onRouteChange() {
+async function onRouteChange() {
   const hash = normalizeHash();
   if (window.location.hash !== hash) {
     window.location.hash = hash; // will re-trigger
@@ -196,6 +197,43 @@ function onRouteChange() {
   }
   const route = hash.slice(2);
   const [name] = route.split("?", 2);
+
+  // Check if there's an active run and redirect to runner if navigating to service routes
+  if (
+    name === "service" ||
+    name === "service-run" ||
+    name === "service-results"
+  ) {
+    try {
+      const { getRunState, isRunActive } = await import(
+        "./utils/task-state.js"
+      );
+      const state = getRunState();
+
+      // If there's an active run, always go to the runner page
+      if (isRunActive() || state.overallStatus === "running") {
+        if (name !== "service-report") {
+          window.location.hash = "#/service-report";
+          return;
+        }
+      }
+      // If run is completed/error, allow navigation to results
+      else if (
+        (state.overallStatus === "completed" ||
+          state.overallStatus === "error") &&
+        state.runId
+      ) {
+        if (name === "service") {
+          // Clicking service tab after completion should go to results
+          window.location.hash = "#/service-report";
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to check run state:", e);
+    }
+  }
+
   setActiveTab(name);
   loadPage(name);
 }
@@ -246,6 +284,10 @@ async function refreshTechnicianTabs() {
 window.addEventListener("hashchange", onRouteChange);
 window.addEventListener("DOMContentLoaded", () => {
   onRouteChange();
+
+  // Initialize persistent task progress widget
+  initWidget();
+
   // Background prewarm of system info so navigating there is instant.
   (async () => {
     try {

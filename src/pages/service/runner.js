@@ -1,6 +1,12 @@
 import { getToolStatuses } from "../../utils/tools.js";
 import { promptServiceMetadata } from "../../utils/service-metadata-modal.js";
 import { isAutoSaveEnabled, autoSaveReport } from "../../utils/reports.js";
+import {
+  initRunState,
+  updateTaskStatus as updateGlobalTaskStatus,
+  updateProgress as updateGlobalProgress,
+  cleanup as cleanupGlobalState,
+} from "../../utils/task-state.js";
 import hljs from "highlight.js/lib/core";
 import jsonLang from "highlight.js/lib/languages/json";
 import "highlight.js/styles/github-dark.css";
@@ -18,6 +24,162 @@ async function ensureNotificationApi() {
   return notifyApi;
 }
 
+// Module-level flag to track if native events have been registered globally
+// This persists across page navigations to prevent duplicate listener registration
+let _globalEventsRegistered = false;
+
+// Module-level unlisten functions to clean up event listeners if needed
+let _unlistenLine = null;
+let _unlistenDone = null;
+
+/**
+ * Process status line markers from Python runner (module-level for event persistence)
+ * @param {string} line - Log line to process
+ */
+function processStatusLine(line) {
+  // Get fresh DOM references and current state
+  const logEl = document.getElementById("svc-log");
+  const taskListEl = document.getElementById("svc-task-status");
+
+  if (!logEl || !taskListEl) return;
+
+  // Helper to append to log with fresh DOM reference
+  const appendToLog = (message) => {
+    const first = !logEl.textContent;
+    logEl.textContent += (logEl.textContent ? "\n" : "") + message;
+    logEl.scrollTop = logEl.scrollHeight;
+
+    if (first) {
+      const overlay = document.getElementById("svc-log-overlay");
+      if (overlay) overlay.hidden = true;
+    }
+
+    try {
+      sessionStorage.setItem("service.runnerLog", logEl.textContent);
+    } catch {}
+  };
+
+  // Helper to update task status with fresh DOM reference
+  const updateTaskStatusDom = async (taskIndex, status) => {
+    try {
+      // Update global state
+      const { updateTaskStatus } = await import("../../utils/task-state.js");
+      const statusMap = {
+        running: "running",
+        success: "success",
+        failure: "error",
+        skipped: "skip",
+      };
+      updateTaskStatus(taskIndex, statusMap[status] || status);
+
+      // Update local DOM
+      const tasks = Array.from(taskListEl.children);
+      if (tasks[taskIndex]) {
+        tasks[taskIndex].className = `task-status ${status}`;
+        const badge = tasks[taskIndex].querySelector(".right");
+        if (badge) {
+          if (status === "running") {
+            badge.innerHTML =
+              '<span class="badge running"><span class="dot"></span> Running</span>';
+          } else if (status === "success") {
+            badge.innerHTML = '<span class="badge ok">Success</span>';
+          } else if (status === "failure") {
+            badge.innerHTML = '<span class="badge fail">Failure</span>';
+          } else if (status === "skipped") {
+            badge.innerHTML = '<span class="badge skipped">Skipped</span>';
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to update task status:", e);
+    }
+  };
+
+  // Parse status markers
+  const startMatch = line.match(/^TASK_START:(\d+):(.+)$/);
+  if (startMatch) {
+    const taskIndex = parseInt(startMatch[1]);
+    const taskType = startMatch[2];
+    updateTaskStatusDom(taskIndex, "running");
+    appendToLog(`[INFO] Started: ${taskType}`);
+    return;
+  }
+
+  const okMatch = line.match(/^TASK_OK:(\d+):(.+)$/);
+  if (okMatch) {
+    const taskIndex = parseInt(okMatch[1]);
+    const taskType = okMatch[2];
+    updateTaskStatusDom(taskIndex, "success");
+    appendToLog(`[SUCCESS] Completed: ${taskType}`);
+    return;
+  }
+
+  const failMatch = line.match(/^TASK_FAIL:(\d+):(.+?)(?:\s*-\s*(.+))?$/);
+  if (failMatch) {
+    const taskIndex = parseInt(failMatch[1]);
+    const taskType = failMatch[2];
+    const reason = failMatch[3] || "Failed";
+    updateTaskStatusDom(taskIndex, "failure");
+    appendToLog(`[ERROR] Failed: ${taskType} - ${reason}`);
+    return;
+  }
+
+  const skipMatch = line.match(/^TASK_SKIP:(\d+):(.+?)(?:\s*-\s*(.+))?$/);
+  if (skipMatch) {
+    const taskIndex = parseInt(skipMatch[1]);
+    const taskType = skipMatch[2];
+    const reason = skipMatch[3] || "Skipped";
+    updateTaskStatusDom(taskIndex, "skipped");
+    appendToLog(`[WARNING] Skipped: ${taskType} - ${reason}`);
+    return;
+  }
+
+  // Handle progress JSON updates
+  if (
+    line.startsWith("PROGRESS_JSON:") ||
+    line.startsWith("PROGRESS_JSON_FINAL:")
+  ) {
+    const isFinal = line.startsWith("PROGRESS_JSON_FINAL:");
+    const jsonPart = line
+      .slice(isFinal ? "PROGRESS_JSON_FINAL:".length : "PROGRESS_JSON:".length)
+      .trim();
+
+    try {
+      const obj = JSON.parse(jsonPart);
+      const finalJsonEl = document.getElementById("svc-final-json");
+
+      if (finalJsonEl) {
+        const pretty = JSON.stringify(obj, null, 2);
+        const highlighted = hljs.highlight(pretty, { language: "json" }).value;
+        finalJsonEl.innerHTML = `<code class="hljs language-json">${highlighted}</code>`;
+      }
+
+      if (isFinal) {
+        const summaryEl = document.getElementById("svc-summary");
+        const summaryTitleEl = document.getElementById("svc-summary-title");
+        const summaryIconEl = document.getElementById("svc-summary-icon");
+
+        if (summaryEl) {
+          const ok = obj?.overall_status === "success";
+          summaryEl.hidden = false;
+          if (summaryTitleEl) {
+            summaryTitleEl.textContent = ok
+              ? "All tasks completed"
+              : "Completed with errors";
+          }
+          if (summaryIconEl) {
+            summaryIconEl.textContent = ok ? "✔" : "!";
+          }
+          summaryEl.classList.toggle("ok", !!ok);
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to parse progress JSON:", e);
+    }
+    return;
+  }
+}
+
 /**
  * Service Runner controller.
  *
@@ -32,6 +194,13 @@ export async function initPage() {
   try {
     cacheApi = await import("../system-info/cache.js");
   } catch {}
+  // Import global state management
+  const {
+    initRunState,
+    updateTaskStatus: updateGlobalTaskStatus,
+    updateProgress: updateGlobalProgress,
+    getRunState,
+  } = await import("../../utils/task-state.js");
   const runnerTitle = document.getElementById("svc-report-title");
   const runnerDesc = document.getElementById("svc-report-desc");
   const backBtn = document.getElementById("svc-report-back");
@@ -208,6 +377,38 @@ export async function initPage() {
     label: (t && t.ui_label) || friendlyTaskLabel(t.type),
     status: "pending", // pending | running | success | failure | skipped
   }));
+
+  // Check if there's an active run in global state and restore UI
+  const globalState = getRunState();
+  if (
+    globalState &&
+    globalState.overallStatus === "running" &&
+    globalState.tasks.length > 0
+  ) {
+    // Restore task statuses from global state
+    globalState.tasks.forEach((globalTask, idx) => {
+      if (taskState[idx]) {
+        const statusMap = {
+          pending: "pending",
+          running: "running",
+          success: "success",
+          error: "failure",
+          warning: "failure",
+          skip: "skipped",
+        };
+        taskState[idx].status = statusMap[globalTask.status] || "pending";
+      }
+    });
+
+    // Try to restore log from sessionStorage
+    try {
+      const savedLog = sessionStorage.getItem("service.runnerLog");
+      if (savedLog && logEl) {
+        logEl.innerHTML = savedLog;
+      }
+    } catch {}
+  }
+
   renderTaskList();
 
   container.hidden = false;
@@ -242,15 +443,28 @@ export async function initPage() {
   // Initialize task status tracking
   let taskStatuses = {};
   tasks.forEach((task, index) => {
-    taskStatuses[index] = "pending";
+    taskStatuses[index] = taskState[index]?.status || "pending";
   });
 
   // Track whether a run is currently in progress to prevent duplicate clicks
-  let _isRunning = false;
+  let _isRunning = globalState && globalState.overallStatus === "running";
   // Hold results for client-only tasks (not executed by Python runner)
   let _clientResults = [];
   // Prevent duplicate notifications per run
   let _notifiedOnce = false;
+
+  // If we're reconnecting to an active run, wire up native events and update UI
+  if (_isRunning) {
+    wireNativeEvents();
+    showOverlay(false);
+    updateSummaryDuringRun();
+    // Disable run button while running
+    runBtn.disabled = true;
+    runBtn.setAttribute("disabled", "");
+    runBtn.setAttribute("aria-disabled", "true");
+    backBtn.disabled = true;
+    backBtn.setAttribute("disabled", "");
+  }
 
   runBtn?.addEventListener("click", async () => {
     if (!tasks.length) return;
@@ -303,6 +517,13 @@ export async function initPage() {
       taskStatuses[index] = "pending";
     });
     renderTaskList();
+
+    // Initialize global task state for persistent widget tracking
+    initRunState(tasks, {
+      title: runnerTitle?.textContent || "Service Run",
+      description: runnerDesc?.textContent || "",
+    });
+
     // Show reactive running summary for this new session
     resetSummaryForNewRun();
     finalJsonEl.textContent = "";
@@ -343,6 +564,13 @@ export async function initPage() {
       if (!runnerTasks.length) {
         const finalReport = buildFinalReportFromClient(_clientResults);
         handleFinalResult(finalReport);
+
+        // Update global state to mark run as completed
+        updateGlobalProgress({
+          overallStatus:
+            finalReport?.overall_status === "success" ? "completed" : "error",
+        });
+
         _isRunning = false;
         showOverlay(false);
         backBtn.disabled = false;
@@ -444,7 +672,6 @@ export async function initPage() {
     }
   });
 
-  let _nativeEventsWired = false;
   // Flag: whether to show raw (full) progress JSON lines in log. Default false for conciseness.
   const SHOW_RAW_PROGRESS_JSON = false;
 
@@ -482,83 +709,195 @@ export async function initPage() {
   }
 
   function wireNativeEvents() {
-    if (_nativeEventsWired) return; // avoid duplicate listeners across reruns
+    // Only register global event listeners once
+    // But always allow this function to run to update DOM references
     if (!window.__TAURI__?.event?.listen) return;
     const { listen } = window.__TAURI__.event;
-    _nativeEventsWired = true;
-    listen("service_runner_line", (evt) => {
-      try {
-        const payload = evt?.payload || {};
-        const line = payload.line || "";
-        if (!line) return;
-        // Replace verbose progress JSON lines with concise summary
-        if (
-          line.startsWith("PROGRESS_JSON:") ||
-          line.startsWith("PROGRESS_JSON_FINAL:")
-        ) {
-          const summary = summarizeProgressLine(line);
-          if (summary) appendLog(summary);
-        } else {
-          appendLog(`[SR] ${line}`);
-        }
-        try {
-          maybeProcessStatus(line);
-        } catch (e) {
-          console.warn("maybeProcessStatus error", e);
-        }
-      } catch (e) {
-        console.warn("service_runner_line listener failed", e);
-      }
-    });
-    listen("service_runner_done", (evt) => {
-      const payload = evt?.payload || {};
-      const finalReport = payload.final_report || payload.finalReport || {};
-      try {
-        lastFinalJsonString = JSON.stringify(finalReport, null, 2);
-        const highlighted = hljs.highlight(lastFinalJsonString, {
-          language: "json",
-        }).value;
-        finalJsonEl.innerHTML = `<code class="hljs language-json">${highlighted}</code>`;
-        applyFinalStatusesFromReport(finalReport);
-        const ok = finalReport?.overall_status === "success";
-        showSummary(ok);
-        persistFinalReport(lastFinalJsonString);
 
-        // Store plan and log file paths for later save operation
-        try {
-          const runnerData = {
-            planFile: payload.plan_file || null,
-            logFile: payload.log_file || null,
-          };
-          sessionStorage.setItem(
-            "service.runnerData",
-            JSON.stringify(runnerData)
-          );
-        } catch (e) {
-          console.warn("Failed to store runner data:", e);
-        }
+    // Register global listeners only once
+    if (!_globalEventsRegistered) {
+      _globalEventsRegistered = true;
 
-        // Auto-save report if enabled in settings
-        handleAutoSave(finalReport, payload);
-
+      // Store unlisten functions for cleanup if needed
+      listen("service_runner_line", (evt) => {
         try {
-          if (viewResultsBtn) {
-            viewResultsBtn.removeAttribute("disabled");
+          const payload = evt?.payload || {};
+          const line = payload.line || "";
+          if (!line) return;
+
+          // Get fresh DOM references
+          const currentLogEl = document.getElementById("svc-log");
+          if (!currentLogEl) return;
+
+          // Replace verbose progress JSON lines with concise summary
+          if (
+            line.startsWith("PROGRESS_JSON:") ||
+            line.startsWith("PROGRESS_JSON_FINAL:")
+          ) {
+            const summary = summarizeProgressLine(line);
+            if (summary) {
+              const first = !currentLogEl.textContent;
+              currentLogEl.textContent +=
+                (currentLogEl.textContent ? "\n" : "") + summary;
+              currentLogEl.scrollTop = currentLogEl.scrollHeight;
+
+              // Auto-hide overlay after first real log line
+              if (first) {
+                const overlay = document.getElementById("svc-log-overlay");
+                if (overlay) overlay.hidden = true;
+              }
+
+              // Save log to sessionStorage
+              try {
+                sessionStorage.setItem(
+                  "service.runnerLog",
+                  currentLogEl.textContent
+                );
+              } catch {}
+            }
+          } else {
+            const first = !currentLogEl.textContent;
+            currentLogEl.textContent +=
+              (currentLogEl.textContent ? "\n" : "") + `[SR] ${line}`;
+            currentLogEl.scrollTop = currentLogEl.scrollHeight;
+
+            // Auto-hide overlay after first real log line
+            if (first) {
+              const overlay = document.getElementById("svc-log-overlay");
+              if (overlay) overlay.hidden = true;
+            }
+
+            // Save log to sessionStorage
+            try {
+              sessionStorage.setItem(
+                "service.runnerLog",
+                currentLogEl.textContent
+              );
+            } catch {}
           }
-        } catch {}
-      } catch (e) {
-        finalJsonEl.textContent = String(e);
-        showSummary(false);
-      }
-      // Native run completed – re-enable UI controls
-      _isRunning = false;
-      showOverlay(false);
-      backBtn.disabled = false;
-      runBtn.disabled = false;
-      runBtn.removeAttribute("aria-disabled");
-      runBtn.removeAttribute("disabled");
-      backBtn.removeAttribute("disabled");
-    });
+
+          try {
+            processStatusLine(line);
+          } catch (e) {
+            console.warn("processStatusLine error", e);
+          }
+        } catch (e) {
+          console.warn("service_runner_line listener failed", e);
+        }
+      }).then((unlisten) => {
+        _unlistenLine = unlisten;
+      });
+
+      listen("service_runner_done", (evt) => {
+        const payload = evt?.payload || {};
+        const finalReport = payload.final_report || payload.finalReport || {};
+
+        try {
+          // Get fresh DOM references
+          const currentFinalJsonEl = document.getElementById("svc-final-json");
+          const currentViewResultsBtn =
+            document.getElementById("svc-view-results");
+          const currentSummaryEl = document.getElementById("svc-summary");
+          const currentBackBtn = document.getElementById("svc-report-back");
+          const currentRunBtn = document.getElementById("svc-report-run");
+          const currentOverlay = document.getElementById("svc-log-overlay");
+
+          lastFinalJsonString = JSON.stringify(finalReport, null, 2);
+
+          if (currentFinalJsonEl) {
+            const highlighted = hljs.highlight(lastFinalJsonString, {
+              language: "json",
+            }).value;
+            currentFinalJsonEl.innerHTML = `<code class="hljs language-json">${highlighted}</code>`;
+          }
+
+          applyFinalStatusesFromReport(finalReport);
+          const ok = finalReport?.overall_status === "success";
+
+          // Show summary
+          if (currentSummaryEl) {
+            const summaryTitleEl = document.getElementById("svc-summary-title");
+            const summaryIconEl = document.getElementById("svc-summary-icon");
+            currentSummaryEl.hidden = false;
+            if (summaryTitleEl) {
+              summaryTitleEl.textContent = ok
+                ? "All tasks completed"
+                : "Completed with errors";
+            }
+            if (summaryIconEl) {
+              summaryIconEl.textContent = ok ? "✔" : "!";
+            }
+            currentSummaryEl.classList.toggle("ok", !!ok);
+          }
+
+          persistFinalReport(lastFinalJsonString);
+
+          // Store plan and log file paths for later save operation
+          try {
+            const runnerData = {
+              planFile: payload.plan_file || null,
+              logFile: payload.log_file || null,
+            };
+            sessionStorage.setItem(
+              "service.runnerData",
+              JSON.stringify(runnerData)
+            );
+          } catch (e) {
+            console.warn("Failed to store runner data:", e);
+          }
+
+          // Auto-save report if enabled in settings
+          handleAutoSave(finalReport, payload);
+
+          if (currentViewResultsBtn) {
+            currentViewResultsBtn.removeAttribute("disabled");
+          }
+
+          // Update global state to mark run as completed
+          updateGlobalProgress({
+            overallStatus:
+              finalReport?.overall_status === "success" ? "completed" : "error",
+          });
+
+          // Native run completed – re-enable UI controls
+          _isRunning = false;
+          if (currentOverlay) currentOverlay.hidden = true;
+          if (currentBackBtn) {
+            currentBackBtn.disabled = false;
+            currentBackBtn.removeAttribute("disabled");
+          }
+          if (currentRunBtn) {
+            currentRunBtn.disabled = false;
+            currentRunBtn.removeAttribute("aria-disabled");
+            currentRunBtn.removeAttribute("disabled");
+          }
+        } catch (e) {
+          const currentFinalJsonEl = document.getElementById("svc-final-json");
+          if (currentFinalJsonEl) {
+            currentFinalJsonEl.textContent = String(e);
+          }
+
+          const currentSummaryEl = document.getElementById("svc-summary");
+          if (currentSummaryEl) {
+            const summaryTitleEl = document.getElementById("svc-summary-title");
+            const summaryIconEl = document.getElementById("svc-summary-icon");
+            currentSummaryEl.hidden = false;
+            if (summaryTitleEl) {
+              summaryTitleEl.textContent = "Completed with errors";
+            }
+            if (summaryIconEl) {
+              summaryIconEl.textContent = "!";
+            }
+            currentSummaryEl.classList.remove("ok");
+          }
+
+          // Update global state to mark run as error
+          updateGlobalProgress({ overallStatus: "error" });
+        }
+      }).then((unlisten) => {
+        _unlistenDone = unlisten;
+      });
+    }
   }
 
   function handleFinalResult(result) {
@@ -573,9 +912,17 @@ export async function initPage() {
       const ok = obj?.overall_status === "success";
       showSummary(ok);
       persistFinalReport(lastFinalJsonString);
+
+      // Update global state
+      updateGlobalProgress({
+        overallStatus: ok ? "completed" : "error",
+      });
     } catch {
       finalJsonEl.textContent = String(result || "");
       showSummary(false);
+
+      // Update global state on error
+      updateGlobalProgress({ overallStatus: "error" });
     }
   }
 
@@ -634,6 +981,16 @@ export async function initPage() {
       `Task ${index} (${taskState[index].label}): ${prevStatus} → ${status}`
     );
     renderTaskList();
+
+    // Update global task state for persistent widget
+    const globalStatusMap = {
+      pending: "pending",
+      running: "running",
+      success: "success",
+      failure: "error",
+      skipped: "skip",
+    };
+    updateGlobalTaskStatus(index, globalStatusMap[status] || status);
 
     // Update summary whenever a task status changes
     if (_isRunning) {
@@ -725,6 +1082,10 @@ export async function initPage() {
 
   function clearLog() {
     logEl.textContent = "";
+    // Clear saved log when starting new run
+    try {
+      sessionStorage.removeItem("service.runnerLog");
+    } catch {}
   }
   function appendLog(line) {
     const first = !logEl.textContent;
@@ -734,6 +1095,10 @@ export async function initPage() {
     if (first) {
       showOverlay(false);
     }
+    // Save log to sessionStorage for restoration
+    try {
+      sessionStorage.setItem("service.runnerLog", logEl.textContent);
+    } catch {}
   }
   function showOverlay(show) {
     // If showing, ensure it's visible; otherwise hide.
@@ -1121,7 +1486,7 @@ export async function initPage() {
       } else {
         appendLog(`[STDERR] ${s}`);
       }
-      maybeProcessStatus(s);
+      processStatusLine(s);
     });
 
     cmd.stdout.on("data", (line) => {
@@ -1146,7 +1511,7 @@ export async function initPage() {
           appendLog(`[STDOUT] ${s}`);
         }
         // Also check stdout for task status markers
-        maybeProcessStatus(s);
+        processStatusLine(s);
       }
     });
 
@@ -1231,7 +1596,7 @@ export async function initPage() {
       const lines = added.split(/\r?\n/).filter(Boolean);
       for (const line of lines) {
         appendLog(line);
-        maybeProcessStatus(line);
+        processStatusLine(line);
       }
     } finally {
       _logPoll.busy = false;

@@ -1215,6 +1215,20 @@ class BuilderUI {
  * Initialize the Service Run Builder page
  */
 export async function initPage() {
+  // Check if there's an active run - if so, redirect to runner page
+  try {
+    const { getRunState, isRunActive } = await import(
+      "../../utils/task-state.js"
+    );
+    const state = getRunState();
+    if (isRunActive() || state.overallStatus === "running") {
+      window.location.hash = "#/service-report";
+      return;
+    }
+  } catch (e) {
+    console.warn("Failed to check run state:", e);
+  }
+
   const params = new URLSearchParams(location.hash.split("?")[1] || "");
   const preset = params.get("preset");
   const mode = params.get("mode");

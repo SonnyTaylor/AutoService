@@ -485,3 +485,145 @@ details[open] summary {
   color: var(--muted);
   text-align: center;
 }
+
+/* ===================================================================
+   Task Progress Widget - Persistent corner overlay for service runs
+   =================================================================== */
+
+.task-progress-widget {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 320px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2);
+  z-index: 9999;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+}
+
+.task-progress-widget.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.task-progress-widget.hidden {
+  display: none;
+}
+
+.task-progress-widget .widget-content {
+  padding: 16px;
+}
+
+.task-progress-widget .widget-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.task-progress-widget .widget-icon {
+  font-size: 24px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.task-progress-widget .widget-icon .spinner-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.task-progress-widget .widget-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-progress-widget .widget-status {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.task-progress-widget .widget-meta {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.task-progress-widget .widget-close {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 18px;
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.task-progress-widget .widget-close:hover {
+  background: var(--panel-hover);
+  color: var(--text);
+}
+
+.task-progress-widget .widget-progress {
+  height: 6px;
+  background: var(--panel-accent);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.task-progress-widget .widget-progress-bar {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.task-progress-widget .widget-current-task {
+  font-size: 13px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: var(--panel-accent);
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.task-progress-widget .widget-current-task i {
+  flex-shrink: 0;
+}
+
+.task-progress-widget .widget-current-task .spinner-icon {
+  animation: spin 1s linear infinite;
+}
+
+/* Hover effect for clickable widget */
+.task-progress-widget[style*="cursor: pointer"]:hover {
+  border-color: var(--primary);
+  box-shadow: 0 4px 24px rgba(79, 140, 255, 0.2), 0 2px 8px rgba(0, 0, 0, 0.2);
+}

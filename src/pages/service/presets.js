@@ -5,6 +5,20 @@
  * Keyboard accessible: Enter/Space to toggle a card.
  */
 export async function initPage() {
+  // Check if there's an active run - if so, redirect to runner page
+  try {
+    const { getRunState, isRunActive } = await import(
+      "../../utils/task-state.js"
+    );
+    const state = getRunState();
+    if (isRunActive() || state.overallStatus === "running") {
+      window.location.hash = "#/service-report";
+      return;
+    }
+  } catch (e) {
+    console.warn("Failed to check run state:", e);
+  }
+
   const cards = Array.from(document.querySelectorAll(".preset-card"));
   const startBtn = document.getElementById("svc-start");
   let selected = null;
