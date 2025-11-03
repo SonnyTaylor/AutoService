@@ -210,21 +210,15 @@ async function onRouteChange() {
       );
       const state = getRunState();
 
-      // If there's an active run, always go to the runner page
-      if (isRunActive() || state.overallStatus === "running") {
-        if (name !== "service-report") {
-          window.location.hash = "#/service-report";
-          return;
-        }
-      }
-      // If run is completed/error, allow navigation to results
-      else if (
-        (state.overallStatus === "completed" ||
-          state.overallStatus === "error") &&
-        state.runId
+      // If there's an active run or recently completed run, always go to the runner page
+      if (
+        isRunActive() ||
+        state.overallStatus === "running" ||
+        state.overallStatus === "completed" ||
+        state.overallStatus === "error"
       ) {
-        if (name === "service") {
-          // Clicking service tab after completion should go to results
+        // Always redirect service-related routes to the runner page when there's an active/completed run
+        if (name !== "service-report" && state.runId) {
           window.location.hash = "#/service-report";
           return;
         }

@@ -36,15 +36,26 @@ let _unlistenDone = null;
  * Process status line markers from Python runner (module-level for event persistence)
  * @param {string} line - Log line to process
  */
-function processStatusLine(line) {
-  // Get fresh DOM references and current state
+async function processStatusLine(line) {
+  // CRITICAL: Always update global state first, regardless of DOM presence
+  // This ensures widget and restored pages show accurate progress even when not on runner page
+
+  // Import global state updater
+  let updateGlobalTaskStatus = null;
+  try {
+    const taskStateModule = await import("../../utils/task-state.js");
+    updateGlobalTaskStatus = taskStateModule.updateTaskStatus;
+  } catch (e) {
+    console.warn("Failed to import task-state module:", e);
+  }
+
+  // Get DOM references (may be null if not on runner page)
   const logEl = document.getElementById("svc-log");
   const taskListEl = document.getElementById("svc-task-status");
 
-  if (!logEl || !taskListEl) return;
-
   // Helper to append to log with fresh DOM reference
   const appendToLog = (message) => {
+    if (!logEl) return; // Skip if not on page
     const first = !logEl.textContent;
     logEl.textContent += (logEl.textContent ? "\n" : "") + message;
     logEl.scrollTop = logEl.scrollHeight;
@@ -59,39 +70,26 @@ function processStatusLine(line) {
     } catch {}
   };
 
-  // Helper to update task status with fresh DOM reference
-  const updateTaskStatusDom = async (taskIndex, status) => {
-    try {
-      // Update global state
-      const { updateTaskStatus } = await import("../../utils/task-state.js");
-      const statusMap = {
-        running: "running",
-        success: "success",
-        failure: "error",
-        skipped: "skip",
-      };
-      updateTaskStatus(taskIndex, statusMap[status] || status);
+  // Helper to update task status DOM
+  const updateTaskStatusDom = (taskIndex, status) => {
+    if (!taskListEl) return; // Skip if not on page
 
-      // Update local DOM
-      const tasks = Array.from(taskListEl.children);
-      if (tasks[taskIndex]) {
-        tasks[taskIndex].className = `task-status ${status}`;
-        const badge = tasks[taskIndex].querySelector(".right");
-        if (badge) {
-          if (status === "running") {
-            badge.innerHTML =
-              '<span class="badge running"><span class="dot"></span> Running</span>';
-          } else if (status === "success") {
-            badge.innerHTML = '<span class="badge ok">Success</span>';
-          } else if (status === "failure") {
-            badge.innerHTML = '<span class="badge fail">Failure</span>';
-          } else if (status === "skipped") {
-            badge.innerHTML = '<span class="badge skipped">Skipped</span>';
-          }
+    const tasks = Array.from(taskListEl.children);
+    if (tasks[taskIndex]) {
+      tasks[taskIndex].className = `task-status ${status}`;
+      const badge = tasks[taskIndex].querySelector(".right");
+      if (badge) {
+        if (status === "running") {
+          badge.innerHTML =
+            '<span class="badge running"><span class="dot"></span> Running</span>';
+        } else if (status === "success") {
+          badge.innerHTML = '<span class="badge ok">Success</span>';
+        } else if (status === "failure") {
+          badge.innerHTML = '<span class="badge fail">Failure</span>';
+        } else if (status === "skipped") {
+          badge.innerHTML = '<span class="badge skipped">Skipped</span>';
         }
       }
-    } catch (e) {
-      console.warn("Failed to update task status:", e);
     }
   };
 
@@ -100,6 +98,13 @@ function processStatusLine(line) {
   if (startMatch) {
     const taskIndex = parseInt(startMatch[1]);
     const taskType = startMatch[2];
+
+    // Update global state FIRST (always happens)
+    if (updateGlobalTaskStatus) {
+      updateGlobalTaskStatus(taskIndex, "running");
+    }
+
+    // Then update DOM if available
     updateTaskStatusDom(taskIndex, "running");
     appendToLog(`[INFO] Started: ${taskType}`);
     return;
@@ -109,6 +114,13 @@ function processStatusLine(line) {
   if (okMatch) {
     const taskIndex = parseInt(okMatch[1]);
     const taskType = okMatch[2];
+
+    // Update global state FIRST (always happens)
+    if (updateGlobalTaskStatus) {
+      updateGlobalTaskStatus(taskIndex, "success");
+    }
+
+    // Then update DOM if available
     updateTaskStatusDom(taskIndex, "success");
     appendToLog(`[SUCCESS] Completed: ${taskType}`);
     return;
@@ -119,6 +131,13 @@ function processStatusLine(line) {
     const taskIndex = parseInt(failMatch[1]);
     const taskType = failMatch[2];
     const reason = failMatch[3] || "Failed";
+
+    // Update global state FIRST (always happens)
+    if (updateGlobalTaskStatus) {
+      updateGlobalTaskStatus(taskIndex, "error");
+    }
+
+    // Then update DOM if available
     updateTaskStatusDom(taskIndex, "failure");
     appendToLog(`[ERROR] Failed: ${taskType} - ${reason}`);
     return;
@@ -129,6 +148,13 @@ function processStatusLine(line) {
     const taskIndex = parseInt(skipMatch[1]);
     const taskType = skipMatch[2];
     const reason = skipMatch[3] || "Skipped";
+
+    // Update global state FIRST (always happens)
+    if (updateGlobalTaskStatus) {
+      updateGlobalTaskStatus(taskIndex, "skip");
+    }
+
+    // Then update DOM if available
     updateTaskStatusDom(taskIndex, "skipped");
     appendToLog(`[WARNING] Skipped: ${taskType} - ${reason}`);
     return;
@@ -146,6 +172,29 @@ function processStatusLine(line) {
 
     try {
       const obj = JSON.parse(jsonPart);
+
+      // Update global state with task statuses from progress JSON
+      if (
+        obj?.tasks_status &&
+        Array.isArray(obj.tasks_status) &&
+        updateGlobalTaskStatus
+      ) {
+        obj.tasks_status.forEach((taskResult, idx) => {
+          const status = taskResult.status;
+          const statusMap = {
+            success: "success",
+            error: "error",
+            warning: "warning",
+            skip: "skip",
+            running: "running",
+          };
+          if (status && statusMap[status]) {
+            updateGlobalTaskStatus(idx, statusMap[status]);
+          }
+        });
+      }
+
+      // Update DOM elements if available
       const finalJsonEl = document.getElementById("svc-final-json");
 
       if (finalJsonEl) {
@@ -378,11 +427,13 @@ export async function initPage() {
     status: "pending", // pending | running | success | failure | skipped
   }));
 
-  // Check if there's an active run in global state and restore UI
+  // Check if there's an active or completed run in global state and restore UI
   const globalState = getRunState();
   if (
     globalState &&
-    globalState.overallStatus === "running" &&
+    (globalState.overallStatus === "running" ||
+      globalState.overallStatus === "completed" ||
+      globalState.overallStatus === "error") &&
     globalState.tasks.length > 0
   ) {
     // Restore task statuses from global state
@@ -404,7 +455,9 @@ export async function initPage() {
     try {
       const savedLog = sessionStorage.getItem("service.runnerLog");
       if (savedLog && logEl) {
-        logEl.innerHTML = savedLog;
+        logEl.textContent = savedLog;
+        // Scroll to bottom
+        logEl.scrollTop = logEl.scrollHeight;
       }
     } catch {}
   }
@@ -725,9 +778,17 @@ export async function initPage() {
           const line = payload.line || "";
           if (!line) return;
 
-          // Get fresh DOM references
+          // CRITICAL: Always process status line first to update global state
+          // This happens regardless of whether we're on the runner page
+          try {
+            processStatusLine(line);
+          } catch (e) {
+            console.warn("processStatusLine error", e);
+          }
+
+          // Then update DOM elements if available
           const currentLogEl = document.getElementById("svc-log");
-          if (!currentLogEl) return;
+          if (!currentLogEl) return; // Not on runner page, but state was already updated above
 
           // Replace verbose progress JSON lines with concise summary
           if (
@@ -774,12 +835,6 @@ export async function initPage() {
                 currentLogEl.textContent
               );
             } catch {}
-          }
-
-          try {
-            processStatusLine(line);
-          } catch (e) {
-            console.warn("processStatusLine error", e);
           }
         } catch (e) {
           console.warn("service_runner_line listener failed", e);
@@ -858,6 +913,41 @@ export async function initPage() {
             overallStatus:
               finalReport?.overall_status === "success" ? "completed" : "error",
           });
+
+          // Send notification if not already sent and user is not on the page
+          if (!_notifiedOnce) {
+            _notifiedOnce = true;
+            const currentHash = window.location.hash || "";
+            const onRunnerPage = currentHash.startsWith("#/service-report");
+
+            if (!onRunnerPage) {
+              // User is on another page - send notification
+              (async () => {
+                try {
+                  const api = await ensureNotificationApi();
+                  if (!api) return;
+
+                  let granted = await api.isPermissionGranted();
+                  if (!granted) {
+                    const permission = await api.requestPermission();
+                    granted = permission === "granted";
+                  }
+
+                  if (granted) {
+                    const title = ok
+                      ? "Service Run Complete"
+                      : "Service Run Completed with Errors";
+                    const completed = finalReport?.completed_count || 0;
+                    const total = finalReport?.total_count || 0;
+                    const body = `Completed ${completed}/${total} tasks`;
+                    api.sendNotification({ title, body });
+                  }
+                } catch (e) {
+                  console.warn("Failed to send completion notification:", e);
+                }
+              })();
+            }
+          }
 
           // Native run completed – re-enable UI controls
           _isRunning = false;
