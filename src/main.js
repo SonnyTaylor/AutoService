@@ -199,25 +199,22 @@ async function onRouteChange() {
   const [name] = route.split("?", 2);
 
   // Check if there's an active run and redirect to runner if navigating to service routes
-  if (
-    name === "service" ||
-    name === "service-run" ||
-    name === "service-results"
-  ) {
+  if (name === "service" || name === "service-run") {
     try {
       const { getRunState, isRunActive } = await import(
         "./utils/task-state.js"
       );
       const state = getRunState();
 
-      // If there's an active run or recently completed run, always go to the runner page
+      // If there's an active run or recently completed run, redirect to runner page
       if (
         isRunActive() ||
         state.overallStatus === "running" ||
         state.overallStatus === "completed" ||
         state.overallStatus === "error"
       ) {
-        // Always redirect service-related routes to the runner page when there's an active/completed run
+        // Redirect service-related routes to the runner page when there's an active/completed run
+        // BUT allow service-results to pass through (user wants to see results page)
         if (name !== "service-report" && state.runId) {
           window.location.hash = "#/service-report";
           return;

@@ -53,6 +53,7 @@ function handleStateChange(state) {
   // Check if we're on the service-report page - don't show widget there
   const currentHash = window.location.hash || "";
   const onRunnerPage = currentHash.startsWith("#/service-report");
+  const onServicePage = currentHash.startsWith("#/service");
 
   if (state.overallStatus === "running") {
     // Only show widget if NOT on the runner page
@@ -87,17 +88,18 @@ function handleStateChange(state) {
       timerInterval = null;
     }
 
-    if (!onRunnerPage) {
-      renderWidget(state);
-      showWidget(); // Keep widget visible after completion
+    // Clear any pending auto-hide timeout
+    if (completionTimeout) {
+      clearTimeout(completionTimeout);
+      completionTimeout = null;
+    }
 
-      // Auto-hide after 10 seconds on completion (increased from 5s)
-      if (completionTimeout) {
-        clearTimeout(completionTimeout);
-      }
-      completionTimeout = setTimeout(() => {
-        hideWidget();
-      }, 10000);
+    // For completed/error states, only show widget if:
+    // 1. Not on runner page, AND
+    // 2. Not on any service page (results page click should hide widget)
+    if (!onRunnerPage && !onServicePage) {
+      renderWidget(state);
+      showWidget(); // Keep widget visible until user manually dismisses or navigates to service pages
     } else {
       hideWidget();
     }
@@ -107,6 +109,13 @@ function handleStateChange(state) {
       clearInterval(timerInterval);
       timerInterval = null;
     }
+
+    // Clear any pending auto-hide timeout
+    if (completionTimeout) {
+      clearTimeout(completionTimeout);
+      completionTimeout = null;
+    }
+
     hideWidget();
   }
 }

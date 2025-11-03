@@ -355,7 +355,7 @@ export async function initPage() {
       `;
       notification.style.cssText = `
         position: fixed;
-        bottom: 20px;
+        bottom: 100px;
         right: 20px;
         background: #10b981;
         color: white;
@@ -363,7 +363,7 @@ export async function initPage() {
         border-radius: 8px;
         font-size: 14px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        z-index: 10000;
+        z-index: 9998;
         animation: slideInUp 0.3s ease-out;
         max-width: 400px;
       `;
@@ -786,9 +786,35 @@ export async function initPage() {
             console.warn("processStatusLine error", e);
           }
 
-          // Then update DOM elements if available
+          // CRITICAL: Always save to sessionStorage, even when not on page
+          // This ensures full log capture when running in background
+          try {
+            const existingLog =
+              sessionStorage.getItem("service.runnerLog") || "";
+
+            // Format the line for storage
+            let lineToStore;
+            if (
+              line.startsWith("PROGRESS_JSON:") ||
+              line.startsWith("PROGRESS_JSON_FINAL:")
+            ) {
+              lineToStore = summarizeProgressLine(line);
+            } else {
+              lineToStore = `[SR] ${line}`;
+            }
+
+            if (lineToStore) {
+              const updatedLog =
+                existingLog + (existingLog ? "\n" : "") + lineToStore;
+              sessionStorage.setItem("service.runnerLog", updatedLog);
+            }
+          } catch (e) {
+            console.warn("Failed to save log to sessionStorage:", e);
+          }
+
+          // Then update DOM elements if available (optional, only when on page)
           const currentLogEl = document.getElementById("svc-log");
-          if (!currentLogEl) return; // Not on runner page, but state was already updated above
+          if (!currentLogEl) return; // Not on runner page, but state and log were already updated above
 
           // Replace verbose progress JSON lines with concise summary
           if (
@@ -807,14 +833,6 @@ export async function initPage() {
                 const overlay = document.getElementById("svc-log-overlay");
                 if (overlay) overlay.hidden = true;
               }
-
-              // Save log to sessionStorage
-              try {
-                sessionStorage.setItem(
-                  "service.runnerLog",
-                  currentLogEl.textContent
-                );
-              } catch {}
             }
           } else {
             const first = !currentLogEl.textContent;
@@ -827,14 +845,6 @@ export async function initPage() {
               const overlay = document.getElementById("svc-log-overlay");
               if (overlay) overlay.hidden = true;
             }
-
-            // Save log to sessionStorage
-            try {
-              sessionStorage.setItem(
-                "service.runnerLog",
-                currentLogEl.textContent
-              );
-            } catch {}
           }
         } catch (e) {
           console.warn("service_runner_line listener failed", e);
@@ -1358,7 +1368,8 @@ export async function initPage() {
   }
 
   async function triggerCompletionNotification(ok) {
-    if (_notifiedOnce) return;
+    // Check if _notifiedOnce is defined (may not be during state restoration)
+    if (typeof _notifiedOnce !== "undefined" && _notifiedOnce) return;
     // Load setting
     try {
       const { core } = window.__TAURI__ || {};
@@ -1388,14 +1399,18 @@ export async function initPage() {
         ? "All tasks completed successfully. Click to view results."
         : "Some tasks failed. Click to review details.";
       api.sendNotification({ title, body });
-      _notifiedOnce = true;
+      // Only set flag if variable is defined
+      if (typeof _notifiedOnce !== "undefined") {
+        _notifiedOnce = true;
+      }
     } catch (e) {
       console.warn("Notification error:", e);
     }
   }
 
   async function triggerCompletionSound(ok) {
-    if (_notifiedOnce) {
+    // Check if _notifiedOnce is defined (may not be during state restoration)
+    if (typeof _notifiedOnce !== "undefined" && _notifiedOnce) {
       // Reuse the same guard to avoid multiple alerts per run
       return;
     }
@@ -1458,7 +1473,10 @@ export async function initPage() {
         await sound.play(Tone, volumePct);
       }
 
-      _notifiedOnce = true;
+      // Only set flag if variable is defined
+      if (typeof _notifiedOnce !== "undefined") {
+        _notifiedOnce = true;
+      }
     } catch (e) {
       console.warn("Tone play error:", e);
     }
