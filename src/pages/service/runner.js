@@ -645,6 +645,7 @@ export async function initPage() {
         runPlanPayload.metadata = {
           technician_name: serviceMetadata.technicianName,
           customer_name: serviceMetadata.customerName,
+          skipped: serviceMetadata.skipped || false,
         };
       }
 

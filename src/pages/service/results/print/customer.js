@@ -93,11 +93,15 @@ export async function buildCustomerHeader(title, overall, report) {
     metadata.hostname || report?.summary?.hostname || report?.hostname || "";
   const technicianName = metadata.technician_name || "";
   const customerName = metadata.customer_name || "";
+  const skipped = metadata.skipped === true;
 
   // Build service info section (right side, opposite from business branding on left)
   const serviceInfoLines = [];
-  if (technicianName) serviceInfoLines.push(`Technician: ${technicianName}`);
-  if (customerName) serviceInfoLines.push(`Customer: ${customerName}`);
+  // Only show technician/customer if not skipped
+  if (!skipped && technicianName)
+    serviceInfoLines.push(`Technician: ${technicianName}`);
+  if (!skipped && customerName)
+    serviceInfoLines.push(`Customer: ${customerName}`);
   if (hostname) serviceInfoLines.push(`Device: ${hostname}`);
 
   // Always show service info if we have any service details OR if business mode is enabled
