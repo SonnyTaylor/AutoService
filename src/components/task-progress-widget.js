@@ -18,6 +18,23 @@ let isVisible = false;
 let completionTimeout = null;
 let timerInterval = null;
 
+// Key used to record that the user has acknowledged/completed a run by viewing results
+const DISMISSED_RUN_KEY = "taskWidget.dismissedRunId";
+
+function getDismissedRunId() {
+  try {
+    return sessionStorage.getItem(DISMISSED_RUN_KEY) || null;
+  } catch {
+    return null;
+  }
+}
+
+function setDismissedRunId(runId) {
+  try {
+    if (runId) sessionStorage.setItem(DISMISSED_RUN_KEY, runId);
+  } catch {}
+}
+
 /**
  * Initialize and mount the widget.
  * Should be called once at app boot.
@@ -54,6 +71,20 @@ function handleStateChange(state) {
   const currentHash = window.location.hash || "";
   const onRunnerPage = currentHash.startsWith("#/service-report");
   const onServicePage = currentHash.startsWith("#/service");
+  const onResultsPage = currentHash.startsWith("#/service-results");
+
+  // Auto-dismiss when on results page and run completes
+  if (
+    onResultsPage &&
+    state &&
+    (state.overallStatus === "completed" || state.overallStatus === "error") &&
+    state.runId
+  ) {
+    setDismissedRunId(state.runId);
+  }
+
+  const dismissedForThisRun =
+    !!state.runId && getDismissedRunId() === state.runId;
 
   if (state.overallStatus === "running") {
     // Only show widget if NOT on the runner page
@@ -82,6 +113,11 @@ function handleStateChange(state) {
     state.overallStatus === "completed" ||
     state.overallStatus === "error"
   ) {
+    // If the user has visited results for this run, don't show the widget anymore
+    if (dismissedForThisRun) {
+      hideWidget();
+      return;
+    }
     // Stop timer on completion
     if (timerInterval) {
       clearInterval(timerInterval);
@@ -125,6 +161,17 @@ function handleStateChange(state) {
  */
 function handleHashChange() {
   const state = getRunState();
+  // If user navigates to results page for a completed/error run, mark dismissed
+  const hash = window.location.hash || "";
+  const onResultsPage = hash.startsWith("#/service-results");
+  if (
+    onResultsPage &&
+    state &&
+    (state.overallStatus === "completed" || state.overallStatus === "error") &&
+    state.runId
+  ) {
+    setDismissedRunId(state.runId);
+  }
   handleStateChange(state);
 }
 
@@ -166,7 +213,15 @@ function renderWidget(state) {
           state.overallStatus === "completed" ||
           state.overallStatus === "error"
             ? `
-          <button class="widget-close" aria-label="View results" title="Go to runner page">
+          <button class="widget-close" aria-label="${
+            state.overallStatus === "running"
+              ? "Go to runner page"
+              : "View results"
+          }" title="${
+                state.overallStatus === "running"
+                  ? "Go to runner page"
+                  : "View results"
+              }">
             <i class="ph ph-arrow-square-out"></i>
           </button>
         `
@@ -303,7 +358,7 @@ function hideWidget() {
 }
 
 /**
- * Handle widget click - navigate to runner page.
+ * Handle widget click - navigate to runner or results page.
  */
 function handleWidgetClick(e) {
   // Don't navigate if clicking the close button
@@ -311,7 +366,18 @@ function handleWidgetClick(e) {
     e.stopPropagation();
   }
 
-  window.location.hash = "#/service-report";
+  const state = getRunState();
+
+  // For completed/error runs, go straight to results and mark dismissed
+  if (state.overallStatus === "completed" || state.overallStatus === "error") {
+    if (state.runId) {
+      setDismissedRunId(state.runId);
+    }
+    window.location.hash = "#/service-results";
+  } else {
+    // For running state, go to runner page
+    window.location.hash = "#/service-report";
+  }
 }
 
 /**

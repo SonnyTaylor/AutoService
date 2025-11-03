@@ -93,6 +93,56 @@ async function processStatusLine(line) {
     }
   };
 
+  // Helper to update the summary UI from global state metrics (when on runner page)
+  const updateSummaryFromGlobal = async () => {
+    const summaryEl = document.getElementById("svc-summary");
+    if (!summaryEl) return; // Only when runner page is visible
+    try {
+      const { getProgressMetrics } = await import("../../utils/task-state.js");
+      const metrics = getProgressMetrics();
+      const total = metrics.total || 0;
+      const completed = metrics.completed || 0;
+      const runningName = metrics.currentTask
+        ? metrics.currentTask.label
+        : null;
+
+      const summaryTitleEl = document.getElementById("svc-summary-title");
+      const summarySubEl = document.getElementById("svc-summary-sub");
+      const summaryIconEl = document.getElementById("svc-summary-icon");
+      const summaryProgBar = document.getElementById(
+        "svc-summary-progress-bar"
+      );
+
+      summaryEl.hidden = false;
+      summaryEl.classList.remove("ok", "fail");
+      if (summaryIconEl) {
+        summaryIconEl.innerHTML =
+          '<span class="spinner" aria-hidden="true"></span>';
+      }
+
+      if (runningName) {
+        const currentIndex = Math.min(metrics.currentTask?.id || 0, total - 1);
+        const taskNum = currentIndex + 1;
+        if (summaryTitleEl)
+          summaryTitleEl.textContent = `Running Task ${taskNum}/${total}`;
+        if (summarySubEl) summarySubEl.textContent = `${runningName}`;
+      } else if (completed > 0 && completed < total) {
+        if (summaryTitleEl)
+          summaryTitleEl.textContent = `Progress: ${completed}/${total} completed`;
+        if (summarySubEl) summarySubEl.textContent = "Preparing next task…";
+      } else {
+        if (summaryTitleEl) summaryTitleEl.textContent = "Starting…";
+        if (summarySubEl)
+          summarySubEl.textContent = "Initializing service run…";
+      }
+
+      const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+      if (summaryProgBar) summaryProgBar.style.width = `${pct}%`;
+    } catch (e) {
+      console.warn("Failed to update summary from global state:", e);
+    }
+  };
+
   // Parse status markers
   const startMatch = line.match(/^TASK_START:(\d+):(.+)$/);
   if (startMatch) {
@@ -107,6 +157,7 @@ async function processStatusLine(line) {
     // Then update DOM if available
     updateTaskStatusDom(taskIndex, "running");
     appendToLog(`[INFO] Started: ${taskType}`);
+    await updateSummaryFromGlobal();
     return;
   }
 
@@ -123,6 +174,7 @@ async function processStatusLine(line) {
     // Then update DOM if available
     updateTaskStatusDom(taskIndex, "success");
     appendToLog(`[SUCCESS] Completed: ${taskType}`);
+    await updateSummaryFromGlobal();
     return;
   }
 
@@ -140,6 +192,7 @@ async function processStatusLine(line) {
     // Then update DOM if available
     updateTaskStatusDom(taskIndex, "failure");
     appendToLog(`[ERROR] Failed: ${taskType} - ${reason}`);
+    await updateSummaryFromGlobal();
     return;
   }
 
@@ -157,6 +210,7 @@ async function processStatusLine(line) {
     // Then update DOM if available
     updateTaskStatusDom(taskIndex, "skipped");
     appendToLog(`[WARNING] Skipped: ${taskType} - ${reason}`);
+    await updateSummaryFromGlobal();
     return;
   }
 
@@ -221,6 +275,9 @@ async function processStatusLine(line) {
           }
           summaryEl.classList.toggle("ok", !!ok);
         }
+      } else {
+        // Non-final progress JSON: update summary to reflect current progress
+        await updateSummaryFromGlobal();
       }
     } catch (e) {
       console.warn("Failed to parse progress JSON:", e);
@@ -387,7 +444,8 @@ export async function initPage() {
   forceHideOverlay();
 
   backBtn?.addEventListener("click", () => {
-    window.location.hash = "#/service-run";
+    // Navigate back to presets page
+    window.location.hash = "#/service";
   });
 
   copyFinalBtn?.addEventListener("click", async () => {
@@ -511,12 +569,11 @@ export async function initPage() {
     wireNativeEvents();
     showOverlay(false);
     updateSummaryDuringRun();
-    // Disable run button while running
+    // Disable run button while running (but keep back button enabled)
     runBtn.disabled = true;
     runBtn.setAttribute("disabled", "");
     runBtn.setAttribute("aria-disabled", "true");
-    backBtn.disabled = true;
-    backBtn.setAttribute("disabled", "");
+    // Keep back button enabled so users can navigate away during run
   }
 
   runBtn?.addEventListener("click", async () => {
@@ -546,12 +603,11 @@ export async function initPage() {
     }
 
     _isRunning = true;
-    // Hard-disable UI controls
+    // Hard-disable run button during run
     runBtn.disabled = true;
     runBtn.setAttribute("disabled", "");
     runBtn.setAttribute("aria-disabled", "true");
-    backBtn.disabled = true;
-    backBtn.setAttribute("disabled", "");
+    // Keep back button enabled so users can navigate away during run
     // New service: clear any previously cached results so navigating back won't show stale data
     clearFinalReportCache();
     lastFinalJsonString = "{}";
@@ -1245,6 +1301,15 @@ export async function initPage() {
     if (lastFinalJsonString && lastFinalJsonString.length > 2) {
       persistFinalReport(lastFinalJsonString);
     }
+
+    // Mark this run as dismissed since user is viewing results
+    const state = getRunState();
+    if (state && state.runId) {
+      try {
+        sessionStorage.setItem("taskWidget.dismissedRunId", state.runId);
+      } catch {}
+    }
+
     window.location.hash = "#/service-results";
   });
 
