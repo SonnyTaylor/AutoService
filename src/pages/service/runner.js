@@ -443,9 +443,33 @@ export async function initPage() {
   };
   forceHideOverlay();
 
-  backBtn?.addEventListener("click", () => {
+  backBtn?.addEventListener("click", (e) => {
+    console.log("[BackBtn] Click event fired", {
+      isRunning: _isRunning,
+      buttonDisabled: backBtn?.disabled,
+      buttonElement: backBtn,
+      currentHash: window.location.hash,
+    });
+
+    // Mark run state as dismissed so presets page doesn't redirect back
+    try {
+      const state = getRunState();
+      if (state && state.runId) {
+        console.log("[BackBtn] Marking run as dismissed:", state.runId);
+        sessionStorage.setItem("taskWidget.dismissedRunId", state.runId);
+      }
+    } catch (err) {
+      console.warn("[BackBtn] Failed to mark run as dismissed:", err);
+    }
+
     // Navigate back to presets page
-    window.location.hash = "#/service";
+    try {
+      console.log("[BackBtn] Attempting to navigate to #/service");
+      window.location.hash = "#/service";
+      console.log("[BackBtn] Navigation triggered successfully");
+    } catch (err) {
+      console.error("[BackBtn] Navigation failed:", err);
+    }
   });
 
   copyFinalBtn?.addEventListener("click", async () => {
@@ -524,6 +548,26 @@ export async function initPage() {
 
   container.hidden = false;
 
+  // Initialize task status tracking
+  let taskStatuses = {};
+  tasks.forEach((task, index) => {
+    taskStatuses[index] = taskState[index]?.status || "pending";
+  });
+
+  // Track whether a run is currently in progress to prevent duplicate clicks
+  let _isRunning = globalState && globalState.overallStatus === "running";
+  // Hold results for client-only tasks (not executed by Python runner)
+  let _clientResults = [];
+  // Prevent duplicate notifications per run - track in sessionStorage to persist across page loads
+  let _notifiedOnce = false;
+  try {
+    const notifiedRunId = sessionStorage.getItem("service.notifiedRunId");
+    if (notifiedRunId && globalState && globalState.runId === notifiedRunId) {
+      _notifiedOnce = true; // Already notified for this run
+      console.log("[Init] Notifications already sent for run:", notifiedRunId);
+    }
+  } catch {}
+
   // Try to rehydrate from cached final report so navigation back preserves results
   try {
     const cachedRaw =
@@ -550,19 +594,6 @@ export async function initPage() {
       } catch {}
     }
   } catch {}
-
-  // Initialize task status tracking
-  let taskStatuses = {};
-  tasks.forEach((task, index) => {
-    taskStatuses[index] = taskState[index]?.status || "pending";
-  });
-
-  // Track whether a run is currently in progress to prevent duplicate clicks
-  let _isRunning = globalState && globalState.overallStatus === "running";
-  // Hold results for client-only tasks (not executed by Python runner)
-  let _clientResults = [];
-  // Prevent duplicate notifications per run
-  let _notifiedOnce = false;
 
   // If we're reconnecting to an active run, wire up native events and update UI
   if (_isRunning) {
@@ -612,6 +643,12 @@ export async function initPage() {
     clearFinalReportCache();
     lastFinalJsonString = "{}";
     _notifiedOnce = false;
+    // Clear notification flag for new run
+    try {
+      sessionStorage.removeItem("service.notifiedRunId");
+      sessionStorage.removeItem("taskWidget.dismissedRunId");
+      console.log("[RunBtn] Cleared notification flags for new run");
+    } catch {}
     if (viewResultsBtn) {
       try {
         viewResultsBtn.setAttribute("disabled", "");
@@ -671,6 +708,9 @@ export async function initPage() {
 
       // If no runner tasks remain, synthesize a final report and finish
       if (!runnerTasks.length) {
+        console.log(
+          "[Runner] Client-only tasks completed, generating final report"
+        );
         const finalReport = buildFinalReportFromClient(_clientResults);
         handleFinalResult(finalReport);
 
@@ -681,12 +721,17 @@ export async function initPage() {
         });
 
         _isRunning = false;
+        console.log("[Runner] Client-only run completed, re-enabling controls");
         showOverlay(false);
         backBtn.disabled = false;
         runBtn.disabled = false;
         runBtn.removeAttribute("aria-disabled");
         runBtn.removeAttribute("disabled");
         backBtn.removeAttribute("disabled");
+        console.log("[Runner] Controls re-enabled after client-only run", {
+          backBtnDisabled: backBtn.disabled,
+          runBtnDisabled: runBtn.disabled,
+        });
         return;
       }
 
@@ -747,38 +792,56 @@ export async function initPage() {
           appendLog(
             `[WARN] Native runner failed, falling back to shell: ${err}`
           );
+          console.error("[Runner] Native runner failed, falling back:", err);
           const result = await runRunner(jsonArg); // fallback
           handleFinalResult(mergeClientWithRunner(_clientResults, result));
           // Fallback is synchronous to completion; re-enable controls now
           _isRunning = false;
+          console.log("[Runner] Fallback completed, re-enabling controls");
           showOverlay(false);
           backBtn.disabled = false;
           runBtn.disabled = false;
           runBtn.removeAttribute("aria-disabled");
           runBtn.removeAttribute("disabled");
           backBtn.removeAttribute("disabled");
+          console.log("[Runner] Controls re-enabled after fallback", {
+            backBtnDisabled: backBtn.disabled,
+            runBtnDisabled: runBtn.disabled,
+          });
         }
       } else {
+        console.log("[Runner] No invoke available, using shell fallback");
         const result = await runRunner(jsonArg);
         handleFinalResult(mergeClientWithRunner(_clientResults, result));
         _isRunning = false;
+        console.log("[Runner] Shell fallback completed, re-enabling controls");
         showOverlay(false);
         backBtn.disabled = false;
         runBtn.disabled = false;
         runBtn.removeAttribute("aria-disabled");
         runBtn.removeAttribute("disabled");
         backBtn.removeAttribute("disabled");
+        console.log("[Runner] Controls re-enabled after shell fallback", {
+          backBtnDisabled: backBtn.disabled,
+          runBtnDisabled: runBtn.disabled,
+        });
       }
     } catch (e) {
       appendLog(`[ERROR] ${new Date().toLocaleTimeString()} ${String(e)}`);
+      console.error("[Runner] Caught error during run:", e);
       showSummary(false);
       _isRunning = false;
+      console.log("[Runner] Error handler re-enabling controls");
       showOverlay(false);
       backBtn.disabled = false;
       runBtn.disabled = false;
       runBtn.removeAttribute("aria-disabled");
       runBtn.removeAttribute("disabled");
       backBtn.removeAttribute("disabled");
+      console.log("[Runner] Controls re-enabled after error", {
+        backBtnDisabled: backBtn.disabled,
+        runBtnDisabled: runBtn.disabled,
+      });
     }
   });
 
@@ -1018,15 +1081,31 @@ export async function initPage() {
 
           // Native run completed – re-enable UI controls
           _isRunning = false;
-          if (currentOverlay) currentOverlay.hidden = true;
+          console.log(
+            "[service_runner_done] Run completed, re-enabling controls",
+            {
+              currentBackBtn: !!currentBackBtn,
+              currentRunBtn: !!currentRunBtn,
+              hasOverlay: !!currentOverlay,
+            }
+          );
+          if (currentOverlay) {
+            currentOverlay.hidden = true;
+            console.log("[service_runner_done] Overlay hidden");
+          }
           if (currentBackBtn) {
             currentBackBtn.disabled = false;
             currentBackBtn.removeAttribute("disabled");
+            console.log("[service_runner_done] Back button re-enabled", {
+              disabled: currentBackBtn.disabled,
+              hasDisabledAttr: currentBackBtn.hasAttribute("disabled"),
+            });
           }
           if (currentRunBtn) {
             currentRunBtn.disabled = false;
             currentRunBtn.removeAttribute("aria-disabled");
             currentRunBtn.removeAttribute("disabled");
+            console.log("[service_runner_done] Run button re-enabled");
           }
         } catch (e) {
           const currentFinalJsonEl = document.getElementById("svc-final-json");
@@ -1465,9 +1544,17 @@ export async function initPage() {
         ? "All tasks completed successfully. Click to view results."
         : "Some tasks failed. Click to review details.";
       api.sendNotification({ title, body });
-      // Only set flag if variable is defined
+      // Mark this run as notified
       if (typeof _notifiedOnce !== "undefined") {
         _notifiedOnce = true;
+        // Save to sessionStorage to prevent duplicate notifications on page reload
+        try {
+          const state = getRunState();
+          if (state && state.runId) {
+            sessionStorage.setItem("service.notifiedRunId", state.runId);
+            console.log("[Notification] Marked run as notified:", state.runId);
+          }
+        } catch {}
       }
     } catch (e) {
       console.warn("Notification error:", e);
@@ -1539,9 +1626,20 @@ export async function initPage() {
         await sound.play(Tone, volumePct);
       }
 
-      // Only set flag if variable is defined
+      // Mark this run as notified
       if (typeof _notifiedOnce !== "undefined") {
         _notifiedOnce = true;
+        // Save to sessionStorage to prevent duplicate sounds on page reload
+        try {
+          const state = getRunState();
+          if (state && state.runId) {
+            sessionStorage.setItem("service.notifiedRunId", state.runId);
+            console.log(
+              "[CompletionSound] Marked run as notified:",
+              state.runId
+            );
+          }
+        } catch {}
       }
     } catch (e) {
       console.warn("Tone play error:", e);

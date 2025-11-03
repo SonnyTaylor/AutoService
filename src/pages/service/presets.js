@@ -6,14 +6,25 @@
  */
 export async function initPage() {
   // Check if there's an active run - if so, redirect to runner page
+  // BUT only if the user hasn't explicitly dismissed it via back button
   try {
     const { getRunState, isRunActive } = await import(
       "../../utils/task-state.js"
     );
     const state = getRunState();
-    if (isRunActive() || state.overallStatus === "running") {
+
+    // Check if user dismissed this run
+    const dismissedRunId = sessionStorage.getItem("taskWidget.dismissedRunId");
+    const isDismissed = dismissedRunId && state.runId === dismissedRunId;
+
+    if (!isDismissed && (isRunActive() || state.overallStatus === "running")) {
+      console.log("[Presets] Active run detected, redirecting to runner");
       window.location.hash = "#/service-report";
       return;
+    } else if (isDismissed) {
+      console.log(
+        "[Presets] Run was dismissed by user, staying on presets page"
+      );
     }
   } catch (e) {
     console.warn("Failed to check run state:", e);
