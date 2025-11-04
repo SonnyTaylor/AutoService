@@ -1239,14 +1239,16 @@ export async function initPage() {
     renderTaskList();
 
     // Update global task state for persistent widget
-    const globalStatusMap = {
-      pending: "pending",
-      running: "running",
-      success: "success",
-      failure: "error",
-      skipped: "skip",
-    };
-    updateGlobalTaskStatus(index, globalStatusMap[status] || status);
+    if (updateGlobalTaskStatus) {
+      const globalStatusMap = {
+        pending: "pending",
+        running: "running",
+        success: "success",
+        failure: "error",
+        skipped: "skip",
+      };
+      updateGlobalTaskStatus(index, globalStatusMap[status] || status);
+    }
 
     // Update summary whenever a task status changes
     if (_isRunning) {
