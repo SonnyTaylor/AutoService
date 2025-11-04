@@ -190,13 +190,24 @@ function setActiveTab(route) {
  * Update UI when the hash changes: normalize hash, compute route, set tab, and load page.
  */
 async function onRouteChange() {
+  console.log(
+    "[Router] onRouteChange called, current hash:",
+    window.location.hash
+  );
+
   const hash = normalizeHash();
   if (window.location.hash !== hash) {
+    console.log("[Router] Hash needs normalization:", {
+      current: window.location.hash,
+      normalized: hash,
+    });
     window.location.hash = hash; // will re-trigger
     return;
   }
   const route = hash.slice(2);
   const [name] = route.split("?", 2);
+
+  console.log("[Router] Processing route:", { hash, route, name });
 
   // Check if there's an active run and redirect to runner if navigating to service routes
   if (name === "service" || name === "service-run") {
@@ -206,25 +217,50 @@ async function onRouteChange() {
       );
       const state = getRunState();
 
-      // If there's an active run or recently completed run, redirect to runner page
+      // Check if user has dismissed this run (clicked back button)
+      let isDismissed = false;
+      try {
+        const dismissedRunId = sessionStorage.getItem(
+          "taskWidget.dismissedRunId"
+        );
+        isDismissed = dismissedRunId === state.runId;
+        console.log("[Router] Checking run dismissal:", {
+          currentRunId: state.runId,
+          dismissedRunId,
+          isDismissed,
+          overallStatus: state.overallStatus,
+          navigatingTo: name,
+        });
+      } catch (e) {
+        console.warn("[Router] Failed to check dismissal status:", e);
+      }
+
+      // If there's an active run or recently completed run (and not dismissed), redirect to runner page
       if (
-        isRunActive() ||
-        state.overallStatus === "running" ||
-        state.overallStatus === "completed" ||
-        state.overallStatus === "error"
+        !isDismissed &&
+        (isRunActive() ||
+          state.overallStatus === "running" ||
+          state.overallStatus === "completed" ||
+          state.overallStatus === "error")
       ) {
         // Redirect service-related routes to the runner page when there's an active/completed run
         // BUT allow service-results to pass through (user wants to see results page)
         if (name !== "service-report" && state.runId) {
+          console.log(
+            "[Router] Redirecting to runner page (run not dismissed)"
+          );
           window.location.hash = "#/service-report";
           return;
         }
+      } else if (isDismissed) {
+        console.log("[Router] Run dismissed, allowing navigation to:", name);
       }
     } catch (e) {
-      console.warn("Failed to check run state:", e);
+      console.warn("[Router] Failed to check run state:", e);
     }
   }
 
+  console.log("[Router] Setting active tab and loading page:", name);
   setActiveTab(name);
   loadPage(name);
 }
@@ -272,8 +308,13 @@ async function refreshTechnicianTabs() {
 // Wire up events
 // -----------------------------
 
-window.addEventListener("hashchange", onRouteChange);
+window.addEventListener("hashchange", () => {
+  console.log("[Router] Hash changed to:", window.location.hash);
+  onRouteChange();
+});
+
 window.addEventListener("DOMContentLoaded", () => {
+  console.log("[Router] DOM loaded, initializing router");
   onRouteChange();
 
   // Initialize persistent task progress widget

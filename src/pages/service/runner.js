@@ -454,19 +454,40 @@ export async function initPage() {
     // Mark run state as dismissed so presets page doesn't redirect back
     try {
       const state = getRunState();
+      console.log("[BackBtn] Current run state:", {
+        runId: state?.runId,
+        overallStatus: state?.overallStatus,
+        hasState: !!state,
+      });
+
       if (state && state.runId) {
         console.log("[BackBtn] Marking run as dismissed:", state.runId);
         sessionStorage.setItem("taskWidget.dismissedRunId", state.runId);
+
+        // Verify it was set
+        const verify = sessionStorage.getItem("taskWidget.dismissedRunId");
+        console.log("[BackBtn] Dismissal set and verified:", {
+          expected: state.runId,
+          actual: verify,
+          matches: verify === state.runId,
+        });
+      } else {
+        console.warn("[BackBtn] No state or runId to dismiss");
       }
     } catch (err) {
-      console.warn("[BackBtn] Failed to mark run as dismissed:", err);
+      console.error("[BackBtn] Failed to mark run as dismissed:", err);
     }
 
     // Navigate back to presets page
     try {
-      console.log("[BackBtn] Attempting to navigate to #/service");
+      console.log("[BackBtn] Attempting to navigate to #/service", {
+        currentHash: window.location.hash,
+        sessionStorageKeys: Object.keys(sessionStorage),
+      });
       window.location.hash = "#/service";
-      console.log("[BackBtn] Navigation triggered successfully");
+      console.log(
+        "[BackBtn] Navigation hash set, waiting for route change event"
+      );
     } catch (err) {
       console.error("[BackBtn] Navigation failed:", err);
     }
