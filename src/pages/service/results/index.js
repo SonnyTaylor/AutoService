@@ -157,6 +157,11 @@ export async function initPage() {
   // Set up save handler
   setupSaveHandler(report, saveBtn);
 
+  // Handle auto-save if not viewing from reports page
+  if (!viewingFromReports) {
+    handleAutoSaveOnPageLoad(report);
+  }
+
   if (container) container.hidden = false;
   if (tabsNav) tabsNav.hidden = false;
 }
@@ -851,4 +856,155 @@ function showNotification(message, type = "info") {
       document.body.removeChild(notification);
     }, 300);
   }, 5000);
+}
+
+/**
+ * Handle auto-save when results page loads
+ * @param {Object} report - Final report data
+ */
+async function handleAutoSaveOnPageLoad(report) {
+  try {
+    // Check if auto-save is enabled
+    const autoSaveOn = await isAutoSaveEnabled();
+    if (!autoSaveOn) {
+      console.log("[AutoSave] Auto-save disabled, skipping");
+      return;
+    }
+
+    // Check if already auto-saved for this run (prevent duplicate saves)
+    const state = await (async () => {
+      try {
+        const { getRunState } = await import("../../../utils/task-state.js");
+        return getRunState();
+      } catch {
+        return null;
+      }
+    })();
+
+    const alreadySavedKey = "service.autoSavedRunId";
+    try {
+      const savedRunId = sessionStorage.getItem(alreadySavedKey);
+      if (savedRunId && state && state.runId === savedRunId) {
+        console.log("[AutoSave] Already auto-saved for this run:", savedRunId);
+        return;
+      }
+    } catch {}
+
+    console.log("[AutoSave] Auto-save enabled, saving report...");
+
+    // Get system info for hostname
+    const { core } = window.__TAURI__ || {};
+    const { invoke } = core || {};
+    if (!invoke) return;
+
+    let hostname = "Unknown_PC";
+    try {
+      const sysInfo = await invoke("get_system_info");
+      hostname = sysInfo?.hostname || hostname;
+    } catch (e) {
+      console.warn("[AutoSave] Could not fetch hostname:", e);
+    }
+
+    // Get metadata from sessionStorage
+    let customerName = null;
+    let technicianName = null;
+    try {
+      const metadataRaw = sessionStorage.getItem("service.metadata");
+      if (metadataRaw) {
+        const metadata = JSON.parse(metadataRaw);
+        customerName = metadata.customerName || null;
+        technicianName = metadata.technicianName || null;
+      }
+    } catch (e) {
+      console.warn("[AutoSave] Could not load metadata:", e);
+    }
+
+    // Get runner data (plan and log files)
+    let planFilePath = null;
+    let logFilePath = null;
+    try {
+      const runnerDataRaw = sessionStorage.getItem("service.runnerData");
+      if (runnerDataRaw) {
+        const runnerData = JSON.parse(runnerDataRaw);
+        planFilePath = runnerData.planFile || null;
+        logFilePath = runnerData.logFile || null;
+      }
+    } catch (e) {
+      console.warn("[AutoSave] Could not load runner data:", e);
+    }
+
+    // Import autoSaveReport utility
+    const { autoSaveReport } = await import("../../../utils/reports.js");
+
+    // Auto-save the report
+    const response = await autoSaveReport(report, {
+      planFilePath,
+      logFilePath,
+      hostname,
+      customerName,
+      technicianName,
+    });
+
+    if (response.success) {
+      console.log(
+        "[AutoSave] Report auto-saved successfully:",
+        response.report_folder
+      );
+
+      // Mark this run as auto-saved
+      if (state && state.runId) {
+        try {
+          sessionStorage.setItem(alreadySavedKey, state.runId);
+        } catch {}
+      }
+
+      // Show notification
+      showAutoSaveNotification(response.report_folder);
+    } else {
+      console.error("[AutoSave] Auto-save failed:", response.error);
+    }
+  } catch (error) {
+    console.error("[AutoSave] Auto-save error:", error);
+  }
+}
+
+/**
+ * Show auto-save notification
+ * @param {string} folderPath - Path where report was saved
+ */
+function showAutoSaveNotification(folderPath) {
+  try {
+    const notification = document.createElement("div");
+    notification.className = "autosave-notification";
+    notification.innerHTML = `
+      <i class="ph ph-check-circle" style="margin-right: 8px; vertical-align: -2px;"></i>
+      Report auto-saved to: ${folderPath}
+    `;
+    notification.style.cssText = `
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #10b981;
+      color: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      z-index: 10000;
+      animation: slideIn 0.3s ease-out;
+      max-width: 400px;
+    `;
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+      notification.style.animation = "slideOut 0.3s ease-out";
+      setTimeout(() => {
+        try {
+          notification.remove();
+        } catch {}
+      }, 300);
+    }, 4000);
+  } catch (e) {
+    console.warn("[AutoSave] Could not show notification:", e);
+  }
 }

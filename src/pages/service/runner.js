@@ -606,7 +606,7 @@ export async function initPage() {
           applyFinalStatusesFromReport(obj);
         } catch {}
         const ok = obj?.overall_status === "success";
-        showSummary(ok);
+        showSummary(ok, false); // Cached results - don't trigger alerts
         try {
           if (viewResultsBtn) {
             viewResultsBtn.removeAttribute("disabled");
@@ -850,7 +850,7 @@ export async function initPage() {
     } catch (e) {
       appendLog(`[ERROR] ${new Date().toLocaleTimeString()} ${String(e)}`);
       console.error("[Runner] Caught error during run:", e);
-      showSummary(false);
+      showSummary(false, true); // Error during run - trigger alerts
       _isRunning = false;
       console.log("[Runner] Error handler re-enabling controls");
       showOverlay(false);
@@ -1052,8 +1052,7 @@ export async function initPage() {
             console.warn("Failed to store runner data:", e);
           }
 
-          // Auto-save report if enabled in settings
-          handleAutoSave(finalReport, payload);
+          // Note: Auto-save is now handled in the results page for better positioning
 
           if (currentViewResultsBtn) {
             currentViewResultsBtn.removeAttribute("disabled");
@@ -1167,7 +1166,7 @@ export async function initPage() {
       finalJsonEl.innerHTML = `<code class=\"hljs language-json\">${highlighted}</code>`;
       applyFinalStatusesFromReport(obj);
       const ok = obj?.overall_status === "success";
-      showSummary(ok);
+      showSummary(ok, true); // Actual completion - trigger alerts
       persistFinalReport(lastFinalJsonString);
 
       // Update global state
@@ -1176,7 +1175,7 @@ export async function initPage() {
       });
     } catch {
       finalJsonEl.textContent = String(result || "");
-      showSummary(false);
+      showSummary(false, true); // Error parsing result - trigger alerts
 
       // Update global state on error
       updateGlobalProgress({ overallStatus: "error" });
@@ -1361,7 +1360,7 @@ export async function initPage() {
     // If showing, ensure it's visible; otherwise hide.
     logOverlay.hidden = !show;
   }
-  function showSummary(ok) {
+  function showSummary(ok, triggerAlerts = false) {
     summaryEl.hidden = false;
     summaryTitleEl.textContent = ok
       ? "All tasks completed"
@@ -1386,15 +1385,26 @@ export async function initPage() {
       }
     } catch {}
 
-    // Fire a desktop notification if enabled in settings
-    triggerCompletionNotification(ok).catch((e) =>
-      console.warn("Failed to trigger notification:", e)
-    );
+    // Only fire notifications/sounds when explicitly requested (from actual completion, not cached results)
+    if (triggerAlerts) {
+      console.log(
+        "[showSummary] Triggering completion alerts (notifications + sound)"
+      );
 
-    // Play completion sound if enabled in settings
-    triggerCompletionSound(ok).catch((e) =>
-      console.warn("Failed to play completion sound:", e)
-    );
+      // Fire a desktop notification if enabled in settings
+      triggerCompletionNotification(ok).catch((e) =>
+        console.warn("Failed to trigger notification:", e)
+      );
+
+      // Play completion sound if enabled in settings
+      triggerCompletionSound(ok).catch((e) =>
+        console.warn("Failed to play completion sound:", e)
+      );
+    } else {
+      console.log(
+        "[showSummary] Not triggering alerts (displaying cached results)"
+      );
+    }
   }
   // Navigate to results page with stored final report
   viewResultsBtn?.addEventListener("click", () => {
@@ -1528,22 +1538,33 @@ export async function initPage() {
       finalJsonEl.innerHTML = `<code class=\"hljs language-json\">${highlighted}</code>`;
       if (isFinal) {
         const ok = obj?.overall_status === "success";
-        showSummary(ok);
+        showSummary(ok, true); // Final progress marker - trigger alerts
       }
     } catch {}
   }
 
   async function triggerCompletionNotification(ok) {
     // Check if _notifiedOnce is defined (may not be during state restoration)
-    if (typeof _notifiedOnce !== "undefined" && _notifiedOnce) return;
+    if (typeof _notifiedOnce !== "undefined" && _notifiedOnce) {
+      console.log("[Notification] Already notified for this run, skipping");
+      return;
+    }
     // Load setting
     try {
       const { core } = window.__TAURI__ || {};
       const settings = await core?.invoke?.("load_app_settings");
       const enabled = settings?.reports?.notifications_enabled === true;
-      if (!enabled) return;
+      console.log("[Notification] Settings check:", {
+        enabled,
+        settings: settings?.reports,
+      });
+      if (!enabled) {
+        console.log("[Notification] Notifications disabled in settings");
+        return;
+      }
     } catch (e) {
       // If settings can't be loaded, do nothing silently
+      console.warn("[Notification] Failed to load settings:", e);
       return;
     }
 
