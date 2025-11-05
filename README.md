@@ -55,13 +55,19 @@ The project is under active development; flows are maturing quickly. Feedback & 
 
 ## 🚀 Quick Start
 
-### Prerequisites
+### Option 1: Use Precompiled Executable
+
+Download the latest precompiled `.exe` from the [Releases page](https://github.com/SonnyTaylor/AutoService/releases). Simply run the executable—no installation required. It's fully portable and can be used from a USB drive.
+
+### Option 2: Build from Source
+
+#### Prerequisites
 
 - Windows 10/11
 - Node.js + pnpm
 - Rust toolchain (install via <https://rustup.rs/>)
 
-### Development
+#### Development Setup
 
 ```powershell
 git clone https://github.com/SonnyTaylor/AutoService.git
