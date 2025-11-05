@@ -470,7 +470,7 @@ data/                      # Portable data folder (travels with EXE)
 
 - **Python**: `runner/sentry_config.py` - Python SDK with task lifecycle tracking
 
-**Release Format**: `autoservice@{version}` (e.g., `autoservice@0.4.0`)
+**Release Format**: `autoservice@{version}` (e.g., `autoservice@0.5.0`)
 
 ## Development Notes
 

@@ -176,7 +176,7 @@ Two report types: **Technical** (full diagnostic data) and **Customer** (simplif
 
 <div align="center" markdown>
 
-**Version 0.4.0** • Last Updated: October 2025
+**Version 0.5.0** • Last Updated: November 2025
 
 [:fontawesome-brands-github: View on GitHub](https://github.com/SonnyTaylor/AutoService){ .md-button .md-button--primary }
 

@@ -318,4 +318,4 @@ See [Frontend Development](frontend-dev.md) for details.
 
 ---
 
-**Version**: 0.4.0 | **Last Updated**: October 2025
+**Version**: 0.5.0 | **Last Updated**: November 2025
