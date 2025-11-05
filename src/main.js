@@ -68,6 +68,10 @@ const pathMap = {
   "component-test": "component-test/index",
 };
 
+/** Track the current page module for cleanup purposes. */
+let currentPageModule = null;
+let currentPageRoute = null;
+
 /** Return all known routes including dynamic technician routes. */
 function allRoutes() {
   return [...baseRoutes, ...dynamicTechRoutes];
@@ -106,6 +110,22 @@ async function loadPage(route) {
   const content = document.getElementById("content");
   if (!content) return;
   content.setAttribute("aria-busy", "true");
+
+  // Call cleanup on the previous page if it has a cleanupPage function
+  if (
+    currentPageModule &&
+    typeof currentPageModule.cleanupPage === "function"
+  ) {
+    try {
+      console.log(`[Router] Cleaning up previous page: ${currentPageRoute}`);
+      await currentPageModule.cleanupPage();
+    } catch (e) {
+      console.warn(`[Router] Cleanup failed for ${currentPageRoute}:`, e);
+    }
+  }
+  currentPageModule = null;
+  currentPageRoute = null;
+
   try {
     // Dynamic technician pages are shown in a persistent iframe container
     if (nameIsDynamicTech(route)) {
@@ -159,6 +179,10 @@ async function loadPage(route) {
         console.log("No page controller registered for", key);
       } else {
         const mod = await importer();
+        // Store the module reference for cleanup on next navigation
+        currentPageModule = mod;
+        currentPageRoute = route;
+
         if (typeof mod.initPage === "function") {
           await mod.initPage();
         }

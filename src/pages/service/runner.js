@@ -32,6 +32,9 @@ let _globalEventsRegistered = false;
 let _unlistenLine = null;
 let _unlistenDone = null;
 
+// Module-level log polling state
+let _logPoll = { timer: null, lastTextLen: 0, busy: false, path: null };
+
 /**
  * Process status line markers from Python runner (module-level for event persistence)
  * @param {string} line - Log line to process
@@ -1920,7 +1923,7 @@ export async function initPage() {
   }
 
   // ----- Live log polling from file (works through UAC elevation) ---------
-  let _logPoll = { timer: null, lastTextLen: 0, busy: false, path: null };
+  // Note: _logPoll is defined at module level for cleanup access
 
   function startLogPolling(path) {
     _logPoll.path = path;
@@ -1975,5 +1978,36 @@ export async function initPage() {
     ]);
     const out = await ps.execute();
     return String(out.stdout || "");
+  }
+}
+
+/**
+ * Cleanup function to be called when leaving the runner page.
+ * Removes native event listeners to prevent memory leaks.
+ */
+export function cleanupPage() {
+  console.log("[Runner] Cleaning up page resources...");
+
+  // Unlisten native event listeners
+  if (_unlistenLine) {
+    _unlistenLine();
+    _unlistenLine = null;
+  }
+
+  if (_unlistenDone) {
+    _unlistenDone();
+    _unlistenDone = null;
+  }
+
+  // Reset the registration flag
+  _globalEventsRegistered = false;
+
+  // Clear log polling timer if active
+  if (_logPoll && _logPoll.timer) {
+    clearInterval(_logPoll.timer);
+    _logPoll.timer = null;
+    _logPoll.busy = false;
+    _logPoll.lastTextLen = 0;
+    _logPoll.path = null;
   }
 }

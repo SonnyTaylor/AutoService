@@ -258,6 +258,20 @@ class SettingsManager {
    * @returns {Promise<void>}
    */
   async set(path, value, immediate = false) {
+    // Wait for any pending debounced save before starting new one
+    // This prevents race conditions where rapid successive calls could
+    // result in settings being saved out of order
+    if (this._pendingSave && !immediate) {
+      await new Promise((resolve) => {
+        const checkInterval = setInterval(() => {
+          if (!this._pendingSave) {
+            clearInterval(checkInterval);
+            resolve();
+          }
+        }, 50);
+      });
+    }
+
     const settings = await this.load();
     const updated = structuredClone(settings);
 

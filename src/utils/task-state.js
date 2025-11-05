@@ -6,8 +6,31 @@
  * and provides pub-sub event system for UI components to subscribe to changes.
  */
 
+import { z } from "zod";
+
 const SESSION_KEY = "autoservice.task-state";
 const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutes
+
+// Zod schemas for validation
+const TaskInfoSchema = z.object({
+  id: z.number(),
+  type: z.string(),
+  label: z.string(),
+  status: z.enum(["pending", "running", "success", "error", "warning", "skip"]),
+  startTime: z.number().nullable(),
+  endTime: z.number().nullable(),
+});
+
+const RunStateSchema = z.object({
+  runId: z.string().nullable(),
+  tasks: z.array(TaskInfoSchema),
+  currentTaskIndex: z.number().nullable(),
+  startTime: z.number().nullable(),
+  endTime: z.number().nullable(),
+  overallStatus: z.enum(["idle", "running", "completed", "error"]),
+  metadata: z.record(z.unknown()).default({}),
+  lastActivityTime: z.number().optional(),
+});
 
 /**
  * @typedef {Object} TaskInfo
@@ -204,8 +227,21 @@ export function restoreFromSession() {
 
     const parsed = JSON.parse(stored);
 
+    // Validate stored data structure with Zod
+    const validationResult = RunStateSchema.safeParse(parsed);
+    if (!validationResult.success) {
+      console.warn(
+        "Stored task state has invalid structure, clearing:",
+        validationResult.error.errors
+      );
+      cleanup(true);
+      return false;
+    }
+
+    const validated = validationResult.data;
+
     // Check inactivity timeout
-    const timeSinceActivity = Date.now() - (parsed.lastActivityTime || 0);
+    const timeSinceActivity = Date.now() - (validated.lastActivityTime || 0);
     if (timeSinceActivity > INACTIVITY_TIMEOUT) {
       console.log("Stored task state expired due to inactivity");
       cleanup(true);
@@ -213,26 +249,27 @@ export function restoreFromSession() {
     }
 
     // Only restore if run was actually in progress
-    if (parsed.overallStatus !== "running") {
+    if (validated.overallStatus !== "running") {
       return false;
     }
 
     currentState = {
-      runId: parsed.runId || null,
-      tasks: parsed.tasks || [],
-      currentTaskIndex: parsed.currentTaskIndex || null,
-      startTime: parsed.startTime || null,
-      endTime: parsed.endTime || null,
-      overallStatus: parsed.overallStatus || "idle",
-      metadata: parsed.metadata || {},
+      runId: validated.runId,
+      tasks: validated.tasks,
+      currentTaskIndex: validated.currentTaskIndex,
+      startTime: validated.startTime,
+      endTime: validated.endTime,
+      overallStatus: validated.overallStatus,
+      metadata: validated.metadata,
     };
 
-    lastActivityTime = parsed.lastActivityTime || Date.now();
+    lastActivityTime = validated.lastActivityTime || Date.now();
     notifySubscribers();
 
     return true;
   } catch (e) {
     console.warn("Failed to restore task state from sessionStorage:", e);
+    cleanup(true);
     return false;
   }
 }
