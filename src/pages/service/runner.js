@@ -1099,9 +1099,22 @@ export async function initPage() {
             const onRunnerPage = currentHash.startsWith("#/service-report");
 
             if (!onRunnerPage) {
-              // User is on another page - send notification
+              // User is on another page - send notification (if enabled)
               (async () => {
                 try {
+                  // Check if notifications are enabled in settings first
+                  const { core } = window.__TAURI__ || {};
+                  const settings = await core?.invoke?.("load_app_settings");
+                  const enabled =
+                    settings?.reports?.notifications_enabled === true;
+
+                  if (!enabled) {
+                    console.log(
+                      "[Notification] Notifications disabled in settings, skipping background notification"
+                    );
+                    return;
+                  }
+
                   const api = await ensureNotificationApi();
                   if (!api) return;
 
