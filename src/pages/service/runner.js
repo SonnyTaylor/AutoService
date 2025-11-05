@@ -531,8 +531,13 @@ export async function initPage() {
   }));
 
   // Check if there's an active or completed run in global state and restore UI
+  // ONLY restore state if we're reconnecting to an existing run (no new pendingRun)
   const globalState = getRunState();
+  const hasNewPendingRun =
+    tasks.length > 0 && sessionStorage.getItem("service.pendingRun");
+
   if (
+    !hasNewPendingRun &&
     globalState &&
     (globalState.overallStatus === "running" ||
       globalState.overallStatus === "completed" ||
@@ -563,6 +568,15 @@ export async function initPage() {
         logEl.scrollTop = logEl.scrollHeight;
       }
     } catch {}
+  } else if (hasNewPendingRun) {
+    // Starting a new service run - clear all previous state
+    console.log("[Init] New service run detected, clearing previous state");
+    clearFinalReportCache();
+    try {
+      sessionStorage.removeItem("service.runnerLog");
+      sessionStorage.removeItem("service.notifiedRunId");
+      sessionStorage.removeItem("taskWidget.dismissedRunId");
+    } catch {}
   }
 
   renderTaskList();
@@ -576,7 +590,10 @@ export async function initPage() {
   });
 
   // Track whether a run is currently in progress to prevent duplicate clicks
-  let _isRunning = globalState && globalState.overallStatus === "running";
+  // For new pending runs, always start with _isRunning = false
+  let _isRunning = hasNewPendingRun
+    ? false
+    : globalState && globalState.overallStatus === "running";
   // Hold results for client-only tasks (not executed by Python runner)
   let _clientResults = [];
   // Prevent duplicate notifications per run - track in sessionStorage to persist across page loads
@@ -590,31 +607,42 @@ export async function initPage() {
   } catch {}
 
   // Try to rehydrate from cached final report so navigation back preserves results
-  try {
-    const cachedRaw =
-      sessionStorage.getItem("service.finalReport") ||
-      localStorage.getItem("service.finalReport");
-    if (cachedRaw && cachedRaw.length > 2) {
-      lastFinalJsonString = cachedRaw;
-      try {
-        const obj = JSON.parse(cachedRaw);
-        const highlighted = hljs.highlight(cachedRaw, {
-          language: "json",
-        }).value;
-        finalJsonEl.innerHTML = `<code class="hljs language-json">${highlighted}</code>`;
+  // ONLY restore if not starting a new service run
+  if (!hasNewPendingRun) {
+    try {
+      const cachedRaw =
+        sessionStorage.getItem("service.finalReport") ||
+        localStorage.getItem("service.finalReport");
+      if (cachedRaw && cachedRaw.length > 2) {
+        lastFinalJsonString = cachedRaw;
         try {
-          applyFinalStatusesFromReport(obj);
+          const obj = JSON.parse(cachedRaw);
+          const highlighted = hljs.highlight(cachedRaw, {
+            language: "json",
+          }).value;
+          finalJsonEl.innerHTML = `<code class="hljs language-json">${highlighted}</code>`;
+          try {
+            applyFinalStatusesFromReport(obj);
+          } catch {}
+          const ok = obj?.overall_status === "success";
+          showSummary(ok, false); // Cached results - don't trigger alerts
+          try {
+            if (viewResultsBtn) {
+              viewResultsBtn.removeAttribute("disabled");
+            }
+          } catch {}
         } catch {}
-        const ok = obj?.overall_status === "success";
-        showSummary(ok, false); // Cached results - don't trigger alerts
-        try {
-          if (viewResultsBtn) {
-            viewResultsBtn.removeAttribute("disabled");
-          }
-        } catch {}
-      } catch {}
+      }
+    } catch {}
+  } else {
+    // Starting a new service - ensure UI is in clean initial state
+    lastFinalJsonString = "{}";
+    finalJsonEl.textContent = "";
+    summaryEl.hidden = true;
+    if (viewResultsBtn) {
+      viewResultsBtn.setAttribute("disabled", "");
     }
-  } catch {}
+  }
 
   // If we're reconnecting to an active run, wire up native events and update UI
   if (_isRunning) {
