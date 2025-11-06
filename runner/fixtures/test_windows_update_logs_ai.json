@@ -1,0 +1,10 @@
+{
+  "tasks": [
+    {
+      "type": "windows_update_logs_analysis",
+      "time_frame": "month",
+      "include_ai_analysis": true,
+      "max_errors": 50
+    }
+  ]
+}
