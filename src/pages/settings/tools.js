@@ -22,7 +22,7 @@ export const REQUIRED_TOOLS = [
     icon: "ph ph-shield-check",
   },
   {
-    key: "KVRT",
+    key: "kvrt",
     name: "Kaspersky Virus Removal Tool",
     match: ["KVRT", "kaspersky virus removal tool"],
     hint: "KVRT.exe",
@@ -79,11 +79,18 @@ export const REQUIRED_TOOLS = [
     icon: "ph ph-windows-logo",
   },
   {
-    key: "DriveCleanup",
+    key: "drivecleanup",
     name: "DriveCleanup",
     match: ["drivecleanup", "drive-cleanup", "DriveCleanup"],
     hint: "DriveCleanup.exe",
     icon: "ph ph-usb",
+  },
+  {
+    key: "err",
+    name: "Microsoft Error Lookup Tool",
+    match: ["Err_6.4.5.exe", "Err.exe", "error lookup tool"],
+    hint: "Err_6.4.5.exe",
+    icon: "ph ph-question",
   },
 ];
 
