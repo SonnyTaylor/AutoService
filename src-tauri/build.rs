@@ -312,8 +312,26 @@ fn main() {
                 String::from_utf8_lossy(&output.stdout)
             );
         }
-        _ => {
+        Ok(output) => {
+            println!(
+                "cargo:warning=PyInstaller check failed with exit code: {:?}",
+                output.status.code()
+            );
+            println!(
+                "cargo:warning=stdout: {}",
+                String::from_utf8_lossy(&output.stdout)
+            );
+            println!(
+                "cargo:warning=stderr: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
             println!("cargo:warning=PyInstaller not available or not working. Please install with: pip install pyinstaller");
+            return;
+        }
+        Err(e) => {
+            println!("cargo:warning=Failed to execute python command: {}", e);
+            println!("cargo:warning=This usually means Python is not in PATH during the build");
+            println!("cargo:warning=Please install with: pip install pyinstaller");
             return;
         }
     }
