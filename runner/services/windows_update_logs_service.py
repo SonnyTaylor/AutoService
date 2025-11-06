@@ -150,42 +150,6 @@ def _powershell_run(script_text: str) -> Dict[str, Any]:
             pass
 
 
-def _find_err_exe() -> Optional[str]:
-    """Find Err.exe in common Windows paths.
-
-    Returns:
-        Full path to Err.exe if found, None otherwise
-    """
-    # Common locations for Err.exe
-    common_paths = [
-        r"C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\Common7\Tools\Err.exe",
-        r"C:\Program Files (x86)\Microsoft Visual Studio\2022\Community\Common7\Tools\Err.exe",
-        r"C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\Err.exe",
-        r"C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\Err.exe",
-        r"C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\Err.exe",
-    ]
-
-    for path in common_paths:
-        if os.path.exists(path):
-            return path
-
-    # Try searching in PATH
-    try:
-        result = subprocess.run(
-            ["where", "Err.exe"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            timeout=5,
-        )
-        if result.returncode == 0:
-            return result.stdout.strip().split("\n")[0]
-    except Exception:
-        pass
-
-    return None
-
-
 def _decode_error_code(error_code: str, err_exe_path: str) -> Dict[str, str]:
     """Decode Windows error code using Err.exe.
 
@@ -496,9 +460,11 @@ def run_windows_update_logs_analysis(task: Dict[str, Any]) -> Dict[str, Any]:
 
     Args:
         task: Task configuration with keys:
-            - time_frame: str ("today", "week", "month", "all")
-            - include_ai_analysis: bool
-            - max_errors: int
+            - type: str "windows_update_logs_analysis"
+            - time_frame: str (optional, default "week") - "today", "week", "month", "all"
+            - include_ai_analysis: bool (optional, default False)
+            - max_errors: int (optional, default 50)
+            - err_exe_path: str (optional) - path to Err.exe for error code decoding
 
     Returns:
         Standardized result dict
@@ -506,6 +472,7 @@ def run_windows_update_logs_analysis(task: Dict[str, Any]) -> Dict[str, Any]:
     time_frame = task.get("time_frame", "week").lower()
     include_ai_analysis = task.get("include_ai_analysis", False)
     max_errors = task.get("max_errors", 50)
+    err_exe_path = task.get("err_exe_path")  # Get from task parameters
 
     add_breadcrumb(
         "Starting Windows Update logs analysis",
@@ -514,6 +481,7 @@ def run_windows_update_logs_analysis(task: Dict[str, Any]) -> Dict[str, Any]:
         data={
             "time_frame": time_frame,
             "include_ai_analysis": include_ai_analysis,
+            "has_err_exe": err_exe_path is not None,
         },
     )
 
@@ -540,12 +508,11 @@ def run_windows_update_logs_analysis(task: Dict[str, Any]) -> Dict[str, Any]:
         data={"error_count": len(errors), "unique_codes": len(error_codes)},
     )
 
-    # Find Err.exe for code decoding
-    err_exe = _find_err_exe()
-    if not err_exe:
-        logger.warning("Err.exe not found; error codes will not be decoded")
+    # Use provided Err.exe path for code decoding (or None if not available)
+    if not err_exe_path:
+        logger.warning("Err.exe path not provided; error codes will not be decoded")
         add_breadcrumb(
-            "Err.exe not found",
+            "Err.exe path not provided",
             category="task",
             level="warning",
         )
@@ -586,8 +553,8 @@ def run_windows_update_logs_analysis(task: Dict[str, Any]) -> Dict[str, Any]:
 
     # Decode error codes and perform AI analysis if enabled
     for code, group in error_groups.items():
-        if err_exe:
-            decoded = _decode_error_code(code, err_exe)
+        if err_exe_path:
+            decoded = _decode_error_code(code, err_exe_path)
             group["error_name"] = decoded["name"]
             group["error_description"] = decoded["description"]
 

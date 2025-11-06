@@ -44,12 +44,16 @@ export const definition = {
     time_frame: "week",
     include_ai_analysis: false,
   },
-  toolKeys: [],
+  toolKeys: ["err"], // Add Err.exe as a tool dependency
   async build({ params, resolveToolPath, getDataDirs }) {
+    // Resolve Err.exe path (optional - service will work without it)
+    const errPath = await resolveToolPath("err");
+
     return {
       type: "windows_update_logs_analysis",
       time_frame: params?.time_frame || "week",
       include_ai_analysis: params?.include_ai_analysis === true,
+      err_exe_path: errPath, // Pass Err.exe path to Python service
       max_errors: 50,
       ui_label: "Windows Update Error Analysis",
     };
@@ -311,6 +315,76 @@ export function extractCustomerMetrics({ summary, status }) {
         : "Isolated update issues",
     ],
   });
+}
+
+// =============================================================================
+// PARAMETER CONTROLS
+// =============================================================================
+
+/**
+ * Render parameter controls for Windows Update logs analysis in builder.
+ * Allows selection of time frame and AI analysis options.
+ * @param {import('../types').ParamControlsContext} context - Control context
+ * @returns {HTMLElement} Control wrapper element
+ */
+export function renderParamControls({ params, updateParam }) {
+  const wrapper = document.createElement("div");
+  wrapper.style.display = "flex";
+  wrapper.style.flexWrap = "wrap";
+  wrapper.style.alignItems = "center";
+  wrapper.style.columnGap = "12px";
+  wrapper.style.rowGap = "6px";
+
+  const timeFrameVal = params?.time_frame || "week";
+  const aiAnalysisVal = !!params?.include_ai_analysis;
+
+  wrapper.innerHTML = `
+    <label class="tiny-lab" style="margin-right:12px;" title="Select time period for error log analysis">
+      <span class="lab">Time Frame</span>
+      <select data-param="time_frame" aria-label="Windows Update error log time frame">
+        <option value="today" ${
+          timeFrameVal === "today" ? "selected" : ""
+        }>Today</option>
+        <option value="week" ${
+          timeFrameVal === "week" ? "selected" : ""
+        }>Last 7 Days</option>
+        <option value="month" ${
+          timeFrameVal === "month" ? "selected" : ""
+        }>Last Month</option>
+        <option value="all" ${
+          timeFrameVal === "all" ? "selected" : ""
+        }>All Time</option>
+      </select>
+    </label>
+    <label class="tiny-lab" title="Include AI-powered analysis of errors (requires OpenAI API key)">
+      <input type="checkbox" data-param="include_ai_analysis" ${
+        aiAnalysisVal ? "checked" : ""
+      } />
+      <span class="lab">AI Analysis</span>
+    </label>
+  `;
+
+  // Stop event propagation to prevent drag-and-drop interference
+  wrapper.querySelectorAll("input, select").forEach((el) => {
+    ["mousedown", "pointerdown", "click"].forEach((evt) => {
+      el.addEventListener(evt, (e) => e.stopPropagation());
+    });
+  });
+
+  const selTimeFrame = wrapper.querySelector('select[data-param="time_frame"]');
+  const cbAiAnalysis = wrapper.querySelector(
+    'input[data-param="include_ai_analysis"]'
+  );
+
+  selTimeFrame?.addEventListener("change", () => {
+    updateParam("time_frame", selTimeFrame.value);
+  });
+
+  cbAiAnalysis?.addEventListener("change", () => {
+    updateParam("include_ai_analysis", cbAiAnalysis.checked);
+  });
+
+  return wrapper;
 }
 
 // =============================================================================
