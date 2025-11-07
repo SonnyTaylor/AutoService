@@ -161,47 +161,82 @@
 
       <!-- AI / API pane -->
       <div class="card settings-pane" data-pane="ai" style="display: none">
-        <div class="card-title"><span>AI / API Keys</span></div>
+        <div class="card-title"><span>AI / API Configuration</span></div>
         <div class="card-body">
           <p class="muted">
-            Configure API keys for AI-powered features like the AI Startup
-            Optimizer.
+            Configure AI provider and model for AI-powered features like the AI
+            Startup Optimizer, Browser Notification Analysis, and Windows Update
+            Error Analysis.
           </p>
 
-          <!-- OpenAI API Key -->
-          <form id="openai-settings-form" class="ai-api-form">
+          <!-- AI Provider Selection -->
+          <form id="ai-settings-form" class="ai-api-form">
             <label>
-              <span class="muted">OpenAI API Key</span>
+              <span class="muted">AI Provider</span>
+              <select
+                name="provider"
+                id="ai-provider-select"
+                class="ai-provider-select"
+              >
+                <option value="openai">OpenAI</option>
+                <option value="anthropic">Anthropic (Claude)</option>
+                <option value="groq">Groq</option>
+                <option value="xai">xAI (Grok)</option>
+                <option value="azure">Azure OpenAI</option>
+                <option value="google">Google (Vertex AI)</option>
+                <option value="ollama">Ollama (Local)</option>
+              </select>
+              <span class="muted field-hint">
+                Select your AI provider. LiteLLM handles the API translation.
+              </span>
+            </label>
+
+            <label>
+              <span class="muted">Model</span>
+              <select name="model" id="ai-model-select" class="ai-model-select">
+                <!-- Options populated dynamically based on provider -->
+              </select>
+              <span class="muted field-hint">
+                Select the AI model to use for analysis tasks.
+              </span>
+            </label>
+
+            <label>
+              <span class="muted">API Key</span>
               <div style="display: flex; gap: 8px; align-items: flex-end">
                 <input
                   type="password"
-                  name="openai_api_key"
-                  id="openai-api-key-input"
-                  placeholder="sk-proj-..."
+                  name="api_key"
+                  id="ai-api-key-input"
+                  placeholder="Enter your API key..."
                   autocomplete="off"
                   style="flex: 1"
                 />
                 <button type="submit" class="primary">Save</button>
-                <button
-                  type="button"
-                  id="openai-api-key-clear-btn"
-                  class="ghost"
-                >
+                <button type="button" id="ai-api-key-clear-btn" class="ghost">
                   Clear
                 </button>
               </div>
+              <span class="muted field-hint" id="ai-provider-hint">
+                Get your API key from the provider's website.
+              </span>
+            </label>
+
+            <label id="ai-base-url-label" style="display: none">
+              <span class="muted">Base URL (Optional)</span>
+              <input
+                type="text"
+                name="base_url"
+                id="ai-base-url-input"
+                placeholder="http://localhost:11434"
+                autocomplete="off"
+              />
               <span class="muted field-hint">
-                Required for AI Startup Optimizer. Get your API key from
-                <a
-                  href="https://platform.openai.com/api-keys"
-                  target="_blank"
-                  rel="noopener"
-                  >platform.openai.com</a
-                >
+                Custom API endpoint (e.g., for Ollama or self-hosted models).
               </span>
             </label>
           </form>
-          <div id="openai-settings-status"></div>
+          <div id="ai-settings-status"></div>
         </div>
       </div>
 

@@ -89,6 +89,13 @@ const NetworkSchema = z.object({
  * AI/API settings schema
  */
 const AISchema = z.object({
+  provider: z
+    .enum(["openai", "anthropic", "azure", "google", "groq", "ollama", "xai"])
+    .default("openai"),
+  model: z.string().default("gpt-4o-mini"),
+  api_key: z.string().default(""),
+  base_url: z.string().optional().default(""),
+  // Legacy field for backward compatibility
   openai_api_key: z.string().default(""),
 });
 

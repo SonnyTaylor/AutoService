@@ -4,6 +4,8 @@
       "type": "windows_update_logs_analysis",
       "time_frame": "month",
       "include_ai_analysis": true,
+      "api_key": "env:OPENAI_API_KEY",
+      "model": "gpt-4o-mini",
       "max_errors": 50
     }
   ]

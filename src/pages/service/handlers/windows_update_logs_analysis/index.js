@@ -32,6 +32,23 @@ import {
 // =============================================================================
 
 /**
+ * Check if OpenAI API key is configured in settings (only needed if AI analysis is enabled).
+ * @returns {Promise<boolean>} True if API key is available
+ */
+async function hasApiKey() {
+  try {
+    const { invoke } = window.__TAURI__?.core || {};
+    if (!invoke) return false;
+
+    const settings = await invoke("load_app_settings");
+    const apiKey = settings?.ai?.openai_api_key;
+    return Boolean(apiKey && apiKey.trim().length > 0);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Service catalog definition for Windows Update logs analysis.
  * @type {ServiceDefinition}
  */
@@ -49,11 +66,39 @@ export const definition = {
     // Resolve Err.exe path (optional - service will work without it)
     const errPath = await resolveToolPath("err");
 
+    // Get AI settings from centralized config if AI analysis is enabled
+    const { invoke } = window.__TAURI__?.core || {};
+    let apiKey = "";
+    let provider = "openai";
+    let model = "gpt-4o-mini";
+    let baseUrl = "";
+
+    if (params?.include_ai_analysis && invoke) {
+      try {
+        const settings = await invoke("load_app_settings");
+        const ai = settings?.ai || {};
+
+        // Use new centralized settings
+        apiKey = ai.api_key || ai.openai_api_key || ""; // Backward compat
+        provider = ai.provider || "openai";
+        model = ai.model || "gpt-4o-mini";
+        baseUrl = ai.base_url || "";
+      } catch (e) {
+        console.error("Failed to load AI settings:", e);
+      }
+    }
+
+    // Build model name with provider prefix for LiteLLM
+    const litellmModel = model.includes("/") ? model : `${provider}/${model}`;
+
     return {
       type: "windows_update_logs_analysis",
       time_frame: params?.time_frame || "week",
       include_ai_analysis: params?.include_ai_analysis === true,
       err_exe_path: errPath, // Pass Err.exe path to Python service
+      api_key: apiKey || undefined, // Pass API key if AI analysis is enabled
+      model: litellmModel,
+      base_url: baseUrl || undefined,
       max_errors: 50,
       ui_label: "Windows Update Error Analysis",
     };
@@ -356,12 +401,17 @@ export function renderParamControls({ params, updateParam }) {
         }>All Time</option>
       </select>
     </label>
-    <label class="tiny-lab" title="Include AI-powered analysis of errors (requires OpenAI API key)">
+    <label class="tiny-lab" title="Include AI-powered analysis of errors (requires API key in settings)">
       <input type="checkbox" data-param="include_ai_analysis" ${
         aiAnalysisVal ? "checked" : ""
       } />
       <span class="lab">AI Analysis</span>
     </label>
+    ${
+      aiAnalysisVal
+        ? '<span class="muted" style="font-size: 0.85em;">AI model configured in Settings → AI / API</span>'
+        : ""
+    }
   `;
 
   // Stop event propagation to prevent drag-and-drop interference
@@ -382,6 +432,12 @@ export function renderParamControls({ params, updateParam }) {
 
   cbAiAnalysis?.addEventListener("change", () => {
     updateParam("include_ai_analysis", cbAiAnalysis.checked);
+    // Re-render to show/hide hint
+    const newWrapper = renderParamControls({
+      params: { ...params, include_ai_analysis: cbAiAnalysis.checked },
+      updateParam,
+    });
+    wrapper.parentElement?.replaceChild(newWrapper, wrapper);
   });
 
   return wrapper;

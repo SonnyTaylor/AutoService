@@ -368,18 +368,14 @@ def _call_ai_analysis(
         affected_packages: List of affected app packages
         frequency: How many times this error occurred
         model: AI model to use (None for default)
-        api_key: API key (None to use environment)
+        api_key: API key (must be provided by caller)
 
     Returns:
         Dict with analysis if successful, None on failure
     """
     try:
-        # Get API key from environment if not provided
         if not api_key:
-            api_key = os.getenv("OPENAI_API_KEY")
-
-        if not api_key:
-            logger.debug("No API key available; skipping AI analysis")
+            logger.debug("No API key provided; skipping AI analysis")
             return None
 
         # Construct analysis prompt
@@ -417,6 +413,7 @@ Format your response as JSON with the following structure:
 
         if not result["success"]:
             logger.warning(f"AI analysis failed: {result.get('error')}")
+            sys.stderr.flush()
             return None
 
         analysis = result["data"]
@@ -431,6 +428,7 @@ Format your response as JSON with the following structure:
 
     except Exception as e:
         logger.warning(f"AI analysis failed: {e}")
+        sys.stderr.flush()
         add_breadcrumb(
             "AI analysis failed",
             category="task",
@@ -450,6 +448,8 @@ def run_windows_update_logs_analysis(task: Dict[str, Any]) -> Dict[str, Any]:
             - include_ai_analysis: bool (optional, default False)
             - max_errors: int (optional, default 50)
             - err_exe_path: str (optional) - path to Err.exe for error code decoding
+            - api_key: str (optional) - API key for AI analysis
+            - model: str (optional) - AI model to use
 
     Returns:
         Standardized result dict
@@ -461,6 +461,23 @@ def run_windows_update_logs_analysis(task: Dict[str, Any]) -> Dict[str, Any]:
     ai_model = task.get("model")  # Get AI model from task
     ai_api_key = task.get("api_key")  # Get API key from task
 
+    # Handle environment-backed API keys (same pattern as ai_startup_service)
+    if isinstance(ai_api_key, str) and ai_api_key.startswith("env:"):
+        env_var = ai_api_key.split(":", 1)[1]
+        ai_api_key = os.getenv(env_var)
+        logger.info(f"Using API key from environment variable: {env_var}")
+        sys.stderr.flush()
+
+    # Fallback to common environment variables if no key provided
+    if not ai_api_key and include_ai_analysis:
+        ai_api_key = os.getenv("AUTOSERVICE_OPENAI_KEY") or os.getenv("OPENAI_API_KEY")
+        if ai_api_key:
+            logger.info("Using API key from default environment variables")
+            sys.stderr.flush()
+        else:
+            logger.warning("AI analysis enabled but no API key available")
+            sys.stderr.flush()
+
     add_breadcrumb(
         "Starting Windows Update logs analysis",
         category="task",
@@ -469,6 +486,7 @@ def run_windows_update_logs_analysis(task: Dict[str, Any]) -> Dict[str, Any]:
             "time_frame": time_frame,
             "include_ai_analysis": include_ai_analysis,
             "has_err_exe": err_exe_path is not None,
+            "has_api_key": bool(ai_api_key),
         },
     )
 
@@ -546,11 +564,19 @@ def run_windows_update_logs_analysis(task: Dict[str, Any]) -> Dict[str, Any]:
             group["error_description"] = decoded["description"]
 
         if include_ai_analysis:
+            if not ai_api_key:
+                logger.warning(f"AI analysis enabled but no API key available, skipping analysis for {code}")
+                sys.stderr.flush()
+                continue
+
             add_breadcrumb(
                 f"Requesting AI analysis for {code}",
                 category="task",
                 level="info",
             )
+            logger.info(f"Calling AI analysis for error code {code} (model: {ai_model or 'default'})")
+            sys.stderr.flush()
+
             ai_analysis = _call_ai_analysis(
                 code,
                 group["error_name"],
@@ -561,7 +587,12 @@ def run_windows_update_logs_analysis(task: Dict[str, Any]) -> Dict[str, Any]:
                 api_key=ai_api_key,
             )
             if ai_analysis:
+                logger.info(f"AI analysis successful for {code}")
+                sys.stderr.flush()
                 group["ai_analysis"] = ai_analysis
+            else:
+                logger.warning(f"AI analysis returned no results for {code}")
+                sys.stderr.flush()
 
     # Build human-readable summary
     error_list = sorted(error_groups.values(), key=lambda x: x["count"], reverse=True)
