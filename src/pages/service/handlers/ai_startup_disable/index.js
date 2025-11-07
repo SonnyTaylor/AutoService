@@ -83,11 +83,18 @@ export const definition = {
         const settings = await invoke("load_app_settings");
         const ai = settings?.ai || {};
 
-        // Use new centralized settings
-        apiKey = ai.api_key || ai.openai_api_key || ""; // Backward compat
+        // Get provider and model from settings
         provider = ai.provider || "openai";
         model = ai.model || "gpt-4o-mini";
-        baseUrl = ai.base_url || "";
+
+        // Get API key - check provider-specific keys first, then fallback
+        const providerKeys = ai.provider_keys || {};
+        apiKey =
+          providerKeys[provider] || ai.api_key || ai.openai_api_key || "";
+
+        // Get base URL - check provider-specific URLs first, then fallback
+        const providerBaseUrls = ai.provider_base_urls || {};
+        baseUrl = providerBaseUrls[provider] || ai.base_url || "";
       } catch (e) {
         console.error("Failed to load AI settings:", e);
       }

@@ -154,8 +154,15 @@ export async function initializeAISettings(root) {
   const ai = await settingsManager.get("ai");
   const currentProvider = ai.provider || "openai";
   const currentModel = ai.model || "gpt-4o-mini";
-  const currentKey = ai.api_key || ai.openai_api_key || ""; // Backward compatibility
-  const currentBaseUrl = ai.base_url || "";
+
+  // Get provider-specific keys and base URLs
+  const providerKeys = ai.provider_keys || {};
+  const providerBaseUrls = ai.provider_base_urls || {};
+
+  // Load current provider's key and base URL
+  const currentKey =
+    providerKeys[currentProvider] || ai.api_key || ai.openai_api_key || "";
+  const currentBaseUrl = providerBaseUrls[currentProvider] || ai.base_url || "";
 
   // Set provider
   if (providerSelect) {
@@ -178,6 +185,7 @@ export async function initializeAISettings(root) {
     const maskedKey = currentKey.substring(0, 3) + "..." + currentKey.slice(-4);
     apiKeyInput.value = maskedKey;
     apiKeyInput.dataset.hasKey = "true";
+    apiKeyInput.dataset.originalKey = currentKey; // Store for comparison
   }
 
   // Provider change handler
@@ -190,10 +198,31 @@ export async function initializeAISettings(root) {
     const defaultModel = models.length > 0 ? models[0].value : "";
     populateModelDropdown(provider, defaultModel);
 
-    // Load base URL for this provider if saved
+    // Load saved API key and base URL for this provider
     const ai = await settingsManager.get("ai");
+    const providerKeys = ai.provider_keys || {};
+    const providerBaseUrls = ai.provider_base_urls || {};
+
+    const savedKey = providerKeys[provider] || "";
+    const savedBaseUrl = providerBaseUrls[provider] || "";
+
+    // Update API key input
+    if (apiKeyInput) {
+      if (savedKey) {
+        const maskedKey = savedKey.substring(0, 3) + "..." + savedKey.slice(-4);
+        apiKeyInput.value = maskedKey;
+        apiKeyInput.dataset.hasKey = "true";
+        apiKeyInput.dataset.originalKey = savedKey;
+      } else {
+        apiKeyInput.value = "";
+        apiKeyInput.dataset.hasKey = "false";
+        apiKeyInput.dataset.originalKey = "";
+      }
+    }
+
+    // Update base URL input
     if (baseUrlInput) {
-      baseUrlInput.value = ai.base_url || "";
+      baseUrlInput.value = savedBaseUrl;
     }
   });
 
@@ -206,60 +235,63 @@ export async function initializeAISettings(root) {
     const apiKey = apiKeyInput?.value?.trim() || "";
     const baseUrl = baseUrlInput?.value?.trim() || "";
 
-    // Don't save if it's the masked placeholder
-    if (apiKey.includes("...") && apiKeyInput.dataset.hasKey === "true") {
-      if (status) {
-        status.className = "settings-status";
-        status.textContent = "No changes made to API key.";
-        setTimeout(() => {
-          status.textContent = "";
-          status.className = "";
-        }, 3000);
-      }
-      // Still save other fields
-      try {
-        await settingsManager.batch((draft) => {
-          draft.ai.provider = provider;
-          draft.ai.model = model;
-          draft.ai.base_url = baseUrl;
-        });
-      } catch (e) {
-        console.error("Failed to save AI settings:", e);
-      }
-      return;
-    }
+    // Check if API key was changed (not just the masked placeholder)
+    const isKeyUnchanged =
+      apiKey.includes("...") && apiKeyInput.dataset.hasKey === "true";
+    const actualKey = isKeyUnchanged
+      ? apiKeyInput.dataset.originalKey || ""
+      : apiKey;
 
     try {
       // Batch save all AI settings
       await settingsManager.batch((draft) => {
+        // Ensure provider_keys and provider_base_urls objects exist
+        if (!draft.ai.provider_keys) {
+          draft.ai.provider_keys = {};
+        }
+        if (!draft.ai.provider_base_urls) {
+          draft.ai.provider_base_urls = {};
+        }
+
+        // Save current provider settings
         draft.ai.provider = provider;
         draft.ai.model = model;
-        draft.ai.api_key = apiKey;
+        draft.ai.api_key = actualKey;
         draft.ai.base_url = baseUrl;
+
+        // Save provider-specific key and base URL
+        draft.ai.provider_keys[provider] = actualKey;
+        draft.ai.provider_base_urls[provider] = baseUrl;
+
         // Keep backward compatibility
         if (provider === "openai") {
-          draft.ai.openai_api_key = apiKey;
+          draft.ai.openai_api_key = actualKey;
         }
       });
 
       if (status) {
         status.className = "settings-status success";
-        status.textContent = apiKey
-          ? `✓ Saved. ${
-              PROVIDER_INFO[provider]?.hint.includes("href")
-                ? provider.charAt(0).toUpperCase() + provider.slice(1)
-                : "API"
-            } settings updated.`
-          : "✓ Saved. API key cleared.";
+        if (!isKeyUnchanged) {
+          status.textContent = actualKey
+            ? `✓ Saved. ${
+                provider.charAt(0).toUpperCase() + provider.slice(1)
+              } settings updated.`
+            : "✓ Saved. API key cleared.";
+        } else {
+          status.textContent = `✓ Saved. Provider and model updated.`;
+        }
 
         // Update input to masked value
-        if (apiKey && apiKeyInput) {
-          const maskedKey = apiKey.substring(0, 3) + "..." + apiKey.slice(-4);
+        if (actualKey && apiKeyInput) {
+          const maskedKey =
+            actualKey.substring(0, 3) + "..." + actualKey.slice(-4);
           apiKeyInput.value = maskedKey;
           apiKeyInput.dataset.hasKey = "true";
+          apiKeyInput.dataset.originalKey = actualKey;
         } else if (apiKeyInput) {
           apiKeyInput.value = "";
           apiKeyInput.dataset.hasKey = "false";
+          apiKeyInput.dataset.originalKey = "";
         }
 
         setTimeout(() => {
@@ -270,7 +302,7 @@ export async function initializeAISettings(root) {
 
       // Dispatch event so other parts of the app can react
       const event = new CustomEvent("ai-settings-updated", {
-        detail: { provider, model, hasKey: Boolean(apiKey) },
+        detail: { provider, model, hasKey: Boolean(actualKey) },
       });
       dispatchEvent(event);
     } catch (e) {
@@ -288,6 +320,7 @@ export async function initializeAISettings(root) {
     if (apiKeyInput) {
       apiKeyInput.value = "";
       apiKeyInput.dataset.hasKey = "false";
+      apiKeyInput.dataset.originalKey = "";
       apiKeyInput.focus();
     }
   });

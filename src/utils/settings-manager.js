@@ -93,8 +93,32 @@ const AISchema = z.object({
     .enum(["openai", "anthropic", "azure", "google", "groq", "ollama", "xai"])
     .default("openai"),
   model: z.string().default("gpt-4o-mini"),
-  api_key: z.string().default(""),
+  api_key: z.string().default(""), // Current active API key
   base_url: z.string().optional().default(""),
+  // Provider-specific API keys (preserves keys when switching providers)
+  provider_keys: z
+    .object({
+      openai: z.string().default(""),
+      anthropic: z.string().default(""),
+      azure: z.string().default(""),
+      google: z.string().default(""),
+      groq: z.string().default(""),
+      ollama: z.string().default(""),
+      xai: z.string().default(""),
+    })
+    .default({}),
+  // Provider-specific base URLs
+  provider_base_urls: z
+    .object({
+      openai: z.string().default(""),
+      anthropic: z.string().default(""),
+      azure: z.string().default(""),
+      google: z.string().default(""),
+      groq: z.string().default(""),
+      ollama: z.string().default("http://localhost:11434"),
+      xai: z.string().default(""),
+    })
+    .default({}),
   // Legacy field for backward compatibility
   openai_api_key: z.string().default(""),
 });
