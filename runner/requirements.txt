@@ -4,3 +4,4 @@ speedtest-cli
 batteryinfo
 sentry-sdk>=2.0.0,<3.0.0
 psutil>=5.9.0
+litellm>=1.0.0

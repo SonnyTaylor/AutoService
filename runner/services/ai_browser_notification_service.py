@@ -1,13 +1,13 @@
 """AI-assisted browser notification optimizer.
 
 Enumerates browser notification permissions from Chrome, Edge, Firefox, and Brave,
-then consults an OpenAI-compatible model to suggest which notifications should be disabled.
+then consults an AI model to suggest which notifications should be disabled.
 Optionally applies changes based on AI recommendations.
 
 Features:
 - Multi-browser support (Chrome, Edge, Firefox, Brave, Opera)
 - Reads notification permissions from browser profile databases/configs
-- AI-powered analysis using OpenAI-compatible models
+- AI-powered analysis using multiple providers via LiteLLM
 - Conservative recommendations focused on reducing notification spam
 - Preview mode for safety before applying changes
 - Detailed impact analysis and rationale
@@ -22,6 +22,9 @@ import time
 import shutil
 from typing import Dict, Any, List, Optional
 from pathlib import Path
+
+# Import unified AI utilities
+from ai_utils import call_ai_analysis
 
 # Load environment variables from .env file
 try:
@@ -44,13 +47,6 @@ except ImportError:
 
     def add_breadcrumb(*args, **kwargs):
         pass
-
-
-# Prefer requests for HTTP if available; fall back to urllib otherwise.
-try:
-    import requests  # type: ignore
-except Exception:
-    requests = None  # type: ignore
 
 
 # Browser profile paths (relative to user's home)
@@ -452,14 +448,20 @@ def _call_openai_api(
     notifications: List[Dict[str, Any]],
     base_url: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Call OpenAI (or compatible) API to analyze notification permissions."""
+    """Call AI API to analyze notification permissions.
 
-    if not requests:
-        return {"success": False, "error": "requests library not available"}
+    Args:
+        api_key: API key for the AI provider
+        model: Model name (e.g., "gpt-4-turbo-preview", "claude-3-sonnet")
+        notifications: List of notification permissions to analyze
+        base_url: Optional base URL for API endpoint (for compatibility)
 
+    Returns:
+        Dict with keys: success, data|error, usage (optional)
+    """
     # Build the user message with notification data
     notifications_json = json.dumps(notifications, indent=2)
-    user_message = f"""Analyze these browser notification permissions and recommend which should be disabled.
+    user_prompt = f"""Analyze these browser notification permissions and recommend which should be disabled.
 
 Total notifications to analyze: {len(notifications)}
 
@@ -471,86 +473,37 @@ Notification permissions:
 For each notification, determine if it should be disabled based on the guidelines provided.
 Return your analysis as JSON following the specified format."""
 
-    api_endpoint = base_url or "https://api.openai.com/v1"
-    if not api_endpoint.endswith("/chat/completions"):
-        api_endpoint = api_endpoint.rstrip("/") + "/chat/completions"
-
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {api_key}",
-    }
-
-    payload = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": SYSTEM_INSTRUCTIONS},
-            {"role": "user", "content": user_message},
-        ],
-        "temperature": 0.3,
-        "response_format": {"type": "json_object"},
-    }
-
-    logger.info(f"Calling AI API: {api_endpoint}")
+    logger.info(f"Calling AI API to analyze {len(notifications)} notifications")
     logger.info(f"Model: {model}")
     sys.stderr.flush()
 
-    try:
-        response = requests.post(
-            api_endpoint, headers=headers, json=payload, timeout=120
-        )
-        response.raise_for_status()
-        outer = response.json()
-    except requests.exceptions.RequestException as e:
-        logger.error(f"API request failed: {e}")
-        sys.stderr.flush()
-        return {"success": False, "error": f"API request failed: {str(e)}"}
-    except Exception as e:
-        logger.error(f"Unexpected error calling API: {e}")
-        sys.stderr.flush()
-        return {"success": False, "error": f"Unexpected error: {str(e)}"}
+    # Use unified AI utility
+    result = call_ai_analysis(
+        system_prompt=SYSTEM_INSTRUCTIONS,
+        user_prompt=user_prompt,
+        model=model,
+        api_key=api_key,
+        temperature=0.3,
+        json_mode=True,
+        required_fields=["to_disable"],
+    )
 
-    # Parse response
-    try:
-        choices = outer.get("choices", [])
-        if not choices:
-            return {"success": False, "error": "No choices in API response"}
+    if not result["success"]:
+        return result
 
-        content = choices[0].get("message", {}).get("content", "")
-        if not content:
-            return {"success": False, "error": "Empty content in API response"}
+    # Ensure proper structure
+    data = result["data"]
+    data.setdefault("to_disable", [])
+    data.setdefault("keep_enabled", [])
+    data.setdefault("analysis_summary", {})
 
-        parsed = json.loads(content)
+    logger.info(
+        f"AI analysis complete. Recommendations: {len(data['to_disable'])} to disable, "
+        f"{len(data.get('keep_enabled', []))} to keep"
+    )
+    sys.stderr.flush()
 
-        # Ensure required fields exist
-        if "to_disable" not in parsed:
-            parsed["to_disable"] = []
-        if "keep_enabled" not in parsed:
-            parsed["keep_enabled"] = []
-        if "analysis_summary" not in parsed:
-            parsed["analysis_summary"] = {}
-
-        # Extract token usage if available
-        usage_info = outer.get("usage", {})
-
-        logger.info(
-            f"AI analysis complete. Recommendations: {len(parsed['to_disable'])} to disable, "
-            f"{len(parsed.get('keep_enabled', []))} to keep"
-        )
-        sys.stderr.flush()
-
-    except Exception as e:
-        logger.error(f"Failed to parse AI response: {e}")
-        sys.stderr.flush()
-        return {
-            "success": False,
-            "error": f"Malformed API reply: {e} | body={str(outer)[:2000]}",
-        }
-
-    return {
-        "success": True,
-        "data": parsed,
-        "usage": usage_info,
-    }
+    return result
 
 
 def _disable_chromium_notification(prefs_file: str, origin: str) -> bool:

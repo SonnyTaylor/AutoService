@@ -69,6 +69,9 @@ from typing import Any, Dict, List, Optional
 from datetime import datetime, timedelta
 import xml.etree.ElementTree as ET
 
+# Import unified AI utilities
+from ai_utils import call_ai_analysis
+
 logger = logging.getLogger(__name__)
 
 # Sentry integration for breadcrumbs
@@ -353,6 +356,8 @@ def _call_ai_analysis(
     error_description: str,
     affected_packages: List[str],
     frequency: int,
+    model: Optional[str] = None,
+    api_key: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
     """Call AI API to analyze error and provide remediation.
 
@@ -362,25 +367,23 @@ def _call_ai_analysis(
         error_description: Error description from Err.exe
         affected_packages: List of affected app packages
         frequency: How many times this error occurred
+        model: AI model to use (None for default)
+        api_key: API key (None to use environment)
 
     Returns:
         Dict with analysis if successful, None on failure
     """
     try:
-        import os
-        from pathlib import Path
+        # Get API key from environment if not provided
+        if not api_key:
+            api_key = os.getenv("OPENAI_API_KEY")
 
-        # Try to load settings to get AI configuration
-        # This is a simplified approach; in production, use the settings-manager
-        ai_key = os.getenv("OPENAI_API_KEY")
-        if not ai_key:
-            logger.debug("No AI key available; skipping AI analysis")
+        if not api_key:
+            logger.debug("No API key available; skipping AI analysis")
             return None
 
-        import requests
-
         # Construct analysis prompt
-        prompt = f"""Analyze this Windows Update error:
+        user_prompt = f"""Analyze this Windows Update error:
 
 Error Code: {error_code}
 Error Name: {error_name}
@@ -394,56 +397,38 @@ Provide a structured analysis with:
 3. Step-by-step remediation steps
 4. Priority level (critical/high/medium/low)
 
-Format your response as JSON."""
+Format your response as JSON with the following structure:
+{{
+  "root_cause": "brief explanation",
+  "likely_causes": ["cause1", "cause2", ...],
+  "remediation_steps": ["step1", "step2", ...],
+  "priority": "critical|high|medium|low"
+}}"""
 
-        # Call OpenAI API
-        response = requests.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {ai_key}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": "gpt-4-turbo-preview",
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.5,
-                "max_tokens": 500,
-            },
-            timeout=30,
+        # Use unified AI utility
+        result = call_ai_analysis(
+            system_prompt="You are a Windows Update expert assistant. Analyze errors and provide actionable remediation steps.",
+            user_prompt=user_prompt,
+            model=model or "gpt-4-turbo-preview",
+            api_key=api_key,
+            temperature=0.5,
+            json_mode=True,
         )
 
-        if response.status_code == 200:
-            result = response.json()
-            content = result["choices"][0]["message"]["content"]
-
-            # Try to parse JSON from response
-            try:
-                json_match = re.search(r"\{.*\}", content, re.DOTALL)
-                if json_match:
-                    analysis = json.loads(json_match.group())
-                    return {
-                        "issue_summary": analysis.get("root_cause", ""),
-                        "root_causes": analysis.get("likely_causes", []),
-                        "remediation_steps": analysis.get("remediation_steps", []),
-                        "priority": analysis.get("priority", "medium").lower(),
-                    }
-            except (json.JSONDecodeError, ValueError):
-                pass
-
-            # Fallback: return structured extraction from text
-            return {
-                "issue_summary": content[:200],
-                "root_causes": ["Requires manual analysis"],
-                "remediation_steps": ["See AI analysis above"],
-                "priority": "medium",
-            }
-        else:
-            logger.warning(f"AI API error: {response.status_code}")
+        if not result["success"]:
+            logger.warning(f"AI analysis failed: {result.get('error')}")
             return None
 
-    except ImportError:
-        logger.debug("requests library not available; skipping AI analysis")
-        return None
+        analysis = result["data"]
+
+        # Map to expected structure
+        return {
+            "issue_summary": analysis.get("root_cause", ""),
+            "root_causes": analysis.get("likely_causes", []),
+            "remediation_steps": analysis.get("remediation_steps", []),
+            "priority": analysis.get("priority", "medium").lower(),
+        }
+
     except Exception as e:
         logger.warning(f"AI analysis failed: {e}")
         add_breadcrumb(
@@ -473,6 +458,8 @@ def run_windows_update_logs_analysis(task: Dict[str, Any]) -> Dict[str, Any]:
     include_ai_analysis = task.get("include_ai_analysis", False)
     max_errors = task.get("max_errors", 50)
     err_exe_path = task.get("err_exe_path")  # Get from task parameters
+    ai_model = task.get("model")  # Get AI model from task
+    ai_api_key = task.get("api_key")  # Get API key from task
 
     add_breadcrumb(
         "Starting Windows Update logs analysis",
@@ -570,6 +557,8 @@ def run_windows_update_logs_analysis(task: Dict[str, Any]) -> Dict[str, Any]:
                 group["error_description"],
                 group["affected_packages"],
                 group["count"],
+                model=ai_model,
+                api_key=ai_api_key,
             )
             if ai_analysis:
                 group["ai_analysis"] = ai_analysis
