@@ -369,7 +369,8 @@ fn main() {
     println!("cargo:warning=Command: {} -m PyInstaller --onefile --noconfirm --distpath {} --workpath {} --specpath {} --name {} {}",
              PYTHON_COMMAND, bin_dir_str, workpath_str, specpath_str, PYTHON_RUNNER_STEM, py_src.display());
 
-    let status = Command::new(PYTHON_COMMAND)
+    // Use .output() instead of .status() to capture stdout/stderr and ensure full completion
+    let output = Command::new(PYTHON_COMMAND)
         .arg("-m")
         .arg("PyInstaller")
         .arg("--onefile")
@@ -383,11 +384,29 @@ fn main() {
         .arg("--name")
         .arg(PYTHON_RUNNER_STEM)
         .arg(py_src.to_str().unwrap())
-        .status();
+        .output();
 
-    match status {
-        Ok(s) if s.success() => {
-            if target_exe.exists() {
+    match output {
+        Ok(output) if output.status.success() => {
+            // PyInstaller completed successfully, but the file might not be immediately
+            // available due to Windows file system delays or antivirus scanning.
+            // Retry checking for the file with a brief delay.
+            let mut found = false;
+            for attempt in 1..=10 {
+                if target_exe.exists() {
+                    found = true;
+                    break;
+                }
+                if attempt < 10 {
+                    println!(
+                        "cargo:warning=Waiting for exe to appear (attempt {}/10)...",
+                        attempt
+                    );
+                    std::thread::sleep(std::time::Duration::from_millis(500));
+                }
+            }
+
+            if found {
                 println!(
                     "cargo:warning=PyInstaller finished successfully; created {} (size: {} bytes)",
                     target_exe.display(),
@@ -408,9 +427,25 @@ fn main() {
                 }
             } else {
                 println!(
-                    "cargo:warning=PyInstaller reported success but {} was not found",
+                    "cargo:warning=PyInstaller reported success but {} was not found after 5 seconds",
                     target_exe.display()
                 );
+                println!(
+                    "cargo:warning=This may indicate antivirus interference or file system delays"
+                );
+                // Show PyInstaller output for debugging
+                if !output.stdout.is_empty() {
+                    println!(
+                        "cargo:warning=PyInstaller stdout: {}",
+                        String::from_utf8_lossy(&output.stdout)
+                    );
+                }
+                if !output.stderr.is_empty() {
+                    println!(
+                        "cargo:warning=PyInstaller stderr: {}",
+                        String::from_utf8_lossy(&output.stderr)
+                    );
+                }
                 // List contents of bin directory to see what was created
                 if let Ok(entries) = fs::read_dir(&bin_dir) {
                     println!("cargo:warning=Contents of {}:", bin_dir.display());
@@ -422,9 +457,21 @@ fn main() {
                 }
             }
         }
-        Ok(s) => {
-            println!("cargo:warning=PyInstaller exited with status {} - executable may not have been created", s);
-            println!("cargo:warning=Check the PyInstaller output above for error details");
+        Ok(output) => {
+            println!("cargo:warning=PyInstaller exited with status {} - executable may not have been created", output.status);
+            // Show PyInstaller output for debugging
+            if !output.stdout.is_empty() {
+                println!(
+                    "cargo:warning=PyInstaller stdout: {}",
+                    String::from_utf8_lossy(&output.stdout)
+                );
+            }
+            if !output.stderr.is_empty() {
+                println!(
+                    "cargo:warning=PyInstaller stderr: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                );
+            }
             // List contents of bin directory to see what was created
             if let Ok(entries) = fs::read_dir(&bin_dir) {
                 println!("cargo:warning=Contents of {}:", bin_dir.display());
