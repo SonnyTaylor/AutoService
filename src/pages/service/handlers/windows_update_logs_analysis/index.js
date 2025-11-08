@@ -129,177 +129,189 @@ export function renderTech({ result, index }) {
   const totalErrors = summary.total_errors_found || 0;
   const uniqueCodes = summary.unique_error_codes || 0;
   const timeFrame = summary.time_frame || "unknown";
+  const exitCode = summary.exit_code || 0;
 
-  // Build status color based on error count
-  const statusColor =
-    totalErrors === 0 ? "success" : totalErrors < 5 ? "info" : "warning";
+  // Format time frame for display
+  const timeFrameLabel =
+    {
+      day: "Past 24 Hours",
+      week: "Past Week",
+      month: "Past Month",
+    }[timeFrame] || timeFrame;
+
+  // Build KPI boxes
+  const kpis = [
+    kpiBox("Time Frame", timeFrameLabel),
+    kpiBox("Total Events", totalErrors),
+    kpiBox("Unique Errors", uniqueCodes),
+    kpiBox(
+      "Severity",
+      uniqueCodes === 0 ? "None" : uniqueCodes < 3 ? "Low" : "Moderate",
+      uniqueCodes === 0 ? "success" : uniqueCodes < 3 ? "info" : "warning"
+    ),
+  ];
 
   return html`
     <div class="card windows-update-logs">
       ${renderHeader("Windows Update Error Analysis", result.status)}
 
-      <!-- Summary KPIs -->
-      <div class="kpi-row">
-        ${kpiBox("Total Errors", totalErrors)}
-        ${kpiBox("Unique Codes", uniqueCodes)}
-        ${kpiBox("Time Frame", timeFrame)}
-      </div>
+      <!-- KPI Overview -->
+      <div class="kpi-row">${kpis}</div>
 
       <!-- Summary Notes -->
       ${hr.notes && hr.notes.length > 0
         ? html`
             <div class="summary-notes">
               ${hr.notes.map(
-                (note) => html`<p class="note-item">• ${note}</p>`
+                (note) => html`<div class="note-item">• ${note}</div>`
               )}
             </div>
           `
-        : html``}
+        : ""}
 
-      <!-- Error Groups Table -->
+      <!-- No Errors State -->
+      ${errorGroups.length === 0
+        ? html`
+            <div class="no-errors">
+              <strong>✅ No Windows Update errors detected</strong><br />
+              All Windows Update operations completed successfully during the
+              analyzed period.
+            </div>
+          `
+        : ""}
+
+      <!-- Error Groups -->
       ${errorGroups.length > 0
         ? html`
             <div class="error-groups">
-              <h3>Error Codes Detected</h3>
-              <div class="error-table-container">
-                <table class="error-table">
-                  <thead>
-                    <tr>
-                      <th>Error Code</th>
-                      <th>Error Name</th>
-                      <th>Count</th>
-                      <th>Latest</th>
-                      <th>Packages</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${errorGroups.map(
-                      (error) => html`
-                        <tr>
-                          <td class="error-code">${error.error_code}</td>
-                          <td class="error-name">${error.error_name}</td>
-                          <td class="error-count">
-                            <span class="badge">${error.count}</span>
-                          </td>
-                          <td class="error-latest">
-                            ${formatTimestamp(error.latest_occurrence)}
-                          </td>
-                          <td class="error-packages">
-                            ${error.affected_packages &&
-                            error.affected_packages.length > 0
-                              ? html`
-                                  <div class="package-list">
-                                    ${error.affected_packages
-                                      .slice(0, 2)
-                                      .map(
-                                        (pkg) =>
-                                          html`<span class="package-badge"
-                                            >${pkg}</span
-                                          >`
-                                      )}
-                                    ${error.affected_packages.length > 2
-                                      ? html`<span class="package-more"
-                                          >+${error.affected_packages.length -
-                                          2}
-                                          more</span
-                                        >`
-                                      : html``}
-                                  </div>
-                                `
-                              : html`<span class="na">N/A</span>`}
-                          </td>
-                        </tr>
-                      `
-                    )}
-                  </tbody>
-                </table>
+              <h3>
+                Error Details (${errorGroups.length} unique
+                error${errorGroups.length !== 1 ? "s" : ""})
+              </h3>
+              ${errorGroups.map((group, idx) => renderErrorGroup(group, idx))}
+            </div>
+          `
+        : ""}
+    </div>
+  `;
+}
+
+/**
+ * Render a single error group with AI analysis if available.
+ */
+function renderErrorGroup(group, index) {
+  const errorCode = group.error_code || "Unknown";
+  const errorName = group.error_name || "Unknown Error";
+  const errorDesc = group.error_description || "";
+  const count = group.count || 0;
+  const latestOccurrence = group.latest_occurrence || "";
+  const affectedPackages = group.affected_packages || [];
+  const aiAnalysis = group.ai_analysis || null;
+
+  // Severity indicator based on count
+  const severityPill =
+    count >= 10
+      ? pill(`${count} occurrences`, "danger")
+      : count >= 5
+      ? pill(`${count} occurrences`, "warning")
+      : pill(`${count} occurrences`, "info");
+
+  return html`
+    <div class="error-group-card">
+      <div class="error-group-header">
+        <div class="error-title-row">
+          <span class="error-code-badge">${errorCode}</span>
+          <span class="error-name">${errorName}</span>
+          ${severityPill}
+        </div>
+        <div class="error-description">${errorDesc}</div>
+        ${latestOccurrence
+          ? html`<div class="error-meta">
+              Latest occurrence: ${formatTimestamp(latestOccurrence)}
+            </div>`
+          : ""}
+      </div>
+
+      <!-- Affected Packages -->
+      ${affectedPackages.length > 0
+        ? html`
+            <div class="error-packages">
+              <strong>Affected Packages:</strong>
+              <div class="package-list">
+                ${affectedPackages
+                  .slice(0, 5)
+                  .map(
+                    (pkg) => html`<span class="package-badge">${pkg}</span>`
+                  )}
+                ${affectedPackages.length > 5
+                  ? html`<span class="package-more"
+                      >+${affectedPackages.length - 5} more</span
+                    >`
+                  : ""}
               </div>
             </div>
           `
-        : html`
-            <div class="no-errors">
-              <p>
-                ✓ No Windows Update errors found in the selected time frame.
-              </p>
-            </div>
-          `}
+        : ""}
 
       <!-- AI Analysis Section -->
-      ${errorGroups.some((e) => e.ai_analysis)
+      ${aiAnalysis ? renderAIAnalysis(aiAnalysis, errorCode) : ""}
+    </div>
+  `;
+}
+
+/**
+ * Render AI analysis section for an error.
+ */
+function renderAIAnalysis(analysis, errorCode) {
+  const priority = analysis.priority || "low";
+  const issueSummary = analysis.issue_summary || "";
+  const rootCauses = analysis.root_causes || [];
+  const remediationSteps = analysis.remediation_steps || [];
+
+  // Priority badge color mapping
+  const priorityVariant =
+    {
+      critical: "danger",
+      high: "warning",
+      medium: "info",
+      low: "success",
+    }[priority] || "info";
+
+  return html`
+    <div class="ai-analysis-section">
+      <div class="ai-header">
+        <span style="font-weight: 600;">🤖 AI Analysis</span>
+        ${pill(`Priority: ${priority.toUpperCase()}`, priorityVariant)}
+      </div>
+
+      ${issueSummary
         ? html`
-            <div class="ai-analysis-section">
-              <h3>AI Analysis & Remediation</h3>
-              ${errorGroups
-                .filter((e) => e.ai_analysis)
-                .map(
-                  (error) => html`
-                    <div class="ai-analysis-card">
-                      <div class="ai-header">
-                        <span class="error-code-badge"
-                          >${error.error_code}</span
-                        >
-                        <span
-                          class="priority-badge priority-${error.ai_analysis
-                            .priority || "medium"}"
-                        >
-                          ${(
-                            error.ai_analysis.priority || "medium"
-                          ).toUpperCase()}
-                        </span>
-                      </div>
-
-                      <div class="ai-issue">
-                        <strong>Issue:</strong>
-                        <p>
-                          ${error.ai_analysis.issue_summary ||
-                          "No summary available"}
-                        </p>
-                      </div>
-
-                      ${error.ai_analysis.root_causes &&
-                      error.ai_analysis.root_causes.length > 0
-                        ? html`
-                            <div class="ai-causes">
-                              <strong>Likely Causes:</strong>
-                              <ul>
-                                ${error.ai_analysis.root_causes.map(
-                                  (cause) => html`<li>${cause}</li>`
-                                )}
-                              </ul>
-                            </div>
-                          `
-                        : html``}
-                      ${error.ai_analysis.remediation_steps &&
-                      error.ai_analysis.remediation_steps.length > 0
-                        ? html`
-                            <div class="ai-remediation">
-                              <strong>Remediation Steps:</strong>
-                              <ol>
-                                ${error.ai_analysis.remediation_steps.map(
-                                  (step) => html`<li>${step}</li>`
-                                )}
-                              </ol>
-                            </div>
-                          `
-                        : html``}
-                    </div>
-                  `
-                )}
+            <div class="ai-issue-summary">
+              <strong>Issue:</strong>
+              <p>${issueSummary}</p>
             </div>
           `
-        : html``}
-
-      <!-- Error Details -->
-      ${summary.stderr_excerpt
+        : ""}
+      ${rootCauses.length > 0
         ? html`
-            <div class="error-details">
-              <details>
-                <summary>Error Output</summary>
-                <pre>${summary.stderr_excerpt}</pre>
-              </details>
+            <div class="ai-causes">
+              <strong>Likely Root Causes:</strong>
+              <ul>
+                ${rootCauses.map((cause) => html`<li>${cause}</li>`)}
+              </ul>
             </div>
           `
-        : html``}
+        : ""}
+      ${remediationSteps.length > 0
+        ? html`
+            <div class="ai-remediation">
+              <strong>Remediation Steps:</strong>
+              <ol>
+                ${remediationSteps.map((step) => html`<li>${step}</li>`)}
+              </ol>
+            </div>
+          `
+        : ""}
     </div>
   `;
 }
@@ -454,277 +466,83 @@ export function renderParamControls({ params, updateParam }) {
 // CSS EXPORTS
 // =============================================================================
 
+// Screen-only styles (dark theme for tech view)
+export const viewCSS = `
+/* Windows Update Logs Analysis (technician screen styles) */
+.card.windows-update-logs { display: flex; flex-direction: column; gap: 16px; }
+.card.windows-update-logs .summary-notes { background: rgba(79, 140, 255, 0.12); border-left: 4px solid #4f8cff; padding: 14px; border-radius: 8px; margin-bottom: 0; }
+.card.windows-update-logs .note-item { margin: 6px 0; font-size: 13px; line-height: 1.5; color: #cbd5e1; }
+.card.windows-update-logs .note-item:first-child { margin-top: 0; }
+.card.windows-update-logs .note-item:last-child { margin-bottom: 0; }
+.card.windows-update-logs .no-errors { background: rgba(16, 185, 129, 0.15); border-left: 4px solid #10b981; padding: 14px; border-radius: 8px; color: #d1fae5; line-height: 1.6; margin-bottom: 0; }
+.card.windows-update-logs .no-errors strong { color: #6ee7b7; }
+.card.windows-update-logs .error-groups { margin: 0; }
+.card.windows-update-logs .error-groups h3 { font-size: 16px; font-weight: 600; color: #e3e9f8; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
+.card.windows-update-logs .error-group-card { background: rgba(36, 48, 68, 0.5); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; transition: all 0.2s ease; }
+.card.windows-update-logs .error-group-card:last-child { margin-bottom: 0; }
+.card.windows-update-logs .error-group-card:hover { border-color: #4f8cff; background: rgba(36, 48, 68, 0.7); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3); }
+.card.windows-update-logs .error-group-header { display: flex; flex-direction: column; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid rgba(203, 213, 225, 0.15); margin-bottom: 12px; }
+.card.windows-update-logs .error-title-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.card.windows-update-logs .error-code-badge { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); padding: 6px 10px; border-radius: 6px; font-family: "Courier New", "Consolas", monospace; font-weight: 700; font-size: 13px; color: #fca5a5; letter-spacing: 0.5px; }
+.card.windows-update-logs .error-name { font-weight: 600; color: #e3e9f8; font-size: 14px; flex: 1; min-width: 200px; }
+.card.windows-update-logs .error-description { font-size: 13px; color: #cbd5e1; line-height: 1.6; }
+.card.windows-update-logs .error-meta { font-size: 12px; color: #94a3b8; font-style: italic; }
+.card.windows-update-logs .error-packages { margin-top: 12px; padding: 12px; background: rgba(36, 48, 68, 0.4); border-radius: 8px; }
+.card.windows-update-logs .error-packages strong { display: block; font-size: 13px; font-weight: 600; color: #a3adbf; margin-bottom: 8px; }
+.card.windows-update-logs .package-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.card.windows-update-logs .package-badge { background: rgba(79, 140, 255, 0.15); border: 1px solid rgba(79, 140, 255, 0.3); color: #93bbff; padding: 4px 10px; border-radius: 5px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+.card.windows-update-logs .package-more { color: #64748b; font-size: 12px; font-style: italic; padding: 4px 8px; }
+.card.windows-update-logs .ai-analysis-section { margin-top: 16px; padding: 14px; background: rgba(124, 58, 237, 0.08); border: 1px solid rgba(124, 58, 237, 0.3); border-radius: 8px; }
+.card.windows-update-logs .ai-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid rgba(203, 213, 225, 0.15); }
+.card.windows-update-logs .ai-header span:first-child { font-weight: 600; color: #e3e9f8; font-size: 14px; }
+.card.windows-update-logs .ai-issue-summary { margin-bottom: 14px; }
+.card.windows-update-logs .ai-issue-summary strong { display: block; font-size: 13px; font-weight: 600; color: #a3adbf; margin-bottom: 6px; }
+.card.windows-update-logs .ai-issue-summary p { margin: 0; font-size: 13px; line-height: 1.6; color: #cbd5e1; }
+.card.windows-update-logs .ai-causes, .card.windows-update-logs .ai-remediation { margin: 14px 0 0 0; }
+.card.windows-update-logs .ai-causes strong, .card.windows-update-logs .ai-remediation strong { display: block; font-size: 13px; font-weight: 600; color: #a3adbf; margin-bottom: 8px; }
+.card.windows-update-logs .ai-causes ul, .card.windows-update-logs .ai-remediation ol { margin: 0; padding-left: 20px; }
+.card.windows-update-logs .ai-causes li, .card.windows-update-logs .ai-remediation li { margin: 6px 0; font-size: 13px; color: #cbd5e1; line-height: 1.6; }
+.card.windows-update-logs .ai-causes li::marker, .card.windows-update-logs .ai-remediation li::marker { color: #94a3b8; }
+`;
+
+// Print styles (light theme for reports)
 export const printCSS = `
-  .card.windows-update-logs {
-    break-inside: avoid;
-  }
-
-  .card.windows-update-logs .kpi-row {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .card.windows-update-logs .summary-notes {
-    background: #f5f5f5;
-    border-left: 4px solid #0066cc;
-    padding: 1rem;
-    margin-bottom: 1.5rem;
-    border-radius: 4px;
-  }
-
-  .card.windows-update-logs .summary-notes .note-item {
-    margin: 0.5rem 0;
-    font-size: 0.95rem;
-    line-height: 1.4;
-  }
-
-  .card.windows-update-logs .error-groups {
-    margin: 2rem 0;
-  }
-
-  .card.windows-update-logs .error-groups h3 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 1rem;
-    color: #222;
-  }
-
-  .card.windows-update-logs .error-table-container {
-    overflow-x: auto;
-    margin-bottom: 1rem;
-  }
-
-  .card.windows-update-logs .error-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.9rem;
-  }
-
-  .card.windows-update-logs .error-table thead {
-    background: #f0f0f0;
-    border-bottom: 2px solid #ddd;
-  }
-
-  .card.windows-update-logs .error-table th {
-    padding: 0.75rem;
-    text-align: left;
-    font-weight: 600;
-    color: #333;
-  }
-
-  .card.windows-update-logs .error-table td {
-    padding: 0.75rem;
-    border-bottom: 1px solid #eee;
-  }
-
-  .card.windows-update-logs .error-code {
-    font-family: "Courier New", monospace;
-    font-weight: 600;
-    color: #d32f2f;
-  }
-
-  .card.windows-update-logs .error-name {
-    font-weight: 500;
-    color: #555;
-  }
-
-  .card.windows-update-logs .error-count .badge {
-    background: #ff9800;
-    color: white;
-    padding: 0.25rem 0.5rem;
-    border-radius: 12px;
-    font-weight: 600;
-    font-size: 0.85rem;
-  }
-
-  .card.windows-update-logs .error-latest {
-    font-size: 0.85rem;
-    color: #666;
-  }
-
-  .card.windows-update-logs .package-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .card.windows-update-logs .package-badge {
-    background: #e3f2fd;
-    color: #1976d2;
-    padding: 0.25rem 0.5rem;
-    border-radius: 3px;
-    font-size: 0.8rem;
-    max-width: 150px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .card.windows-update-logs .package-more {
-    color: #999;
-    font-size: 0.8rem;
-    font-style: italic;
-  }
-
-  .card.windows-update-logs .no-errors {
-    background: #e8f5e9;
-    border-left: 4px solid #4caf50;
-    padding: 1rem;
-    border-radius: 4px;
-    color: #2e7d32;
-    margin: 1rem 0;
-  }
-
-  .card.windows-update-logs .ai-analysis-section {
-    margin: 2rem 0;
-    padding-top: 1rem;
-    border-top: 2px solid #eee;
-  }
-
-  .card.windows-update-logs .ai-analysis-section h3 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 1rem;
-    color: #222;
-  }
-
-  .card.windows-update-logs .ai-analysis-card {
-    background: #fafafa;
-    border: 1px solid #e0e0e0;
-    border-radius: 6px;
-    padding: 1rem;
-    margin-bottom: 1.5rem;
-    break-inside: avoid;
-  }
-
-  .card.windows-update-logs .ai-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-  }
-
-  .card.windows-update-logs .error-code-badge {
-    background: #f5f5f5;
-    border: 1px solid #ddd;
-    padding: 0.25rem 0.5rem;
-    border-radius: 3px;
-    font-family: "Courier New", monospace;
-    font-weight: 600;
-    font-size: 0.85rem;
-  }
-
-  .card.windows-update-logs .priority-badge {
-    padding: 0.25rem 0.75rem;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .card.windows-update-logs .priority-critical {
-    background: #d32f2f;
-    color: white;
-  }
-
-  .card.windows-update-logs .priority-high {
-    background: #f57c00;
-    color: white;
-  }
-
-  .card.windows-update-logs .priority-medium {
-    background: #fbc02d;
-    color: #222;
-  }
-
-  .card.windows-update-logs .priority-low {
-    background: #388e3c;
-    color: white;
-  }
-
-  .card.windows-update-logs .ai-issue {
-    margin-bottom: 1rem;
-  }
-
-  .card.windows-update-logs .ai-issue strong {
-    display: block;
-    margin-bottom: 0.5rem;
-    color: #333;
-  }
-
-  .card.windows-update-logs .ai-issue p {
-    margin: 0;
-    line-height: 1.5;
-    color: #555;
-  }
-
-  .card.windows-update-logs .ai-causes,
-  .card.windows-update-logs .ai-remediation {
-    margin: 1rem 0;
-  }
-
-  .card.windows-update-logs .ai-causes strong,
-  .card.windows-update-logs .ai-remediation strong {
-    display: block;
-    margin-bottom: 0.5rem;
-    color: #333;
-  }
-
-  .card.windows-update-logs .ai-causes ul,
-  .card.windows-update-logs .ai-remediation ol {
-    margin: 0;
-    padding-left: 1.5rem;
-  }
-
-  .card.windows-update-logs .ai-causes li,
-  .card.windows-update-logs .ai-remediation li {
-    margin: 0.5rem 0;
-    color: #555;
-    line-height: 1.5;
-  }
-
-  .card.windows-update-logs .error-details {
-    margin-top: 1rem;
-    border-top: 1px solid #eee;
-    padding-top: 1rem;
-  }
-
-  .card.windows-update-logs .error-details details {
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    padding: 0.75rem;
-  }
-
-  .card.windows-update-logs .error-details summary {
-    cursor: pointer;
-    font-weight: 600;
-    color: #333;
-    user-select: none;
-  }
-
-  .card.windows-update-logs .error-details pre {
-    background: #f5f5f5;
-    border: 1px solid #ddd;
-    border-radius: 3px;
-    padding: 0.75rem;
-    margin: 0.75rem 0 0 0;
-    font-family: "Courier New", monospace;
-    font-size: 0.8rem;
-    overflow-x: auto;
-    color: #333;
-    line-height: 1.3;
-  }
-
+  .card.windows-update-logs { page-break-inside: avoid; }
+  .card.windows-update-logs .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+  .card.windows-update-logs .summary-notes { background: #e3f2fd; border-left: 4px solid #1976d2; padding: 1rem; margin-bottom: 1.5rem; border-radius: 6px; }
+  .card.windows-update-logs .note-item { margin: 0.5rem 0; font-size: 0.95rem; line-height: 1.5; color: #0d47a1; }
+  .card.windows-update-logs .note-item:first-child { margin-top: 0; }
+  .card.windows-update-logs .note-item:last-child { margin-bottom: 0; }
+  .card.windows-update-logs .no-errors { background: #e8f5e9; border-left: 4px solid #4caf50; padding: 1rem; border-radius: 6px; color: #1b5e20; margin: 1.5rem 0; line-height: 1.6; }
+  .card.windows-update-logs .no-errors strong { color: #2e7d32; }
+  .card.windows-update-logs .error-groups { margin: 1.5rem 0; }
+  .card.windows-update-logs .error-groups h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; color: #1a1a1a; padding-bottom: 0.5rem; border-bottom: 2px solid #ddd; }
+  .card.windows-update-logs .error-group-card { background: #fafafa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.25rem; page-break-inside: avoid; }
+  .card.windows-update-logs .error-group-card:last-child { margin-bottom: 0; }
+  .card.windows-update-logs .error-group-header { padding-bottom: 1rem; border-bottom: 1px solid #e0e0e0; margin-bottom: 1rem; }
+  .card.windows-update-logs .error-title-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+  .card.windows-update-logs .error-code-badge { background: #ffebee; border: 1px solid #ef5350; padding: 0.35rem 0.75rem; border-radius: 4px; font-family: "Courier New", "Consolas", monospace; font-weight: 700; font-size: 0.85rem; color: #c62828; letter-spacing: 0.5px; }
+  .card.windows-update-logs .error-name { font-weight: 600; color: #333; font-size: 0.95rem; }
+  .card.windows-update-logs .error-description { font-size: 0.9rem; color: #555; line-height: 1.6; margin-bottom: 0.5rem; }
+  .card.windows-update-logs .error-meta { font-size: 0.85rem; color: #666; font-style: italic; }
+  .card.windows-update-logs .error-packages { margin-top: 1rem; padding: 0.875rem; background: #f5f5f5; border-radius: 6px; border: 1px solid #e0e0e0; }
+  .card.windows-update-logs .error-packages strong { display: block; font-size: 0.9rem; font-weight: 600; color: #444; margin-bottom: 0.5rem; }
+  .card.windows-update-logs .package-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .card.windows-update-logs .package-badge { background: #e3f2fd; border: 1px solid #90caf9; color: #0d47a1; padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.8rem; font-weight: 500; }
+  .card.windows-update-logs .package-more { color: #888; font-size: 0.8rem; font-style: italic; padding: 0.25rem 0.5rem; }
+  .card.windows-update-logs .ai-analysis-section { margin-top: 1.25rem; padding: 1rem; background: #f3e5f5; border: 1px solid #ce93d8; border-radius: 6px; page-break-inside: avoid; }
+  .card.windows-update-logs .ai-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid #e0e0e0; }
+  .card.windows-update-logs .ai-header span:first-child { font-weight: 600; color: #6a1b9a; font-size: 0.95rem; }
+  .card.windows-update-logs .ai-issue-summary { margin-bottom: 1rem; }
+  .card.windows-update-logs .ai-issue-summary strong { display: block; font-size: 0.9rem; font-weight: 600; color: #444; margin-bottom: 0.5rem; }
+  .card.windows-update-logs .ai-issue-summary p { margin: 0; font-size: 0.9rem; line-height: 1.6; color: #555; }
+  .card.windows-update-logs .ai-causes, .card.windows-update-logs .ai-remediation { margin: 1rem 0 0 0; }
+  .card.windows-update-logs .ai-causes strong, .card.windows-update-logs .ai-remediation strong { display: block; font-size: 0.9rem; font-weight: 600; color: #444; margin-bottom: 0.5rem; }
+  .card.windows-update-logs .ai-causes ul, .card.windows-update-logs .ai-remediation ol { margin: 0; padding-left: 1.5rem; }
+  .card.windows-update-logs .ai-causes li, .card.windows-update-logs .ai-remediation li { margin: 0.5rem 0; font-size: 0.9rem; color: #555; line-height: 1.6; }
+  
   @media print {
-    .card.windows-update-logs .error-table {
-      page-break-inside: avoid;
-    }
-
-    .card.windows-update-logs .ai-analysis-card {
-      page-break-inside: avoid;
-    }
+    .card.windows-update-logs .error-group-card { page-break-inside: avoid; break-inside: avoid; }
+    .card.windows-update-logs .ai-analysis-section { page-break-inside: avoid; break-inside: avoid; }
   }
 `;
