@@ -10,7 +10,6 @@ mod paths {
 // Easy-to-change constants for where the generated Python executable is placed
 // and what it is named. Change these to control the target location or name
 // without digging through the build logic.
-const PYTHON_RUNNER_STEM: &str = "service_runner"; // PyInstaller --name
 const PYTHON_RUNNER_EXE_NAME: &str = "service_runner.exe"; // final exe name in bin dir
 const PYTHON_COMMAND: &str = "python"; // program used to invoke PyInstaller
 
@@ -363,27 +362,28 @@ fn main() {
     }
 
     let workpath_str = workpath.to_str().unwrap_or(bin_dir_str);
-    let specpath_str = specpath.to_str().unwrap_or(bin_dir_str);
 
-    println!("cargo:warning=Executing PyInstaller command...");
-    println!("cargo:warning=Command: {} -m PyInstaller --onefile --noconfirm --distpath {} --workpath {} --specpath {} --name {} {}",
-             PYTHON_COMMAND, bin_dir_str, workpath_str, specpath_str, PYTHON_RUNNER_STEM, py_src.display());
+    // Path to the spec file in src-tauri directory
+    let spec_file = manifest_dir.join("service_runner.spec");
+
+    println!("cargo:warning=Executing PyInstaller with spec file...");
+    println!(
+        "cargo:warning=Command: {} -m PyInstaller --distpath {} --workpath {} {}",
+        PYTHON_COMMAND,
+        bin_dir_str,
+        workpath_str,
+        spec_file.display()
+    );
 
     // Use .output() instead of .status() to capture stdout/stderr and ensure full completion
     let output = Command::new(PYTHON_COMMAND)
         .arg("-m")
         .arg("PyInstaller")
-        .arg("--onefile")
-        .arg("--noconfirm")
         .arg("--distpath")
         .arg(bin_dir_str)
         .arg("--workpath")
         .arg(workpath_str)
-        .arg("--specpath")
-        .arg(specpath_str)
-        .arg("--name")
-        .arg(PYTHON_RUNNER_STEM)
-        .arg(py_src.to_str().unwrap())
+        .arg(spec_file.to_str().unwrap())
         .output();
 
     match output {
