@@ -226,9 +226,8 @@ async function processStatusLine(line) {
     if (updateGlobalProgress) {
       updateGlobalProgress({ overallStatus: "stopped" });
     }
-    // Update status indicator
-    const currentStatus = getRunState();
-    updateRunnerStatus(currentStatus.overallStatus);
+    // Update status indicator - use "stopped" directly since we just set it
+    updateRunnerStatus("stopped");
     await updateSummaryFromGlobal();
     return;
   }
@@ -241,9 +240,8 @@ async function processStatusLine(line) {
     if (updateGlobalProgress) {
       updateGlobalProgress({ overallStatus: "paused" });
     }
-    // Update status indicator
-    const currentStatus = getRunState();
-    updateRunnerStatus(currentStatus.overallStatus);
+    // Update status indicator - use "paused" directly since we just set it
+    updateRunnerStatus("paused");
     await updateSummaryFromGlobal();
     return;
   }
@@ -256,9 +254,8 @@ async function processStatusLine(line) {
     if (updateGlobalProgress) {
       updateGlobalProgress({ overallStatus: "running" });
     }
-    // Update status indicator
-    const currentStatus = getRunState();
-    updateRunnerStatus(currentStatus.overallStatus);
+    // Update status indicator - use "running" directly since we just set it
+    updateRunnerStatus("running");
     await updateSummaryFromGlobal();
     return;
   }
@@ -639,6 +636,15 @@ export async function initPage() {
 
   container.hidden = false;
 
+  // Initialize status indicator
+  if (runnerControls && !runnerControls.hidden) {
+    const currentState = getRunState();
+    const status = currentState?.overallStatus || "idle";
+    updateRunnerStatus(status);
+  } else {
+    updateRunnerStatus("idle");
+  }
+
   // Initialize task status tracking
   let taskStatuses = {};
   tasks.forEach((task, index) => {
@@ -712,11 +718,15 @@ export async function initPage() {
     // Show control buttons and update status
     if (runnerControls) runnerControls.hidden = false;
     const currentState = getRunState();
-    updateRunnerStatus(currentState.overallStatus || "running");
+    // Use the actual state from global state, default to "running" if not set
+    const status = currentState?.overallStatus || "running";
+    updateRunnerStatus(status);
     // Keep back button enabled so users can navigate away during run
   } else {
     // Hide control buttons when not running
     if (runnerControls) runnerControls.hidden = true;
+    // Set status to idle when not running
+    updateRunnerStatus("idle");
   }
   
   // Wire up control button handlers
@@ -776,7 +786,10 @@ export async function initPage() {
   
   // Helper function to update status indicator and pause/resume button
   function updateRunnerStatus(status) {
-    if (!runnerStatus || !statusIcon || !statusText || !pauseResumeBtn) return;
+    if (!runnerStatus || !statusIcon || !statusText || !pauseResumeBtn) {
+      // Elements not available yet, skip update
+      return;
+    }
     
     const iconEl = pauseResumeBtn.querySelector("i");
     const textEl = pauseResumeBtn.querySelector(".btn-text");
@@ -789,7 +802,12 @@ export async function initPage() {
         pauseResumeBtn.className = "control-btn pause";
         pauseResumeBtn.title = "Pause run after current task completes";
         if (iconEl) iconEl.className = "ph ph-pause-circle";
-        if (textEl) textEl.textContent = "Pause";
+        if (textEl) {
+          textEl.textContent = "Pause";
+        } else {
+          // Fallback if btn-text span doesn't exist
+          pauseResumeBtn.innerHTML = '<i class="ph ph-pause-circle"></i><span class="btn-text">Pause</span>';
+        }
         pauseResumeBtn.disabled = false;
         break;
       case "paused":
@@ -799,7 +817,12 @@ export async function initPage() {
         pauseResumeBtn.className = "control-btn resume";
         pauseResumeBtn.title = "Resume paused run";
         if (iconEl) iconEl.className = "ph ph-play-circle";
-        if (textEl) textEl.textContent = "Resume";
+        if (textEl) {
+          textEl.textContent = "Resume";
+        } else {
+          // Fallback if btn-text span doesn't exist
+          pauseResumeBtn.innerHTML = '<i class="ph ph-play-circle"></i><span class="btn-text">Resume</span>';
+        }
         pauseResumeBtn.disabled = false;
         break;
       case "stopped":
@@ -859,8 +882,9 @@ export async function initPage() {
     runBtn.disabled = true;
     runBtn.setAttribute("disabled", "");
     runBtn.setAttribute("aria-disabled", "true");
-    // Show control buttons
+    // Show control buttons and update status
     if (runnerControls) runnerControls.hidden = false;
+    updateRunnerStatus("running");
     // Keep back button enabled so users can navigate away during run
     // New service: clear any previously cached results so navigating back won't show stale data
     clearFinalReportCache();
