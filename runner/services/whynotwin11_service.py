@@ -32,6 +32,13 @@ import os
 import subprocess
 import tempfile
 from typing import Any, Dict, List, Optional
+
+# Import subprocess utility with skip checking
+try:
+    from subprocess_utils import run_with_skip_check
+except ImportError:
+    # Fallback if utility not available
+    run_with_skip_check = subprocess.run
 import logging
 
 logger = logging.getLogger(__name__)
@@ -128,7 +135,7 @@ def run_whynotwin11_check(task: Dict[str, Any]) -> Dict[str, Any]:
 
         add_breadcrumb("Executing WhyNotWin11", category="subprocess", level="info")
 
-        proc = subprocess.run(
+        proc = run_with_skip_check(
             command,
             cwd=work_dir,
             capture_output=True,

@@ -134,7 +134,7 @@ def run_sfc_scan(task: Dict[str, Any]) -> Dict[str, Any]:
         # Capture raw bytes so we can detect and decode UTF-16LE (sfc often
         # emits output containing null bytes when run on Windows). We'll
         # decode explicitly below.
-        proc = subprocess.run(
+        proc = run_with_skip_check(
             command,
             capture_output=True,
             text=False,

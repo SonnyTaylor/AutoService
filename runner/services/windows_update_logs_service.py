@@ -66,6 +66,13 @@ import sys
 import tempfile
 import time
 from typing import Any, Dict, List, Optional
+
+# Import subprocess utility with skip checking
+try:
+    from subprocess_utils import run_with_skip_check
+except ImportError:
+    # Fallback if utility not available
+    run_with_skip_check = subprocess.run
 from datetime import datetime, timedelta
 import xml.etree.ElementTree as ET
 
@@ -105,7 +112,7 @@ def _powershell_run(script_text: str) -> Dict[str, Any]:
         ps1_path = tf.name
 
     try:
-        proc = subprocess.run(
+        proc = run_with_skip_check(
             [
                 "powershell.exe",
                 "-NoProfile",
@@ -114,8 +121,7 @@ def _powershell_run(script_text: str) -> Dict[str, Any]:
                 "-File",
                 ps1_path,
             ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             text=True,
             encoding="utf-8",
             errors="replace",
@@ -164,10 +170,9 @@ def _decode_error_code(error_code: str, err_exe_path: str) -> Dict[str, str]:
         Dict with keys: name, description
     """
     try:
-        result = subprocess.run(
+        result = run_with_skip_check(
             [err_exe_path, "/:xml", error_code],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             text=True,
             timeout=10,
         )

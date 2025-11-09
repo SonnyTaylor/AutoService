@@ -34,6 +34,13 @@ import logging
 import os
 from typing import Dict, Any, List, Optional
 
+# Import subprocess utility with skip checking
+try:
+    from subprocess_utils import run_with_skip_check
+except ImportError:
+    # Fallback if utility not available
+    run_with_skip_check = subprocess.run
+
 logger = logging.getLogger(__name__)
 
 # Sentry integration for breadcrumbs
@@ -277,7 +284,8 @@ def run_ping_test(task: Dict[str, Any]) -> Dict[str, Any]:
     )
 
     try:
-        process = subprocess.run(
+        # Use utility function that checks for skip signals during execution
+        process = run_with_skip_check(
             command,
             capture_output=True,
             text=True,
@@ -285,7 +293,7 @@ def run_ping_test(task: Dict[str, Any]) -> Dict[str, Any]:
             encoding="utf-8",
             errors="replace",
         )
-
+        
         if process.returncode != 0:
             logger.warning(f"Ping process exited with code {process.returncode}.")
             # Ping might still have useful output even with non-zero exit
@@ -383,6 +391,16 @@ def run_ping_test(task: Dict[str, Any]) -> Dict[str, Any]:
             "command": command,
         }
 
+    except KeyboardInterrupt as e:
+        # Handle skip signal
+        if "skip" in str(e).lower():
+            logger.warning("Ping test skipped by user request")
+            return {
+                "task_type": "ping_test",
+                "status": "skipped",
+                "summary": {"reason": "User requested skip"},
+            }
+        raise
     except FileNotFoundError:
         logger.error("Ping command not found in PATH.")
         return {
