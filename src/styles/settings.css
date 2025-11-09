@@ -488,12 +488,59 @@
   color: var(--muted);
 }
 
+/* Business configuration sections */
+.business-config-section {
+  background: var(--panel-accent);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px;
+  margin: 0; /* Spacing handled by card-body gap */
+}
+
+.business-section-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.business-section-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.business-section-subtitle {
+  font-size: 12px;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: normal;
+}
+
+/* Technician names form */
+.tech-name-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tech-name-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.tech-names-list {
+  margin-top: 0;
+}
+
 /* Business form categories */
 .business-category {
   background: var(--panel-accent);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 16px;
+  padding: 18px;
   margin: 0; /* Spacing handled by card-body gap */
 }
 
@@ -577,7 +624,8 @@
 }
 
 #business-settings-status {
-  padding-left: 4px;
+  margin-top: 4px;
+  min-height: 20px;
   font-size: 12px;
 }
 
