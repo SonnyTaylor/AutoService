@@ -188,20 +188,61 @@ pub fn get_tool_statuses(state: tauri::State<AppState>) -> Result<Vec<ToolStatus
         ("prime95", "Prime95", "prime95.exe"),
         ("sdi", "Snappy Driver Installer", "SDI.exe"),
         ("gsmartcontrol", "GSmartControl", "gsmartcontrol.exe"),
+        ("err", "Microsoft Error Lookup Tool", "Err_6.4.5.exe"),
+        ("heavyload", "HeavyLoad", "heavyload.exe"),
+        ("furmark", "FurMark", "furmark.exe"),
+        ("iperf3", "iPerf3", "iperf3.exe"),
+        (
+            "whynotwin11",
+            "WhyNotWin11 Portable",
+            "WhyNotWin11Portable.exe",
+        ),
+        ("drivecleanup", "DriveCleanup", "DriveCleanup.exe"),
     ];
 
     let mut out = Vec::with_capacity(required.len());
     for (key, name, hint) in required.iter().copied() {
-        // Simple fuzzy match against saved entries by key or display name.
+        // Fuzzy match with scoring to find best match
         let mut path: Option<String> = None;
         let mut exists = false;
+        let mut best_score = 0;
+
         for p in &list {
-            let hay = format!("{} {} {}", p.name, p.description, p.exe_path).to_lowercase();
-            if hay.contains(key) || hay.contains(name.to_lowercase().as_str()) {
+            let p_name_lower = p.name.to_lowercase();
+            let p_exe_lower = p.exe_path.to_lowercase();
+            let key_lower = key.to_lowercase();
+
+            let mut score = 0;
+
+            // Highest priority: Name starts with key (e.g., "Err_6.4.5" starts with "err")
+            if p_name_lower.starts_with(&key_lower) {
+                score += 1000;
+            }
+
+            // High priority: Key matches full name
+            if p_name_lower == key_lower || p_name_lower == name.to_lowercase() {
+                score += 500;
+            }
+
+            // Medium priority: Key appears as whole word in name
+            let name_words: Vec<&str> =
+                p_name_lower.split(|c: char| !c.is_alphanumeric()).collect();
+            if name_words.iter().any(|word| *word == key_lower) {
+                score += 100;
+            }
+
+            // Low priority: Key appears as whole word in exe path
+            let exe_words: Vec<&str> = p_exe_lower.split(|c: char| !c.is_alphanumeric()).collect();
+            if exe_words.iter().any(|word| *word == key_lower) {
+                score += 50;
+            }
+
+            // Only update if this is a better match
+            if score > best_score {
+                best_score = score;
                 let full = resolve_exe_path(data_root, &p.exe_path);
                 exists = Path::new(&full).is_file();
                 path = Some(full);
-                break;
             }
         }
 

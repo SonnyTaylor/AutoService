@@ -100,6 +100,7 @@ from services.iperf_service import run_iperf_test  # type: ignore
 from services.kvrt_service import run_kvrt_scan  # type: ignore
 from services.speedtest_service import run_speedtest  # type: ignore
 from services.windows_update_service import run_windows_update  # type: ignore
+from services.windows_update_logs_service import run_windows_update_logs_analysis  # type: ignore
 from services.whynotwin11_service import run_whynotwin11_check  # type: ignore
 from services.winsat_service import run_winsat_disk  # type: ignore
 from services.disk_space_service import run_disk_space_report  # type: ignore
@@ -199,6 +200,7 @@ TASK_HANDLERS: Dict[str, TaskHandler] = {
     "kvrt_scan": run_kvrt_scan,
     "speedtest": run_speedtest,
     "windows_update": run_windows_update,
+    "windows_update_logs_analysis": run_windows_update_logs_analysis,
     "whynotwin11_check": run_whynotwin11_check,
     "winsat_disk": run_winsat_disk,
     "disk_space_report": run_disk_space_report,

@@ -33,13 +33,9 @@ export const definition = {
       "registry",
     ],
   },
-  toolKeys: ["drivecleanup", "drive-cleanup", "DriveCleanup"],
+  toolKeys: ["drivecleanup"],
   async build({ params, resolveToolPath }) {
-    const exec = await resolveToolPath([
-      "drivecleanup",
-      "drive-cleanup",
-      "DriveCleanup",
-    ]);
+    const exec = await resolveToolPath("drivecleanup");
 
     const ALL = [
       "usb",

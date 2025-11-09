@@ -1,12 +1,12 @@
 """AI-assisted Windows startup item optimizer.
 
 Enumerates startup entries from registry keys, Startup folders, Task Scheduler,
-and services, then consults an OpenAI-compatible model to suggest safe disables.
+and services, then consults an AI model to suggest safe disables.
 Optionally applies changes based on AI recommendations.
 
 Features:
 - Comprehensive startup item enumeration (Registry, folders, scheduled tasks)
-- AI-powered analysis using OpenAI-compatible models
+- AI-powered analysis using multiple providers via LiteLLM
 - Conservative recommendations focused on user safety
 - Detailed impact analysis and risk assessment
 - Reversible changes with backup/restore capability
@@ -21,6 +21,9 @@ import subprocess
 import time
 from typing import Dict, Any, List, Optional, Tuple
 from pathlib import Path
+
+# Import unified AI utilities
+from ai_utils import call_ai_analysis
 
 # Load environment variables from .env file
 try:
@@ -46,11 +49,6 @@ except ImportError:
         pass
 
 
-# Prefer requests for HTTP if available; fall back to urllib otherwise.
-try:  # lightweight optional dependency
-    import requests  # type: ignore
-except Exception:  # noqa: BLE001
-    requests = None  # type: ignore
 try:
     import winreg  # type: ignore
 except ImportError:  # Non-Windows systems will not support this service
@@ -503,13 +501,17 @@ def call_chat_model(
     items: List[Dict[str, Any]],
     base_url: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Call the OpenAI-compatible chat completion endpoint.
+    """Call AI chat completion to analyze startup items.
 
-    Uses `requests` if available for readability; falls back to stdlib `urllib`.
-    Returns dict with keys: success, data|error, usage (optional).
+    Args:
+        api_key: API key for the AI provider
+        model: Model name (e.g., "gpt-4-turbo-preview", "claude-3-sonnet")
+        items: List of startup items to analyze
+        base_url: Optional base URL for API endpoint (for compatibility)
+
+    Returns:
+        Dict with keys: success, data|error, usage (optional)
     """
-    url = (base_url or "https://api.openai.com").rstrip("/") + "/v1/chat/completions"
-
     # Prepare simplified item list for AI (remove unnecessary metadata)
     simplified_items = []
     for item in items:
@@ -527,112 +529,38 @@ def call_chat_model(
             }
         )
 
-    payload = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": SYSTEM_INSTRUCTIONS},
-            {
-                "role": "user",
-                "content": f"Analyze these {len(simplified_items)} startup items and provide recommendations:\n\n{json.dumps(simplified_items, indent=2)}",
-            },
-        ],
-        "temperature": 0.1,  # Slight randomness for more natural responses
-        "response_format": {"type": "json_object"},
-    }
+    user_prompt = f"Analyze these {len(simplified_items)} startup items and provide recommendations:\n\n{json.dumps(simplified_items, indent=2)}"
 
     logger.info(f"Sending {len(items)} startup items to AI model {model}...")
     sys.stderr.flush()
 
-    try:
-        if requests is not None:
-            resp = requests.post(  # type: ignore
-                url,
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json",
-                },
-                json=payload,
-                timeout=120,  # Increased timeout for large payloads
-            )
-            if not resp.ok:
-                error_detail = (
-                    resp.text[:2000] if resp.text else f"Status {resp.status_code}"
-                )
-                logger.error(f"API request failed: {error_detail}")
-                sys.stderr.flush()
-                return {
-                    "success": False,
-                    "error": f"HTTP {resp.status_code}: {error_detail}",
-                }
-            outer = resp.json()
-        else:
-            import urllib.request
-            import urllib.error
+    # Use unified AI utility
+    result = call_ai_analysis(
+        system_prompt=SYSTEM_INSTRUCTIONS,
+        user_prompt=user_prompt,
+        model=model,
+        api_key=api_key,
+        temperature=0.1,
+        json_mode=True,
+        required_fields=["to_disable"],
+    )
 
-            data = json.dumps(payload).encode("utf-8")
-            req = urllib.request.Request(
-                url,
-                data=data,
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json",
-                },
-                method="POST",
-            )
-            with urllib.request.urlopen(req, timeout=120) as resp:  # type: ignore
-                body = resp.read().decode("utf-8", "replace")
-            outer = json.loads(body)
-    except Exception as e:  # noqa: BLE001
-        logger.error(f"API request exception: {e}")
-        sys.stderr.flush()
-        return {"success": False, "error": f"Request failed: {e}"}
+    if not result["success"]:
+        return result
 
-    # Parse assistant content (should already be JSON due to response_format)
-    try:
-        content = outer["choices"][0]["message"]["content"]
-        json_text = content.strip()
+    # Ensure proper structure
+    data = result["data"]
+    data.setdefault("to_disable", [])
+    data.setdefault("keep_enabled", [])
+    data.setdefault("analysis_summary", {})
 
-        # Try to extract JSON if wrapped in markdown
-        if "```json" in json_text:
-            json_match = re.search(r"```json\s*(\{.*?\})\s*```", json_text, re.DOTALL)
-            if json_match:
-                json_text = json_match.group(1)
-        elif not json_text.startswith("{"):
-            m = re.search(r"(\{.*\})", json_text, re.DOTALL)
-            if m:
-                json_text = m.group(1)
+    logger.info(
+        f"AI analysis complete. Recommendations: {len(data['to_disable'])} to disable, "
+        f"{len(data.get('keep_enabled', []))} to keep"
+    )
+    sys.stderr.flush()
 
-        parsed = json.loads(json_text)
-
-        # Ensure required structure
-        if "to_disable" not in parsed or not isinstance(parsed.get("to_disable"), list):
-            parsed.setdefault("to_disable", [])
-        if "keep_enabled" not in parsed:
-            parsed["keep_enabled"] = []
-        if "analysis_summary" not in parsed:
-            parsed["analysis_summary"] = {}
-
-        # Extract token usage if available
-        usage_info = outer.get("usage", {})
-
-        logger.info(
-            f"AI analysis complete. Recommendations: {len(parsed['to_disable'])} to disable, {len(parsed.get('keep_enabled', []))} to keep"
-        )
-        sys.stderr.flush()
-
-    except Exception as e:  # noqa: BLE001
-        logger.error(f"Failed to parse AI response: {e}")
-        sys.stderr.flush()
-        return {
-            "success": False,
-            "error": f"Malformed API reply: {e} | body={str(outer)[:2000]}",
-        }
-
-    return {
-        "success": True,
-        "data": parsed,
-        "usage": usage_info,
-    }
+    return result
 
 
 def _disable_registry_item(hive_name: str, path: str, value_name: str) -> bool:

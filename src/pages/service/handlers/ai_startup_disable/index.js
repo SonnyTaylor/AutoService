@@ -33,7 +33,7 @@ import {
 // =============================================================================
 
 /**
- * Check if OpenAI API key is configured in settings.
+ * Check if AI is configured in settings.
  * @returns {Promise<boolean>} True if API key is available
  */
 async function hasApiKey() {
@@ -42,7 +42,7 @@ async function hasApiKey() {
     if (!invoke) return false;
 
     const settings = await invoke("load_app_settings");
-    const apiKey = settings?.ai?.openai_api_key;
+    const apiKey = settings?.ai?.api_key || settings?.ai?.openai_api_key; // Backward compat
     return Boolean(apiKey && apiKey.trim().length > 0);
   } catch {
     return false;
@@ -60,7 +60,6 @@ export const definition = {
   category: "Performance",
   description: "Use AI to analyze and optimize Windows startup programs",
   defaultParams: {
-    model: "gpt-4o-mini",
     apply_changes: true, // Default: actually disable items (not preview mode)
   },
   toolKeys: [],
@@ -69,27 +68,46 @@ export const definition = {
     return await hasApiKey();
   },
   getUnavailableReason() {
-    return "OpenAI API key not configured. Add it in Settings → AI / API.";
+    return "AI API key not configured. Add it in Settings → AI / API.";
   },
   async build({ params }) {
-    // Get API key from settings
+    // Get AI settings from centralized config
     const { invoke } = window.__TAURI__?.core || {};
     let apiKey = "";
+    let provider = "openai";
+    let model = "gpt-4o-mini";
+    let baseUrl = "";
 
     if (invoke) {
       try {
         const settings = await invoke("load_app_settings");
-        apiKey = settings?.ai?.openai_api_key || "";
+        const ai = settings?.ai || {};
+
+        // Get provider and model from settings
+        provider = ai.provider || "openai";
+        model = ai.model || "gpt-4o-mini";
+
+        // Get API key - check provider-specific keys first, then fallback
+        const providerKeys = ai.provider_keys || {};
+        apiKey =
+          providerKeys[provider] || ai.api_key || ai.openai_api_key || "";
+
+        // Get base URL - check provider-specific URLs first, then fallback
+        const providerBaseUrls = ai.provider_base_urls || {};
+        baseUrl = providerBaseUrls[provider] || ai.base_url || "";
       } catch (e) {
-        console.error("Failed to load API key from settings:", e);
+        console.error("Failed to load AI settings:", e);
       }
     }
+
+    // Build model name with provider prefix for LiteLLM
+    const litellmModel = model.includes("/") ? model : `${provider}/${model}`;
 
     return {
       type: "ai_startup_disable",
       api_key: apiKey || "env:AUTOSERVICE_OPENAI_KEY", // Fallback to env var
-      model: params?.model || "gpt-4o-mini",
-      base_url: params?.base_url || undefined,
+      model: litellmModel,
+      base_url: baseUrl || undefined,
       apply_changes: Boolean(params?.apply_changes),
       ui_label: params?.apply_changes
         ? "AI Startup Optimizer (Apply Changes)"
@@ -541,50 +559,28 @@ export function renderParamControls({ params, updateParam }) {
   wrapper.style.rowGap = "6px";
 
   const applyChangesVal = params?.apply_changes !== false; // Default true
-  const modelVal = params?.model || "gpt-4o-mini";
 
   wrapper.innerHTML = `
-    <label class="tiny-lab" style="margin-right:12px;" title="Apply AI recommendations or show preview only">
+    <label class="tiny-lab" title="Apply AI recommendations or show preview only">
       <input type="checkbox" data-param="apply_changes" ${
         applyChangesVal ? "checked" : ""
       } />
       <span class="lab">Apply changes</span>
     </label>
-    <label class="tiny-lab" style="margin-right:12px;" title="Select AI model for analysis">
-      <span class="lab">AI Model</span>
-      <select data-param="model" aria-label="AI model selection">
-        <option value="gpt-4o-mini" ${
-          modelVal === "gpt-4o-mini" ? "selected" : ""
-        }>GPT-4o Mini (Fast)</option>
-        <option value="gpt-4o" ${
-          modelVal === "gpt-4o" ? "selected" : ""
-        }>GPT-4o (Balanced)</option>
-        <option value="gpt-4-turbo" ${
-          modelVal === "gpt-4-turbo" ? "selected" : ""
-        }>GPT-4 Turbo</option>
-        <option value="gpt-4" ${
-          modelVal === "gpt-4" ? "selected" : ""
-        }>GPT-4</option>
-      </select>
-    </label>
+    <span class="muted" style="font-size: 0.85em;">AI model configured in Settings → AI / API</span>
   `;
 
   // Stop event propagation to prevent drag-and-drop interference
-  wrapper.querySelectorAll("input, select").forEach((el) => {
+  wrapper.querySelectorAll("input").forEach((el) => {
     ["mousedown", "pointerdown", "click"].forEach((evt) => {
       el.addEventListener(evt, (e) => e.stopPropagation());
     });
   });
 
   const cbApply = wrapper.querySelector('input[data-param="apply_changes"]');
-  const selModel = wrapper.querySelector('select[data-param="model"]');
 
   cbApply?.addEventListener("change", () => {
     updateParam("apply_changes", cbApply.checked);
-  });
-
-  selModel?.addEventListener("change", () => {
-    updateParam("model", selModel.value);
   });
 
   return wrapper;

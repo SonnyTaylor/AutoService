@@ -380,6 +380,76 @@ await settingsManager.set('business.name', newName, true);
 }
 ```
 
+## AI Utilities - Multi-Provider Support
+
+**Location**: `runner/ai_utils.py` | **Documentation**: `runner/AI_UTILITIES_README.md`
+
+AutoService uses **LiteLLM** for unified AI operations across multiple providers while maintaining backward compatibility with OpenAI.
+
+### Supported Providers
+
+- OpenAI (GPT-4, GPT-3.5, etc.)
+- Anthropic (Claude 3 Sonnet, Claude 3 Opus, etc.)
+- Azure OpenAI
+- Google (Vertex AI)
+- Groq
+- Ollama (local models)
+- And many more...
+
+### Basic Usage
+
+```python
+from ai_utils import call_ai_analysis
+
+result = call_ai_analysis(
+    system_prompt="You are an expert assistant.",
+    user_prompt="Analyze this data...",
+    model="gpt-4-turbo-preview",  # or "anthropic/claude-3-sonnet-20240229"
+    api_key=api_key,
+    temperature=0.3,
+    json_mode=True,
+    required_fields=["analysis", "recommendations"]  # Validates response
+)
+
+if result["success"]:
+    data = result["data"]  # Already parsed JSON
+    usage = result["usage"]  # Token usage info
+else:
+    error = result["error"]
+```
+
+### AI-Powered Services
+
+Services using AI utilities:
+- `ai_startup_service.py` - Startup item optimization
+- `ai_browser_notification_service.py` - Browser notification analysis
+- `windows_update_logs_service.py` - Windows Update error analysis
+
+### Model Name Format
+
+Use `provider/model` format:
+- `openai/gpt-4-turbo-preview` (or just `gpt-4-turbo-preview`)
+- `anthropic/claude-3-sonnet-20240229`
+- `groq/llama2-70b-4096`
+- `ollama/mistral`
+
+### Environment Variables
+
+```bash
+OPENAI_API_KEY=sk-...          # Default provider
+ANTHROPIC_API_KEY=sk-ant-...   # For Claude models
+GROQ_API_KEY=gsk_...           # For Groq
+```
+
+### Key Features
+
+- **Unified Interface**: Same code works across all providers
+- **Automatic JSON Parsing**: Extracts JSON from various response formats
+- **Sentry Integration**: Automatic breadcrumb tracking
+- **Fallback Support**: Falls back to requests library if LiteLLM unavailable
+- **Backward Compatible**: Existing OpenAI code continues to work
+- **Error Handling**: Comprehensive error handling and logging
+
 ## Python Service Return Schema
 
 **All Python services must return standardized schema**:
