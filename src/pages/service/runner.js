@@ -1378,6 +1378,93 @@ export async function initPage() {
         const finalReport = payload.final_report || payload.finalReport || {};
 
         try {
+          // Capture task durations for time estimation
+          try {
+            const { normalizeTaskParams } = await import("../../utils/task-time-estimates.js");
+            const { core } = window.__TAURI__ || {};
+            const { invoke } = core || {};
+            
+            if (invoke && Array.isArray(finalReport.results)) {
+              // Get original task definitions from run plan
+              let originalTasks = [];
+              try {
+                const pendingRunRaw = sessionStorage.getItem("service.pendingRun");
+                if (pendingRunRaw) {
+                  const pendingRun = JSON.parse(pendingRunRaw);
+                  originalTasks = Array.isArray(pendingRun.tasks) ? pendingRun.tasks : [];
+                }
+              } catch (e) {
+                console.warn("[Task Time] Failed to load original tasks for time capture:", e);
+              }
+
+              const timeRecords = [];
+              const timestamp = Math.floor(Date.now() / 1000);
+
+              console.log(`[Task Time] Processing ${finalReport.results.length} results for time capture`);
+
+              // Match results to original tasks by index
+              finalReport.results.forEach((result, idx) => {
+                // Only save successful tasks
+                const status = String(result?.status || "").toLowerCase();
+                if (status !== "success") {
+                  console.log(`[Task Time] Skipping task ${idx}: status=${status}`);
+                  return;
+                }
+
+                // Extract duration
+                const duration = result?.summary?.duration_seconds;
+                if (!Number.isFinite(duration) || duration <= 0) {
+                  console.log(`[Task Time] Skipping task ${idx}: invalid duration=${duration}`);
+                  return;
+                }
+
+                // Get task type
+                const taskType = result?.task_type || originalTasks[idx]?.type;
+                if (!taskType) {
+                  console.log(`[Task Time] Skipping task ${idx}: no task type`);
+                  return;
+                }
+
+                // Get original task for params
+                const originalTask = originalTasks[idx] || {};
+                const paramsHash = normalizeTaskParams(originalTask);
+                let paramsJson;
+                try {
+                  paramsJson = JSON.parse(paramsHash);
+                } catch (e) {
+                  console.warn(`[Task Time] Failed to parse params hash for ${taskType}:`, e);
+                  paramsJson = {};
+                }
+
+                console.log(`[Task Time] Capturing: ${taskType}, duration=${duration}s, params=`, paramsJson);
+
+                timeRecords.push({
+                  task_type: taskType,
+                  params: paramsJson,
+                  duration_seconds: Number(duration),
+                  timestamp: timestamp,
+                });
+              });
+
+              // Save records if any
+              if (timeRecords.length > 0) {
+                try {
+                  await invoke("save_task_time", { records: timeRecords });
+                  console.log(`[Task Time] Successfully saved ${timeRecords.length} duration record(s)`);
+                } catch (saveError) {
+                  console.error("[Task Time] Failed to save duration records:", saveError);
+                }
+              } else {
+                console.log("[Task Time] No valid duration records to save");
+              }
+            } else {
+              console.log("[Task Time] No invoke available or results not an array");
+            }
+          } catch (error) {
+            console.error("[Task Time] Failed to capture task durations:", error);
+            // Don't block report processing if time capture fails
+          }
+
           // Get fresh DOM references
           const currentFinalJsonEl = document.getElementById("svc-final-json");
           const currentViewResultsBtn =

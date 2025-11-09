@@ -647,12 +647,13 @@ class BuilderUI {
     this.elements = {};
     this.lastJsonString = "{}";
     this.sortableInstance = null;
+    this.timeEstimates = null; // Cache for time estimates
   }
 
   /**
    * Initialize UI elements and event listeners
    */
-  initialize() {
+  async initialize() {
     // Get DOM elements
     this.elements = {
       desc: document.getElementById("svc-run-desc"),
@@ -676,6 +677,22 @@ class BuilderUI {
     this.setupEventListeners();
     this.setTitle();
     this.setupAISummaryToggle();
+    
+    // Load time estimates asynchronously
+    this.loadTimeEstimates();
+  }
+
+  /**
+   * Load task time estimates from backend
+   */
+  async loadTimeEstimates() {
+    try {
+      const { loadTaskTimeEstimates } = await import("../../utils/task-time-estimates.js");
+      this.timeEstimates = await loadTaskTimeEstimates();
+    } catch (error) {
+      console.warn("Failed to load time estimates:", error);
+      this.timeEstimates = [];
+    }
   }
 
   /**
@@ -983,10 +1000,13 @@ class BuilderUI {
         <span class="grab" aria-hidden="true">⋮⋮</span>
         <span class="main">
           <span class="name">${label}</span>
-          <span class="meta">${group} ${this.renderAvailabilityBadge(id)}</span>
+          <span class="meta">${group} ${this.renderAvailabilityBadge(id)}<span class="time-estimate-placeholder" data-task-id="${id}"></span></span>
         </span>
       </div>
     `;
+
+    // Load time estimate asynchronously and update placeholder
+    this.loadAndRenderTimeEstimate(id, li);
 
     const row = li.querySelector(".task-row");
     const checkbox = row.querySelector("input");
@@ -1028,6 +1048,66 @@ class BuilderUI {
     });
 
     return li;
+  }
+
+  /**
+   * Load and render time estimate for a task
+   */
+  async loadAndRenderTimeEstimate(id, liElement) {
+    // Skip for GPU parent (handled separately if needed)
+    if (id === GPU_PARENT_ID) {
+      return;
+    }
+
+    try {
+      const { getEstimate, formatDuration } = await import("../../utils/task-time-estimates.js");
+      
+      // Get current task parameters
+      const taskParams = this.builder.taskParams[id]?.params || {};
+      
+      // Get estimate
+      const estimateData = await getEstimate(id, taskParams);
+      
+      // Find placeholder element
+      const placeholder = liElement?.querySelector(`.time-estimate-placeholder[data-task-id="${id}"]`);
+      if (!placeholder) {
+        return;
+      }
+
+      if (!estimateData) {
+        console.log(`[Task Time] No estimate data for ${id}`);
+        placeholder.remove();
+        return;
+      }
+
+      if (estimateData.sampleCount < 3) {
+        console.log(`[Task Time] Insufficient samples for ${id}: ${estimateData.sampleCount} < 3`);
+        placeholder.remove();
+        return;
+      }
+
+      const formatted = formatDuration(estimateData.estimate);
+      if (!formatted) {
+        console.log(`[Task Time] Failed to format duration for ${id}: ${estimateData.estimate}`);
+        placeholder.remove();
+        return;
+      }
+
+      console.log(`[Task Time] Displaying estimate for ${id}: ${formatted} (${estimateData.sampleCount} samples)`);
+
+      // Replace placeholder with actual estimate
+      const estimateEl = document.createElement("span");
+      estimateEl.className = "time-estimate";
+      estimateEl.textContent = formatted;
+      estimateEl.title = `Estimated time based on ${estimateData.sampleCount} previous runs`;
+      placeholder.replaceWith(estimateEl);
+    } catch (error) {
+      console.warn(`[Task Time] Failed to get time estimate for ${id}:`, error);
+      const placeholder = liElement?.querySelector(`.time-estimate-placeholder[data-task-id="${id}"]`);
+      if (placeholder) {
+        placeholder.remove();
+      }
+    }
   }
 
   /**
@@ -1324,7 +1404,7 @@ export async function initPage() {
 
   // Create UI controller
   const ui = new BuilderUI(builder);
-  ui.initialize();
+  await ui.initialize();
 
   // Initial render
   ui.render();

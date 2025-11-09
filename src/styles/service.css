@@ -472,6 +472,18 @@
   background: #161a22;
   animation: pulse-badge 1.5s ease-in-out infinite;
 }
+[data-page="service-run"] .time-estimate {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.65rem;
+  color: var(--muted);
+  opacity: 0.85;
+  margin-left: 6px;
+  font-weight: 500;
+}
+[data-page="service-run"] .time-estimate-placeholder {
+  display: none;
+}
 @keyframes pulse-badge {
   0%,
   100% {
