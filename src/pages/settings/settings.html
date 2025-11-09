@@ -35,18 +35,26 @@
             the service runner.
           </p>
 
-          <!-- Toolbar with search -->
-          <div class="settings-toolbar">
-            <input
-              id="req-tools-search"
-              class="shortcut-search"
-              type="search"
-              placeholder="Search required tools..."
-              autocomplete="off"
-            />
+          <!-- Required Tools Section -->
+          <div class="programs-config-section">
+            <div class="programs-section-header">
+              <span class="programs-section-title">Required Tools</span>
+              <span class="muted programs-section-subtitle">
+                External tools required by service automation tasks
+              </span>
+            </div>
+            <!-- Toolbar with search -->
+            <div class="settings-toolbar">
+              <input
+                id="req-tools-search"
+                class="shortcut-search"
+                type="search"
+                placeholder="Search required tools..."
+                autocomplete="off"
+              />
+            </div>
+            <div class="list" id="req-programs-list" aria-live="polite"></div>
           </div>
-
-          <div class="list" id="req-programs-list" aria-live="polite"></div>
         </div>
       </div>
       <!-- Technician pane -->
@@ -63,32 +71,49 @@
             app webview profile.
           </p>
 
-          <!-- Toolbar-style form -->
-          <form id="tech-link-form" class="tech-links-toolbar">
-            <label class="tech-input-title">
-              <span class="muted">Title</span>
-              <input
-                type="text"
-                name="title"
-                placeholder="e.g., Password Reset"
-                required
-                autocomplete="off"
-              />
-            </label>
-            <label class="tech-input-url">
-              <span class="muted">URL</span>
-              <input
-                type="url"
-                name="url"
-                placeholder="https://..."
-                required
-                autocomplete="off"
-              />
-            </label>
-            <button type="submit" class="primary">Add</button>
-          </form>
+          <!-- Add Link Section -->
+          <div class="tech-links-config-section">
+            <div class="tech-links-section-header">
+              <span class="tech-links-section-title">Add New Link</span>
+              <span class="muted tech-links-section-subtitle">
+                Create a new technician link that will appear in the top bar
+              </span>
+            </div>
+            <form id="tech-link-form" class="tech-links-toolbar">
+              <label class="tech-input-title">
+                <span class="muted">Title</span>
+                <input
+                  type="text"
+                  name="title"
+                  placeholder="e.g., Password Reset"
+                  required
+                  autocomplete="off"
+                />
+              </label>
+              <label class="tech-input-url">
+                <span class="muted">URL</span>
+                <input
+                  type="url"
+                  name="url"
+                  placeholder="https://..."
+                  required
+                  autocomplete="off"
+                />
+              </label>
+              <button type="submit" class="primary">Add</button>
+            </form>
+          </div>
 
-          <div class="list" id="tech-links-list" aria-live="polite"></div>
+          <!-- Links List Section -->
+          <div class="tech-links-list-section">
+            <div class="tech-links-section-header">
+              <span class="tech-links-section-title">Saved Links</span>
+              <span class="muted tech-links-section-subtitle">
+                Manage your technician links
+              </span>
+            </div>
+            <div class="list" id="tech-links-list" aria-live="polite"></div>
+          </div>
           <dialog id="tech-link-editor" class="program-editor">
             <form method="dialog" id="tech-link-edit-form">
               <h3>Edit Link</h3>
@@ -120,7 +145,13 @@
           </p>
 
           <!-- iPerf Settings -->
-          <div class="network-form-group">
+          <div class="network-config-section">
+            <div class="network-section-header">
+              <span class="network-section-title">iPerf Server</span>
+              <span class="muted network-section-subtitle">
+                Configure the iPerf server for network performance testing
+              </span>
+            </div>
             <form id="iperf-settings-form">
               <label>
                 <span class="muted">iPerf Server IP/Host</span>
@@ -136,10 +167,14 @@
             <div id="iperf-settings-status"></div>
           </div>
 
-          <hr />
-
           <!-- Ping Settings -->
-          <div class="network-form-group">
+          <div class="network-config-section">
+            <div class="network-section-header">
+              <span class="network-section-title">Ping Host</span>
+              <span class="muted network-section-subtitle">
+                Configure the default host for ping tests
+              </span>
+            </div>
             <form id="ping-settings-form">
               <label>
                 <span class="muted">Ping Host</span>
@@ -587,7 +622,7 @@
                 </div>
               </label>
             </div>
-            <div class="network-form-group">
+            <div class="network-sharing-form-group">
               <form id="network-sharing-form">
                 <label>
                   <span class="muted">Network UNC Path</span>
@@ -637,11 +672,7 @@
                 </div>
               </form>
 
-              <div
-                id="network-sharing-status"
-                class="muted"
-                style="margin-top: 8px"
-              ></div>
+              <div id="network-sharing-status"></div>
             </div>
           </div>
         </div>

@@ -83,6 +83,75 @@
   margin: 0; /* Remove default margins */
 }
 
+/* Base configuration section styling - applied to all config sections */
+.config-section,
+.programs-config-section,
+.tech-links-config-section,
+.tech-links-list-section,
+.network-config-section,
+.ai-config-section,
+.business-config-section,
+.reports-config-section,
+.sentry-config-section {
+  background: var(--panel-accent);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px;
+  margin: 0; /* Spacing handled by card-body gap */
+}
+
+/* Base section header styling - applied to all section headers */
+.section-header,
+.programs-section-header,
+.tech-links-section-header,
+.network-section-header,
+.ai-section-header,
+.business-section-header,
+.reports-section-header,
+.sentry-section-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Base section title styling */
+.section-title,
+.programs-section-title,
+.tech-links-section-title,
+.network-section-title,
+.ai-section-title,
+.business-section-title,
+.reports-section-title,
+.sentry-section-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Base section subtitle styling */
+.section-subtitle,
+.programs-section-subtitle,
+.tech-links-section-subtitle,
+.network-section-subtitle,
+.ai-section-subtitle,
+.business-section-subtitle,
+.reports-section-subtitle,
+.sentry-section-subtitle {
+  font-size: 12px;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: normal;
+}
+
+/* Programs configuration sections */
+.programs-config-section .settings-toolbar {
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+
 /* Programs pane specific */
 .settings-pane[data-pane="programs"] .list {
   margin-top: 0; /* Toolbar already provides spacing */
@@ -194,16 +263,17 @@
   white-space: nowrap;
 }
 
-/* Technician links pane */
+/* Technician links configuration sections */
+.tech-links-list-section .list {
+  margin-top: 0;
+}
+
+/* Technician links toolbar */
 .tech-links-toolbar {
   display: flex;
   gap: 10px;
   align-items: flex-end;
-  margin: 0; /* Spacing handled by card-body gap */
-  padding: 14px;
-  background: var(--panel-accent);
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  margin: 0; /* Spacing handled by section padding */
   flex-wrap: wrap;
 }
 
@@ -281,6 +351,7 @@
   gap: 10px;
 }
 
+/* Network configuration sections */
 /* Network settings forms */
 #iperf-settings-form,
 #ping-settings-form {
@@ -294,42 +365,24 @@
 #ping-settings-form label {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   flex: 2;
   min-width: 260px;
 }
 
-/* AI/API settings - Configuration sections */
-.ai-config-section {
-  background: var(--panel-accent);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 18px;
-  margin: 0; /* Spacing handled by card-body gap */
-}
-
-.ai-section-header {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border);
-}
-
-.ai-section-title {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.ai-section-subtitle {
+#iperf-settings-form .muted,
+#ping-settings-form .muted {
   font-size: 12px;
-  text-transform: none;
-  letter-spacing: normal;
-  font-weight: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
 }
 
+.network-config-section > div[id$="-status"] {
+  margin-top: 10px;
+}
+
+/* AI/API settings - Configuration sections */
 /* AI/API settings form */
 .ai-api-form {
   padding: 0;
@@ -411,43 +464,38 @@
   font-size: 12px;
 }
 
-/* Status message styling */
+/* Status message styling - standardized across all settings */
 .settings-status {
   font-size: 12px;
   padding: 8px 12px;
   border-radius: 6px;
-  margin: 0; /* No extra margin needed */
-  display: inline-block;
+  margin: 0;
+  display: none; /* Hidden by default */
   transition: opacity 0.2s ease;
-  min-height: 0; /* No minimum height - only takes space when content exists */
-}
-
-/* Status containers - hidden by default, only shown when JavaScript sets display */
-[id$="-settings-status"] {
-  display: none;
   min-height: 0;
-  height: 0;
-  padding: 0;
-  margin: 0;
 }
 
-/* When status is shown (via inline style from JavaScript), restore proper styling */
-[id$="-settings-status"][style*="inline-block"] {
+/* Status containers - shown when JavaScript sets display */
+[id$="-settings-status"][style*="inline-block"],
+[id$="-settings-status"][style*="block"] {
+  display: inline-block;
   min-height: auto;
-  height: auto;
   padding: 8px 12px;
-  margin: 0;
+  margin-top: 12px; /* Consistent spacing above status messages */
 }
 
-/* Specific margin-top for status elements when visible */
-#ai-settings-status[style*="inline-block"] {
-  margin-top: 4px;
-}
-
-#business-settings-status[style*="inline-block"],
-#reports-settings-status[style*="inline-block"],
-#sentry-settings-status[style*="inline-block"] {
+/* Status messages at the end of config sections */
+.config-section > [id$="-settings-status"][style*="inline-block"],
+.config-section > [id$="-settings-status"][style*="block"] {
   margin-top: 12px;
+}
+
+/* Status messages within form groups */
+.network-config-section > [id$="-status"][style*="inline-block"],
+.network-config-section > [id$="-status"][style*="block"],
+.network-sharing-form-group > [id$="-status"][style*="inline-block"],
+.network-sharing-form-group > [id$="-status"][style*="block"] {
+  margin-top: 10px;
 }
 
 .settings-status.success {
@@ -462,13 +510,7 @@
   color: #ffb3ba;
 }
 
-/* Divider between network settings */
-.settings-pane hr {
-  margin: 0; /* Spacing handled by card-body gap */
-  opacity: 0.25;
-  border: none;
-  border-top: 1px solid #788bb5;
-}
+/* Remove divider - sections now use consistent spacing */
 
 /* Business settings pane */
 .business-settings-toggle {
@@ -513,36 +555,6 @@
 }
 
 /* Business configuration sections */
-.business-config-section {
-  background: var(--panel-accent);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 18px;
-  margin: 0; /* Spacing handled by card-body gap */
-}
-
-.business-section-header {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border);
-}
-
-.business-section-title {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.business-section-subtitle {
-  font-size: 12px;
-  text-transform: none;
-  letter-spacing: normal;
-  font-weight: normal;
-}
-
 /* Technician names form */
 .tech-name-form {
   display: flex;
@@ -652,48 +664,42 @@
   font-size: 12px;
 }
 
-/* Network settings forms */
-.network-form-group {
-  background: var(--panel-accent);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px;
-  margin: 0; /* Spacing handled by card-body gap */
+/* Network sharing form group (used in reports section) */
+.network-sharing-form-group {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  margin: 0;
+  margin-top: 12px;
 }
 
-.network-form-group form {
+.network-sharing-form-group form {
   display: flex;
+  flex-direction: column;
   gap: 12px;
-  align-items: flex-end;
-  flex-wrap: wrap;
 }
 
-.network-form-group label {
+.network-sharing-form-group label {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  flex: 2;
-  min-width: 260px;
 }
 
-.network-form-group .muted {
+.network-sharing-form-group .muted {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-weight: 500;
 }
 
-.network-form-group button {
-  height: 40px;
-}
-
-.network-form-group > div[id$="-status"] {
-  margin-top: 10px; /* Space between form and status message */
-}
-
-.network-form-group input {
+.network-sharing-form-group input {
   height: 40px;
   box-sizing: border-box;
+}
+
+.network-sharing-form-group > div[id$="-status"] {
+  margin-top: 10px;
 }
 
 /* UNC path input - use monospace font like textarea for better path readability */
@@ -703,7 +709,7 @@
 }
 
 /* Radio button styling for network save modes */
-.network-form-group input[type="radio"] {
+.network-sharing-form-group input[type="radio"] {
   width: 18px;
   height: 18px;
   cursor: pointer;
@@ -808,36 +814,6 @@
 }
 
 /* Reports configuration sections */
-.reports-config-section {
-  background: var(--panel-accent);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 18px;
-  margin: 0; /* Spacing handled by card-body gap */
-}
-
-.reports-section-header {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border);
-}
-
-.reports-section-title {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.reports-section-subtitle {
-  font-size: 12px;
-  text-transform: none;
-  letter-spacing: normal;
-  font-weight: normal;
-}
-
 .reports-toggles-group {
   display: flex;
   flex-direction: column;
@@ -945,36 +921,6 @@
 }
 
 /* Sentry configuration sections */
-.sentry-config-section {
-  background: var(--panel-accent);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 18px;
-  margin: 0; /* Spacing handled by card-body gap */
-}
-
-.sentry-section-header {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border);
-}
-
-.sentry-section-title {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.sentry-section-subtitle {
-  font-size: 12px;
-  text-transform: none;
-  letter-spacing: normal;
-  font-weight: normal;
-}
-
 .sentry-config-group {
   display: flex;
   flex-direction: column;
@@ -1052,7 +998,7 @@
     align-self: stretch;
   }
 
-  .network-form-group label {
+  .network-sharing-form-group label {
     min-width: 100%;
   }
 
