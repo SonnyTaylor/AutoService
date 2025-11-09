@@ -17,6 +17,7 @@
         <button class="shortcut-btn" data-target="ai">AI / API</button>
         <button class="shortcut-btn" data-target="business">Business</button>
         <button class="shortcut-btn" data-target="reports">Reports</button>
+        <button class="shortcut-btn" data-target="task-times">Task Times</button>
         <button class="shortcut-btn" data-target="sentry">Sentry</button>
       </nav>
     </aside>
@@ -679,6 +680,67 @@
       </div>
 
       <!-- Sentry pane -->
+      <!-- Task Time Estimates pane -->
+      <div class="card settings-pane" data-pane="task-times" style="display: none">
+        <div class="card-title"><span>Task Time Estimates</span></div>
+        <div class="card-body">
+          <p class="muted">
+            Task time estimates are calculated from historical execution data to help predict how long service runs will take.
+            Estimates are displayed after the first successful run of each task configuration.
+          </p>
+
+          <!-- Statistics Section -->
+          <div class="task-times-config-section">
+            <div class="task-times-section-header">
+              <span class="task-times-section-title">Statistics</span>
+              <span class="muted task-times-section-subtitle">
+                Overview of stored task time records
+              </span>
+            </div>
+
+            <div id="task-times-stats" class="task-times-stats-grid">
+              <div class="task-times-stat-card">
+                <div class="task-times-stat-label">Total Records</div>
+                <div class="task-times-stat-value" id="task-times-total">Loading...</div>
+              </div>
+              <div class="task-times-stat-card">
+                <div class="task-times-stat-label">Unique Task Types</div>
+                <div class="task-times-stat-value" id="task-times-unique">Loading...</div>
+              </div>
+              <div class="task-times-stat-card">
+                <div class="task-times-stat-label">Oldest Record</div>
+                <div class="task-times-stat-value" id="task-times-oldest">Loading...</div>
+              </div>
+              <div class="task-times-stat-card">
+                <div class="task-times-stat-label">Newest Record</div>
+                <div class="task-times-stat-value" id="task-times-newest">Loading...</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Data Management Section -->
+          <div class="task-times-config-section">
+            <div class="task-times-section-header">
+              <span class="task-times-section-title">Data Management</span>
+              <span class="muted task-times-section-subtitle">
+                Clear all stored task time estimates
+              </span>
+            </div>
+
+            <div class="task-times-actions">
+              <button id="task-times-clear-btn" class="task-times-clear-btn">
+                <i class="ph ph-trash" aria-hidden="true"></i>
+                <span>Clear All Estimates</span>
+              </button>
+              <p class="muted small task-times-warning">
+                This will permanently delete all task time records. Estimates will need to be rebuilt from future runs.
+              </p>
+            </div>
+            <div id="task-times-settings-status" class="muted"></div>
+          </div>
+        </div>
+      </div>
+
       <div class="card settings-pane" data-pane="sentry" style="display: none">
         <div class="card-title"><span>Sentry Error Tracking</span></div>
         <div class="card-body">

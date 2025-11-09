@@ -31,7 +31,8 @@ use crate::reports::{
 };
 use crate::scripts::{list_scripts, remove_script, run_script, save_script};
 use crate::settings::{
-    load_app_settings, make_portable_path, resolve_portable_path, save_app_settings,
+    clear_task_times, get_task_time_estimate, load_app_settings, load_task_times,
+    make_portable_path, resolve_portable_path, save_app_settings, save_task_time,
 };
 use crate::shortcuts::launch_shortcut;
 use crate::state::AppState;
@@ -455,6 +456,10 @@ pub fn run() {
             save_app_settings,
             make_portable_path,
             resolve_portable_path,
+            save_task_time,
+            load_task_times,
+            get_task_time_estimate,
+            clear_task_times,
             save_report,
             list_reports,
             load_report,

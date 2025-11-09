@@ -72,6 +72,101 @@ export async function initPage() {
   });
 
   update();
+  
+  // Load and display time estimates for each preset
+  await updatePresetTimeEstimates();
+}
+
+/**
+ * Calculate and display time estimates for each preset
+ */
+async function updatePresetTimeEstimates() {
+  try {
+    const { getPreset } = await import("./handlers/presets.js");
+    const { calculateTotalTime, formatDuration } = await import("../../utils/task-time-estimates.js");
+    
+    const presetNames = ["diagnostics", "general", "complete"];
+    
+    for (const presetName of presetNames) {
+      const preset = getPreset(presetName);
+      if (!preset || !preset.services) continue;
+      
+      // Build task objects from preset services
+      // Need to actually build tasks to get full structure
+      const { getHandler } = await import("./handlers/index.js");
+      const tasks = [];
+      
+      for (const item of preset.services) {
+        const serviceId = typeof item === "string" ? item : item.id;
+        const serviceParams = typeof item === "string" ? {} : (item.params || {});
+        
+        try {
+          const handler = getHandler(serviceId);
+          if (handler && handler.definition && handler.definition.build) {
+            // Build the actual task to get full structure
+            const builtTask = await handler.definition.build({
+              params: serviceParams,
+              resolveToolPath: async () => null, // Tool path not needed for time estimates
+              getDataDirs: async () => ({}),
+            });
+            tasks.push(builtTask);
+          } else {
+            // Fallback to simple structure
+            tasks.push({ type: serviceId, params: serviceParams });
+          }
+        } catch (error) {
+          console.warn(`[Presets] Failed to build task ${serviceId} for time estimate:`, error);
+          // Fallback to simple structure
+          tasks.push({ type: serviceId, params: serviceParams });
+        }
+      }
+      
+      // Calculate total time
+      const result = await calculateTotalTime(tasks);
+      
+      // Find the time display element
+      const timeEl = document.querySelector(`[data-preset-time="${presetName}"]`);
+      if (!timeEl) continue;
+      
+      const valueEl = timeEl.querySelector(".time-value");
+      const partialEl = timeEl.querySelector(".time-partial");
+      
+      if (result.totalSeconds > 0) {
+        const formatted = formatDuration(result.totalSeconds);
+        
+        // Update or create badge element
+        let badgeEl = timeEl.querySelector(".badge.time-estimate");
+        if (!badgeEl) {
+          // Remove old structure if exists
+          if (valueEl) valueEl.remove();
+          if (partialEl) partialEl.remove();
+          
+          // Create new badge
+          badgeEl = document.createElement("span");
+          badgeEl.className = "badge time-estimate";
+          timeEl.appendChild(badgeEl);
+        }
+        
+        // Set badge text with partial indicator if needed
+        if (result.hasPartial) {
+          badgeEl.textContent = `${formatted} (partial)`;
+          badgeEl.title = `Estimated time - ${result.estimatedCount}/${result.totalCount} tasks have estimates`;
+        } else {
+          badgeEl.textContent = formatted;
+          badgeEl.title = `Estimated time for all ${result.totalCount} tasks`;
+        }
+        
+        timeEl.style.display = "flex";
+        timeEl.style.alignItems = "center";
+        timeEl.style.gap = "8px";
+      } else {
+        // No estimates available yet
+        timeEl.style.display = "none";
+      }
+    }
+  } catch (error) {
+    console.warn("[Presets] Failed to update time estimates:", error);
+  }
 }
 
 // (Later) helper to fetch preset definitions from settings JSON

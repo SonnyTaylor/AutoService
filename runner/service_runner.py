@@ -511,11 +511,22 @@ def main():
             # Wrap task execution in Sentry span for performance tracking
             with create_task_span(task_type, idx, len(tasks), task) as span:
                 try:
+                    # Track execution time for all tasks
+                    task_start_time = time.time()
+                    
                     # Execute handler with skip monitoring for immediate skip detection
                     # Subprocess calls within handlers use run_with_skip_check for skip detection
                     result = execute_task_with_skip_monitoring(
                         handler, task, control_file_path, check_interval=0.2
                     )
+                    
+                    # Calculate duration and add to summary if not already present
+                    task_duration = time.time() - task_start_time
+                    if not result.get("summary"):
+                        result["summary"] = {}
+                    if "duration_seconds" not in result.get("summary", {}):
+                        result["summary"]["duration_seconds"] = round(task_duration, 2)
+                    
                     status = result.get("status", "unknown")
                     
                     # Check for stop/pause after task completes

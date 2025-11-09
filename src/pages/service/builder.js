@@ -647,12 +647,13 @@ class BuilderUI {
     this.elements = {};
     this.lastJsonString = "{}";
     this.sortableInstance = null;
+    this.timeEstimates = null; // Cache for time estimates
   }
 
   /**
    * Initialize UI elements and event listeners
    */
-  initialize() {
+  async initialize() {
     // Get DOM elements
     this.elements = {
       desc: document.getElementById("svc-run-desc"),
@@ -670,12 +671,29 @@ class BuilderUI {
       searchClear: document.getElementById("svc-search-clear"),
       aiSummaryToggle: document.getElementById("svc-ai-summary-toggle"),
       aiSummaryWarning: document.getElementById("svc-ai-summary-warning"),
+      totalTime: document.getElementById("svc-total-time"),
     };
 
     this.builder.setElements(this.elements);
     this.setupEventListeners();
     this.setTitle();
     this.setupAISummaryToggle();
+    
+    // Load time estimates asynchronously
+    this.loadTimeEstimates();
+  }
+
+  /**
+   * Load task time estimates from backend
+   */
+  async loadTimeEstimates() {
+    try {
+      const { loadTaskTimeEstimates } = await import("../../utils/task-time-estimates.js");
+      this.timeEstimates = await loadTaskTimeEstimates();
+    } catch (error) {
+      console.warn("Failed to load time estimates:", error);
+      this.timeEstimates = [];
+    }
   }
 
   /**
@@ -720,6 +738,13 @@ class BuilderUI {
       this.render(); // Re-render to trigger availability checks
     });
 
+    // Listen for task times cleared to refresh estimates
+    window.addEventListener("task-times-cleared", () => {
+      console.log("Task times cleared, refreshing estimates...");
+      this.render(); // Re-render to update estimates
+      this.updateTotalTime(); // Refresh total time
+    });
+
     this.elements.searchInput?.addEventListener("input", () => {
       this.builder.setFilterQuery(
         (this.elements.searchInput.value || "").trim()
@@ -737,17 +762,20 @@ class BuilderUI {
       this.builder.selectAll();
       this.builder.persist();
       this.render();
+      this.updateTotalTime();
     });
 
     this.elements.btnDeselectAll?.addEventListener("click", () => {
       this.builder.deselectAll();
       this.builder.persist();
       this.render();
+      this.updateTotalTime();
     });
 
     this.elements.btnReset?.addEventListener("click", () => {
       this.builder.reset();
       this.render();
+      this.updateTotalTime();
     });
 
     this.elements.btnCopyJson?.addEventListener("click", async () => {
@@ -983,10 +1011,13 @@ class BuilderUI {
         <span class="grab" aria-hidden="true">⋮⋮</span>
         <span class="main">
           <span class="name">${label}</span>
-          <span class="meta">${group} ${this.renderAvailabilityBadge(id)}</span>
+          <span class="meta">${group} ${this.renderAvailabilityBadge(id)}<span class="time-estimate-placeholder" data-task-id="${id}"></span></span>
         </span>
       </div>
     `;
+
+    // Load time estimate asynchronously and update placeholder
+    this.loadAndRenderTimeEstimate(id, li);
 
     const row = li.querySelector(".task-row");
     const checkbox = row.querySelector("input");
@@ -1017,7 +1048,7 @@ class BuilderUI {
       row.appendChild(this.renderGpuSubOptions());
     }
 
-    checkbox.addEventListener("change", () => {
+    checkbox.addEventListener("change", async () => {
       if (checkbox.checked) {
         this.builder.addTask(id);
       } else {
@@ -1025,9 +1056,195 @@ class BuilderUI {
       }
       this.builder.persist();
       this.render();
+      await this.updateTotalTime();
     });
 
     return li;
+  }
+
+  /**
+   * Load and render time estimate for a task
+   */
+  async loadAndRenderTimeEstimate(id, liElement) {
+    // Special handling for GPU parent: calculate combined estimate from child tasks
+    if (id === GPU_PARENT_ID) {
+      await this.loadGpuParentTimeEstimate(liElement);
+      return;
+    }
+
+    try {
+      const { getEstimate, formatDuration, normalizeTaskParams } = await import("../../utils/task-time-estimates.js");
+      
+      // Build the actual task to get the full structure
+      const def = getServiceById(id);
+      if (!def) return;
+      
+      let taskForEstimate;
+      try {
+        const params = this.builder.taskParams[id]?.params || {};
+        const builtTask = await def.build({
+          params: params,
+          resolveToolPath: toolPath,
+          getDataDirs,
+        });
+        taskForEstimate = builtTask;
+      } catch (error) {
+        console.warn(`[Task Time] Failed to build task ${id} for estimate:`, error);
+        // Fallback to simple structure
+        taskForEstimate = {
+          type: id,
+          params: this.builder.taskParams[id]?.params || {},
+        };
+      }
+      
+      // Normalize params from the full task structure
+      const paramsHash = normalizeTaskParams(taskForEstimate);
+      const taskParams = JSON.parse(paramsHash);
+      
+      // Get estimate using the task type from the built task (might differ from id)
+      const taskType = taskForEstimate.type || id;
+      const estimateData = await getEstimate(id, taskParams, taskType);
+      
+      // Find placeholder element
+      const placeholder = liElement?.querySelector(`.time-estimate-placeholder[data-task-id="${id}"]`);
+      if (!placeholder) {
+        return;
+      }
+
+      if (!estimateData) {
+        console.log(`[Task Time] No estimate data for ${id}`);
+        placeholder.remove();
+        return;
+      }
+
+      if (estimateData.sampleCount < 1) {
+        console.log(`[Task Time] Insufficient samples for ${id}: ${estimateData.sampleCount} < 1`);
+        placeholder.remove();
+        return;
+      }
+
+      const formatted = formatDuration(estimateData.estimate);
+      if (!formatted) {
+        console.log(`[Task Time] Failed to format duration for ${id}: ${estimateData.estimate}`);
+        placeholder.remove();
+        return;
+      }
+
+      console.log(`[Task Time] Displaying estimate for ${id}: ${formatted} (${estimateData.sampleCount} samples)`);
+
+      // Replace placeholder with actual estimate as a badge
+      const estimateEl = document.createElement("span");
+      estimateEl.className = "badge time-estimate";
+      estimateEl.textContent = formatted;
+      estimateEl.title = `Estimated time based on ${estimateData.sampleCount} previous runs`;
+      placeholder.replaceWith(estimateEl);
+    } catch (error) {
+      console.warn(`[Task Time] Failed to get time estimate for ${id}:`, error);
+      const placeholder = liElement?.querySelector(`.time-estimate-placeholder[data-task-id="${id}"]`);
+      if (placeholder) {
+        placeholder.remove();
+      }
+    }
+  }
+
+  /**
+   * Load and render combined time estimate for GPU parent task
+   * GPU parent expands to furmark_stress_test and/or heavyload_stress_gpu
+   */
+  async loadGpuParentTimeEstimate(liElement) {
+    try {
+      const { getEstimate, formatDuration } = await import("../../utils/task-time-estimates.js");
+      const { getServiceById } = await import("./handlers/index.js");
+      
+      const placeholder = liElement?.querySelector(`.time-estimate-placeholder[data-task-id="${GPU_PARENT_ID}"]`);
+      if (!placeholder) {
+        return;
+      }
+
+      let totalSeconds = 0;
+      let hasEstimate = false;
+
+      // Check FurMark estimate if enabled
+      if (this.builder.gpuConfig.subs.furmark) {
+        const furmarkDef = getServiceById("furmark_stress_test");
+        if (furmarkDef) {
+          try {
+            const furmarkMinutes = this.builder.gpuConfig.params.furmarkMinutes || 1;
+            const builtFurmark = await furmarkDef.build({
+              params: { minutes: furmarkMinutes },
+              resolveToolPath: toolPath,
+              getDataDirs,
+            });
+            
+            // Use the built task's params (which has duration_seconds, not minutes)
+            const furmarkEstimate = await getEstimate(
+              "furmark_stress_test",
+              builtFurmark.params || { duration_seconds: furmarkMinutes * 60 },
+              builtFurmark.type
+            );
+            
+            if (furmarkEstimate && furmarkEstimate.sampleCount >= 1) {
+              totalSeconds += furmarkEstimate.estimate;
+              hasEstimate = true;
+            }
+          } catch (error) {
+            console.warn("[Task Time] Failed to get FurMark estimate for GPU parent:", error);
+          }
+        }
+      }
+
+      // Check HeavyLoad GPU estimate if enabled
+      if (this.builder.gpuConfig.subs.heavyload) {
+        const heavyloadDef = getServiceById("heavyload_stress_gpu");
+        if (heavyloadDef) {
+          try {
+            const heavyloadMinutes = this.builder.gpuConfig.params.heavyloadMinutes || 1;
+            const builtHeavyload = await heavyloadDef.build({
+              params: { minutes: heavyloadMinutes },
+              resolveToolPath: toolPath,
+              getDataDirs,
+            });
+            
+            const heavyloadEstimate = await getEstimate(
+              "heavyload_stress_gpu",
+              builtHeavyload.params || { minutes: heavyloadMinutes },
+              builtHeavyload.type
+            );
+            
+            if (heavyloadEstimate && heavyloadEstimate.sampleCount >= 1) {
+              totalSeconds += heavyloadEstimate.estimate;
+              hasEstimate = true;
+            }
+          } catch (error) {
+            console.warn("[Task Time] Failed to get HeavyLoad GPU estimate for GPU parent:", error);
+          }
+        }
+      }
+
+      if (!hasEstimate || totalSeconds === 0) {
+        placeholder.remove();
+        return;
+      }
+
+      const formatted = formatDuration(totalSeconds);
+      if (!formatted) {
+        placeholder.remove();
+        return;
+      }
+
+      // Create badge with combined estimate
+      const estimateEl = document.createElement("span");
+      estimateEl.className = "badge time-estimate";
+      estimateEl.textContent = formatted;
+      estimateEl.title = `Estimated time for GPU stress test (combined FurMark + HeavyLoad)`;
+      placeholder.replaceWith(estimateEl);
+    } catch (error) {
+      console.warn("[Task Time] Failed to get GPU parent time estimate:", error);
+      const placeholder = liElement?.querySelector(`.time-estimate-placeholder[data-task-id="${GPU_PARENT_ID}"]`);
+      if (placeholder) {
+        placeholder.remove();
+      }
+    }
   }
 
   /**
@@ -1271,6 +1488,90 @@ class BuilderUI {
     this.elements.json.innerHTML = `<code class="hljs language-json">${highlighted}</code>`;
     this.builder.persist();
     this.validateNext();
+    
+    // Update total time estimate
+    await this.updateTotalTime();
+  }
+
+  /**
+   * Update total time estimate display
+   */
+  async updateTotalTime() {
+    if (!this.elements.totalTime) {
+      return;
+    }
+
+    try {
+      const { calculateTotalTime, formatDuration } = await import("../../utils/task-time-estimates.js");
+      
+      // Get selected tasks with their parameters
+      // Build actual tasks to get the full structure (not just params)
+      const selectedTasks = [];
+      for (const id of this.builder.order) {
+        if (!this.builder.selection.has(id)) continue;
+        
+        const def = getServiceById(id);
+        if (!def) continue;
+
+        // Build the actual task to get the full structure
+        try {
+          const params = this.builder.taskParams[id]?.params || {};
+          const builtTask = await def.build({
+            params: params,
+            resolveToolPath: toolPath,
+            getDataDirs,
+          });
+          
+          // Use the built task structure (has all params at top level)
+          selectedTasks.push(builtTask);
+        } catch (error) {
+          console.warn(`[Task Time] Failed to build task ${id} for time estimate:`, error);
+          // Fallback to simple structure
+          selectedTasks.push({
+            type: id,
+            params: this.builder.taskParams[id]?.params || {},
+          });
+        }
+      }
+
+      if (selectedTasks.length === 0) {
+        this.elements.totalTime.style.display = "none";
+        return;
+      }
+
+      const result = await calculateTotalTime(selectedTasks);
+
+      if (result.totalSeconds > 0) {
+        const formatted = formatDuration(result.totalSeconds);
+        
+        // Update or create badge element
+        let badgeEl = this.elements.totalTime.querySelector(".badge.time-estimate");
+        if (!badgeEl) {
+          badgeEl = document.createElement("span");
+          badgeEl.className = "badge time-estimate";
+          this.elements.totalTime.appendChild(badgeEl);
+        }
+        
+        // Set badge text with partial indicator if needed
+        if (result.hasPartial) {
+          badgeEl.textContent = `${formatted} (partial)`;
+          badgeEl.title = `Estimated time - ${result.estimatedCount}/${result.totalCount} tasks have estimates`;
+        } else {
+          badgeEl.textContent = formatted;
+          badgeEl.title = `Estimated time for all ${result.totalCount} tasks`;
+        }
+        
+        this.elements.totalTime.style.display = "flex";
+        this.elements.totalTime.style.alignItems = "center";
+        this.elements.totalTime.style.gap = "8px";
+      } else {
+        // No estimates available yet
+        this.elements.totalTime.style.display = "none";
+      }
+    } catch (error) {
+      console.warn("[Builder] Failed to update total time:", error);
+      this.elements.totalTime.style.display = "none";
+    }
   }
 
   /**
@@ -1324,7 +1625,7 @@ export async function initPage() {
 
   // Create UI controller
   const ui = new BuilderUI(builder);
-  ui.initialize();
+  await ui.initialize();
 
   // Initial render
   ui.render();

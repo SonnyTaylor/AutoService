@@ -472,6 +472,91 @@
   background: #161a22;
   animation: pulse-badge 1.5s ease-in-out infinite;
 }
+[data-page="service-run"] .time-estimate {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.65rem;
+  color: var(--muted);
+  opacity: 0.85;
+  margin-left: 6px;
+  font-weight: 500;
+}
+[data-page="service-run"] .time-estimate-placeholder {
+  display: none;
+}
+
+/* Time estimate badge styling */
+[data-page="service-run"] .badge.time-estimate {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.65rem;
+  background: #1d2738;
+  border: 1px solid var(--border);
+  color: #94a3b8;
+  padding: 2px 6px;
+  border-radius: 999px;
+  margin-left: 6px;
+  font-weight: 500;
+  opacity: 0.9;
+}
+[data-page="service-run"] .badge.time-estimate:hover {
+  opacity: 1;
+  border-color: #2e3b55;
+}
+
+/* Preset time estimate badge styling */
+[data-page="service"] .preset-time {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+[data-page="service"] .preset-time .badge.time-estimate {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7rem;
+  background: #1d2738;
+  border: 1px solid var(--border);
+  color: #94a3b8;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-weight: 500;
+  opacity: 0.9;
+}
+[data-page="service"] .preset-time .badge.time-estimate:hover {
+  opacity: 1;
+  border-color: #2e3b55;
+}
+
+/* Total time estimate badge styling in builder */
+[data-page="service-run"] .total-time-estimate {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+[data-page="service-run"] .total-time-estimate .time-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+[data-page="service-run"] .total-time-estimate .badge.time-estimate {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  background: #1d2738;
+  border: 1px solid var(--border);
+  color: #94a3b8;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-weight: 500;
+  opacity: 0.9;
+}
+[data-page="service-run"] .total-time-estimate .badge.time-estimate:hover {
+  opacity: 1;
+  border-color: #2e3b55;
+}
 @keyframes pulse-badge {
   0%,
   100% {
