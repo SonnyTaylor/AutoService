@@ -118,7 +118,14 @@ export async function initializeTaskTimesSettings(root) {
         }, 3000);
       }
       
-      // Dispatch event to notify other parts of the app
+      // Clear cache and dispatch event to notify other parts of the app
+      try {
+        const { clearTaskTimeCache } = await import("../../utils/task-time-estimates.js");
+        clearTaskTimeCache();
+      } catch (e) {
+        // Ignore cache clear errors
+      }
+      
       window.dispatchEvent(new CustomEvent("task-times-cleared"));
     } catch (error) {
       console.error("Failed to clear task times:", error);

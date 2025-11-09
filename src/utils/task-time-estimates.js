@@ -5,6 +5,50 @@
  * based on historical execution data. Estimates use median calculation to resist outliers.
  */
 
+// Cache for task time records (invalidated on clear or after 5 minutes)
+let _recordsCache = null;
+let _cacheTimestamp = 0;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Mapping from handler IDs to actual task types returned by Python services.
+ * Some handlers build tasks with different types than their handler ID.
+ */
+const HANDLER_TO_TASK_TYPE = {
+  // HeavyLoad handlers all return "heavyload_stress_test"
+  heavyload_stress_cpu: "heavyload_stress_test",
+  heavyload_stress_memory: "heavyload_stress_test",
+  heavyload_stress_gpu: "heavyload_stress_test",
+  // Add more mappings as needed
+};
+
+/**
+ * Get the actual task type for a handler ID, trying both the ID and known mappings.
+ * @param {string} handlerId - Handler ID
+ * @param {string} builtTaskType - Task type from built task (if available)
+ * @returns {string[]} Array of possible task types to try
+ */
+function getPossibleTaskTypes(handlerId, builtTaskType) {
+  const types = new Set();
+  
+  // Add the built task type if available (most accurate)
+  if (builtTaskType) {
+    types.add(builtTaskType);
+  }
+  
+  // Add handler ID (in case it matches)
+  if (handlerId) {
+    types.add(handlerId);
+  }
+  
+  // Add mapped type if exists
+  if (HANDLER_TO_TASK_TYPE[handlerId]) {
+    types.add(HANDLER_TO_TASK_TYPE[handlerId]);
+  }
+  
+  return Array.from(types);
+}
+
 /**
  * Normalize task parameters to create a consistent hash key for grouping.
  * Extracts relevant parameters that affect duration and creates a sorted JSON string.
@@ -112,10 +156,19 @@ export function normalizeTaskParams(task) {
 
 /**
  * Load all task time records from the Rust backend.
+ * Uses caching to avoid repeated backend calls.
  * 
+ * @param {boolean} forceRefresh - Force refresh cache
  * @returns {Promise<Array>} Array of task time records
  */
-export async function loadTaskTimeEstimates() {
+export async function loadTaskTimeEstimates(forceRefresh = false) {
+  const now = Date.now();
+  
+  // Return cached data if still valid
+  if (!forceRefresh && _recordsCache && (now - _cacheTimestamp) < CACHE_TTL) {
+    return _recordsCache;
+  }
+  
   try {
     const { core } = window.__TAURI__ || {};
     const { invoke } = core || {};
@@ -124,7 +177,13 @@ export async function loadTaskTimeEstimates() {
       return [];
     }
     const records = await invoke("load_task_times");
-    return Array.isArray(records) ? records : [];
+    const recordsArray = Array.isArray(records) ? records : [];
+    
+    // Update cache
+    _recordsCache = recordsArray;
+    _cacheTimestamp = now;
+    
+    return recordsArray;
   } catch (error) {
     console.warn("Failed to load task time estimates:", error);
     return [];
@@ -132,14 +191,25 @@ export async function loadTaskTimeEstimates() {
 }
 
 /**
+ * Clear the task time records cache.
+ * Call this after saving new records or clearing all records.
+ */
+export function clearTaskTimeCache() {
+  _recordsCache = null;
+  _cacheTimestamp = 0;
+}
+
+/**
  * Get time estimate for a specific task type and parameters.
  * Calculates median from matching historical records.
+ * Tries multiple task type variations to handle handler ID vs actual task type mismatches.
  * 
- * @param {string} taskType - Task type identifier
+ * @param {string} taskType - Task type identifier (handler ID or actual task type)
  * @param {Object} taskParams - Task parameters object
+ * @param {string} [builtTaskType] - Actual task type from built task (if available)
  * @returns {Promise<{estimate: number, sampleCount: number} | null>} Estimate and sample count, or null if insufficient data
  */
-export async function getEstimate(taskType, taskParams) {
+export async function getEstimate(taskType, taskParams, builtTaskType = null) {
   if (!taskType) {
     return null;
   }
@@ -155,25 +225,51 @@ export async function getEstimate(taskType, taskParams) {
     const paramsHash = normalizeTaskParams({ params: taskParams || {} });
     const paramsJson = JSON.parse(paramsHash);
 
-    // Get estimate from Rust backend (which calculates median)
-    const estimate = await invoke("get_task_time_estimate", {
-      taskType,
-      params: paramsJson,
-    });
+    // Try multiple task type variations (handler ID, built type, mapped type)
+    const possibleTypes = getPossibleTaskTypes(taskType, builtTaskType);
+    
+    let bestEstimate = null;
+    let bestSampleCount = 0;
+    
+    for (const tryType of possibleTypes) {
+      try {
+        // Get estimate from Rust backend (which calculates median)
+        const estimate = await invoke("get_task_time_estimate", {
+          taskType: tryType,
+          params: paramsJson,
+        });
 
-    if (estimate === null || estimate === undefined) {
+        if (estimate !== null && estimate !== undefined) {
+          // Get sample count by loading all records and filtering
+          const allRecords = await loadTaskTimeEstimates();
+          const matching = allRecords.filter((r) => {
+            if (r.task_type !== tryType) return false;
+            // Compare normalized params
+            const rParamsHash = normalizeTaskParams({ type: r.task_type, params: r.params });
+            return rParamsHash === paramsHash;
+          });
+
+          const sampleCount = matching.length;
+          
+          // Use the estimate with the most samples
+          if (sampleCount > bestSampleCount) {
+            bestEstimate = Number(estimate);
+            bestSampleCount = sampleCount;
+          }
+        }
+      } catch (error) {
+        // Continue trying other types
+        continue;
+      }
+    }
+
+    if (bestEstimate === null) {
       return null;
     }
 
-    // Also get sample count by loading all records and filtering
-    const allRecords = await loadTaskTimeEstimates();
-    const matching = allRecords.filter(
-      (r) => r.task_type === taskType && JSON.stringify(r.params) === paramsHash
-    );
-
     return {
-      estimate: Number(estimate),
-      sampleCount: matching.length,
+      estimate: bestEstimate,
+      sampleCount: bestSampleCount,
     };
   } catch (error) {
     console.warn("Failed to get task time estimate:", error);
@@ -183,6 +279,7 @@ export async function getEstimate(taskType, taskParams) {
 
 /**
  * Format duration in seconds as human-readable string (e.g., "~2m 30s").
+ * Handles very small durations (< 1s) with special formatting.
  * 
  * @param {number} seconds - Duration in seconds
  * @returns {string} Formatted duration string
@@ -190,6 +287,16 @@ export async function getEstimate(taskType, taskParams) {
 export function formatDuration(seconds) {
   if (!Number.isFinite(seconds) || seconds < 0) {
     return "";
+  }
+
+  // Handle very small durations (< 1 second)
+  if (seconds < 1) {
+    if (seconds < 0.1) {
+      return "< 1s";
+    }
+    // Show milliseconds for very fast tasks
+    const ms = Math.round(seconds * 1000);
+    return `~${ms}ms`;
   }
 
   const totalSeconds = Math.round(seconds);
@@ -246,8 +353,12 @@ export async function calculateTotalTime(tasks) {
     const taskType = task.type || task.task_type || task.id;
     if (!taskType) continue;
 
+    // Use the task's actual type if available (from built task)
+    const builtTaskType = task.type || task.task_type;
     const taskParams = task.params || {};
-    const estimate = await getEstimate(taskType, taskParams);
+    
+    // Pass built task type to help with type matching
+    const estimate = await getEstimate(taskType, taskParams, builtTaskType);
     
     if (estimate && estimate.sampleCount >= 1) {
       totalSeconds += estimate.estimate;

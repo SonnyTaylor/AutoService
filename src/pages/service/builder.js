@@ -740,6 +740,13 @@ class BuilderUI {
       this.render(); // Re-render to trigger availability checks
     });
 
+    // Listen for task times cleared to refresh estimates
+    window.addEventListener("task-times-cleared", () => {
+      console.log("Task times cleared, refreshing estimates...");
+      this.render(); // Re-render to update estimates
+      this.updateTotalTime(); // Refresh total time
+    });
+
     this.elements.searchInput?.addEventListener("input", () => {
       this.builder.setFilterQuery(
         (this.elements.searchInput.value || "").trim()
@@ -1097,7 +1104,7 @@ class BuilderUI {
       
       // Get estimate using the task type from the built task (might differ from id)
       const taskType = taskForEstimate.type || id;
-      const estimateData = await getEstimate(taskType, taskParams);
+      const estimateData = await getEstimate(id, taskParams, taskType);
       
       // Find placeholder element
       const placeholder = liElement?.querySelector(`.time-estimate-placeholder[data-task-id="${id}"]`);

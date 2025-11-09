@@ -218,7 +218,7 @@ pub fn get_task_time_estimate(
     // Filter records matching task_type and params
     // Compare params by JSON string for consistency
     let params_str = serde_json::to_string(&params).unwrap_or_default();
-    let matching: Vec<f64> = all_records
+    let mut matching: Vec<f64> = all_records
         .into_iter()
         .filter(|r| {
             if r.task_type != task_type {
@@ -235,17 +235,62 @@ pub fn get_task_time_estimate(
         return Ok(None);
     }
 
-    // Calculate median
-    let mut sorted = matching;
-    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    // Filter out extreme outliers using IQR (Interquartile Range) method
+    // This helps resist single huge outliers while keeping the median robust
+    matching.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
     
-    let len = sorted.len();
-    let median = if len % 2 == 0 {
-        // Even number: average of two middle values
-        (sorted[len / 2 - 1] + sorted[len / 2]) / 2.0
+    let len = matching.len();
+    
+    // For small samples (1-3), just use the values as-is
+    if len <= 3 {
+        let median = if len == 1 {
+            matching[0]
+        } else if len == 2 {
+            (matching[0] + matching[1]) / 2.0
+        } else {
+            matching[1] // Middle of 3
+        };
+        return Ok(Some(median));
+    }
+    
+    // For larger samples, filter outliers using IQR
+    let q1_idx = len / 4;
+    let q3_idx = (3 * len) / 4;
+    let q1 = matching[q1_idx];
+    let q3 = matching[q3_idx];
+    let iqr = q3 - q1;
+    
+    // Outlier bounds: Q1 - 1.5*IQR and Q3 + 1.5*IQR
+    let lower_bound = q1 - 1.5 * iqr;
+    let upper_bound = q3 + 1.5 * iqr;
+    
+    // Filter out outliers
+    let filtered: Vec<f64> = matching
+        .iter()
+        .filter(|&&x| x >= lower_bound && x <= upper_bound)
+        .copied()
+        .collect();
+    
+    // If filtering removed too many values, use original
+    if filtered.len() < len / 2 {
+        // Too many outliers removed, use original (median is already robust)
+        let median = if len % 2 == 0 {
+            (matching[len / 2 - 1] + matching[len / 2]) / 2.0
+        } else {
+            matching[len / 2]
+        };
+        return Ok(Some(median));
+    }
+    
+    // Use filtered values (already sorted from original)
+    let mut filtered_sorted = filtered;
+    filtered_sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    
+    let filtered_len = filtered_sorted.len();
+    let median = if filtered_len % 2 == 0 {
+        (filtered_sorted[filtered_len / 2 - 1] + filtered_sorted[filtered_len / 2]) / 2.0
     } else {
-        // Odd number: middle value
-        sorted[len / 2]
+        filtered_sorted[filtered_len / 2]
     };
 
     Ok(Some(median))

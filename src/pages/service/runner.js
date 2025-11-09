@@ -1457,6 +1457,14 @@ export async function initPage() {
                 try {
                   await invoke("save_task_time", { records: timeRecords });
                   console.log(`[Task Time] Successfully saved ${timeRecords.length} duration record(s)`);
+                  
+                  // Clear cache so estimates refresh
+                  try {
+                    const { clearTaskTimeCache } = await import("../../utils/task-time-estimates.js");
+                    clearTaskTimeCache();
+                  } catch (e) {
+                    // Ignore cache clear errors
+                  }
                 } catch (saveError) {
                   console.error("[Task Time] Failed to save duration records:", saveError);
                 }
