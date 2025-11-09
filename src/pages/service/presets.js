@@ -92,13 +92,34 @@ async function updatePresetTimeEstimates() {
       if (!preset || !preset.services) continue;
       
       // Build task objects from preset services
-      const tasks = preset.services.map((item) => {
-        if (typeof item === "string") {
-          return { type: item, params: {} };
-        } else {
-          return { type: item.id, params: item.params || {} };
+      // Need to actually build tasks to get full structure
+      const { getHandler } = await import("./handlers/index.js");
+      const tasks = [];
+      
+      for (const item of preset.services) {
+        const serviceId = typeof item === "string" ? item : item.id;
+        const serviceParams = typeof item === "string" ? {} : (item.params || {});
+        
+        try {
+          const handler = getHandler(serviceId);
+          if (handler && handler.definition && handler.definition.build) {
+            // Build the actual task to get full structure
+            const builtTask = await handler.definition.build({
+              params: serviceParams,
+              resolveToolPath: async () => null, // Tool path not needed for time estimates
+              getDataDirs: async () => ({}),
+            });
+            tasks.push(builtTask);
+          } else {
+            // Fallback to simple structure
+            tasks.push({ type: serviceId, params: serviceParams });
+          }
+        } catch (error) {
+          console.warn(`[Presets] Failed to build task ${serviceId} for time estimate:`, error);
+          // Fallback to simple structure
+          tasks.push({ type: serviceId, params: serviceParams });
         }
-      });
+      }
       
       // Calculate total time
       const result = await calculateTotalTime(tasks);

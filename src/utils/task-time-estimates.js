@@ -23,7 +23,20 @@ export function normalizeTaskParams(task) {
   
   // Get task type and params object - could be nested or flat
   const taskType = task.type || task.task_type || "";
-  const params = task.params || task;
+  
+  // For flat structures, params are at the top level of the task object
+  // For nested structures, params are in task.params
+  // Merge both to handle all cases
+  const flatParams = { ...task };
+  delete flatParams.type;
+  delete flatParams.task_type;
+  delete flatParams.ui_label;
+  delete flatParams.executable_path;
+  delete flatParams.extra_args;
+  delete flatParams.command;
+  
+  const nestedParams = task.params || {};
+  const params = { ...flatParams, ...nestedParams };
   
   // Common duration parameters (affect execution time)
   if (typeof params.minutes === "number") {
@@ -53,9 +66,24 @@ export function normalizeTaskParams(task) {
     // Protocol might affect duration slightly, but not significantly
   }
   
-  // For FurMark tasks, check for duration_seconds directly
-  if (taskType === "furmark_stress_test" && typeof params.duration_seconds === "number") {
-    relevantParams.duration_seconds = params.duration_seconds;
+  // For FurMark tasks, check for duration_seconds directly (can be at top level or in params)
+  if (taskType === "furmark_stress_test") {
+    if (typeof params.duration_seconds === "number") {
+      relevantParams.duration_seconds = params.duration_seconds;
+    }
+  }
+  
+  // For HeavyLoad stress tests, check for duration_minutes
+  if (taskType === "heavyload_stress_test" || taskType === "heavyload_stress_cpu" || 
+      taskType === "heavyload_stress_memory" || taskType === "heavyload_stress_gpu") {
+    if (typeof params.duration_minutes === "number") {
+      relevantParams.duration_minutes = params.duration_minutes;
+    }
+  }
+  
+  // For tasks with detail_level (like smartctl_report), it might affect duration
+  if (typeof params.detail_level === "string") {
+    relevantParams.detail_level = params.detail_level;
   }
 
   // For GPU parent tasks, include sub-task durations (handled separately in builder)

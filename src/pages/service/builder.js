@@ -1067,13 +1067,37 @@ class BuilderUI {
     }
 
     try {
-      const { getEstimate, formatDuration } = await import("../../utils/task-time-estimates.js");
+      const { getEstimate, formatDuration, normalizeTaskParams } = await import("../../utils/task-time-estimates.js");
       
-      // Get current task parameters
-      const taskParams = this.builder.taskParams[id]?.params || {};
+      // Build the actual task to get the full structure
+      const def = getServiceById(id);
+      if (!def) return;
       
-      // Get estimate
-      const estimateData = await getEstimate(id, taskParams);
+      let taskForEstimate;
+      try {
+        const params = this.builder.taskParams[id]?.params || {};
+        const builtTask = await def.build({
+          params: params,
+          resolveToolPath: toolPath,
+          getDataDirs,
+        });
+        taskForEstimate = builtTask;
+      } catch (error) {
+        console.warn(`[Task Time] Failed to build task ${id} for estimate:`, error);
+        // Fallback to simple structure
+        taskForEstimate = {
+          type: id,
+          params: this.builder.taskParams[id]?.params || {},
+        };
+      }
+      
+      // Normalize params from the full task structure
+      const paramsHash = normalizeTaskParams(taskForEstimate);
+      const taskParams = JSON.parse(paramsHash);
+      
+      // Get estimate using the task type from the built task (might differ from id)
+      const taskType = taskForEstimate.type || id;
+      const estimateData = await getEstimate(taskType, taskParams);
       
       // Find placeholder element
       const placeholder = liElement?.querySelector(`.time-estimate-placeholder[data-task-id="${id}"]`);
@@ -1375,6 +1399,7 @@ class BuilderUI {
       const { calculateTotalTime, formatDuration } = await import("../../utils/task-time-estimates.js");
       
       // Get selected tasks with their parameters
+      // Build actual tasks to get the full structure (not just params)
       const selectedTasks = [];
       for (const id of this.builder.order) {
         if (!this.builder.selection.has(id)) continue;
@@ -1382,16 +1407,25 @@ class BuilderUI {
         const def = getServiceById(id);
         if (!def) continue;
 
-        // Get task params
-        const params = this.builder.taskParams[id]?.params || {};
-        
-        // Build task object for time calculation
-        const task = {
-          type: id,
-          params: params,
-        };
-        
-        selectedTasks.push(task);
+        // Build the actual task to get the full structure
+        try {
+          const params = this.builder.taskParams[id]?.params || {};
+          const builtTask = await def.build({
+            params: params,
+            resolveToolPath: toolPath,
+            getDataDirs,
+          });
+          
+          // Use the built task structure (has all params at top level)
+          selectedTasks.push(builtTask);
+        } catch (error) {
+          console.warn(`[Task Time] Failed to build task ${id} for time estimate:`, error);
+          // Fallback to simple structure
+          selectedTasks.push({
+            type: id,
+            params: this.builder.taskParams[id]?.params || {},
+          });
+        }
       }
 
       if (selectedTasks.length === 0) {
