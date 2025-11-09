@@ -391,6 +391,20 @@ async function callAIProvider(settings, query, pruned) {
     try {
       parsed = JSON.parse(text);
     } catch (parseError) {
+      // Check if response looks like plain text (not JSON)
+      const trimmedText = text.trim();
+      const looksLikePlainText =
+        !trimmedText.startsWith("{") && !trimmedText.startsWith("[");
+
+      if (looksLikePlainText) {
+        // Model didn't follow JSON instructions - likely a capability issue
+        console.error(
+          "Model returned plain text instead of JSON. Response:",
+          text.substring(0, 500)
+        );
+        throw new Error("MODEL_INSTRUCTION_FAILURE");
+      }
+
       // Try to extract JSON object from stray text
       const match = text.match(/\{[\s\S]*\}/);
       if (!match) {
@@ -445,12 +459,26 @@ async function callAIProvider(settings, query, pruned) {
 
     // For Ollama, provide more helpful error messages
     if (settings.provider === "ollama") {
+      if (error.message === "MODEL_INSTRUCTION_FAILURE") {
+        throw new Error(
+          `The Ollama model "${settings.model}" did not follow JSON format instructions. ` +
+            `This model may not be capable enough for structured responses.\n\n` +
+            `Try using a more capable model like:\n` +
+            `• llama3.2 (or newer)\n` +
+            `• mistral\n` +
+            `• mixtral\n` +
+            `• qwen2.5\n\n` +
+            `Smaller models often struggle with strict JSON formatting.`
+        );
+      }
       if (
         error.message?.includes("Failed to parse") ||
         error.message?.includes("parse")
       ) {
         throw new Error(
-          "Ollama returned an invalid response. The model might not be installed or there was a communication error."
+          `Ollama model "${settings.model}" returned an invalid response. ` +
+            `The model may not be following instructions properly. ` +
+            `Try using a more capable model or check if the model is installed correctly.`
         );
       }
       if (
