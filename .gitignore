@@ -1,26 +1,77 @@
+# ============================================================================
+# User Data & Settings (Portable Data Directory)
+# ============================================================================
+# These files contain user-specific data and should not be committed
 data/settings/programs.json
 data/settings/scripts.json
-data/settings/stacks.json   
-data\webview_profile
+data/settings/stacks.json
+data/settings/app_settings.json
+data/webview_profile/
+data/reports/*
 
+# ============================================================================
+# Build Artifacts & Compiled Binaries
+# ============================================================================
+# Frontend build output
+dist/
+dist-ssr/
+
+# Rust build artifacts
+/target/
+target/
+
+# Python build artifacts
+src-tauri/py_build/
+src-tauri/bin/service_runner.exe
+src-tauri/build/service_runner/
+src-tauri/service_runner.spec
+data/resources/bin/service_runner.exe
+
+# Top-level binaries folder
+binaries/
+
+# ============================================================================
+# Dependencies
+# ============================================================================
+node_modules/
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# ============================================================================
 # Logs
-logs
+# ============================================================================
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+*.log.*
 
-node_modules
-dist
-dist-ssr
-*.local
+# ============================================================================
+# Environment & Secrets
+# ============================================================================
+.env
+.env.local
+.env.*.local
+# Keep example env files tracked
+!.env.example
 
-# Editor directories and files
+# ============================================================================
+# Editor & IDE Files
+# ============================================================================
 .vscode/*
 !.vscode/extensions.json
-.idea
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
 .DS_Store
 *.suo
 *.ntvs*
@@ -28,39 +79,33 @@ dist-ssr
 *.sln
 *.sw?
 
-# Syncthing
-.stfolder/
-data/settings/app_settings.json
+# ============================================================================
+# OS & System Files
+# ============================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
 
-# Ignore pyinstaller build artifacts and produced service exe
-src-tauri/py_build
-data/resources/bin/service_runner.exe
-src-tauri/bin/service_runner.exe
-src-tauri/build/service_runner
-src-tauri/service_runner.spec
-
-# Ignore service runner json files
-# runner/*.json
-# runner/sample_tasks/*.json
-
-# Ignore reports
-data/reports/*
-
-# Ignore python cache files
-__pycache__/
-*.py[cod]
-
-# Environment files (keep real secrets out of the repo)
-.env
-.env.local
-# Keep an example env file tracked
-!.env.example
-
-# Ignore compiled Python runner and any other files placed in the top-level binaries folder
-binaries/
-
-# Ignore mkdocs build files
+# ============================================================================
+# Documentation Build
+# ============================================================================
 site/
+.mkdocs/
 
-# Ignore rust analyzer target folder
-/target
+# ============================================================================
+# Syncthing
+# ============================================================================
+.stfolder/
+
+# ============================================================================
+# Temporary & Local Files
+# ============================================================================
+*.local
+*.tmp
+*.temp
+.cache/
