@@ -1087,8 +1087,8 @@ class BuilderUI {
         return;
       }
 
-      if (estimateData.sampleCount < 3) {
-        console.log(`[Task Time] Insufficient samples for ${id}: ${estimateData.sampleCount} < 3`);
+      if (estimateData.sampleCount < 1) {
+        console.log(`[Task Time] Insufficient samples for ${id}: ${estimateData.sampleCount} < 1`);
         placeholder.remove();
         return;
       }

@@ -187,10 +187,10 @@ export function formatDuration(seconds) {
  * Check if there are enough samples for a reliable estimate.
  * 
  * @param {Array} records - Array of task time records
- * @returns {boolean} True if >= 3 samples exist
+ * @returns {boolean} True if >= 1 sample exists
  */
 export function hasEnoughSamples(records) {
-  return Array.isArray(records) && records.length >= 3;
+  return Array.isArray(records) && records.length >= 1;
 }
 
 /**
@@ -221,7 +221,7 @@ export async function calculateTotalTime(tasks) {
     const taskParams = task.params || {};
     const estimate = await getEstimate(taskType, taskParams);
     
-    if (estimate && estimate.sampleCount >= 3) {
+    if (estimate && estimate.sampleCount >= 1) {
       totalSeconds += estimate.estimate;
       estimatedCount++;
     }

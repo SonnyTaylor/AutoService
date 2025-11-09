@@ -207,7 +207,7 @@ pub fn load_task_times(state: tauri::State<AppState>) -> Result<Vec<TaskTimeReco
 #[tauri::command]
 /// Get median time estimate for a specific task type and parameter combination.
 ///
-/// Returns None if fewer than 3 samples exist for the given task+params.
+/// Returns None if no samples exist for the given task+params.
 pub fn get_task_time_estimate(
     state: tauri::State<AppState>,
     task_type: String,
@@ -230,8 +230,8 @@ pub fn get_task_time_estimate(
         .map(|r| r.duration_seconds)
         .collect();
 
-    // Need at least 3 samples
-    if matching.len() < 3 {
+    // Need at least 1 sample
+    if matching.is_empty() {
         return Ok(None);
     }
 
