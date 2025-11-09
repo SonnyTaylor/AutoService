@@ -15,9 +15,29 @@ export function buildPrintableHtml(report, sectionsEl) {
   const title = "AutoService – Service Results";
   const overall = String(report.overall_status || "").toLowerCase();
   const head = "";
+  
+  // Add AI summary section if present
+  let aiSummarySection = "";
+  if (report?.ai_summary) {
+    aiSummarySection = `
+      <section class="result-section ai-summary-section">
+        <div class="card">
+          <h3 class="section-title">AI Summary</h3>
+          <div class="ai-summary-content">
+            ${report.ai_summary
+              .split("\n")
+              .map((line) => (line.trim() ? `<p>${line.trim()}</p>` : ""))
+              .join("")}
+          </div>
+        </div>
+      </section>
+    `;
+  }
+  
   const body = `
     ${buildPrintHeader(title, overall, report)}
     ${sectionsEl.innerHTML}
+    ${aiSummarySection}
   `;
   return `<div>${head}${body}</div>`;
 }

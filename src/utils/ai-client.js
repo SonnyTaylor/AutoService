@@ -516,11 +516,11 @@ export const aiClient = {
     });
 
     // Create a customer-friendly prompt
-    const systemPrompt = `You are a helpful assistant that creates clear, friendly summaries of computer maintenance work for customers. 
-Write in plain language that non-technical people can understand. Focus on what was done, why it matters, and any important findings.
-Keep it concise but informative. Use a warm, professional tone.`;
+    const systemPrompt = `You are a helpful assistant that creates brief, friendly summaries of computer maintenance work for customers. 
+Write in plain language that non-technical people can understand. Keep it SHORT - 2-3 sentences maximum.
+Focus on what was done and any important findings. Use a warm, professional tone.`;
 
-    const userPrompt = `Please create a customer-friendly summary of the following computer maintenance work:
+    const userPrompt = `Please create a BRIEF customer-friendly summary (2-3 sentences maximum) of the following computer maintenance work:
 
 Total Tasks: ${taskCount}
 Successful: ${successfulTasks}
@@ -532,20 +532,19 @@ ${JSON.stringify(taskSummaries, null, 2)}
 
 Overall Status: ${report.overall_status || "unknown"}
 
-Please provide a clear, friendly summary that explains:
-1. What maintenance work was performed
-2. What issues were found (if any)
-3. What was fixed or improved
-4. Any recommendations for the customer
+Provide a SHORT summary (2-3 sentences) that briefly explains:
+- What maintenance work was performed
+- Any important findings or issues
+- Overall system health status
 
-Write in a way that a non-technical customer would understand.`;
+Keep it concise and easy to understand for non-technical customers.`;
 
     try {
       const summary = await this.generateText({
         systemPrompt,
         userPrompt,
         temperature: 0.7,
-        maxTokens: 1000,
+        maxTokens: 200, // Reduced for shorter summaries
       });
 
       return summary.trim();

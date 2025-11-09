@@ -667,6 +667,27 @@ export async function initPage() {
     label: (t && t.ui_label) || friendlyTaskLabel(t.type),
     status: "pending", // pending | running | success | failure | skipped
   }));
+  
+  // Check if AI summary is enabled and add it as a task
+  let aiSummaryEnabled = false;
+  try {
+    const pendingRunRaw = sessionStorage.getItem("service.pendingRun");
+    if (pendingRunRaw) {
+      const pendingRun = JSON.parse(pendingRunRaw);
+      aiSummaryEnabled = pendingRun.ai_summary_enabled === true;
+    }
+  } catch (e) {
+    // Ignore
+  }
+  
+  if (aiSummaryEnabled) {
+    taskState.push({
+      id: taskState.length,
+      type: "ai_summary",
+      label: "AI Summary Generation",
+      status: "pending",
+    });
+  }
 
   // Check if there's an active or completed run in global state and restore UI
   // ONLY restore state if we're reconnecting to an existing run (no new pendingRun)
@@ -1361,6 +1382,9 @@ export async function initPage() {
           }
 
           // Generate AI summary if enabled (before persisting)
+          let aiSummaryPromise = null;
+          const aiSummaryTaskIndex = aiSummaryEnabled ? taskState.findIndex(t => t.type === "ai_summary") : -1;
+          
           if (aiSummaryEnabled) {
             try {
               const { aiClient } = await import("../../utils/ai-client.js");
@@ -1368,13 +1392,26 @@ export async function initPage() {
               
               if (isConfigured) {
                 console.log("[AI Summary] Starting generation...");
-                // Generate summary asynchronously (don't block UI)
-                aiClient
+                
+                // Update AI summary task status to "running"
+                if (aiSummaryTaskIndex >= 0) {
+                  updateTaskStatus(aiSummaryTaskIndex, "running");
+                  renderTaskList();
+                }
+                
+                // Generate summary - store promise to wait for it
+                aiSummaryPromise = aiClient
                   .generateServiceSummary(finalReport)
                   .then((summary) => {
                     console.log("[AI Summary] Generated successfully, length:", summary.length);
                     // Add summary to report object
                     finalReport.ai_summary = summary;
+                    
+                    // Update AI summary task status to "success"
+                    if (aiSummaryTaskIndex >= 0) {
+                      updateTaskStatus(aiSummaryTaskIndex, "success");
+                      renderTaskList();
+                    }
                     
                     // Update persisted report
                     const updatedJson = JSON.stringify(finalReport, null, 2);
@@ -1400,13 +1437,27 @@ export async function initPage() {
                   })
                   .catch((error) => {
                     console.error("[AI Summary] Failed to generate:", error);
+                    // Update AI summary task status to "failure"
+                    if (aiSummaryTaskIndex >= 0) {
+                      updateTaskStatus(aiSummaryTaskIndex, "failure");
+                      renderTaskList();
+                    }
                     // Don't block report display - continue without summary
                   });
               } else {
                 console.warn("[AI Summary] Requested but AI is not configured");
+                // Mark as failed if not configured
+                if (aiSummaryTaskIndex >= 0) {
+                  updateTaskStatus(aiSummaryTaskIndex, "failure");
+                  renderTaskList();
+                }
               }
             } catch (error) {
               console.error("[AI Summary] Error checking AI configuration:", error);
+              if (aiSummaryTaskIndex >= 0) {
+                updateTaskStatus(aiSummaryTaskIndex, "failure");
+                renderTaskList();
+              }
             }
           } else {
             console.log("[AI Summary] Not enabled for this run");
@@ -1468,8 +1519,28 @@ export async function initPage() {
 
           // Note: Auto-save is now handled in the results page for better positioning
 
-          if (currentViewResultsBtn) {
-            currentViewResultsBtn.removeAttribute("disabled");
+          // Enable "View Results" button only after AI summary completes (if enabled)
+          if (aiSummaryPromise) {
+            // Wait for AI summary to complete before enabling button
+            aiSummaryPromise
+              .then(() => {
+                if (currentViewResultsBtn) {
+                  currentViewResultsBtn.removeAttribute("disabled");
+                  console.log("[AI Summary] View Results button enabled after summary completion");
+                }
+              })
+              .catch(() => {
+                // Even if AI summary fails, enable the button
+                if (currentViewResultsBtn) {
+                  currentViewResultsBtn.removeAttribute("disabled");
+                  console.log("[AI Summary] View Results button enabled (summary failed)");
+                }
+              });
+          } else {
+            // No AI summary, enable button immediately
+            if (currentViewResultsBtn) {
+              currentViewResultsBtn.removeAttribute("disabled");
+            }
           }
 
           // Update global state to mark run as completed
@@ -1702,7 +1773,9 @@ export async function initPage() {
     taskListEl.innerHTML = "";
     taskState.forEach((t, idx) => {
       const li = document.createElement("li");
-      li.className = `task-status ${t.status}`;
+      const isAISummary = t.type === "ai_summary";
+      const isLastTask = idx === taskState.length - 1;
+      li.className = `task-status ${t.status}${isAISummary ? " ai-summary-task" : ""}${isLastTask && isAISummary ? " ai-summary-separated" : ""}`;
       li.innerHTML = `
         <div class="left">
           <span class="idx">${String(idx + 1).padStart(2, "0")}</span>

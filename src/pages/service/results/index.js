@@ -160,6 +160,24 @@ export async function initPage() {
   // Render summary and sections using exported functions
   renderResultsSummary(report, summaryEl);
   renderResultsSections(report, sectionsEl);
+  
+  // Add AI summary section to technician view if present
+  if (report.ai_summary && sectionsEl) {
+    const aiSummarySection = document.createElement("section");
+    aiSummarySection.className = "result-section ai-summary-section";
+    aiSummarySection.innerHTML = `
+      <div class="card">
+        <h3 class="section-title">AI Summary</h3>
+        <div class="ai-summary-content">
+          ${report.ai_summary
+            .split("\n")
+            .map((line) => (line.trim() ? `<p>${line.trim()}</p>` : ""))
+            .join("")}
+        </div>
+      </div>
+    `;
+    sectionsEl.appendChild(aiSummarySection);
+  }
 
   // Set up print handlers
   setupPrintHandlers(report, sectionsEl);
@@ -168,8 +186,26 @@ export async function initPage() {
   setupSaveHandler(report, saveBtn);
 
   // Handle auto-save if not viewing from reports page
+  // But only if AI summary is not pending (wait for it to complete first)
   if (!viewingFromReports) {
-    handleAutoSaveOnPageLoad(report);
+    // Check if AI summary is expected but not yet present
+    let aiSummaryExpected = false;
+    try {
+      const pendingRunRaw = sessionStorage.getItem("service.pendingRun");
+      if (pendingRunRaw) {
+        const pendingRun = JSON.parse(pendingRunRaw);
+        aiSummaryExpected = pendingRun.ai_summary_enabled === true;
+      }
+    } catch (e) {
+      // Ignore
+    }
+    
+    // Only auto-save immediately if AI summary is not expected, or if it's already present
+    if (!aiSummaryExpected || report.ai_summary) {
+      handleAutoSaveOnPageLoad(report);
+    } else {
+      console.log("[AutoSave] Waiting for AI summary before auto-saving...");
+    }
   }
 
   if (container) container.hidden = false;
@@ -381,9 +417,36 @@ function setupPrintHandlers(report, sectionsEl) {
     if (updatedReport) {
       console.log("[Results] Report updated with AI summary, refreshing previews");
       currentReport = updatedReport;
+      
+      // Add AI summary to technician view if not already present
+      if (updatedReport.ai_summary && sectionsEl) {
+        // Check if AI summary section already exists
+        const existingAISection = sectionsEl.querySelector(".ai-summary-section");
+        if (!existingAISection) {
+          const aiSummarySection = document.createElement("section");
+          aiSummarySection.className = "result-section ai-summary-section";
+          aiSummarySection.innerHTML = `
+            <div class="card">
+              <h3 class="section-title">AI Summary</h3>
+              <div class="ai-summary-content">
+                ${updatedReport.ai_summary
+                  .split("\n")
+                  .map((line) => (line.trim() ? `<p>${line.trim()}</p>` : ""))
+                  .join("")}
+              </div>
+            </div>
+          `;
+          sectionsEl.appendChild(aiSummarySection);
+        }
+      }
+      
       // Refresh customer preview
       if (customerPreview) {
         renderCustomerPreview();
+      }
+      // Trigger auto-save if enabled (now that AI summary is complete)
+      if (!viewingFromReports) {
+        handleAutoSaveOnPageLoad(updatedReport);
       }
     }
   });

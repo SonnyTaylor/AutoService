@@ -50,6 +50,12 @@
   background: var(--panel-2);
 }
 
+[data-page="service-report"] .task-status.ai-summary-separated {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(148, 163, 184, 0.3);
+}
+
 [data-page="service-report"] .task-status .left {
   display: flex;
   align-items: center;
