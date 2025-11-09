@@ -106,9 +106,11 @@ export async function initializeReportsSettings(root) {
     const icon = type === "success" ? "✓" : "✕";
     statusEl.className = `settings-status ${type}`;
     statusEl.textContent = `${icon} ${message}`;
+    statusEl.style.display = "inline-block";
     setTimeout(() => {
       statusEl.textContent = "";
       statusEl.className = "";
+      statusEl.style.display = "none";
     }, 3000);
   }
 
@@ -118,9 +120,11 @@ export async function initializeReportsSettings(root) {
     const icon = type === "success" ? "✓" : type === "error" ? "✕" : "ℹ";
     networkStatus.className = `settings-status ${type}`;
     networkStatus.textContent = `${icon} ${message}`;
+    networkStatus.style.display = "inline-block";
     setTimeout(() => {
       networkStatus.textContent = "";
       networkStatus.className = "";
+      networkStatus.style.display = "none";
     }, 3000);
   }
 

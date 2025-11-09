@@ -42,9 +42,11 @@ export async function initializeNetworkSettings(root) {
     if (statusElement) {
       statusElement.className = "settings-status error";
       statusElement.textContent = `✕ Please enter a valid IPv4 or IPv6 address for ${fieldName}.`;
+      statusElement.style.display = "inline-block";
       setTimeout(() => {
         statusElement.textContent = "";
         statusElement.className = "";
+        statusElement.style.display = "none";
       }, 4000);
     }
   }
@@ -71,9 +73,11 @@ export async function initializeNetworkSettings(root) {
         status.textContent = value
           ? `✓ Saved. Using ${value} as iPerf server.`
           : "✓ Saved. iPerf server cleared.";
+        status.style.display = "inline-block";
         setTimeout(() => {
           status.textContent = "";
           status.className = "";
+          status.style.display = "none";
         }, 3000);
       }
       dispatchEvent(new Event("network-settings-updated"));
@@ -81,6 +85,12 @@ export async function initializeNetworkSettings(root) {
       if (status) {
         status.className = "settings-status error";
         status.textContent = "✕ Failed to save settings.";
+        status.style.display = "inline-block";
+        setTimeout(() => {
+          status.textContent = "";
+          status.className = "";
+          status.style.display = "none";
+        }, 3000);
       }
       console.error(e);
     }
@@ -101,9 +111,11 @@ export async function initializeNetworkSettings(root) {
       if (pingStatus) {
         pingStatus.className = "settings-status success";
         pingStatus.textContent = `✓ Saved. Using ${value} as Ping host.`;
+        pingStatus.style.display = "inline-block";
         setTimeout(() => {
           pingStatus.textContent = "";
           pingStatus.className = "";
+          pingStatus.style.display = "none";
         }, 3000);
       }
       dispatchEvent(new Event("network-settings-updated"));
@@ -111,6 +123,12 @@ export async function initializeNetworkSettings(root) {
       if (pingStatus) {
         pingStatus.className = "settings-status error";
         pingStatus.textContent = "✕ Failed to save settings.";
+        pingStatus.style.display = "inline-block";
+        setTimeout(() => {
+          pingStatus.textContent = "";
+          pingStatus.className = "";
+          pingStatus.style.display = "none";
+        }, 3000);
       }
       console.error(e);
     }

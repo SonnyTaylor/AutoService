@@ -456,187 +456,193 @@
         <div class="card-body">
           <p class="muted">Configure report saving behavior and preferences.</p>
 
-          <!-- Auto-save Toggle -->
-          <label class="business-settings-toggle">
-            <input type="checkbox" id="reports-autosave-toggle" />
-            <div class="toggle-text">
-              <div class="toggle-title">Auto-save Reports</div>
-              <div class="muted toggle-description">
-                Automatically save reports after every service completes (no
-                need to manually click Save Report)
-              </div>
+          <!-- Report Saving Section -->
+          <div class="reports-config-section">
+            <div class="reports-section-header">
+              <span class="reports-section-title">Report Saving</span>
+              <span class="muted reports-section-subtitle">
+                Configure how reports are saved automatically
+              </span>
             </div>
-          </label>
-
-          <hr />
-
-          <!-- Desktop Notifications Toggle -->
-          <label class="business-settings-toggle">
-            <input type="checkbox" id="reports-notifications-toggle" />
-            <div class="toggle-text">
-              <div class="toggle-title">Desktop Notifications</div>
-              <div class="muted toggle-description">
-                Show a system notification when a service run completes
-              </div>
+            <div class="reports-toggles-group">
+              <label class="business-settings-toggle">
+                <input type="checkbox" id="reports-autosave-toggle" />
+                <div class="toggle-text">
+                  <div class="toggle-title">Auto-save Reports</div>
+                  <div class="muted toggle-description">
+                    Automatically save reports after every service completes (no
+                    need to manually click Save Report)
+                  </div>
+                </div>
+              </label>
             </div>
-          </label>
+          </div>
 
-          <hr />
-
-          <!-- Completion Sound Toggle and Volume -->
-          <label class="business-settings-toggle">
-            <input type="checkbox" id="reports-sound-toggle" />
-            <div class="toggle-text">
-              <div class="toggle-title">Play Sound on Completion</div>
-              <div class="muted toggle-description">
-                Plays a tone sequence when a service finishes to get your
-                attention
-              </div>
-              <div
-                style="
-                  display: flex;
-                  align-items: center;
-                  gap: 10px;
-                  margin-top: 8px;
-                  flex-wrap: wrap;
-                "
-              >
-                <label
-                  for="reports-sound-volume"
-                  class="muted"
-                  style="min-width: 70px"
-                  >Volume</label
-                >
-                <input
-                  type="range"
-                  id="reports-sound-volume"
-                  min="0"
-                  max="100"
-                  step="1"
-                  value="80"
-                  aria-label="Completion sound volume"
-                />
-                <span
-                  id="reports-sound-volume-label"
-                  class="muted"
-                  style="width: 42px; text-align: right"
-                  >80%</span
-                >
-
-                <label
-                  for="reports-sound-select"
-                  class="muted"
-                  style="min-width: 60px; margin-left: auto"
-                  >Sound</label
-                >
-                <select
-                  id="reports-sound-select"
-                  aria-label="Notification sound"
-                  style="flex: 1; min-width: 160px; max-width: 260px"
-                >
-                  <option value="classic-beep">Classic Beep</option>
-                </select>
-
-                <label
-                  for="reports-sound-repeat"
-                  class="muted"
-                  style="min-width: 60px"
-                  >Repeat</label
-                >
-                <input
-                  id="reports-sound-repeat"
-                  type="number"
-                  min="1"
-                  max="10"
-                  step="1"
-                  value="1"
-                  aria-label="How many times to play the sound"
-                  style="width: 70px"
-                />
-
-                <button
-                  type="button"
-                  id="reports-sound-test-btn"
-                  class="ghost"
-                  title="Test the selected sound"
-                >
-                  <i class="ph ph-speaker-high" aria-hidden="true"></i>
-                  <span>Test</span>
-                </button>
-              </div>
+          <!-- Notifications Section -->
+          <div class="reports-config-section">
+            <div class="reports-section-header">
+              <span class="reports-section-title">Notifications</span>
+              <span class="muted reports-section-subtitle">
+                Configure alerts when services complete
+              </span>
             </div>
-          </label>
-
-          <div id="reports-settings-status" class="muted"></div>
-
-          <hr />
-
-          <!-- Network Report Sharing -->
-          <label class="business-settings-toggle">
-            <input type="checkbox" id="network-sharing-toggle" />
-            <div class="toggle-text">
-              <div class="toggle-title">Enable network report sharing</div>
-              <div class="muted toggle-description">
-                Copy saved reports to a network share (UNC path)
-              </div>
-            </div>
-          </label>
-
-          <div class="network-form-group">
-            <form id="network-sharing-form">
-              <label>
-                <span class="muted">Network UNC Path</span>
-                <input
-                  type="text"
-                  id="network-unc-input"
-                  placeholder="\\\\192.168.1.100\\share\\reports"
-                  autocomplete="off"
-                />
+            <div class="reports-toggles-group">
+              <label class="business-settings-toggle">
+                <input type="checkbox" id="reports-notifications-toggle" />
+                <div class="toggle-text">
+                  <div class="toggle-title">Desktop Notifications</div>
+                  <div class="muted toggle-description">
+                    Show a system notification when a service run completes
+                  </div>
+                </div>
               </label>
 
-              <div class="network-save-modes">
-                <span class="muted">Save to</span>
-                <div class="radio-group">
-                  <label class="radio-option">
-                    <input
-                      type="radio"
-                      name="network-save-mode"
-                      id="network-save-local"
-                      value="local"
-                    />
-                    <span>Local only</span>
-                  </label>
-                  <label class="radio-option">
-                    <input
-                      type="radio"
-                      name="network-save-mode"
-                      id="network-save-network"
-                      value="network"
-                    />
-                    <span>Network only</span>
-                  </label>
-                  <label class="radio-option">
-                    <input
-                      type="radio"
-                      name="network-save-mode"
-                      id="network-save-both"
-                      value="both"
-                      checked
-                    />
-                    <span>Both (recommended)</span>
-                  </label>
+              <!-- Completion Sound Toggle and Controls -->
+              <label class="business-settings-toggle">
+                <input type="checkbox" id="reports-sound-toggle" />
+                <div class="toggle-text">
+                  <div class="toggle-title">Play Sound on Completion</div>
+                  <div class="muted toggle-description">
+                    Plays a tone sequence when a service finishes to get your
+                    attention
+                  </div>
+                  <div class="sound-controls">
+                    <div class="sound-control-row">
+                      <label for="reports-sound-volume" class="sound-control-label">
+                        Volume
+                      </label>
+                      <input
+                        type="range"
+                        id="reports-sound-volume"
+                        min="0"
+                        max="100"
+                        step="1"
+                        value="80"
+                        aria-label="Completion sound volume"
+                        class="sound-volume-slider"
+                      />
+                      <span id="reports-sound-volume-label" class="sound-volume-value">
+                        80%
+                      </span>
+                    </div>
+                    <div class="sound-control-row">
+                      <label for="reports-sound-select" class="sound-control-label">
+                        Sound
+                      </label>
+                      <select
+                        id="reports-sound-select"
+                        aria-label="Notification sound"
+                        class="sound-select"
+                      >
+                        <option value="classic-beep">Classic Beep</option>
+                      </select>
+                    </div>
+                    <div class="sound-control-row">
+                      <label for="reports-sound-repeat" class="sound-control-label">
+                        Repeat
+                      </label>
+                      <input
+                        id="reports-sound-repeat"
+                        type="number"
+                        min="1"
+                        max="10"
+                        step="1"
+                        value="1"
+                        aria-label="How many times to play the sound"
+                        class="sound-repeat-input"
+                      />
+                      <button
+                        type="button"
+                        id="reports-sound-test-btn"
+                        class="ghost sound-test-btn"
+                        title="Test the selected sound"
+                      >
+                        <i class="ph ph-speaker-high" aria-hidden="true"></i>
+                        <span>Test</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <button type="button" id="network-test-btn" class="ghost">
-                  <i class="ph ph-plug-charging"></i> Test Connection
-                </button>
-              </div>
-            </form>
+              </label>
+            </div>
+            <div id="reports-settings-status" class="muted"></div>
+          </div>
 
-            <div
-              id="network-sharing-status"
-              class="muted"
-              style="margin-top: 8px"
-            ></div>
+          <!-- Network Sharing Section -->
+          <div class="reports-config-section">
+            <div class="reports-section-header">
+              <span class="reports-section-title">Network Sharing</span>
+              <span class="muted reports-section-subtitle">
+                Share reports across your network
+              </span>
+            </div>
+            <div class="reports-toggles-group">
+              <label class="business-settings-toggle">
+                <input type="checkbox" id="network-sharing-toggle" />
+                <div class="toggle-text">
+                  <div class="toggle-title">Enable network report sharing</div>
+                  <div class="muted toggle-description">
+                    Copy saved reports to a network share (UNC path)
+                  </div>
+                </div>
+              </label>
+            </div>
+            <div class="network-form-group">
+              <form id="network-sharing-form">
+                <label>
+                  <span class="muted">Network UNC Path</span>
+                  <input
+                    type="text"
+                    id="network-unc-input"
+                    placeholder="\\\\192.168.1.100\\share\\reports"
+                    autocomplete="off"
+                  />
+                </label>
+
+                <div class="network-save-modes">
+                  <span class="muted">Save to</span>
+                  <div class="radio-group">
+                    <label class="radio-option">
+                      <input
+                        type="radio"
+                        name="network-save-mode"
+                        id="network-save-local"
+                        value="local"
+                      />
+                      <span>Local only</span>
+                    </label>
+                    <label class="radio-option">
+                      <input
+                        type="radio"
+                        name="network-save-mode"
+                        id="network-save-network"
+                        value="network"
+                      />
+                      <span>Network only</span>
+                    </label>
+                    <label class="radio-option">
+                      <input
+                        type="radio"
+                        name="network-save-mode"
+                        id="network-save-both"
+                        value="both"
+                        checked
+                      />
+                      <span>Both (recommended)</span>
+                    </label>
+                  </div>
+                  <button type="button" id="network-test-btn" class="ghost">
+                    <i class="ph ph-plug-charging"></i> Test Connection
+                  </button>
+                </div>
+              </form>
+
+              <div
+                id="network-sharing-status"
+                class="muted"
+                style="margin-top: 8px"
+              ></div>
+            </div>
           </div>
         </div>
       </div>
@@ -651,79 +657,97 @@
             errors and performance data to Sentry.
           </p>
 
-          <!-- Master Toggle -->
-          <label class="business-settings-toggle">
-            <input type="checkbox" id="sentry-enabled-toggle" />
-            <div class="toggle-text">
-              <div class="toggle-title">Enable Sentry</div>
-              <div class="muted toggle-description">
+          <!-- Master Toggle Section -->
+          <div class="sentry-config-section">
+            <div class="sentry-section-header">
+              <span class="sentry-section-title">Enable Sentry</span>
+              <span class="muted sentry-section-subtitle">
                 Master toggle to enable/disable all error tracking and
                 performance monitoring
-              </div>
+              </span>
             </div>
-          </label>
-
-          <hr />
-
-          <!-- Environment Selection -->
-          <label class="sentry-environment-label">
-            <span class="muted">Environment</span>
-            <select
-              id="sentry-environment-select"
-              aria-label="Sentry environment"
-            >
-              <option value="production">Production</option>
-              <option value="development">Development</option>
-              <option value="staging">Staging</option>
-            </select>
-            <span class="muted field-hint">
-              Select the environment for error tracking and performance
-              monitoring
-            </span>
-          </label>
-
-          <hr />
-
-          <!-- PII Toggle -->
-          <label class="business-settings-toggle">
-            <input type="checkbox" id="sentry-pii-toggle" />
-            <div class="toggle-text">
-              <div class="toggle-title">Send PII Data</div>
-              <div class="muted toggle-description">
-                Include hostname and username in error reports (helps identify
-                which PC had issues)
+            <label class="business-settings-toggle">
+              <input type="checkbox" id="sentry-enabled-toggle" />
+              <div class="toggle-text">
+                <div class="toggle-title">Enable Sentry</div>
+                <div class="muted toggle-description">
+                  Master toggle to enable/disable all error tracking and
+                  performance monitoring
+                </div>
               </div>
+            </label>
+          </div>
+
+          <!-- Configuration Section -->
+          <div class="sentry-config-section">
+            <div class="sentry-section-header">
+              <span class="sentry-section-title">Configuration</span>
+              <span class="muted sentry-section-subtitle">
+                Configure environment and data collection settings
+              </span>
             </div>
-          </label>
-
-          <hr />
-
-          <!-- Performance Monitoring Toggle -->
-          <label class="business-settings-toggle">
-            <input type="checkbox" id="sentry-performance-toggle" />
-            <div class="toggle-text">
-              <div class="toggle-title">Performance Monitoring</div>
-              <div class="muted toggle-description">
-                Enable transaction and trace sampling to track performance
-                metrics
-              </div>
+            <div class="sentry-config-group">
+              <label class="sentry-environment-label">
+                <span class="muted">Environment</span>
+                <select
+                  id="sentry-environment-select"
+                  aria-label="Sentry environment"
+                >
+                  <option value="production">Production</option>
+                  <option value="development">Development</option>
+                  <option value="staging">Staging</option>
+                </select>
+                <span class="muted field-hint">
+                  Select the environment for error tracking and performance
+                  monitoring
+                </span>
+              </label>
             </div>
-          </label>
+          </div>
 
-          <hr />
-
-          <!-- System Info Toggle -->
-          <label class="business-settings-toggle">
-            <input type="checkbox" id="sentry-system-info-toggle" />
-            <div class="toggle-text">
-              <div class="toggle-title">System Information</div>
-              <div class="muted toggle-description">
-                Include system information (CPU, memory, disk) in error reports
-              </div>
+          <!-- Data Collection Section -->
+          <div class="sentry-config-section">
+            <div class="sentry-section-header">
+              <span class="sentry-section-title">Data Collection</span>
+              <span class="muted sentry-section-subtitle">
+                Control what information is included in error reports
+              </span>
             </div>
-          </label>
+            <div class="sentry-toggles-group">
+              <label class="business-settings-toggle">
+                <input type="checkbox" id="sentry-pii-toggle" />
+                <div class="toggle-text">
+                  <div class="toggle-title">Send PII Data</div>
+                  <div class="muted toggle-description">
+                    Include hostname and username in error reports (helps identify
+                    which PC had issues)
+                  </div>
+                </div>
+              </label>
 
-          <div id="sentry-settings-status" class="muted"></div>
+              <label class="business-settings-toggle">
+                <input type="checkbox" id="sentry-performance-toggle" />
+                <div class="toggle-text">
+                  <div class="toggle-title">Performance Monitoring</div>
+                  <div class="muted toggle-description">
+                    Enable transaction and trace sampling to track performance
+                    metrics
+                  </div>
+                </div>
+              </label>
+
+              <label class="business-settings-toggle">
+                <input type="checkbox" id="sentry-system-info-toggle" />
+                <div class="toggle-text">
+                  <div class="toggle-title">System Information</div>
+                  <div class="muted toggle-description">
+                    Include system information (CPU, memory, disk) in error reports
+                  </div>
+                </div>
+              </label>
+            </div>
+            <div id="sentry-settings-status" class="muted"></div>
+          </div>
         </div>
       </div>
     </div>

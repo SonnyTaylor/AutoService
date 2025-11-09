@@ -367,6 +367,7 @@ export async function initializeAISettings(root) {
 
       if (!options.suppressStatus && status) {
         status.className = "settings-status success";
+        status.style.display = "inline-block";
         if (!isKeyUnchanged) {
           status.textContent = actualKey
             ? `✓ Saved. ${
@@ -393,6 +394,7 @@ export async function initializeAISettings(root) {
         setTimeout(() => {
           status.textContent = "";
           status.className = "";
+          status.style.display = "none";
         }, 3000);
       }
 
@@ -405,6 +407,12 @@ export async function initializeAISettings(root) {
       if (status) {
         status.className = "settings-status error";
         status.textContent = "✕ Failed to save settings.";
+        status.style.display = "inline-block";
+        setTimeout(() => {
+          status.textContent = "";
+          status.className = "";
+          status.style.display = "none";
+        }, 3000);
       }
       console.error(e);
       throw e;

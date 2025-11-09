@@ -121,9 +121,11 @@ export async function initializeBusinessSettings(root) {
     const icon = type === "success" ? "✓" : "✕";
     statusEl.className = `settings-status ${type}`;
     statusEl.textContent = `${icon} ${message}`;
+    statusEl.style.display = "inline-block";
     setTimeout(() => {
       statusEl.textContent = "";
       statusEl.className = "";
+      statusEl.style.display = "none";
     }, 3000);
   }
 
