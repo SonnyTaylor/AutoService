@@ -11,6 +11,7 @@ import { initializeBusinessSettings } from "./business.js";
 import { initializeReportsSettings } from "./reports.js";
 import { initializeAISettings } from "./ai.js";
 import { initializeSentrySettings } from "./sentry.js";
+import { initializeTaskTimesSettings } from "./task-times.js";
 
 /**
  * Initializes the settings page functionality.
@@ -32,5 +33,6 @@ export async function initPage() {
   await initializeBusinessSettings(root);
   await initializeReportsSettings(root);
   await initializeAISettings(root);
+  await initializeTaskTimesSettings(root);
   await initializeSentrySettings(root);
 }

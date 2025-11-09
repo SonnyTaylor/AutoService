@@ -92,7 +92,8 @@
 .ai-config-section,
 .business-config-section,
 .reports-config-section,
-.sentry-config-section {
+.sentry-config-section,
+.task-times-config-section {
   background: var(--panel-accent);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -108,7 +109,8 @@
 .ai-section-header,
 .business-section-header,
 .reports-section-header,
-.sentry-section-header {
+.sentry-section-header,
+.task-times-section-header {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -125,7 +127,8 @@
 .ai-section-title,
 .business-section-title,
 .reports-section-title,
-.sentry-section-title {
+.sentry-section-title,
+.task-times-section-title {
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--text);
@@ -139,7 +142,8 @@
 .ai-section-subtitle,
 .business-section-subtitle,
 .reports-section-subtitle,
-.sentry-section-subtitle {
+.sentry-section-subtitle,
+.task-times-section-subtitle {
   font-size: 12px;
   text-transform: none;
   letter-spacing: normal;
@@ -644,6 +648,88 @@
 
 .business-logo-input-row input {
   flex: 1;
+}
+
+/* Task Time Estimates specific styles */
+.task-times-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-top: 0;
+}
+
+.task-times-stat-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.task-times-stat-card:hover {
+  background: var(--panel-hover);
+  border-color: #2e3b55;
+}
+
+.task-times-stat-label {
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+.task-times-stat-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.task-times-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task-times-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #ef4444;
+  color: white;
+  border: 1px solid #dc2626;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, opacity 0.15s;
+  width: fit-content;
+}
+
+.task-times-clear-btn:hover:not(:disabled) {
+  background: #dc2626;
+  border-color: #b91c1c;
+}
+
+.task-times-clear-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.task-times-clear-btn i {
+  font-size: 16px;
+}
+
+.task-times-warning {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.5;
 }
 
 .business-logo-input-row button {

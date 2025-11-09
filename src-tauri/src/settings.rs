@@ -250,3 +250,18 @@ pub fn get_task_time_estimate(
 
     Ok(Some(median))
 }
+
+#[tauri::command]
+/// Clear all task time records by deleting the task_times.json file.
+///
+/// Returns Ok(()) on success, or an error string if deletion fails.
+pub fn clear_task_times(state: tauri::State<AppState>) -> Result<(), String> {
+    let path = task_times_file_path(state.data_dir.as_path());
+    
+    // Delete the file if it exists
+    if path.exists() {
+        fs::remove_file(&path).map_err(|e| e.to_string())?;
+    }
+    
+    Ok(())
+}
