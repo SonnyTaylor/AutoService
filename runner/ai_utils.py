@@ -99,14 +99,36 @@ class AIClient:
 
             # Set API key in environment for LiteLLM
             # LiteLLM reads from environment variables based on provider
-            provider_prefix = self.model.split("/")[0].upper()
-            if provider_prefix == "OPENAI":
-                os.environ["OPENAI_API_KEY"] = self.api_key
-            elif provider_prefix == "ANTHROPIC":
-                os.environ["ANTHROPIC_API_KEY"] = self.api_key
-            # Add more providers as needed
+            provider_prefix = self.model.split("/")[0].lower()
+            
+            # Map providers to their environment variable names
+            provider_env_map = {
+                "openai": "OPENAI_API_KEY",
+                "anthropic": "ANTHROPIC_API_KEY",
+                "groq": "GROQ_API_KEY",
+                "xai": "XAI_API_KEY",
+                "google": "GOOGLE_API_KEY",  # Also supports GEMINI_API_KEY
+                "azure": "AZURE_API_KEY",
+                "ollama": None,  # Ollama doesn't use API keys
+            }
+            
+            # Set the appropriate environment variable
+            env_var = provider_env_map.get(provider_prefix)
+            if env_var and self.api_key:
+                os.environ[env_var] = self.api_key
+            elif provider_prefix == "google" and self.api_key:
+                # Google also accepts GEMINI_API_KEY
+                os.environ["GEMINI_API_KEY"] = self.api_key
+            
+            # Handle Ollama base_url (default to localhost if not provided)
+            if provider_prefix == "ollama":
+                if not self.base_url:
+                    self.base_url = "http://localhost:11434"
+                # Ollama doesn't need API key, but we set a dummy if needed for LiteLLM
+                if not self.api_key:
+                    self.api_key = "ollama"  # LiteLLM may check for key presence
 
-            logger.info(f"Initialized AI client with LiteLLM, model: {self.model}")
+            logger.info(f"Initialized AI client with LiteLLM, model: {self.model}, provider: {provider_prefix}")
         else:
             logger.info(
                 f"Initialized AI client with requests fallback, model: {self.model}"
@@ -141,10 +163,17 @@ class AIClient:
                 - usage: dict - Token usage information (if available)
                 - error: str - Error message (if success=False)
         """
-        if not self.api_key:
+        # Check if API key is required (Ollama doesn't need one)
+        # Determine provider from model name (may have been normalized in __init__)
+        if "/" in self.model:
+            provider = self.model.split("/")[0].lower()
+        else:
+            provider = "openai"  # Default if no prefix
+        
+        if provider != "ollama" and not self.api_key:
             return {
                 "success": False,
-                "error": "No API key configured. Set OPENAI_API_KEY environment variable.",
+                "error": f"No API key configured for provider '{provider}'. Please set the API key in settings.",
             }
 
         add_breadcrumb(
@@ -192,26 +221,43 @@ class AIClient:
     ) -> Dict[str, Any]:
         """Use LiteLLM for completion (multi-provider support)."""
         try:
+            provider = self.model.split("/")[0].lower()
+            
             kwargs = {
-                "model": self.model,
+                "model": self.model,  # Keep full model name with provider prefix for LiteLLM
                 "messages": messages,
                 "temperature": temperature,
                 "timeout": self.timeout,
             }
+
+            # Handle base_url for providers that need it (Ollama, Azure, custom endpoints)
+            if self.base_url:
+                # For Ollama, LiteLLM expects api_base parameter
+                kwargs["api_base"] = self.base_url.rstrip("/")
+            elif provider == "ollama":
+                # Ollama should always have a base_url (defaults to localhost:11434)
+                # If somehow it's None, set it now
+                kwargs["api_base"] = "http://localhost:11434"
 
             if max_tokens is not None:
                 kwargs["max_tokens"] = max_tokens
 
             # Enable JSON mode if requested (provider-specific handling)
             if json_mode:
-                # Different providers handle JSON mode differently
-                provider = self.model.split("/")[0].lower()
-                if provider in ["openai", "azure"]:
+                if provider == "ollama":
+                    # Ollama uses format="json" parameter, not response_format
+                    kwargs["format"] = "json"
+                elif provider in ["openai", "azure"]:
                     kwargs["response_format"] = {"type": "json_object"}
-                # Anthropic and others may need different approaches
-                # For now, we'll rely on system messages to request JSON
+                elif provider == "anthropic":
+                    # Anthropic supports structured outputs, but we'll use system prompt for now
+                    # Add instruction to system message if not already present
+                    system_msg = next((m for m in messages if m.get("role") == "system"), None)
+                    if system_msg and "JSON" not in system_msg.get("content", ""):
+                        system_msg["content"] += "\n\nIMPORTANT: You must respond with valid JSON only, no additional text."
+                # For other providers, rely on system messages to request JSON
 
-            logger.info(f"Calling LiteLLM with model: {self.model}")
+            logger.info(f"Calling LiteLLM with model: {self.model}, api_base: {kwargs.get('api_base', 'default')}, provider: {provider}")
             sys.stderr.flush()
 
             response = litellm.completion(**kwargs)
@@ -324,10 +370,20 @@ def parse_json_response(content: str) -> Optional[Dict[str, Any]]:
 
     Returns:
         Parsed JSON dict if successful, None otherwise
+        
+    Note:
+        Returns a special dict with key "_model_instruction_failure" = True
+        if the response appears to be plain text (not JSON) - this indicates
+        the model didn't follow JSON format instructions.
     """
+    if not content or not content.strip():
+        return None
+        
+    trimmed = content.strip()
+    
     try:
         # First try direct parsing
-        return json.loads(content.strip())
+        return json.loads(trimmed)
     except json.JSONDecodeError:
         pass
 
@@ -339,10 +395,19 @@ def parse_json_response(content: str) -> Optional[Dict[str, Any]]:
                 return json.loads(json_match.group(1))
 
         # Try to find any JSON object in the content
-        if not content.strip().startswith("{"):
+        if not trimmed.startswith("{") and not trimmed.startswith("["):
+            # Check if this looks like plain text (not JSON at all)
+            # If it doesn't start with { or [ and doesn't contain JSON-like structures
             json_match = re.search(r"(\{.*\})", content, re.DOTALL)
             if json_match:
-                return json.loads(json_match.group(1))
+                try:
+                    return json.loads(json_match.group(1))
+                except json.JSONDecodeError:
+                    pass
+            else:
+                # No JSON found at all - likely plain text response
+                # Return special marker to indicate model instruction failure
+                return {"_model_instruction_failure": True, "_raw_content": content[:500]}
 
     except json.JSONDecodeError:
         pass
@@ -355,6 +420,7 @@ def call_ai_analysis(
     user_prompt: str,
     model: Optional[str] = None,
     api_key: Optional[str] = None,
+    base_url: Optional[str] = None,
     temperature: float = 0.3,
     json_mode: bool = True,
     required_fields: Optional[List[str]] = None,
@@ -366,6 +432,7 @@ def call_ai_analysis(
         user_prompt: User message with data to analyze
         model: Model to use (None for default)
         api_key: API key (None to use environment)
+        base_url: Base URL for API endpoint (required for Ollama, optional for others)
         temperature: Sampling temperature
         json_mode: Whether to request JSON output
         required_fields: List of required fields in JSON response
@@ -377,7 +444,7 @@ def call_ai_analysis(
             - usage: dict (token usage if available)
             - error: str (if success=False)
     """
-    client = AIClient(api_key=api_key, model=model)
+    client = AIClient(api_key=api_key, model=model, base_url=base_url)
 
     messages = [
         {"role": "system", "content": system_prompt},
@@ -400,6 +467,46 @@ def call_ai_analysis(
         return {
             "success": False,
             "error": f"Malformed JSON in AI response. Content: {content[:500]}",
+        }
+    
+    # Check if model failed to follow JSON instructions (returned plain text)
+    if isinstance(parsed, dict) and parsed.get("_model_instruction_failure"):
+        raw_content = parsed.get("_raw_content", content[:500])
+        # Determine provider and model name from model parameter
+        provider = "unknown"
+        model_name = model or "unknown"
+        if model:
+            if "/" in model:
+                parts = model.split("/", 1)
+                provider = parts[0].lower()
+                model_name = parts[1] if len(parts) > 1 else model
+            elif model.startswith("ollama/"):
+                provider = "ollama"
+                model_name = model.replace("ollama/", "")
+        
+        if provider == "ollama":
+            error_msg = (
+                f"The Ollama model \"{model_name}\" did not follow JSON format instructions. "
+                f"This model may not be capable enough for structured responses.\n\n"
+                f"Try using a more capable model like:\n"
+                f"• llama3.2 (or newer)\n"
+                f"• mistral\n"
+                f"• mixtral\n"
+                f"• qwen2.5\n\n"
+                f"Smaller models often struggle with strict JSON formatting.\n\n"
+                f"Response preview: {raw_content}"
+            )
+        else:
+            error_msg = (
+                f"The AI model \"{model_name}\" did not follow JSON format instructions. "
+                f"The model returned plain text instead of JSON.\n\n"
+                f"Response preview: {raw_content}"
+            )
+        
+        logger.error(f"Model instruction failure: {error_msg}")
+        return {
+            "success": False,
+            "error": error_msg,
         }
 
     # Validate required fields if specified

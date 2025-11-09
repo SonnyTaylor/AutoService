@@ -358,6 +358,7 @@ def _call_ai_analysis(
     frequency: int,
     model: Optional[str] = None,
     api_key: Optional[str] = None,
+    base_url: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
     """Call AI API to analyze error and provide remediation.
 
@@ -407,6 +408,7 @@ Format your response as JSON with the following structure:
             user_prompt=user_prompt,
             model=model or "gpt-4-turbo-preview",
             api_key=api_key,
+            base_url=base_url,
             temperature=0.5,
             json_mode=True,
         )
@@ -461,6 +463,7 @@ def run_windows_update_logs_analysis(task: Dict[str, Any]) -> Dict[str, Any]:
     err_exe_path = task.get("err_exe_path")  # Get from task parameters
     ai_model = task.get("model")  # Get AI model from task
     ai_api_key = task.get("api_key")  # Get API key from task
+    ai_base_url = task.get("base_url")  # Get base URL from task
 
     # Handle environment-backed API keys (same pattern as ai_startup_service)
     if isinstance(ai_api_key, str) and ai_api_key.startswith("env:"):
@@ -587,6 +590,7 @@ def run_windows_update_logs_analysis(task: Dict[str, Any]) -> Dict[str, Any]:
                 group["count"],
                 model=ai_model,
                 api_key=ai_api_key,
+                base_url=ai_base_url,
             )
             if ai_analysis:
                 logger.info(f"AI analysis successful for {code}")
