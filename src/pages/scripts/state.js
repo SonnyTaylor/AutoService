@@ -85,7 +85,6 @@ function buildFuseIndex() {
     id: s.id,
     name: s.name || "",
     description: s.description || "",
-    version: s.version || "",
     path: s.path || s.exe_path || "",
     command: s.command || "",
     raw: s,
@@ -93,10 +92,9 @@ function buildFuseIndex() {
   fuse = new Fuse(items, {
     keys: [
       { name: "name", weight: 0.6 },
-      { name: "description", weight: 0.25 },
-      { name: "version", weight: 0.08 },
-      { name: "path", weight: 0.04 },
-      { name: "command", weight: 0.03 },
+      { name: "description", weight: 0.3 },
+      { name: "path", weight: 0.05 },
+      { name: "command", weight: 0.05 },
     ],
     threshold: 0.38,
     ignoreLocation: true,

@@ -26,7 +26,7 @@ export function openEditor(script) {
     : {
         id: crypto.randomUUID(),
         name: "",
-        version: "",
+        version: "", // Version field removed from UI but still required by backend
         description: "",
         runner: "powershell",
         source: "file",
@@ -41,7 +41,6 @@ export function openEditor(script) {
   form.reset();
 
   $("#s-name").value = state.editing.name;
-  $("#s-version").value = state.editing.version;
   $("#s-desc").value = state.editing.description;
   $("#s-runner").value = state.editing.runner;
 
@@ -106,13 +105,14 @@ export function wireEditor() {
 
     // Update editing script with form values
     state.editing.name = $("#s-name").value.trim();
-    state.editing.version = $("#s-version").value.trim();
     state.editing.description = $("#s-desc").value.trim();
     state.editing.runner = runnerSelect.value;
     state.editing.source = source;
     state.editing.path = $("#s-file").value.trim();
     state.editing.url = $("#s-url").value.trim();
     state.editing.inline = $("#s-inline").value.trim();
+    // Ensure version is always an empty string (field removed from UI but still in backend model)
+    state.editing.version = "";
 
     // Validation
     if (!state.editing.name) {
@@ -144,6 +144,8 @@ export function wireEditor() {
     try {
       await saveScript(state.editing);
       dialog.close();
+      // Inform listeners that list should be refreshed
+      window.dispatchEvent(new CustomEvent("scripts-updated"));
     } catch (error) {
       console.error("Error saving script:", error);
       window.__TAURI__?.dialog?.message?.(String(error), {
