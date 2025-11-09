@@ -723,8 +723,9 @@
 .network-save-modes {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 18px;
   flex-wrap: wrap;
+  padding: 12px 0;
 }
 
 .network-save-modes > .muted {
@@ -738,17 +739,24 @@
 
 .network-save-modes .radio-group {
   display: flex;
-  gap: 6px;
+  gap: 16px;
   flex-wrap: wrap;
   align-items: center;
 }
 
 .network-save-modes .radio-option {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
   cursor: pointer;
   user-select: none;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background-color 0.15s ease;
+}
+
+.network-save-modes .radio-option:hover {
+  background: var(--panel-hover);
 }
 
 .network-save-modes .radio-option input[type="radio"] {
@@ -795,6 +803,7 @@
 
 .network-save-modes button {
   margin-left: auto;
+  flex-shrink: 0;
 }
 
 /* Responsive adjustments */
