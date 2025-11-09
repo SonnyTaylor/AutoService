@@ -11,6 +11,7 @@
 /* global crypto */
 import { invoke, state, DEFAULT_LOGO, $, escapeHtml } from "./state.js";
 import Fuse from "fuse.js";
+import { initAIStack } from "./ai-stack.js";
 
 /**
  * Open the stack editor with either a copy of the existing stack
@@ -46,6 +47,13 @@ export function openStackEditor(stack) {
   // Render program selector
   renderProgramSelector("");
 
+  // Clear any AI error messages
+  const aiError = /** @type {HTMLDivElement|null} */ ($("#s-ai-error"));
+  if (aiError) {
+    aiError.textContent = "";
+    aiError.style.display = "none";
+  }
+
   dlg.showModal();
 }
 
@@ -79,7 +87,7 @@ function buildProgramFuseIndex() {
  * Render the program selector with checkboxes for all available programs.
  * @param {string} [searchQuery] Optional search query to filter programs
  */
-function renderProgramSelector(searchQuery = "") {
+export function renderProgramSelector(searchQuery = "") {
   const container = /** @type {HTMLElement|null} */ ($("#s-programs-selector"));
   if (!container) return;
 
@@ -142,6 +150,9 @@ export function wireStackEditor() {
   const selector = /** @type {HTMLElement|null} */ ($("#s-programs-selector"));
   const searchInput = /** @type {HTMLInputElement|null} */ ($("#s-program-search"));
   if (!cancel || !save || !dlg || !selector) return;
+
+  // Initialize AI stack functionality
+  initAIStack();
 
   // Handle search input
   if (searchInput) {

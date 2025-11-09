@@ -119,12 +119,24 @@
         </label>
         <label
           >Programs
-          <input
-            id="s-program-search"
-            type="search"
-            placeholder="Search programs..."
-            class="program-selector-search"
-          />
+          <div class="program-selector-header">
+            <input
+              id="s-program-search"
+              type="search"
+              placeholder="Search programs..."
+              class="program-selector-search"
+            />
+            <button
+              type="button"
+              id="s-ai-suggest-btn"
+              class="secondary"
+              title="Configure AI API key in Settings"
+              disabled
+            >
+              <i class="ph ph-robot" aria-hidden="true"></i> AI Suggest
+            </button>
+          </div>
+          <div id="s-ai-error" class="ai-stack-error" role="alert" style="display:none"></div>
           <div id="s-programs-selector" class="program-selector"></div>
         </label>
       </div>
