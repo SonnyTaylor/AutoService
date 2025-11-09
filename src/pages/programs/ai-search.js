@@ -12,7 +12,6 @@ import { generateText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { createOllama } from "ollama-ai-provider-v2";
 
 const BTN_ID = "program-ai-search-btn";
 const MODAL_ID = "ai-search-modal";
@@ -323,10 +322,13 @@ function createProviderModel(settings) {
     }
     
     case "ollama": {
-      const ollama = createOllama({
-        baseURL: baseUrl || "http://localhost:11434",
+      // Ollama provides an OpenAI-compatible API endpoint
+      const ollamaBaseUrl = baseUrl || "http://localhost:11434";
+      const openai = createOpenAI({
+        apiKey: "ollama", // Ollama doesn't require a real API key, but the SDK expects one
+        baseURL: `${ollamaBaseUrl.replace(/\/$/, "")}/v1`, // Ollama's OpenAI-compatible endpoint
       });
-      return ollama(model);
+      return openai(model);
     }
     
     case "groq":
