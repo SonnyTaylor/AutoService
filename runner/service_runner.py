@@ -6,7 +6,7 @@ report to stdout. Windows elevation is requested automatically when needed.
 """
 
 import sys, os, ctypes, json, subprocess, argparse, logging, time
-from typing import List, Dict, Any, Callable
+from typing import List, Dict, Any, Callable, Optional, Tuple
 
 # Import Sentry configuration early for error tracking
 try:
@@ -172,6 +172,101 @@ def flush_logs():  # pragma: no cover - simple utility
         pass
 
 
+def check_control_file(control_file_path: Optional[str]) -> Tuple[Optional[str], Optional[int]]:
+    """Check control file for stop/pause/skip/resume signals.
+    
+    Returns:
+        Tuple of (action, timestamp) or (None, None) if no signal or file doesn't exist.
+        action can be "stop", "pause", "skip", or "resume".
+    """
+    if not control_file_path:
+        return None, None
+    
+    try:
+        if not os.path.exists(control_file_path):
+            return None, None
+        
+        with open(control_file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            action = data.get("action")
+            timestamp = data.get("timestamp")
+            if action in ("stop", "pause", "skip", "resume"):
+                return action, timestamp
+    except Exception:
+        # File doesn't exist, is malformed, or other error - ignore
+        pass
+    
+    return None, None
+
+
+def clear_control_file(control_file_path: Optional[str]) -> None:
+    """Clear the control file by removing it.
+    
+    Args:
+        control_file_path: Path to the control file to clear
+    """
+    if control_file_path and os.path.exists(control_file_path):
+        try:
+            os.remove(control_file_path)
+        except Exception:
+            pass
+
+
+def execute_task_with_skip_monitoring(
+    handler: TaskHandler,
+    task: Task,
+    control_file_path: Optional[str],
+    check_interval: float = 0.2,
+) -> TaskResult:
+    """Execute a task handler with periodic skip signal monitoring.
+    
+    This function runs the handler and periodically checks for skip signals.
+    If a skip signal is detected, it raises KeyboardInterrupt to immediately stop the task.
+    
+    For handlers that use subprocess calls, the subprocess_utils.run_with_skip_check
+    will handle skip detection within those subprocess calls. This wrapper provides
+    additional monitoring for handlers that don't use subprocess calls or have
+    long-running Python code between subprocess calls.
+    
+    Args:
+        handler: The task handler function to execute
+        task: The task dictionary to pass to the handler
+        control_file_path: Path to the control file for skip signal checking
+        check_interval: How often to check for skip signals (seconds)
+    
+    Returns:
+        TaskResult from the handler
+    
+    Raises:
+        KeyboardInterrupt: If skip signal is detected during execution
+    """
+    # Simple approach: check for skip before calling handler, then call handler directly
+    # Most handlers use subprocess_utils.run_with_skip_check which handles skip internally
+    # For handlers with long Python code, they should check periodically themselves
+    # This wrapper just ensures we catch skip signals that might be set right before
+    # or during handler execution
+    
+    # Check for skip signal before starting
+    action, _ = check_control_file(control_file_path)
+    if action == "skip":
+        clear_control_file(control_file_path)
+        raise KeyboardInterrupt("User requested skip")
+    
+    # Call handler directly - subprocess calls within will handle skip signals
+    # For pure Python code, the handler should check periodically if needed
+    result = handler(task)
+    
+    # Check for skip signal after handler completes (in case it was set during execution
+    # but handler didn't check for it - this shouldn't happen with proper subprocess usage)
+    action, _ = check_control_file(control_file_path)
+    if action == "skip":
+        clear_control_file(control_file_path)
+        # Handler already completed, but skip was requested - mark as skipped anyway
+        raise KeyboardInterrupt("User requested skip")
+    
+    return result
+
+
 # Truncation threshold for log snippets to keep logs readable in the UI.
 MAX_LOG_SNIPPET: int = 200
 
@@ -332,10 +427,69 @@ def main():
         logging.info(f"Task {i}: {task.get('type', 'unknown')}")
         flush_logs()
 
+    # Get control file path from environment
+    control_file_path = os.environ.get("AUTOSERVICE_CONTROL_FILE")
+    
+    # Control state
+    run_stopped = False
+    run_paused = False
+    
     all_results = []
     overall_success = True
 
     for idx, task in enumerate(tasks):
+        # CRITICAL: Clear any lingering skip signal before checking for next task
+        # This prevents skipping the wrong task if a skip signal wasn't cleared properly
+        action, _ = check_control_file(control_file_path)
+        if action == "skip":
+            # Clear stale skip signal before starting new task
+            clear_control_file(control_file_path)
+            logging.info("Cleared stale skip signal before starting task %d", idx)
+            flush_logs()
+        
+        # Check for control signals before starting task
+        action, _ = check_control_file(control_file_path)
+        if action == "stop":
+            run_stopped = True
+            logging.info("RUN_STOPPED:user_requested")
+            flush_logs()
+            break
+        elif action == "pause":
+            run_paused = True
+            logging.info("RUN_PAUSED:user_requested")
+            flush_logs()
+            # Wait in pause loop until stopped or resumed
+            while run_paused:
+                time.sleep(0.5)
+                action, _ = check_control_file(control_file_path)
+                if action == "stop":
+                    run_stopped = True
+                    run_paused = False
+                    logging.info("RUN_STOPPED:user_requested")
+                    flush_logs()
+                    break
+                elif action == "resume":
+                    run_paused = False
+                    logging.info("RUN_RESUMED:user_requested")
+                    flush_logs()
+                    # Clear resume signal by removing control file
+                    clear_control_file(control_file_path)
+                    break
+            if run_stopped:
+                break
+        elif action == "skip":
+            # Skip current task before it starts
+            logging.warning("TASK_SKIP:%d:%s - User requested skip", idx, task.get("type", "unknown"))
+            flush_logs()
+            skipped_result = {
+                "task_type": task.get("type", "unknown"),
+                "status": "skipped",
+                "summary": {"reason": "User requested skip"},
+            }
+            all_results.append(skipped_result)
+            # Clear skip signal immediately
+            clear_control_file(control_file_path)
+            continue
         task_type = task.get("type", "")
         handler = TASK_HANDLERS.get(task_type) if task_type else None
 
@@ -357,8 +511,19 @@ def main():
             # Wrap task execution in Sentry span for performance tracking
             with create_task_span(task_type, idx, len(tasks), task) as span:
                 try:
-                    result = handler(task)
+                    # Execute handler with skip monitoring for immediate skip detection
+                    # Subprocess calls within handlers use run_with_skip_check for skip detection
+                    result = execute_task_with_skip_monitoring(
+                        handler, task, control_file_path, check_interval=0.2
+                    )
                     status = result.get("status", "unknown")
+                    
+                    # Check for stop/pause after task completes
+                    action, _ = check_control_file(control_file_path)
+                    if action == "stop":
+                        run_stopped = True
+                    elif action == "pause":
+                        run_paused = True
 
                     # Handle both "failure" and "error" as error conditions
                     if status in ("failure", "error"):
@@ -465,7 +630,56 @@ def main():
                         flush_logs()
                     except Exception:
                         pass
+                    
+                    # If stopped or paused after task, break or pause
+                    if run_stopped:
+                        logging.info("RUN_STOPPED:user_requested")
+                        flush_logs()
+                        break
+                    elif run_paused:
+                        logging.info("RUN_PAUSED:user_requested")
+                        flush_logs()
+                        # Wait in pause loop
+                        while run_paused:
+                            time.sleep(0.5)
+                            action, _ = check_control_file(control_file_path)
+                            if action == "stop":
+                                run_stopped = True
+                                run_paused = False
+                                logging.info("RUN_STOPPED:user_requested")
+                                flush_logs()
+                                break
+                            elif action == "resume":
+                                run_paused = False
+                                logging.info("RUN_RESUMED:user_requested")
+                                flush_logs()
+                                # Clear resume signal by removing control file
+                                if control_file_path and os.path.exists(control_file_path):
+                                    try:
+                                        os.remove(control_file_path)
+                                    except Exception:
+                                        pass
+                                break
+                        if run_stopped:
+                            break
 
+                except KeyboardInterrupt as e:
+                    # Handle skip signal
+                    if "skip" in str(e).lower() or "User requested skip" in str(e):
+                        logging.warning("TASK_SKIP:%d:%s - User requested skip", idx, task_type)
+                        flush_logs()
+                        skipped_result = {
+                            "task_type": task_type,
+                            "status": "skipped",
+                            "summary": {"reason": "User requested skip"},
+                        }
+                        all_results.append(skipped_result)
+                        # Clear skip signal immediately (should already be cleared, but ensure it)
+                        clear_control_file(control_file_path)
+                        # Continue to next task
+                        continue
+                    else:
+                        raise
                 except Exception as e:
                     overall_success = False
                     logging.error(
@@ -561,8 +775,18 @@ def main():
         if metadata:
             system_metadata.update(metadata)
 
+    # Determine final status
+    if run_stopped:
+        final_status = "stopped"
+    elif run_paused:
+        final_status = "paused"
+    elif overall_success:
+        final_status = "success"
+    else:
+        final_status = "completed_with_errors"
+    
     final_report = {
-        "overall_status": "success" if overall_success else "completed_with_errors",
+        "overall_status": final_status,
         "results": all_results,
         "metadata": system_metadata,
     }

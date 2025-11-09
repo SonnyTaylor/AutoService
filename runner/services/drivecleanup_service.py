@@ -63,6 +63,13 @@ import logging
 import subprocess
 from typing import Dict, Any, List, Optional
 
+# Import subprocess utility with skip checking
+try:
+    from subprocess_utils import run_with_skip_check
+except ImportError:
+    # Fallback if utility not available
+    run_with_skip_check = subprocess.run
+
 
 logger = logging.getLogger(__name__)
 
@@ -331,7 +338,7 @@ def run_drivecleanup_clean(task: Dict[str, Any]) -> Dict[str, Any]:
     add_breadcrumb("Executing DriveCleanup", category="subprocess", level="info")
 
     try:
-        proc = subprocess.run(
+        proc = run_with_skip_check(
             command,
             capture_output=True,
             text=True,

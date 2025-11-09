@@ -18,33 +18,57 @@
       <h2 class="section-title" style="margin-top: 0px; margin-bottom: 0px">
         Tasks
       </h2>
+      <div class="runner-controls" id="svc-runner-controls" hidden>
+        <div class="runner-status-section">
+          <div class="runner-status-indicator" id="svc-runner-status">
+            <span class="status-icon" id="svc-status-icon"></span>
+            <span class="status-text" id="svc-status-text">Idle</span>
+          </div>
+          <div class="runner-status-details" id="svc-summary" hidden>
+            <div class="status-details-content">
+              <span id="svc-summary-icon" aria-hidden="true">✔</span>
+              <div class="status-details-text">
+                <div id="svc-summary-title">All tasks completed</div>
+                <div class="muted small" id="svc-summary-sub">
+                  Review the final report below.
+                </div>
+              </div>
+            </div>
+            <div
+              class="summary-progress"
+              id="svc-summary-progress"
+              aria-hidden="true"
+            >
+              <div class="progress-track">
+                <div
+                  class="progress-bar"
+                  id="svc-summary-progress-bar"
+                  style="width: 0%"
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="runner-control-buttons">
+          <button id="svc-stop-btn" class="control-btn stop" title="Stop run after current task completes">
+            <i class="ph ph-stop-circle"></i>
+            Stop
+          </button>
+          <button id="svc-pause-resume-btn" class="control-btn pause" title="Pause run after current task completes">
+            <i class="ph ph-pause-circle"></i>
+            <span class="btn-text">Pause</span>
+          </button>
+          <button id="svc-skip-btn" class="control-btn skip" title="Skip current task immediately">
+            <i class="ph ph-skip-forward-circle"></i>
+            Skip
+          </button>
+        </div>
+      </div>
       <ul
         id="svc-task-status"
         class="task-status-list"
         aria-label="Task statuses"
       ></ul>
-      <div class="runner-summary" id="svc-summary" hidden>
-        <span id="svc-summary-icon" aria-hidden="true">✔</span>
-        <div>
-          <div id="svc-summary-title">All tasks completed</div>
-          <div class="muted small" id="svc-summary-sub">
-            Review the final report below.
-          </div>
-          <div
-            class="summary-progress"
-            id="svc-summary-progress"
-            aria-hidden="true"
-          >
-            <div class="progress-track">
-              <div
-                class="progress-bar"
-                id="svc-summary-progress-bar"
-                style="width: 0%"
-              ></div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
     <div class="runner-right">
       <h2 class="section-title" style="margin-top: 0px">Live Log</h2>

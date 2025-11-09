@@ -47,6 +47,13 @@ from __future__ import annotations
 import subprocess
 import json
 import logging
+
+# Import subprocess utility with skip checking
+try:
+    from subprocess_utils import run_with_skip_check
+except ImportError:
+    # Fallback if utility not available
+    run_with_skip_check = subprocess.run
 from typing import Dict, Any, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -471,7 +478,7 @@ def run_iperf_test(task: Dict[str, Any]) -> Dict[str, Any]:
     )
 
     try:
-        proc = subprocess.run(
+        proc = run_with_skip_check(
             command,
             capture_output=True,
             text=True,

@@ -27,7 +27,7 @@ const RunStateSchema = z.object({
   currentTaskIndex: z.number().nullable(),
   startTime: z.number().nullable(),
   endTime: z.number().nullable(),
-  overallStatus: z.enum(["idle", "running", "completed", "error"]),
+  overallStatus: z.enum(["idle", "running", "completed", "error", "paused", "stopped"]),
   metadata: z.record(z.unknown()).default({}),
   lastActivityTime: z.number().optional(),
 });
@@ -49,7 +49,7 @@ const RunStateSchema = z.object({
  * @property {number|null} currentTaskIndex - Index of currently executing task
  * @property {number} startTime - Unix timestamp when run started
  * @property {number|null} endTime - Unix timestamp when run completed
- * @property {"idle"|"running"|"completed"|"error"} overallStatus - Overall run status
+ * @property {"idle"|"running"|"completed"|"error"|"paused"|"stopped"} overallStatus - Overall run status
  * @property {Object} metadata - Additional run metadata (title, description, etc.)
  */
 
@@ -138,7 +138,7 @@ export function updateTaskStatus(taskIndex, status) {
  * Update overall progress metrics.
  * @param {Object} metrics - Progress metrics
  * @param {number} [metrics.currentTaskIndex] - Current task index
- * @param {"idle"|"running"|"completed"|"error"} [metrics.overallStatus] - Overall status
+ * @param {"idle"|"running"|"completed"|"error"|"paused"|"stopped"} [metrics.overallStatus] - Overall status
  */
 export function updateProgress(metrics) {
   if (metrics.currentTaskIndex !== undefined) {
@@ -148,7 +148,7 @@ export function updateProgress(metrics) {
   if (metrics.overallStatus !== undefined) {
     currentState.overallStatus = metrics.overallStatus;
 
-    if (["completed", "error"].includes(metrics.overallStatus)) {
+    if (["completed", "error", "stopped", "paused"].includes(metrics.overallStatus)) {
       currentState.endTime = Date.now();
     }
   }
@@ -248,8 +248,8 @@ export function restoreFromSession() {
       return false;
     }
 
-    // Only restore if run was actually in progress
-    if (validated.overallStatus !== "running") {
+    // Only restore if run was actually in progress (running or paused)
+    if (!["running", "paused"].includes(validated.overallStatus)) {
       return false;
     }
 

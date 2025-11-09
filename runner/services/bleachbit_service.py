@@ -10,6 +10,13 @@ import logging
 from typing import Dict, Any, List, Optional
 import os
 
+# Import subprocess utility with skip checking
+try:
+    from subprocess_utils import run_with_skip_check
+except ImportError:
+    # Fallback if utility not available
+    run_with_skip_check = subprocess.run
+
 logger = logging.getLogger(__name__)
 
 # Sentry integration for breadcrumbs
@@ -157,7 +164,7 @@ def run_bleachbit_clean(task: Dict[str, Any]) -> Dict[str, Any]:
     )
 
     try:
-        process = subprocess.run(
+        process = run_with_skip_check(
             command,
             capture_output=True,
             text=True,

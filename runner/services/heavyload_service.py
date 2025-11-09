@@ -40,6 +40,13 @@ import subprocess
 import logging
 from typing import Dict, Any, List, Tuple
 
+# Import subprocess utility with skip checking
+try:
+    from subprocess_utils import run_with_skip_check
+except ImportError:
+    # Fallback if utility not available
+    run_with_skip_check = subprocess.run
+
 logger = logging.getLogger(__name__)
 
 # Sentry integration for breadcrumbs
@@ -209,7 +216,7 @@ def run_heavyload_stress_test(task: Dict[str, Any]) -> Dict[str, Any]:
     )
 
     try:
-        proc = subprocess.run(
+        proc = run_with_skip_check(
             command,
             capture_output=True,
             text=True,

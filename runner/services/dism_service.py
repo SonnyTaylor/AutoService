@@ -10,6 +10,13 @@ import sys
 import re
 from typing import Dict, Any, List, Callable, Optional, TypedDict
 
+# Import subprocess utility with skip checking
+try:
+    from subprocess_utils import run_with_skip_check
+except ImportError:
+    # Fallback if utility not available
+    run_with_skip_check = subprocess.run
+
 logger = logging.getLogger(__name__)
 
 # Sentry integration for breadcrumbs
@@ -181,7 +188,7 @@ def run_dism_health_check(task: Task) -> TaskResult:
         try:
             # RestoreHealth can take a long time
             timeout = 7200 if action_lower == "restorehealth" else 3600
-            proc = subprocess.run(
+            proc = run_with_skip_check(
                 cmd,
                 capture_output=True,
                 text=True,

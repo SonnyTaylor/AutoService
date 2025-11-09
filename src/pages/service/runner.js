@@ -101,13 +101,21 @@ async function processStatusLine(line) {
     const summaryEl = document.getElementById("svc-summary");
     if (!summaryEl) return; // Only when runner page is visible
     try {
-      const { getProgressMetrics } = await import("../../utils/task-state.js");
+      const { getProgressMetrics, getRunState } = await import("../../utils/task-state.js");
       const metrics = getProgressMetrics();
+      const runState = getRunState();
       const total = metrics.total || 0;
       const completed = metrics.completed || 0;
       const runningName = metrics.currentTask
         ? metrics.currentTask.label
         : null;
+      
+      // Check if run is completed - don't update if so (let showSummary handle it)
+      const overallStatus = runState?.overallStatus;
+      if (overallStatus === "completed" || overallStatus === "error" || overallStatus === "stopped") {
+        // Run is finished, don't overwrite the completion message
+        return;
+      }
 
       const summaryTitleEl = document.getElementById("svc-summary-title");
       const summarySubEl = document.getElementById("svc-summary-sub");
@@ -133,6 +141,11 @@ async function processStatusLine(line) {
         if (summaryTitleEl)
           summaryTitleEl.textContent = `Progress: ${completed}/${total} completed`;
         if (summarySubEl) summarySubEl.textContent = "Preparing next task…";
+      } else if (completed === total && total > 0) {
+        // All tasks completed but run not marked as finished yet
+        if (summaryTitleEl)
+          summaryTitleEl.textContent = `Progress: ${completed}/${total} completed`;
+        if (summarySubEl) summarySubEl.textContent = "Finalizing…";
       } else {
         if (summaryTitleEl) summaryTitleEl.textContent = "Starting…";
         if (summarySubEl)
@@ -217,6 +230,111 @@ async function processStatusLine(line) {
     return;
   }
 
+  // Handle run control signals
+  const stoppedMatch = line.match(/^RUN_STOPPED:(.+)$/);
+  if (stoppedMatch) {
+    const reason = stoppedMatch[1] || "User requested";
+    appendToLog(`[INFO] Run stopped: ${reason}`);
+    // Update global state
+    let updateGlobalProgress = null;
+    try {
+      const taskStateModule = await import("../../utils/task-state.js");
+      updateGlobalProgress = taskStateModule.updateProgress;
+    } catch (e) {
+      console.warn("Failed to import task-state module:", e);
+    }
+    if (updateGlobalProgress) {
+      updateGlobalProgress({ overallStatus: "stopped" });
+    }
+    // Update status indicator directly
+    const runnerStatus = document.getElementById("svc-runner-status");
+    const statusIcon = document.getElementById("svc-status-icon");
+    const statusText = document.getElementById("svc-status-text");
+    const pauseResumeBtn = document.getElementById("svc-pause-resume-btn");
+    if (runnerStatus && statusIcon && statusText) {
+      statusIcon.innerHTML =
+        '<i class="ph ph-stop-circle" style="color: var(--muted-color)"></i>';
+      statusText.textContent = "Stopped";
+      runnerStatus.className = "runner-status-indicator stopped";
+    }
+    if (pauseResumeBtn) pauseResumeBtn.disabled = true;
+    await updateSummaryFromGlobal();
+    return;
+  }
+
+  const pausedMatch = line.match(/^RUN_PAUSED:(.+)$/);
+  if (pausedMatch) {
+    const reason = pausedMatch[1] || "User requested";
+    appendToLog(`[INFO] Run paused: ${reason}`);
+    // Update global state
+    let updateGlobalProgress = null;
+    try {
+      const taskStateModule = await import("../../utils/task-state.js");
+      updateGlobalProgress = taskStateModule.updateProgress;
+    } catch (e) {
+      console.warn("Failed to import task-state module:", e);
+    }
+    if (updateGlobalProgress) {
+      updateGlobalProgress({ overallStatus: "paused" });
+    }
+    // Update status indicator directly
+    const runnerStatus = document.getElementById("svc-runner-status");
+    const statusIcon = document.getElementById("svc-status-icon");
+    const statusText = document.getElementById("svc-status-text");
+    const pauseResumeBtn = document.getElementById("svc-pause-resume-btn");
+    if (runnerStatus && statusIcon && statusText) {
+      statusIcon.innerHTML =
+        '<i class="ph ph-pause-circle" style="color: var(--warning-color)"></i>';
+      statusText.textContent = "Paused";
+      runnerStatus.className = "runner-status-indicator paused";
+    }
+    if (pauseResumeBtn) {
+      pauseResumeBtn.className = "control-btn resume";
+      pauseResumeBtn.title = "Resume paused run";
+      pauseResumeBtn.innerHTML =
+        '<i class="ph ph-play-circle"></i><span class="btn-text">Resume</span>';
+      pauseResumeBtn.disabled = false;
+    }
+    await updateSummaryFromGlobal();
+    return;
+  }
+
+  const resumedMatch = line.match(/^RUN_RESUMED:(.+)$/);
+  if (resumedMatch) {
+    const reason = resumedMatch[1] || "User requested";
+    appendToLog(`[INFO] Run resumed: ${reason}`);
+    // Update global state
+    let updateGlobalProgress = null;
+    try {
+      const taskStateModule = await import("../../utils/task-state.js");
+      updateGlobalProgress = taskStateModule.updateProgress;
+    } catch (e) {
+      console.warn("Failed to import task-state module:", e);
+    }
+    if (updateGlobalProgress) {
+      updateGlobalProgress({ overallStatus: "running" });
+    }
+    // Update status indicator directly
+    const runnerStatus = document.getElementById("svc-runner-status");
+    const statusIcon = document.getElementById("svc-status-icon");
+    const statusText = document.getElementById("svc-status-text");
+    const pauseResumeBtn = document.getElementById("svc-pause-resume-btn");
+    if (runnerStatus && statusIcon && statusText) {
+      statusIcon.innerHTML = '<i class="ph ph-spinner spinner-icon"></i>';
+      statusText.textContent = "Running";
+      runnerStatus.className = "runner-status-indicator running";
+    }
+    if (pauseResumeBtn) {
+      pauseResumeBtn.className = "control-btn pause";
+      pauseResumeBtn.title = "Pause run after current task completes";
+      pauseResumeBtn.innerHTML =
+        '<i class="ph ph-pause-circle"></i><span class="btn-text">Pause</span>';
+      pauseResumeBtn.disabled = false;
+    }
+    await updateSummaryFromGlobal();
+    return;
+  }
+
   // Handle progress JSON updates
   if (
     line.startsWith("PROGRESS_JSON:") ||
@@ -263,6 +381,7 @@ async function processStatusLine(line) {
       if (isFinal) {
         const summaryEl = document.getElementById("svc-summary");
         const summaryTitleEl = document.getElementById("svc-summary-title");
+        const summarySubEl = document.getElementById("svc-summary-sub");
         const summaryIconEl = document.getElementById("svc-summary-icon");
 
         if (summaryEl) {
@@ -273,10 +392,19 @@ async function processStatusLine(line) {
               ? "All tasks completed"
               : "Completed with errors";
           }
+          if (summarySubEl) {
+            summarySubEl.textContent = ok
+              ? "Review the final report below."
+              : "Check the log and JSON report for details.";
+          }
           if (summaryIconEl) {
             summaryIconEl.textContent = ok ? "✔" : "!";
           }
           summaryEl.classList.toggle("ok", !!ok);
+          summaryEl.classList.toggle("fail", !ok);
+          // Hide progress bar when completed
+          const summaryProgWrap = document.getElementById("svc-summary-progress");
+          if (summaryProgWrap) summaryProgWrap.setAttribute("aria-hidden", "true");
         }
       } else {
         // Non-final progress JSON: update summary to reflect current progress
@@ -327,6 +455,13 @@ export async function initPage() {
   const summarySubEl = document.getElementById("svc-summary-sub");
   const summaryProgWrap = document.getElementById("svc-summary-progress");
   const summaryProgBar = document.getElementById("svc-summary-progress-bar");
+  const runnerControls = document.getElementById("svc-runner-controls");
+  const runnerStatus = document.getElementById("svc-runner-status");
+  const statusIcon = document.getElementById("svc-status-icon");
+  const statusText = document.getElementById("svc-status-text");
+  const stopBtn = document.getElementById("svc-stop-btn");
+  const pauseResumeBtn = document.getElementById("svc-pause-resume-btn");
+  const skipBtn = document.getElementById("svc-skip-btn");
   // Keep raw JSON for copy-to-clipboard while showing highlighted HTML
   let lastFinalJsonString = "{}";
   // Helper: persist final report to both session and local storage
@@ -586,6 +721,25 @@ export async function initPage() {
 
   container.hidden = false;
 
+  // Initialize status indicator and disable buttons until run starts
+  updateRunnerStatus("idle");
+  if (stopBtn) stopBtn.disabled = true;
+  if (pauseResumeBtn) pauseResumeBtn.disabled = true;
+  if (skipBtn) skipBtn.disabled = true;
+
+  // If reconnecting to an active run, update status
+  if (runnerControls && !runnerControls.hidden) {
+    const currentState = getRunState();
+    const status = currentState?.overallStatus || "idle";
+    updateRunnerStatus(status);
+    // Re-enable buttons if run is active
+    if (status === "running" || status === "paused") {
+      if (stopBtn) stopBtn.disabled = false;
+      if (pauseResumeBtn) pauseResumeBtn.disabled = false;
+      if (skipBtn) skipBtn.disabled = false;
+    }
+  }
+
   // Initialize task status tracking
   let taskStatuses = {};
   tasks.forEach((task, index) => {
@@ -656,7 +810,149 @@ export async function initPage() {
     runBtn.disabled = true;
     runBtn.setAttribute("disabled", "");
     runBtn.setAttribute("aria-disabled", "true");
+    // Show control buttons and update status
+    if (runnerControls) runnerControls.hidden = false;
+    const currentState = getRunState();
+    // Use the actual state from global state, default to "running" if not set
+    const status = currentState?.overallStatus || "running";
+    updateRunnerStatus(status);
+    // Enable control buttons if run is active
+    if (status === "running" || status === "paused") {
+      if (stopBtn) stopBtn.disabled = false;
+      if (pauseResumeBtn) pauseResumeBtn.disabled = false;
+      if (skipBtn) skipBtn.disabled = false;
+    }
     // Keep back button enabled so users can navigate away during run
+  } else {
+    // Hide control buttons when not running
+    if (runnerControls) runnerControls.hidden = true;
+    // Set status to idle when not running
+    updateRunnerStatus("idle");
+    // Disable buttons
+    if (stopBtn) stopBtn.disabled = true;
+    if (pauseResumeBtn) pauseResumeBtn.disabled = true;
+    if (skipBtn) skipBtn.disabled = true;
+  }
+
+  // Wire up control button handlers
+  stopBtn?.addEventListener("click", async () => {
+    if (!_isRunning) return;
+    try {
+      const { core } = window.__TAURI__ || {};
+      const { invoke: invokeCmd } = core || {};
+      if (!invokeCmd) {
+        appendLog("[ERROR] Tauri invoke not available");
+        return;
+      }
+      await invokeCmd("stop_service_run");
+      appendLog(
+        "[INFO] Stop signal sent. Current task will finish, then run will stop."
+      );
+    } catch (e) {
+      appendLog(`[ERROR] Failed to send stop signal: ${e}`);
+    }
+  });
+
+  pauseResumeBtn?.addEventListener("click", async () => {
+    try {
+      const { core } = window.__TAURI__ || {};
+      const { invoke: invokeCmd } = core || {};
+      if (!invokeCmd) {
+        appendLog("[ERROR] Tauri invoke not available");
+        return;
+      }
+      const state = getRunState();
+      if (state.overallStatus === "paused") {
+        await invokeCmd("resume_service_run");
+        appendLog("[INFO] Resume signal sent. Run will resume.");
+      } else {
+        if (!_isRunning) return;
+        await invokeCmd("pause_service_run");
+        appendLog(
+          "[INFO] Pause signal sent. Current task will finish, then run will pause."
+        );
+      }
+    } catch (e) {
+      appendLog(`[ERROR] Failed to send pause/resume signal: ${e}`);
+    }
+  });
+
+  skipBtn?.addEventListener("click", async () => {
+    if (!_isRunning) return;
+    try {
+      const { core } = window.__TAURI__ || {};
+      const { invoke: invokeCmd } = core || {};
+      if (!invokeCmd) {
+        appendLog("[ERROR] Tauri invoke not available");
+        return;
+      }
+      await invokeCmd("skip_current_task");
+      appendLog(
+        "[INFO] Skip signal sent. Current task will be skipped immediately."
+      );
+    } catch (e) {
+      appendLog(`[ERROR] Failed to send skip signal: ${e}`);
+    }
+  });
+
+  // Helper function to update status indicator and pause/resume button
+  function updateRunnerStatus(status) {
+    if (!runnerStatus || !statusIcon || !statusText || !pauseResumeBtn) {
+      // Elements not available yet, skip update
+      return;
+    }
+
+    switch (status) {
+      case "running":
+        statusIcon.innerHTML = '<i class="ph ph-spinner spinner-icon"></i>';
+        statusText.textContent = "Running";
+        runnerStatus.className = "runner-status-indicator running";
+        // Force update button to pause state
+        pauseResumeBtn.className = "control-btn pause";
+        pauseResumeBtn.title = "Pause run after current task completes";
+        pauseResumeBtn.innerHTML =
+          '<i class="ph ph-pause-circle"></i><span class="btn-text">Pause</span>';
+        pauseResumeBtn.disabled = false;
+        break;
+      case "paused":
+        statusIcon.innerHTML =
+          '<i class="ph ph-pause-circle" style="color: var(--warning-color)"></i>';
+        statusText.textContent = "Paused";
+        runnerStatus.className = "runner-status-indicator paused";
+        // Force update button to resume state
+        pauseResumeBtn.className = "control-btn resume";
+        pauseResumeBtn.title = "Resume paused run";
+        pauseResumeBtn.innerHTML =
+          '<i class="ph ph-play-circle"></i><span class="btn-text">Resume</span>';
+        pauseResumeBtn.disabled = false;
+        break;
+      case "stopped":
+        statusIcon.innerHTML =
+          '<i class="ph ph-stop-circle" style="color: var(--muted-color)"></i>';
+        statusText.textContent = "Stopped";
+        runnerStatus.className = "runner-status-indicator stopped";
+        pauseResumeBtn.disabled = true;
+        break;
+      case "completed":
+        statusIcon.innerHTML =
+          '<i class="ph ph-check-circle" style="color: var(--success-color)"></i>';
+        statusText.textContent = "Completed";
+        runnerStatus.className = "runner-status-indicator completed";
+        pauseResumeBtn.disabled = true;
+        break;
+      case "error":
+        statusIcon.innerHTML =
+          '<i class="ph ph-x-circle" style="color: var(--error-color)"></i>';
+        statusText.textContent = "Error";
+        runnerStatus.className = "runner-status-indicator error";
+        pauseResumeBtn.disabled = true;
+        break;
+      default:
+        statusIcon.innerHTML = '<i class="ph ph-clock"></i>';
+        statusText.textContent = "Idle";
+        runnerStatus.className = "runner-status-indicator idle";
+        pauseResumeBtn.disabled = true;
+    }
   }
 
   runBtn?.addEventListener("click", async () => {
@@ -690,6 +986,13 @@ export async function initPage() {
     runBtn.disabled = true;
     runBtn.setAttribute("disabled", "");
     runBtn.setAttribute("aria-disabled", "true");
+    // Show control buttons and update status
+    if (runnerControls) runnerControls.hidden = false;
+    updateRunnerStatus("running");
+    // Enable control buttons
+    if (stopBtn) stopBtn.disabled = false;
+    if (pauseResumeBtn) pauseResumeBtn.disabled = false;
+    if (skipBtn) skipBtn.disabled = false;
     // Keep back button enabled so users can navigate away during run
     // New service: clear any previously cached results so navigating back won't show stale data
     clearFinalReportCache();
@@ -851,6 +1154,7 @@ export async function initPage() {
           _isRunning = false;
           console.log("[Runner] Fallback completed, re-enabling controls");
           showOverlay(false);
+          if (runnerControls) runnerControls.hidden = true;
           backBtn.disabled = false;
           runBtn.disabled = false;
           runBtn.removeAttribute("aria-disabled");
@@ -868,6 +1172,7 @@ export async function initPage() {
         _isRunning = false;
         console.log("[Runner] Shell fallback completed, re-enabling controls");
         showOverlay(false);
+        if (runnerControls) runnerControls.hidden = true;
         backBtn.disabled = false;
         runBtn.disabled = false;
         runBtn.removeAttribute("aria-disabled");
@@ -885,6 +1190,7 @@ export async function initPage() {
       _isRunning = false;
       console.log("[Runner] Error handler re-enabling controls");
       showOverlay(false);
+      if (runnerControls) runnerControls.hidden = true;
       backBtn.disabled = false;
       runBtn.disabled = false;
       runBtn.removeAttribute("aria-disabled");
@@ -1051,9 +1357,10 @@ export async function initPage() {
           applyFinalStatusesFromReport(finalReport);
           const ok = finalReport?.overall_status === "success";
 
-          // Show summary
+          // Show summary with proper subtitle
           if (currentSummaryEl) {
             const summaryTitleEl = document.getElementById("svc-summary-title");
+            const summarySubEl = document.getElementById("svc-summary-sub");
             const summaryIconEl = document.getElementById("svc-summary-icon");
             currentSummaryEl.hidden = false;
             if (summaryTitleEl) {
@@ -1061,10 +1368,19 @@ export async function initPage() {
                 ? "All tasks completed"
                 : "Completed with errors";
             }
+            if (summarySubEl) {
+              summarySubEl.textContent = ok
+                ? "Review the final report below."
+                : "Check the log and JSON report for details.";
+            }
             if (summaryIconEl) {
               summaryIconEl.textContent = ok ? "✔" : "!";
             }
             currentSummaryEl.classList.toggle("ok", !!ok);
+            currentSummaryEl.classList.toggle("fail", !ok);
+            // Hide progress bar when completed
+            const summaryProgWrap = document.getElementById("svc-summary-progress");
+            if (summaryProgWrap) summaryProgWrap.setAttribute("aria-hidden", "true");
           }
 
           persistFinalReport(lastFinalJsonString);
@@ -1090,10 +1406,16 @@ export async function initPage() {
           }
 
           // Update global state to mark run as completed
+          const finalStatus =
+            finalReport?.overall_status === "success" ? "completed" : "error";
           updateGlobalProgress({
-            overallStatus:
-              finalReport?.overall_status === "success" ? "completed" : "error",
+            overallStatus: finalStatus,
           });
+          // Update status indicator and disable buttons
+          updateRunnerStatus(finalStatus);
+          if (stopBtn) stopBtn.disabled = true;
+          if (pauseResumeBtn) pauseResumeBtn.disabled = true;
+          if (skipBtn) skipBtn.disabled = true;
 
           // Send notification if not already sent and user is not on the page
           if (!_notifiedOnce) {
@@ -1153,6 +1475,12 @@ export async function initPage() {
               hasOverlay: !!currentOverlay,
             }
           );
+          const currentRunnerControls = document.getElementById(
+            "svc-runner-controls"
+          );
+          if (currentRunnerControls) {
+            currentRunnerControls.hidden = true;
+          }
           if (currentOverlay) {
             currentOverlay.hidden = true;
             console.log("[service_runner_done] Overlay hidden");
@@ -1193,6 +1521,11 @@ export async function initPage() {
 
           // Update global state to mark run as error
           updateGlobalProgress({ overallStatus: "error" });
+          // Update status indicator and disable buttons
+          updateRunnerStatus("error");
+          if (stopBtn) stopBtn.disabled = true;
+          if (pauseResumeBtn) pauseResumeBtn.disabled = true;
+          if (skipBtn) skipBtn.disabled = true;
         }
       }).then((unlisten) => {
         _unlistenDone = unlisten;
@@ -1214,15 +1547,26 @@ export async function initPage() {
       persistFinalReport(lastFinalJsonString);
 
       // Update global state
+      const finalStatus = ok ? "completed" : "error";
       updateGlobalProgress({
-        overallStatus: ok ? "completed" : "error",
+        overallStatus: finalStatus,
       });
+      // Update status indicator and disable buttons
+      updateRunnerStatus(finalStatus);
+      if (stopBtn) stopBtn.disabled = true;
+      if (pauseResumeBtn) pauseResumeBtn.disabled = true;
+      if (skipBtn) skipBtn.disabled = true;
     } catch {
       finalJsonEl.textContent = String(result || "");
       showSummary(false, true); // Error parsing result - trigger alerts
 
       // Update global state on error
       updateGlobalProgress({ overallStatus: "error" });
+      // Update status indicator and disable buttons
+      updateRunnerStatus("error");
+      if (stopBtn) stopBtn.disabled = true;
+      if (pauseResumeBtn) pauseResumeBtn.disabled = true;
+      if (skipBtn) skipBtn.disabled = true;
     }
   }
 

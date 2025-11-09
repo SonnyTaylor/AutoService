@@ -303,8 +303,14 @@ def run_kvrt_scan(task: Dict[str, Any]) -> Dict[str, Any]:
         "Executing KVRT (may take several minutes)", category="subprocess", level="info"
     )
 
+    # Import subprocess utility with skip checking
     try:
-        proc = subprocess.run(
+        from subprocess_utils import run_with_skip_check
+    except ImportError:
+        run_with_skip_check = subprocess.run
+    
+    try:
+        proc = run_with_skip_check(
             command,
             capture_output=True,
             text=True,

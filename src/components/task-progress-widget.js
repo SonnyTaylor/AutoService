@@ -77,7 +77,10 @@ function handleStateChange(state) {
   if (
     onResultsPage &&
     state &&
-    (state.overallStatus === "completed" || state.overallStatus === "error") &&
+    (state.overallStatus === "completed" ||
+      state.overallStatus === "error" ||
+      state.overallStatus === "stopped" ||
+      state.overallStatus === "paused") &&
     state.runId
   ) {
     setDismissedRunId(state.runId);
@@ -111,7 +114,9 @@ function handleStateChange(state) {
     }
   } else if (
     state.overallStatus === "completed" ||
-    state.overallStatus === "error"
+    state.overallStatus === "error" ||
+    state.overallStatus === "stopped" ||
+    state.overallStatus === "paused"
   ) {
     // If the user has visited results for this run, don't show the widget anymore
     if (dismissedForThisRun) {
@@ -167,7 +172,10 @@ function handleHashChange() {
   if (
     onResultsPage &&
     state &&
-    (state.overallStatus === "completed" || state.overallStatus === "error") &&
+    (state.overallStatus === "completed" ||
+      state.overallStatus === "error" ||
+      state.overallStatus === "stopped" ||
+      state.overallStatus === "paused") &&
     state.runId
   ) {
     setDismissedRunId(state.runId);
@@ -211,7 +219,9 @@ function renderWidget(state) {
         ${
           state.overallStatus === "running" ||
           state.overallStatus === "completed" ||
-          state.overallStatus === "error"
+          state.overallStatus === "error" ||
+          state.overallStatus === "stopped" ||
+          state.overallStatus === "paused"
             ? `
           <button class="widget-close" aria-label="${
             state.overallStatus === "running"
@@ -256,7 +266,9 @@ function renderWidget(state) {
   if (
     state.overallStatus === "running" ||
     state.overallStatus === "completed" ||
-    state.overallStatus === "error"
+    state.overallStatus === "error" ||
+    state.overallStatus === "stopped" ||
+    state.overallStatus === "paused"
   ) {
     widgetContainer.style.cursor = "pointer";
     widgetContainer.addEventListener("click", handleWidgetClick);
@@ -279,6 +291,10 @@ function getStatusIcon(status) {
       return '<i class="ph ph-check-circle" style="color: var(--success-color)"></i>';
     case "error":
       return '<i class="ph ph-x-circle" style="color: var(--error-color)"></i>';
+    case "paused":
+      return '<i class="ph ph-pause-circle" style="color: var(--warning-color)"></i>';
+    case "stopped":
+      return '<i class="ph ph-stop-circle" style="color: var(--muted-color)"></i>';
     default:
       return '<i class="ph ph-clock"></i>';
   }
@@ -298,6 +314,10 @@ function getStatusText(status, currentTask) {
       return "Run completed";
     case "error":
       return "Run completed with errors";
+    case "paused":
+      return "Run paused";
+    case "stopped":
+      return "Run stopped";
     default:
       return "Idle";
   }
@@ -368,8 +388,13 @@ function handleWidgetClick(e) {
 
   const state = getRunState();
 
-  // For completed/error runs, go straight to results and mark dismissed
-  if (state.overallStatus === "completed" || state.overallStatus === "error") {
+  // For completed/error/stopped/paused runs, go straight to results and mark dismissed
+  if (
+    state.overallStatus === "completed" ||
+    state.overallStatus === "error" ||
+    state.overallStatus === "stopped" ||
+    state.overallStatus === "paused"
+  ) {
     if (state.runId) {
       setDismissedRunId(state.runId);
     }
