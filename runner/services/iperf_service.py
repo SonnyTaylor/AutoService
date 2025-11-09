@@ -246,6 +246,11 @@ def _build_iperf_command(task: Dict[str, Any]) -> Dict[str, Any]:
     duration_seconds = duration_minutes * 60
     cmd: List[str] = [exec_path, "-c", str(server), "-p", str(port), "--json"]
 
+    # Add connection timeout to fail fast if server is unreachable (default 5 seconds)
+    # This prevents iperf3 from hanging for the full test duration when server is down
+    connect_timeout = task.get("connect_timeout", 5)
+    cmd += ["--connect-timeout", str(int(connect_timeout))]
+
     # Always include interval for regular reporting in iperf output
     if interval_seconds and interval_seconds > 0:
         cmd += ["-i", str(interval_seconds)]
@@ -457,16 +462,30 @@ def run_iperf_test(task: Dict[str, Any]) -> Dict[str, Any]:
         },
     )
 
+    # Validate server parameter before proceeding
+    server = task.get("server", "").strip()
+    if not server:
+        return {
+            "task_type": "iperf_test",
+            "status": "failure",
+            "summary": {
+                "error": "iPerf server address is required",
+                "reason": "No server IP address or hostname provided. Configure the iPerf server in Settings → Network.",
+            },
+        }
+
     build = _build_iperf_command(task)
     if "error" in build:
         return {
             "task_type": "iperf_test",
             "status": "failure",
-            "summary": {"error": build["error"]},
+            "summary": {"error": build["error"], "reason": build["error"]},
         }
 
     command: List[str] = build["command"]
     summary_base = build["summary"]
+    duration_seconds = summary_base.get("duration_seconds", 60)
+    connect_timeout = task.get("connect_timeout", 5)
 
     logger.info("Running iperf3: %s", " ".join(command))
 
@@ -474,8 +493,11 @@ def run_iperf_test(task: Dict[str, Any]) -> Dict[str, Any]:
         "Executing iperf3 (long-running test)",
         category="subprocess",
         level="info",
-        data={"duration_seconds": summary_base.get("duration_seconds")},
+        data={"duration_seconds": duration_seconds},
     )
+
+    # Calculate timeout: test duration + connection timeout + 10 second buffer
+    process_timeout = duration_seconds + connect_timeout + 10
 
     try:
         proc = run_with_skip_check(
@@ -485,39 +507,115 @@ def run_iperf_test(task: Dict[str, Any]) -> Dict[str, Any]:
             encoding="utf-8",
             errors="replace",
             check=False,
+            timeout=process_timeout,
         )
     except FileNotFoundError:
         return {
             "task_type": "iperf_test",
             "status": "failure",
-            "summary": {"error": f"File not found: {command[0]}"},
+            "summary": {
+                "error": f"iperf3 executable not found: {command[0]}",
+                "reason": f"Could not locate iperf3 executable at: {command[0]}. Verify the tool is installed in the programs directory.",
+            },
             "command": command,
         }
-    except Exception as e:  # noqa: BLE001
+    except subprocess.TimeoutExpired:
         return {
             "task_type": "iperf_test",
             "status": "failure",
-            "summary": {"error": f"Unexpected exception: {e}"},
+            "summary": {
+                **summary_base,
+                "error": f"iperf3 test timed out after {process_timeout} seconds",
+                "reason": (
+                    f"Test exceeded maximum time limit ({process_timeout}s). "
+                    "This may indicate network issues or the server is not responding. "
+                    "Try reducing the test duration or verify server connectivity."
+                ),
+            },
+            "command": command,
+        }
+    except KeyboardInterrupt:
+        # User requested skip
+        return {
+            "task_type": "iperf_test",
+            "status": "failure",
+            "summary": {
+                **summary_base,
+                "error": "Test was cancelled by user",
+                "reason": "The iperf3 test was interrupted before completion.",
+            },
+            "command": command,
+        }
+    except Exception as e:  # noqa: BLE001
+        logger.exception("Unexpected exception running iperf3")
+        return {
+            "task_type": "iperf_test",
+            "status": "failure",
+            "summary": {
+                "error": f"Unexpected error: {str(e)}",
+                "reason": f"An unexpected error occurred while running iperf3: {type(e).__name__}",
+            },
             "command": command,
         }
 
     stdout_text = proc.stdout or ""
     stderr_text = proc.stderr or ""
 
-    # iperf3 uses non-zero exit codes for certain network issues; we still
-    # attempt to parse JSON to give meaningful data to the user.
-    parsed_json: Optional[Dict[str, Any]] = None
-    try:
-        parsed_json = json.loads(stdout_text)
-    except json.JSONDecodeError:
-        # If JSON failed, include excerpts to aid debugging
+    # Check for empty output (indicates process may have failed to start)
+    if not stdout_text and not stderr_text:
         return {
             "task_type": "iperf_test",
             "status": "failure",
             "summary": {
                 **summary_base,
-                "error": "Failed to parse iperf3 JSON output",
-                "reason": "Failed to parse iperf3 JSON output",
+                "error": "iperf3 produced no output",
+                "reason": (
+                    "iperf3 process completed but produced no output. "
+                    "This may indicate the executable failed to start or encountered a critical error."
+                ),
+                "exit_code": proc.returncode,
+            },
+            "command": command,
+        }
+
+    # iperf3 uses non-zero exit codes for certain network issues; we still
+    # attempt to parse JSON to give meaningful data to the user.
+    parsed_json: Optional[Dict[str, Any]] = None
+    try:
+        if stdout_text.strip():
+            parsed_json = json.loads(stdout_text)
+        else:
+            # Empty JSON - check stderr for clues
+            if stderr_text:
+                return {
+                    "task_type": "iperf_test",
+                    "status": "failure",
+                    "summary": {
+                        **summary_base,
+                        "error": "iperf3 produced no JSON output",
+                        "reason": f"iperf3 did not produce valid JSON. Error output: {stderr_text[:500]}",
+                        "stderr_excerpt": stderr_text[:1000],
+                        "exit_code": proc.returncode,
+                    },
+                    "command": command,
+                }
+    except json.JSONDecodeError as e:
+        # If JSON failed, try to extract error information from the output
+        error_hint = ""
+        if "error" in stdout_text.lower():
+            # Try to extract error message even if JSON is malformed
+            error_hint = f" (Possible error in output: {stdout_text[:200]})"
+        
+        return {
+            "task_type": "iperf_test",
+            "status": "failure",
+            "summary": {
+                **summary_base,
+                "error": f"Failed to parse iperf3 JSON output{error_hint}",
+                "reason": (
+                    f"iperf3 output was not valid JSON. This may indicate a connection failure or server error. "
+                    f"JSON parse error: {str(e)}"
+                ),
                 "stdout_excerpt": stdout_text[:1000],
                 "stderr_excerpt": stderr_text[:1000],
                 "exit_code": proc.returncode,
@@ -533,11 +631,23 @@ def run_iperf_test(task: Dict[str, Any]) -> Dict[str, Any]:
 
     # Surface iperf3-reported error (top-level field in JSON) when present
     iperf_error: Optional[str] = None
+    error_category: Optional[str] = None
     try:
         if isinstance(parsed_json, dict):
             err = parsed_json.get("error")
             if isinstance(err, str) and err.strip():
                 iperf_error = err.strip()
+                
+                # Categorize error types for better user guidance
+                err_lower = iperf_error.lower()
+                if any(term in err_lower for term in ["unable to connect", "connection timed out", "connection refused"]):
+                    error_category = "connection"
+                elif "server may have stopped" in err_lower or "firewall" in err_lower:
+                    error_category = "server"
+                elif "no route" in err_lower or "host unreachable" in err_lower:
+                    error_category = "network"
+                elif "port" in err_lower and ("in use" in err_lower or "invalid" in err_lower):
+                    error_category = "port"
     except Exception:  # noqa: BLE001
         iperf_error = None
 
@@ -572,10 +682,81 @@ def run_iperf_test(task: Dict[str, Any]) -> Dict[str, Any]:
     if status == "failure":
         if iperf_error:
             final_summary["error"] = iperf_error
-            final_summary["reason"] = iperf_error
+            
+            # Provide context-specific guidance based on error category
+            if error_category == "connection":
+                final_summary["reason"] = (
+                    f"Connection failed: {iperf_error}\n\n"
+                    f"Troubleshooting steps:\n"
+                    f"• Verify iPerf3 server is running on {summary_base.get('server')}:{summary_base.get('port')}\n"
+                    f"• Check firewall rules allow connections on port {summary_base.get('port')}\n"
+                    f"• Ensure the server IP address is correct\n"
+                    f"• Try: iperf3 -s -p {summary_base.get('port')} (on the server)"
+                )
+            elif error_category == "server":
+                final_summary["reason"] = (
+                    f"Server error: {iperf_error}\n\n"
+                    f"The iPerf3 server at {summary_base.get('server')}:{summary_base.get('port')} "
+                    f"may have stopped or is not accepting connections. "
+                    f"Restart the iPerf3 server and try again."
+                )
+            elif error_category == "network":
+                final_summary["reason"] = (
+                    f"Network error: {iperf_error}\n\n"
+                    f"Cannot reach {summary_base.get('server')}. "
+                    f"Check network connectivity, routing, and firewall settings."
+                )
+            elif error_category == "port":
+                final_summary["reason"] = (
+                    f"Port error: {iperf_error}\n\n"
+                    f"Port {summary_base.get('port')} may be in use or invalid. "
+                    f"Try a different port or verify the server configuration."
+                )
+            else:
+                # Generic error with helpful context
+                final_summary["reason"] = (
+                    f"{iperf_error}\n\n"
+                    f"Server: {summary_base.get('server')}:{summary_base.get('port')}\n"
+                    f"Protocol: {summary_base.get('protocol', 'tcp').upper()}\n"
+                    f"Exit code: {proc.returncode}"
+                )
         else:
-            final_summary["reason"] = f"iperf3 exited with code {proc.returncode}"
+            # Check for common connection failure patterns in stderr/stdout
+            connection_errors = [
+                "unable to connect",
+                "connection refused",
+                "connection timed out",
+                "no route to host",
+                "connection reset",
+                "server may have stopped",
+            ]
+            combined_output = (stderr_text + " " + stdout_text).lower()
+            if any(err in combined_output for err in connection_errors):
+                final_summary["error"] = "Connection failed"
+                final_summary["reason"] = (
+                    f"Unable to connect to {summary_base.get('server')}:{summary_base.get('port')}.\n\n"
+                    f"Possible causes:\n"
+                    f"• iPerf3 server is not running (start with: iperf3 -s -p {summary_base.get('port')})\n"
+                    f"• Firewall is blocking the connection\n"
+                    f"• Incorrect server IP address or port\n"
+                    f"• Network connectivity issues\n\n"
+                    f"Error details: {stderr_text[:300] or stdout_text[:300]}"
+                )
+            elif proc.returncode != 0:
+                # Non-zero exit but no clear error message
+                final_summary["error"] = f"iperf3 test failed (exit code {proc.returncode})"
+                final_summary["reason"] = (
+                    f"iperf3 exited with code {proc.returncode}. "
+                    f"This may indicate a network issue, server problem, or configuration error.\n\n"
+                    f"Output: {stdout_text[:500] or stderr_text[:500] or 'No output available'}"
+                )
+            else:
+                # Exit code 0 but marked as failure (shouldn't happen, but handle gracefully)
+                final_summary["error"] = "Test completed with errors"
+                final_summary["reason"] = "Test completed but was marked as failed. Check output for details."
+        
         final_summary["stdout_excerpt"] = stdout_text[:1000]
+        final_summary["stderr_excerpt"] = stderr_text[:1000]
 
     add_breadcrumb(
         f"iperf3 test completed: {status}",
