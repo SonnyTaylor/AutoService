@@ -8,7 +8,7 @@
 import { invoke, state, DEFAULT_LOGO, $, escapeHtml } from "./state.js";
 import { openEditor } from "./editor.js";
 import { settingsManager } from "../../utils/settings-manager.js";
-import { generateText } from "@ai-sdk/core";
+import { generateText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
