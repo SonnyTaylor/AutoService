@@ -22,7 +22,8 @@ use tauri::{Emitter, Manager};
 // Import command functions to bring them into scope for the handler
 use crate::icons::{read_image_as_data_url, suggest_logo_from_exe};
 use crate::programs::{
-    get_tool_statuses, launch_program, list_programs, remove_program, save_program,
+    get_tool_statuses, launch_program, list_programs, open_program_folder, remove_program,
+    save_program,
 };
 use crate::reports::{
     delete_report, list_network_reports, list_reports, load_report, load_report_from_path,
@@ -282,6 +283,7 @@ pub fn run() {
             save_program,
             remove_program,
             launch_program,
+            open_program_folder,
             get_tool_statuses,
             list_scripts,
             save_script,

@@ -89,6 +89,64 @@ pub fn remove_program(state: tauri::State<AppState>, id: Uuid) -> Result<(), Str
     write_programs_file(&settings_path, &list)
 }
 
+/// Opens the folder containing a program's executable in the system file explorer.
+///
+/// Resolves the executable path and opens its parent directory.
+///
+/// # Arguments
+/// * `state` - Application state containing data directory path
+/// * `program` - Program entry with exe_path to resolve
+///
+/// # Returns
+/// True if the folder was opened successfully, error message otherwise
+#[tauri::command]
+pub fn open_program_folder(
+    state: tauri::State<AppState>,
+    program: ProgramEntry,
+) -> Result<bool, String> {
+    let data_root = state.data_dir.as_path();
+    let exe_full = resolve_exe_path(data_root, &program.exe_path);
+    let exe_path = PathBuf::from(&exe_full);
+
+    // Get the parent directory (folder containing the executable)
+    let folder = exe_path
+        .parent()
+        .ok_or_else(|| "Executable path has no parent directory".to_string())?;
+
+    // Verify the folder exists
+    if !folder.exists() {
+        return Err(format!("Folder does not exist: {}", folder.display()));
+    }
+
+    // Open the folder in file explorer
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer.exe")
+            .arg(folder)
+            .spawn()
+            .map(|_| true)
+            .map_err(|e| format!("Failed to open folder: {}", e))
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(folder)
+            .spawn()
+            .map(|_| true)
+            .map_err(|e| format!("Failed to open folder: {}", e))
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(folder)
+            .spawn()
+            .map(|_| true)
+            .map_err(|e| format!("Failed to open folder: {}", e))
+    }
+}
+
 #[tauri::command]
 /// Launch a program on Windows using PowerShell and increment its `launch_count` on success.
 ///

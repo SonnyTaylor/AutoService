@@ -62,6 +62,9 @@ function renderProgramRow(p) {
         <button data-action="launch" ${
           p.exe_exists ? "" : "disabled"
         }>Launch</button>
+        <button data-action="open" class="ghost" title="Open folder in file explorer">
+          <i class="ph ph-folder-open"></i> Open
+        </button>
         <button data-action="edit" class="secondary">Edit</button>
         <button data-action="remove" class="ghost">Remove</button>
       </div>
@@ -204,6 +207,14 @@ export function wireListActions() {
         await loadPrograms();
       } finally {
         /** @type {HTMLButtonElement} */ (btn).disabled = false;
+      }
+      return;
+    }
+    if (action === "open") {
+      try {
+        await invoke("open_program_folder", { program: prog });
+      } catch (error) {
+        alert(`Failed to open folder: ${error}`);
       }
       return;
     }
