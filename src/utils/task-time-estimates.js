@@ -110,10 +110,14 @@ export function normalizeTaskParams(task) {
     // Protocol might affect duration slightly, but not significantly
   }
   
-  // For FurMark tasks, check for duration_seconds directly (can be at top level or in params)
+  // For FurMark tasks, check for duration_seconds or minutes (minutes gets converted to seconds)
+  // Normalize minutes to duration_seconds for consistency since built tasks always have duration_seconds
   if (taskType === "furmark_stress_test") {
     if (typeof params.duration_seconds === "number") {
       relevantParams.duration_seconds = params.duration_seconds;
+    } else if (typeof params.minutes === "number") {
+      // Convert minutes to seconds for consistent matching (FurMark build converts minutes to duration_seconds)
+      relevantParams.duration_seconds = params.minutes * 60;
     }
   }
   

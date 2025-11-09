@@ -1066,8 +1066,9 @@ class BuilderUI {
    * Load and render time estimate for a task
    */
   async loadAndRenderTimeEstimate(id, liElement) {
-    // Skip for GPU parent (handled separately if needed)
+    // Special handling for GPU parent: calculate combined estimate from child tasks
     if (id === GPU_PARENT_ID) {
+      await this.loadGpuParentTimeEstimate(liElement);
       return;
     }
 
@@ -1140,6 +1141,106 @@ class BuilderUI {
     } catch (error) {
       console.warn(`[Task Time] Failed to get time estimate for ${id}:`, error);
       const placeholder = liElement?.querySelector(`.time-estimate-placeholder[data-task-id="${id}"]`);
+      if (placeholder) {
+        placeholder.remove();
+      }
+    }
+  }
+
+  /**
+   * Load and render combined time estimate for GPU parent task
+   * GPU parent expands to furmark_stress_test and/or heavyload_stress_gpu
+   */
+  async loadGpuParentTimeEstimate(liElement) {
+    try {
+      const { getEstimate, formatDuration } = await import("../../utils/task-time-estimates.js");
+      const { getServiceById } = await import("./handlers/index.js");
+      
+      const placeholder = liElement?.querySelector(`.time-estimate-placeholder[data-task-id="${GPU_PARENT_ID}"]`);
+      if (!placeholder) {
+        return;
+      }
+
+      let totalSeconds = 0;
+      let hasEstimate = false;
+
+      // Check FurMark estimate if enabled
+      if (this.builder.gpuConfig.subs.furmark) {
+        const furmarkDef = getServiceById("furmark_stress_test");
+        if (furmarkDef) {
+          try {
+            const furmarkMinutes = this.builder.gpuConfig.params.furmarkMinutes || 1;
+            const builtFurmark = await furmarkDef.build({
+              params: { minutes: furmarkMinutes },
+              resolveToolPath: toolPath,
+              getDataDirs,
+            });
+            
+            // Use the built task's params (which has duration_seconds, not minutes)
+            const furmarkEstimate = await getEstimate(
+              "furmark_stress_test",
+              builtFurmark.params || { duration_seconds: furmarkMinutes * 60 },
+              builtFurmark.type
+            );
+            
+            if (furmarkEstimate && furmarkEstimate.sampleCount >= 1) {
+              totalSeconds += furmarkEstimate.estimate;
+              hasEstimate = true;
+            }
+          } catch (error) {
+            console.warn("[Task Time] Failed to get FurMark estimate for GPU parent:", error);
+          }
+        }
+      }
+
+      // Check HeavyLoad GPU estimate if enabled
+      if (this.builder.gpuConfig.subs.heavyload) {
+        const heavyloadDef = getServiceById("heavyload_stress_gpu");
+        if (heavyloadDef) {
+          try {
+            const heavyloadMinutes = this.builder.gpuConfig.params.heavyloadMinutes || 1;
+            const builtHeavyload = await heavyloadDef.build({
+              params: { minutes: heavyloadMinutes },
+              resolveToolPath: toolPath,
+              getDataDirs,
+            });
+            
+            const heavyloadEstimate = await getEstimate(
+              "heavyload_stress_gpu",
+              builtHeavyload.params || { minutes: heavyloadMinutes },
+              builtHeavyload.type
+            );
+            
+            if (heavyloadEstimate && heavyloadEstimate.sampleCount >= 1) {
+              totalSeconds += heavyloadEstimate.estimate;
+              hasEstimate = true;
+            }
+          } catch (error) {
+            console.warn("[Task Time] Failed to get HeavyLoad GPU estimate for GPU parent:", error);
+          }
+        }
+      }
+
+      if (!hasEstimate || totalSeconds === 0) {
+        placeholder.remove();
+        return;
+      }
+
+      const formatted = formatDuration(totalSeconds);
+      if (!formatted) {
+        placeholder.remove();
+        return;
+      }
+
+      // Create badge with combined estimate
+      const estimateEl = document.createElement("span");
+      estimateEl.className = "badge time-estimate";
+      estimateEl.textContent = formatted;
+      estimateEl.title = `Estimated time for GPU stress test (combined FurMark + HeavyLoad)`;
+      placeholder.replaceWith(estimateEl);
+    } catch (error) {
+      console.warn("[Task Time] Failed to get GPU parent time estimate:", error);
+      const placeholder = liElement?.querySelector(`.time-estimate-placeholder[data-task-id="${GPU_PARENT_ID}"]`);
       if (placeholder) {
         placeholder.remove();
       }
