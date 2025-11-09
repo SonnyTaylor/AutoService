@@ -9,6 +9,7 @@ import { renderList } from "./renderer.js";
 import { openEditor, wireEditor } from "./editor.js";
 import { runScript, removeScript } from "./api.js";
 import { confirmRemove } from "./utils.js";
+import { initAIGenerate } from "./ai-generate.js";
 
 /**
  * Wires up event listeners for the toolbar controls (search, sort, add).
@@ -83,6 +84,7 @@ function wireScriptActions() {
 export async function initPage() {
   wireToolbar();
   wireEditor();
+  initAIGenerate();
   await loadScripts();
   renderList();
   wireScriptActions();
