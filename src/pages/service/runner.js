@@ -1040,8 +1040,29 @@ export async function initPage() {
     });
     renderTaskList();
 
+    // Check if AI summary is enabled and add it to global state
+    let aiSummaryEnabled = false;
+    try {
+      const pendingRunRaw = sessionStorage.getItem("service.pendingRun");
+      if (pendingRunRaw) {
+        const pendingRun = JSON.parse(pendingRunRaw);
+        aiSummaryEnabled = pendingRun.ai_summary_enabled === true;
+      }
+    } catch (e) {
+      // Ignore
+    }
+
+    // Build tasks array for global state (include AI summary if enabled)
+    const tasksForGlobalState = [...tasks];
+    if (aiSummaryEnabled) {
+      tasksForGlobalState.push({
+        type: "ai_summary",
+        ui_label: "AI Summary Generation",
+      });
+    }
+
     // Initialize global task state for persistent widget tracking
-    initRunState(tasks, {
+    initRunState(tasksForGlobalState, {
       title: runnerTitle?.textContent || "Service Run",
       description: runnerDesc?.textContent || "",
     });
@@ -1395,8 +1416,41 @@ export async function initPage() {
                 
                 // Update AI summary task status to "running"
                 if (aiSummaryTaskIndex >= 0) {
+                  // Update local task state
                   updateTaskStatus(aiSummaryTaskIndex, "running");
                   renderTaskList();
+                  // Update global task state (AI summary is at index = number of Python tasks)
+                  if (updateGlobalTaskStatus) {
+                    const pythonTaskCount = finalReport?.results?.length || tasks.length;
+                    updateGlobalTaskStatus(pythonTaskCount, "running");
+                  }
+                  // Update summary UI to show progress with AI summary running
+                  if (currentSummaryEl) {
+                    const total = taskState.length;
+                    const completed = taskState.filter((t) =>
+                      ["success", "failure", "skipped"].includes(t.status)
+                    ).length;
+                    const summaryTitleEl = document.getElementById("svc-summary-title");
+                    const summarySubEl = document.getElementById("svc-summary-sub");
+                    const summaryIconEl = document.getElementById("svc-summary-icon");
+                    const summaryProgWrap = document.getElementById("svc-summary-progress");
+                    const summaryProgBar = document.getElementById("svc-summary-progress-bar");
+                    if (summaryTitleEl) {
+                      summaryTitleEl.textContent = `Progress: ${completed}/${total} completed`;
+                    }
+                    if (summarySubEl) {
+                      summarySubEl.textContent = "Generating AI summary...";
+                    }
+                    if (summaryIconEl) {
+                      summaryIconEl.innerHTML = '<span class="spinner" aria-hidden="true"></span>';
+                    }
+                    if (summaryProgWrap) summaryProgWrap.removeAttribute("aria-hidden");
+                    if (summaryProgBar) {
+                      const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+                      summaryProgBar.style.width = `${pct}%`;
+                    }
+                    currentSummaryEl.classList.remove("ok", "fail");
+                  }
                 }
                 
                 // Generate summary - store promise to wait for it
@@ -1409,8 +1463,14 @@ export async function initPage() {
                     
                     // Update AI summary task status to "success"
                     if (aiSummaryTaskIndex >= 0) {
+                      // Update local task state
                       updateTaskStatus(aiSummaryTaskIndex, "success");
                       renderTaskList();
+                      // Update global task state (AI summary is at index = number of Python tasks)
+                      if (updateGlobalTaskStatus) {
+                        const pythonTaskCount = finalReport?.results?.length || tasks.length;
+                        updateGlobalTaskStatus(pythonTaskCount, "success");
+                      }
                     }
                     
                     // Update persisted report
@@ -1439,8 +1499,14 @@ export async function initPage() {
                     console.error("[AI Summary] Failed to generate:", error);
                     // Update AI summary task status to "failure"
                     if (aiSummaryTaskIndex >= 0) {
+                      // Update local task state
                       updateTaskStatus(aiSummaryTaskIndex, "failure");
                       renderTaskList();
+                      // Update global task state (AI summary is at index = number of Python tasks)
+                      if (updateGlobalTaskStatus) {
+                        const pythonTaskCount = finalReport?.results?.length || tasks.length;
+                        updateGlobalTaskStatus(pythonTaskCount, "error");
+                      }
                     }
                     // Don't block report display - continue without summary
                   });
@@ -1448,15 +1514,27 @@ export async function initPage() {
                 console.warn("[AI Summary] Requested but AI is not configured");
                 // Mark as failed if not configured
                 if (aiSummaryTaskIndex >= 0) {
+                  // Update local task state
                   updateTaskStatus(aiSummaryTaskIndex, "failure");
                   renderTaskList();
+                  // Update global task state (AI summary is at index = number of Python tasks)
+                  if (updateGlobalTaskStatus) {
+                    const pythonTaskCount = finalReport?.results?.length || tasks.length;
+                    updateGlobalTaskStatus(pythonTaskCount, "error");
+                  }
                 }
               }
             } catch (error) {
               console.error("[AI Summary] Error checking AI configuration:", error);
               if (aiSummaryTaskIndex >= 0) {
+                // Update local task state
                 updateTaskStatus(aiSummaryTaskIndex, "failure");
                 renderTaskList();
+                // Update global task state (AI summary is at index = number of Python tasks)
+                if (updateGlobalTaskStatus) {
+                  const pythonTaskCount = finalReport?.results?.length || tasks.length;
+                  updateGlobalTaskStatus(pythonTaskCount, "error");
+                }
               }
             }
           } else {
@@ -1481,14 +1559,22 @@ export async function initPage() {
               const summaryTitleEl = document.getElementById("svc-summary-title");
               const summarySubEl = document.getElementById("svc-summary-sub");
               const summaryIconEl = document.getElementById("svc-summary-icon");
+              const summaryProgWrap = document.getElementById("svc-summary-progress");
+              const summaryProgBar = document.getElementById("svc-summary-progress-bar");
+              
               currentSummaryEl.hidden = false;
               
+              // Calculate progress including AI summary task
+              const total = taskState.length;
+              const completed = taskState.filter((t) =>
+                ["success", "failure", "skipped"].includes(t.status)
+              ).length;
+              const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+              
               if (isAIGenerating) {
-                // Show "generating" state while AI summary is being created
+                // Show progress while AI summary is being created
                 if (summaryTitleEl) {
-                  summaryTitleEl.textContent = ok
-                    ? "All tasks completed"
-                    : "Completed with errors";
+                  summaryTitleEl.textContent = `Progress: ${completed}/${total} completed`;
                 }
                 if (summarySubEl) {
                   summarySubEl.textContent = "Generating AI summary...";
@@ -1496,6 +1582,10 @@ export async function initPage() {
                 if (summaryIconEl) {
                   summaryIconEl.innerHTML = '<span class="spinner" aria-hidden="true"></span>';
                 }
+                // Keep progress bar visible and update it
+                if (summaryProgWrap) summaryProgWrap.removeAttribute("aria-hidden");
+                if (summaryProgBar) summaryProgBar.style.width = `${pct}%`;
+                // Don't turn green yet - still running
                 currentSummaryEl.classList.remove("ok", "fail");
               } else {
                 // Show final completion state
@@ -1512,19 +1602,18 @@ export async function initPage() {
                 if (summaryIconEl) {
                   summaryIconEl.textContent = ok ? "✔" : "!";
                 }
+                // Hide progress bar when fully completed
+                if (summaryProgWrap) summaryProgWrap.setAttribute("aria-hidden", "true");
+                // Now we can turn green/red
                 currentSummaryEl.classList.toggle("ok", !!ok);
                 currentSummaryEl.classList.toggle("fail", !ok);
               }
-              
-              // Hide progress bar when completed
-              const summaryProgWrap = document.getElementById("svc-summary-progress");
-              if (summaryProgWrap) summaryProgWrap.setAttribute("aria-hidden", "true");
             }
           };
 
-          // Show summary UI - if AI summary is generating, show "generating" state
+          // Show summary UI - if AI summary is generating, show progress state
           if (aiSummaryPromise) {
-            updateSummaryUI(true); // Show "generating" state
+            updateSummaryUI(true); // Show progress state with spinner
             // Update to final state after AI summary completes
             aiSummaryPromise
               .then(() => {
@@ -1579,17 +1668,35 @@ export async function initPage() {
             }
           }
 
-          // Update global state to mark run as completed
-          const finalStatus =
-            finalReport?.overall_status === "success" ? "completed" : "error";
-          updateGlobalProgress({
-            overallStatus: finalStatus,
-          });
-          // Update status indicator and disable buttons
-          updateRunnerStatus(finalStatus);
-          if (stopBtn) stopBtn.disabled = true;
-          if (pauseResumeBtn) pauseResumeBtn.disabled = true;
-          if (skipBtn) skipBtn.disabled = true;
+          // Function to mark run as completed (only after AI summary if enabled)
+          const markRunCompleted = () => {
+            const finalStatus =
+              finalReport?.overall_status === "success" ? "completed" : "error";
+            updateGlobalProgress({
+              overallStatus: finalStatus,
+            });
+            // Update status indicator and disable buttons
+            updateRunnerStatus(finalStatus);
+            if (stopBtn) stopBtn.disabled = true;
+            if (pauseResumeBtn) pauseResumeBtn.disabled = true;
+            if (skipBtn) skipBtn.disabled = true;
+          };
+
+          // Only mark as completed after AI summary finishes (if enabled)
+          if (aiSummaryPromise) {
+            // Wait for AI summary to complete before marking as done
+            aiSummaryPromise
+              .then(() => {
+                markRunCompleted();
+              })
+              .catch(() => {
+                // Even if AI summary fails, mark as completed
+                markRunCompleted();
+              });
+          } else {
+            // No AI summary, mark as completed immediately
+            markRunCompleted();
+          }
 
           // Send notification if not already sent and user is not on the page
           if (!_notifiedOnce) {
