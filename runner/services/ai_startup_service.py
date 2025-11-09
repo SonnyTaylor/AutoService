@@ -540,6 +540,7 @@ def call_chat_model(
         user_prompt=user_prompt,
         model=model,
         api_key=api_key,
+        base_url=base_url,
         temperature=0.1,
         json_mode=True,
         required_fields=["to_disable"],

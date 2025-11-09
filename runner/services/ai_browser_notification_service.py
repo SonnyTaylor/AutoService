@@ -483,6 +483,7 @@ Return your analysis as JSON following the specified format."""
         user_prompt=user_prompt,
         model=model,
         api_key=api_key,
+        base_url=base_url,
         temperature=0.3,
         json_mode=True,
         required_fields=["to_disable"],
