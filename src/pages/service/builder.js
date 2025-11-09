@@ -672,8 +672,6 @@ class BuilderUI {
       aiSummaryToggle: document.getElementById("svc-ai-summary-toggle"),
       aiSummaryWarning: document.getElementById("svc-ai-summary-warning"),
       totalTime: document.getElementById("svc-total-time"),
-      totalTimeValue: document.querySelector("#svc-total-time .time-value"),
-      totalTimePartial: document.querySelector("#svc-total-time .time-partial"),
     };
 
     this.builder.setElements(this.elements);
@@ -1133,9 +1131,9 @@ class BuilderUI {
 
       console.log(`[Task Time] Displaying estimate for ${id}: ${formatted} (${estimateData.sampleCount} samples)`);
 
-      // Replace placeholder with actual estimate
+      // Replace placeholder with actual estimate as a badge
       const estimateEl = document.createElement("span");
-      estimateEl.className = "time-estimate";
+      estimateEl.className = "badge time-estimate";
       estimateEl.textContent = formatted;
       estimateEl.title = `Estimated time based on ${estimateData.sampleCount} previous runs`;
       placeholder.replaceWith(estimateEl);
@@ -1398,7 +1396,7 @@ class BuilderUI {
    * Update total time estimate display
    */
   async updateTotalTime() {
-    if (!this.elements.totalTime || !this.elements.totalTimeValue) {
+    if (!this.elements.totalTime) {
       return;
     }
 
@@ -1441,19 +1439,30 @@ class BuilderUI {
       }
 
       const result = await calculateTotalTime(selectedTasks);
-      
+
       if (result.totalSeconds > 0) {
         const formatted = formatDuration(result.totalSeconds);
-        this.elements.totalTimeValue.textContent = formatted;
-        this.elements.totalTime.style.display = "block";
         
-        // Show partial indicator if not all tasks have estimates
-        if (result.hasPartial) {
-          this.elements.totalTimePartial.style.display = "inline";
-          this.elements.totalTimePartial.textContent = `(partial - ${result.estimatedCount}/${result.totalCount} tasks)`;
-        } else {
-          this.elements.totalTimePartial.style.display = "none";
+        // Update or create badge element
+        let badgeEl = this.elements.totalTime.querySelector(".badge.time-estimate");
+        if (!badgeEl) {
+          badgeEl = document.createElement("span");
+          badgeEl.className = "badge time-estimate";
+          this.elements.totalTime.appendChild(badgeEl);
         }
+        
+        // Set badge text with partial indicator if needed
+        if (result.hasPartial) {
+          badgeEl.textContent = `${formatted} (partial)`;
+          badgeEl.title = `Estimated time - ${result.estimatedCount}/${result.totalCount} tasks have estimates`;
+        } else {
+          badgeEl.textContent = formatted;
+          badgeEl.title = `Estimated time for all ${result.totalCount} tasks`;
+        }
+        
+        this.elements.totalTime.style.display = "flex";
+        this.elements.totalTime.style.alignItems = "center";
+        this.elements.totalTime.style.gap = "8px";
       } else {
         // No estimates available yet
         this.elements.totalTime.style.display = "none";

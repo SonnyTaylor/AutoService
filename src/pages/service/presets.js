@@ -133,16 +133,32 @@ async function updatePresetTimeEstimates() {
       
       if (result.totalSeconds > 0) {
         const formatted = formatDuration(result.totalSeconds);
-        if (valueEl) valueEl.textContent = formatted;
-        timeEl.style.display = "block";
         
-        // Show partial indicator if not all tasks have estimates
-        if (result.hasPartial && partialEl) {
-          partialEl.style.display = "inline";
-          partialEl.textContent = "(partial)";
-        } else if (partialEl) {
-          partialEl.style.display = "none";
+        // Update or create badge element
+        let badgeEl = timeEl.querySelector(".badge.time-estimate");
+        if (!badgeEl) {
+          // Remove old structure if exists
+          if (valueEl) valueEl.remove();
+          if (partialEl) partialEl.remove();
+          
+          // Create new badge
+          badgeEl = document.createElement("span");
+          badgeEl.className = "badge time-estimate";
+          timeEl.appendChild(badgeEl);
         }
+        
+        // Set badge text with partial indicator if needed
+        if (result.hasPartial) {
+          badgeEl.textContent = `${formatted} (partial)`;
+          badgeEl.title = `Estimated time - ${result.estimatedCount}/${result.totalCount} tasks have estimates`;
+        } else {
+          badgeEl.textContent = formatted;
+          badgeEl.title = `Estimated time for all ${result.totalCount} tasks`;
+        }
+        
+        timeEl.style.display = "flex";
+        timeEl.style.alignItems = "center";
+        timeEl.style.gap = "8px";
       } else {
         // No estimates available yet
         timeEl.style.display = "none";
