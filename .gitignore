@@ -8,6 +8,8 @@ data/settings/stacks.json
 data/settings/app_settings.json
 data/webview_profile/
 data/reports/*
+data/settings/task_times.json
+
 
 # ============================================================================
 # Build Artifacts & Compiled Binaries
