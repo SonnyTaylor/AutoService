@@ -1475,30 +1475,66 @@ export async function initPage() {
           applyFinalStatusesFromReport(finalReport);
           const ok = finalReport?.overall_status === "success";
 
-          // Show summary with proper subtitle
-          if (currentSummaryEl) {
-            const summaryTitleEl = document.getElementById("svc-summary-title");
-            const summarySubEl = document.getElementById("svc-summary-sub");
-            const summaryIconEl = document.getElementById("svc-summary-icon");
-            currentSummaryEl.hidden = false;
-            if (summaryTitleEl) {
-              summaryTitleEl.textContent = ok
-                ? "All tasks completed"
-                : "Completed with errors";
+          // Function to update summary UI
+          const updateSummaryUI = (isAIGenerating = false) => {
+            if (currentSummaryEl) {
+              const summaryTitleEl = document.getElementById("svc-summary-title");
+              const summarySubEl = document.getElementById("svc-summary-sub");
+              const summaryIconEl = document.getElementById("svc-summary-icon");
+              currentSummaryEl.hidden = false;
+              
+              if (isAIGenerating) {
+                // Show "generating" state while AI summary is being created
+                if (summaryTitleEl) {
+                  summaryTitleEl.textContent = ok
+                    ? "All tasks completed"
+                    : "Completed with errors";
+                }
+                if (summarySubEl) {
+                  summarySubEl.textContent = "Generating AI summary...";
+                }
+                if (summaryIconEl) {
+                  summaryIconEl.innerHTML = '<span class="spinner" aria-hidden="true"></span>';
+                }
+                currentSummaryEl.classList.remove("ok", "fail");
+              } else {
+                // Show final completion state
+                if (summaryTitleEl) {
+                  summaryTitleEl.textContent = ok
+                    ? "All tasks completed"
+                    : "Completed with errors";
+                }
+                if (summarySubEl) {
+                  summarySubEl.textContent = ok
+                    ? "Review the final report below."
+                    : "Check the log and JSON report for details.";
+                }
+                if (summaryIconEl) {
+                  summaryIconEl.textContent = ok ? "✔" : "!";
+                }
+                currentSummaryEl.classList.toggle("ok", !!ok);
+                currentSummaryEl.classList.toggle("fail", !ok);
+              }
+              
+              // Hide progress bar when completed
+              const summaryProgWrap = document.getElementById("svc-summary-progress");
+              if (summaryProgWrap) summaryProgWrap.setAttribute("aria-hidden", "true");
             }
-            if (summarySubEl) {
-              summarySubEl.textContent = ok
-                ? "Review the final report below."
-                : "Check the log and JSON report for details.";
-            }
-            if (summaryIconEl) {
-              summaryIconEl.textContent = ok ? "✔" : "!";
-            }
-            currentSummaryEl.classList.toggle("ok", !!ok);
-            currentSummaryEl.classList.toggle("fail", !ok);
-            // Hide progress bar when completed
-            const summaryProgWrap = document.getElementById("svc-summary-progress");
-            if (summaryProgWrap) summaryProgWrap.setAttribute("aria-hidden", "true");
+          };
+
+          // Show summary UI - if AI summary is generating, show "generating" state
+          if (aiSummaryPromise) {
+            updateSummaryUI(true); // Show "generating" state
+            // Update to final state after AI summary completes
+            aiSummaryPromise
+              .then(() => {
+                updateSummaryUI(false); // Show final completion state
+              })
+              .catch(() => {
+                updateSummaryUI(false); // Show final completion state even if AI fails
+              });
+          } else {
+            updateSummaryUI(false); // No AI summary, show final state immediately
           }
 
           persistFinalReport(lastFinalJsonString);
