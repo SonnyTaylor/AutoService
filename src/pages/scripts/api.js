@@ -3,6 +3,9 @@
  */
 
 const { invoke } = window.__TAURI__.core;
+import { clearCache } from "../../utils/page-cache.js";
+
+const SCRIPTS_CACHE_KEY = "scripts.cache.v1";
 
 /**
  * Runs a script using the backend.
@@ -19,7 +22,9 @@ export async function runScript(script) {
  * @returns {Promise} Promise that resolves when the script is saved.
  */
 export async function saveScript(script) {
-  return await invoke("save_script", { script });
+  await invoke("save_script", { script });
+  // Invalidate cache
+  clearCache(SCRIPTS_CACHE_KEY);
 }
 
 /**
@@ -28,7 +33,9 @@ export async function saveScript(script) {
  * @returns {Promise} Promise that resolves when the script is removed.
  */
 export async function removeScript(id) {
-  return await invoke("remove_script", { id });
+  await invoke("remove_script", { id });
+  // Invalidate cache
+  clearCache(SCRIPTS_CACHE_KEY);
 }
 
 /**

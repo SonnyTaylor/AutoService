@@ -21,6 +21,9 @@ import {
 } from "./state.js";
 import { openEditor } from "./editor.js";
 import Fuse from "fuse.js";
+import { refreshWithCache, clearCache } from "../../utils/page-cache.js";
+
+const PROGRAMS_CACHE_KEY = "programs.cache.v1";
 
 /**
  * Render a single program row as HTML.
@@ -95,11 +98,28 @@ export function renderList() {
   list.innerHTML = items.map(renderProgramRow).join("");
 }
 
-export async function loadPrograms() {
-  // Fetch all programs from the backend and refresh the view.
-  state.all = await invoke("list_programs");
-  buildFuseIndex();
-  applyFilter();
+export async function loadPrograms(force = false) {
+  // Load with caching: show cached data immediately, refresh in background
+  await refreshWithCache({
+    cacheKey: PROGRAMS_CACHE_KEY,
+    version: "v1",
+    fetchFn: async () => {
+      return await invoke("list_programs");
+    },
+    onCached: (cached) => {
+      // Show cached data immediately
+      state.all = cached;
+      buildFuseIndex();
+      applyFilter();
+    },
+    onFresh: (fresh) => {
+      // Update with fresh data if changed
+      state.all = fresh;
+      buildFuseIndex();
+      applyFilter();
+    },
+    force,
+  });
 }
 
 export function applyFilter() {
@@ -279,7 +299,9 @@ export function wireListActions() {
       const ok = await confirmRemove(prog.name);
       if (!ok) return;
       await invoke("remove_program", { id: prog.id });
-      await loadPrograms();
+      // Invalidate cache and refresh
+      clearCache(PROGRAMS_CACHE_KEY);
+      await loadPrograms(true);
     }
   });
 

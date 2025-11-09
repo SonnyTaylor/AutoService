@@ -13,6 +13,9 @@ import { invoke, state, LIST_SELECTOR, $, escapeHtml } from "./state.js";
 import { openViewer } from "./viewer.js";
 import { formatReportDate } from "../../utils/reports.js";
 import Fuse from "fuse.js";
+import { refreshWithCache, clearCache } from "../../utils/page-cache.js";
+
+const REPORTS_CACHE_KEY = "reports.cache.v1";
 
 let fuse = null;
 
@@ -112,56 +115,77 @@ export function renderList() {
 /**
  * Load all reports from the backend and refresh the view
  */
-export async function loadReports() {
-  try {
-    // Load local reports
-    const local = await invoke("list_reports");
-    // Try network when enabled
-    let merged = local.map((r) => ({ ...r, source: "local" }));
-    try {
-      const settings = await invoke("load_app_settings");
-      const ns = settings?.network_sharing;
-      const enabled =
-        ns?.enabled !== undefined ? !!ns?.enabled : !!ns?.unc_path;
-      const unc = ns?.unc_path || "";
-      if (enabled && unc) {
-        const network = await invoke("list_network_reports", {
-          uncPath: unc,
-          unc_path: unc,
-        });
-        // Deduplicate by folder_name; prefer the one with newer metadata.timestamp; mark 'both' if same exists
-        const byName = new Map();
-        merged.forEach((r) => byName.set(r.folder_name, r));
-        for (const n of network) {
-          const existing = byName.get(n.folder_name);
-          if (!existing) {
-            byName.set(n.folder_name, { ...n, source: "network" });
-          } else {
-            // Compare timestamps
-            const tA = existing.metadata?.timestamp || 0;
-            const tB = n.metadata?.timestamp || 0;
-            if (tB > tA) {
-              byName.set(n.folder_name, { ...n, source: "both" });
-            } else {
-              byName.set(existing.folder_name, { ...existing, source: "both" });
+export async function loadReports(force = false) {
+  // Load with caching: show cached data immediately, refresh in background
+  await refreshWithCache({
+    cacheKey: REPORTS_CACHE_KEY,
+    version: "v1",
+    fetchFn: async () => {
+      try {
+        // Load local reports
+        const local = await invoke("list_reports");
+        // Try network when enabled
+        let merged = local.map((r) => ({ ...r, source: "local" }));
+        try {
+          const settings = await invoke("load_app_settings");
+          const ns = settings?.network_sharing;
+          const enabled =
+            ns?.enabled !== undefined ? !!ns?.enabled : !!ns?.unc_path;
+          const unc = ns?.unc_path || "";
+          if (enabled && unc) {
+            const network = await invoke("list_network_reports", {
+              uncPath: unc,
+              unc_path: unc,
+            });
+            // Deduplicate by folder_name; prefer the one with newer metadata.timestamp; mark 'both' if same exists
+            const byName = new Map();
+            merged.forEach((r) => byName.set(r.folder_name, r));
+            for (const n of network) {
+              const existing = byName.get(n.folder_name);
+              if (!existing) {
+                byName.set(n.folder_name, { ...n, source: "network" });
+              } else {
+                // Compare timestamps
+                const tA = existing.metadata?.timestamp || 0;
+                const tB = n.metadata?.timestamp || 0;
+                if (tB > tA) {
+                  byName.set(n.folder_name, { ...n, source: "both" });
+                } else {
+                  byName.set(existing.folder_name, { ...existing, source: "both" });
+                }
+              }
             }
+            merged = Array.from(byName.values());
           }
+        } catch (e) {
+          console.warn("Network reports unavailable:", e);
         }
-        merged = Array.from(byName.values());
+        return merged;
+      } catch (error) {
+        console.error("Failed to load reports:", error);
+        throw error;
       }
-    } catch (e) {
-      console.warn("Network reports unavailable:", e);
-    }
-    state.all = merged;
-    buildFuseIndex();
-    applyFilter();
-  } catch (error) {
+    },
+    onCached: (cached) => {
+      // Show cached data immediately
+      state.all = cached;
+      buildFuseIndex();
+      applyFilter();
+    },
+    onFresh: (fresh) => {
+      // Update with fresh data if changed
+      state.all = fresh;
+      buildFuseIndex();
+      applyFilter();
+    },
+    force,
+  }).catch((error) => {
     console.error("Failed to load reports:", error);
     const list = $(LIST_SELECTOR);
     if (list) {
       list.innerHTML = `<div class="muted error">Failed to load reports: ${error}</div>`;
     }
-  }
+  });
 }
 
 /**
@@ -406,7 +430,9 @@ export function wireListActions() {
           btn.disabled = true;
           btn.textContent = "Deleting...";
           await invoke("delete_report", { folderName });
-          await loadReports();
+          // Invalidate cache and refresh
+          clearCache(REPORTS_CACHE_KEY);
+          await loadReports(true);
         } catch (error) {
           alert(`Failed to delete report: ${error}`);
           btn.disabled = false;

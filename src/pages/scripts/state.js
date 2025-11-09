@@ -4,6 +4,9 @@
 
 const { invoke } = window.__TAURI__.core;
 import Fuse from "fuse.js";
+import { refreshWithCache, clearCache } from "../../utils/page-cache.js";
+
+const SCRIPTS_CACHE_KEY = "scripts.cache.v1";
 
 /**
  * Application state for scripts management.
@@ -25,11 +28,37 @@ export const state = {
 
 /**
  * Loads all scripts from the backend and applies the current filter.
+ * @param {boolean} [force=false] - When true, bypass cache and refresh
  */
-export async function loadScripts() {
-  state.all = await invoke("list_scripts");
-  buildFuseIndex();
-  applyFilter();
+export async function loadScripts(force = false) {
+  // Load with caching: show cached data immediately, refresh in background
+  await refreshWithCache({
+    cacheKey: SCRIPTS_CACHE_KEY,
+    version: "v1",
+    fetchFn: async () => {
+      return await invoke("list_scripts");
+    },
+    onCached: (cached) => {
+      // Show cached data immediately
+      state.all = cached;
+      buildFuseIndex();
+      applyFilter();
+    },
+    onFresh: (fresh) => {
+      // Update with fresh data if changed
+      state.all = fresh;
+      buildFuseIndex();
+      applyFilter();
+    },
+    force,
+  });
+}
+
+/**
+ * Clear the scripts cache (used when scripts are saved/deleted)
+ */
+export function clearScriptsCache() {
+  clearCache(SCRIPTS_CACHE_KEY);
 }
 
 /**

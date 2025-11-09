@@ -10,6 +10,9 @@
 // -----------------------------------------------------------------------------
 /* global crypto */
 import { invoke, state, DEFAULT_LOGO, $, inferNameFromPath } from "./state.js";
+import { clearCache } from "../../utils/page-cache.js";
+
+const PROGRAMS_CACHE_KEY = "programs.cache.v1";
 
 /**
  * Open the program editor with either a copy of the existing program
@@ -184,8 +187,9 @@ export function wireEditor() {
     save.disabled = true;
     try {
       await invoke("save_program", { program: state.editing });
+      // Invalidate cache and inform listeners that list should be refreshed
+      clearCache(PROGRAMS_CACHE_KEY);
       dlg.close();
-      // Inform listeners that list should be refreshed
       window.dispatchEvent(new CustomEvent("programs-updated"));
     } catch (e) {
       console.error(e);

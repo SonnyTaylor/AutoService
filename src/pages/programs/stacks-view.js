@@ -17,6 +17,9 @@ import {
 } from "./state.js";
 import { openStackEditor } from "./stack-editor.js";
 import { confirmRemove } from "./view.js";
+import { refreshWithCache, clearCache } from "../../utils/page-cache.js";
+
+const STACKS_CACHE_KEY = "programs.stacks.cache.v1";
 
 /** CSS selector for the stacks container element on the Programs page. */
 export const STACKS_SELECTOR = ".stacks-list";
@@ -85,11 +88,28 @@ export function renderStacks() {
     .join("");
 }
 
-export async function loadStacks() {
-  // Fetch all stacks from the backend and refresh the view.
-  state.stacks = await invoke("list_stacks");
-  state.stacksFiltered = [...state.stacks];
-  renderStacks();
+export async function loadStacks(force = false) {
+  // Load with caching: show cached data immediately, refresh in background
+  await refreshWithCache({
+    cacheKey: STACKS_CACHE_KEY,
+    version: "v1",
+    fetchFn: async () => {
+      return await invoke("list_stacks");
+    },
+    onCached: (cached) => {
+      // Show cached data immediately
+      state.stacks = cached;
+      state.stacksFiltered = [...state.stacks];
+      renderStacks();
+    },
+    onFresh: (fresh) => {
+      // Update with fresh data if changed
+      state.stacks = fresh;
+      state.stacksFiltered = [...state.stacks];
+      renderStacks();
+    },
+    force,
+  });
 }
 
 export function wireStackActions() {
@@ -178,7 +198,9 @@ export function wireStackActions() {
       if (!ok) return;
       try {
         await invoke("remove_stack", { id: stack.id });
-        await loadStacks();
+        // Invalidate cache and refresh
+        clearCache(STACKS_CACHE_KEY);
+        await loadStacks(true);
       } catch (error) {
         console.error("Failed to remove stack:", error);
         alert(typeof error === "string" ? error : error?.message || "Failed to remove stack");

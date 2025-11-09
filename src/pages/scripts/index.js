@@ -58,7 +58,8 @@ function wireScriptActions() {
         try {
           await runScript(script);
           script.run_count = (script.run_count || 0) + 1;
-          await loadScripts();
+          // Refresh to update run count
+          await loadScripts(true);
           renderList();
           wireScriptActions();
         } catch (error) {
@@ -73,7 +74,8 @@ function wireScriptActions() {
       } else if (action === "remove") {
         if (await confirmRemove(script.name)) {
           await removeScript(scriptId);
-          await loadScripts();
+          // Cache already invalidated by removeScript, just refresh
+          await loadScripts(true);
           renderList();
           wireScriptActions();
         }
@@ -94,7 +96,8 @@ export async function initPage() {
   window.addEventListener(
     "scripts-updated",
     async () => {
-      await loadScripts();
+      // Cache already invalidated by saveScript, just refresh
+      await loadScripts(true);
       renderList();
       wireScriptActions();
     },

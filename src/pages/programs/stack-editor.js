@@ -12,6 +12,9 @@
 import { invoke, state, DEFAULT_LOGO, $, escapeHtml } from "./state.js";
 import Fuse from "fuse.js";
 import { initAIStack } from "./ai-stack.js";
+import { clearCache } from "../../utils/page-cache.js";
+
+const STACKS_CACHE_KEY = "programs.stacks.cache.v1";
 
 /**
  * Open the stack editor with either a copy of the existing stack
@@ -205,8 +208,9 @@ export function wireStackEditor() {
     save.disabled = true;
     try {
       await invoke("save_stack", { stack: state.editingStack });
+      // Invalidate cache and inform listeners that list should be refreshed
+      clearCache(STACKS_CACHE_KEY);
       dlg.close();
-      // Inform listeners that list should be refreshed
       window.dispatchEvent(new CustomEvent("stacks-updated"));
     } catch (e) {
       console.error(e);

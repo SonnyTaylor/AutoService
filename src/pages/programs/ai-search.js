@@ -8,6 +8,9 @@
 import { invoke, state, DEFAULT_LOGO, $, escapeHtml } from "./state.js";
 import { openEditor } from "./editor.js";
 import { aiClient } from "../../utils/ai-client.js";
+import { clearCache } from "../../utils/page-cache.js";
+
+const PROGRAMS_CACHE_KEY = "programs.cache.v1";
 
 const BTN_ID = "program-ai-search-btn";
 const MODAL_ID = "ai-search-modal";
@@ -181,6 +184,8 @@ export function initAISearch() {
         }
         if (!ok) return;
         await invoke("remove_program", { id: prog.id });
+        // Invalidate cache
+        clearCache(PROGRAMS_CACHE_KEY);
         // update local state and remove row
         const idx = state.all.findIndex((p) => p.id === prog.id);
         if (idx >= 0) state.all.splice(idx, 1);

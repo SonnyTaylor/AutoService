@@ -13,6 +13,9 @@ import {
 } from "./print.js";
 import { isAutoSaveEnabled } from "../../../utils/reports.js";
 import { getHandlerViewCSS } from "../handlers/index.js";
+import { clearCache } from "../../../utils/page-cache.js";
+
+const REPORTS_CACHE_KEY = "reports.cache.v1";
 
 /**
  * Render the summary header for a report
@@ -724,6 +727,8 @@ function setupSaveHandler(report, saveBtn) {
       });
 
       if (response.success) {
+        // Invalidate reports cache since a new report was saved
+        clearCache(REPORTS_CACHE_KEY);
         // Attempt network save depending on settings
         try {
           const settings = await core?.invoke("load_app_settings");

@@ -3,9 +3,12 @@
  */
 
 import { escapeHtml } from "./utils.js";
+import { clearCache } from "../../utils/page-cache.js";
 
 const { invoke } = window.__TAURI__.core;
 const { Command } = window.__TAURI__?.shell || {};
+
+const PROGRAMS_CACHE_KEY = "programs.cache.v1";
 
 /**
  * Configuration for required external tools.
@@ -339,6 +342,8 @@ export async function renderRequiredPrograms() {
 
       try {
         await invoke("save_program", { program: programEntry });
+        // Invalidate programs cache
+        clearCache(PROGRAMS_CACHE_KEY);
         await renderRequiredPrograms();
       } catch (error) {
         console.error(error);
