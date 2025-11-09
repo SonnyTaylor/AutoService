@@ -707,6 +707,59 @@
   grid-template-columns: 320px 1fr;
   gap: 20px;
 }
+[data-page="service-report"] .runner-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+[data-page="service-report"] .runner-controls .control-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel-alt);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+[data-page="service-report"] .runner-controls .control-btn:hover {
+  background: var(--panel-2);
+  border-color: var(--border-hover);
+}
+[data-page="service-report"] .runner-controls .control-btn.stop {
+  border-color: #5b2b2b;
+  color: #ff9999;
+}
+[data-page="service-report"] .runner-controls .control-btn.stop:hover {
+  background: #3a1a1a;
+  border-color: #7a3b3b;
+}
+[data-page="service-report"] .runner-controls .control-btn.pause {
+  border-color: #4a3b1a;
+  color: #ffcc88;
+}
+[data-page="service-report"] .runner-controls .control-btn.pause:hover {
+  background: #2a1f0f;
+  border-color: #6a5b2a;
+}
+[data-page="service-report"] .runner-controls .control-btn.skip {
+  border-color: #2b3b5b;
+  color: #88ccff;
+}
+[data-page="service-report"] .runner-controls .control-btn.skip:hover {
+  background: #1a2332;
+  border-color: #3b4b6b;
+}
+[data-page="service-report"] .runner-controls .control-btn i {
+  font-size: 1rem;
+}
 [data-page="service-report"] .runner-left,
 [data-page="service-report"] .runner-right {
   background: var(--panel-2);

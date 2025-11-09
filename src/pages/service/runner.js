@@ -217,6 +217,31 @@ async function processStatusLine(line) {
     return;
   }
 
+  // Handle run control signals
+  const stoppedMatch = line.match(/^RUN_STOPPED:(.+)$/);
+  if (stoppedMatch) {
+    const reason = stoppedMatch[1] || "User requested";
+    appendToLog(`[INFO] Run stopped: ${reason}`);
+    // Update global state
+    if (updateGlobalProgress) {
+      updateGlobalProgress({ overallStatus: "stopped" });
+    }
+    await updateSummaryFromGlobal();
+    return;
+  }
+
+  const pausedMatch = line.match(/^RUN_PAUSED:(.+)$/);
+  if (pausedMatch) {
+    const reason = pausedMatch[1] || "User requested";
+    appendToLog(`[INFO] Run paused: ${reason}`);
+    // Update global state
+    if (updateGlobalProgress) {
+      updateGlobalProgress({ overallStatus: "paused" });
+    }
+    await updateSummaryFromGlobal();
+    return;
+  }
+
   // Handle progress JSON updates
   if (
     line.startsWith("PROGRESS_JSON:") ||
@@ -327,6 +352,10 @@ export async function initPage() {
   const summarySubEl = document.getElementById("svc-summary-sub");
   const summaryProgWrap = document.getElementById("svc-summary-progress");
   const summaryProgBar = document.getElementById("svc-summary-progress-bar");
+  const runnerControls = document.getElementById("svc-runner-controls");
+  const stopBtn = document.getElementById("svc-stop-btn");
+  const pauseBtn = document.getElementById("svc-pause-btn");
+  const skipBtn = document.getElementById("svc-skip-btn");
   // Keep raw JSON for copy-to-clipboard while showing highlighted HTML
   let lastFinalJsonString = "{}";
   // Helper: persist final report to both session and local storage
@@ -656,8 +685,62 @@ export async function initPage() {
     runBtn.disabled = true;
     runBtn.setAttribute("disabled", "");
     runBtn.setAttribute("aria-disabled", "true");
+    // Show control buttons
+    if (runnerControls) runnerControls.hidden = false;
     // Keep back button enabled so users can navigate away during run
+  } else {
+    // Hide control buttons when not running
+    if (runnerControls) runnerControls.hidden = true;
   }
+  
+  // Wire up control button handlers
+  stopBtn?.addEventListener("click", async () => {
+    if (!_isRunning) return;
+    try {
+      const { core } = window.__TAURI__ || {};
+      const { invoke: invokeCmd } = core || {};
+      if (!invokeCmd) {
+        appendLog("[ERROR] Tauri invoke not available");
+        return;
+      }
+      await invokeCmd("stop_service_run");
+      appendLog("[INFO] Stop signal sent. Current task will finish, then run will stop.");
+    } catch (e) {
+      appendLog(`[ERROR] Failed to send stop signal: ${e}`);
+    }
+  });
+  
+  pauseBtn?.addEventListener("click", async () => {
+    if (!_isRunning) return;
+    try {
+      const { core } = window.__TAURI__ || {};
+      const { invoke: invokeCmd } = core || {};
+      if (!invokeCmd) {
+        appendLog("[ERROR] Tauri invoke not available");
+        return;
+      }
+      await invokeCmd("pause_service_run");
+      appendLog("[INFO] Pause signal sent. Current task will finish, then run will pause.");
+    } catch (e) {
+      appendLog(`[ERROR] Failed to send pause signal: ${e}`);
+    }
+  });
+  
+  skipBtn?.addEventListener("click", async () => {
+    if (!_isRunning) return;
+    try {
+      const { core } = window.__TAURI__ || {};
+      const { invoke: invokeCmd } = core || {};
+      if (!invokeCmd) {
+        appendLog("[ERROR] Tauri invoke not available");
+        return;
+      }
+      await invokeCmd("skip_current_task");
+      appendLog("[INFO] Skip signal sent. Current task will be skipped immediately.");
+    } catch (e) {
+      appendLog(`[ERROR] Failed to send skip signal: ${e}`);
+    }
+  });
 
   runBtn?.addEventListener("click", async () => {
     if (!tasks.length) return;
@@ -690,6 +773,8 @@ export async function initPage() {
     runBtn.disabled = true;
     runBtn.setAttribute("disabled", "");
     runBtn.setAttribute("aria-disabled", "true");
+    // Show control buttons
+    if (runnerControls) runnerControls.hidden = false;
     // Keep back button enabled so users can navigate away during run
     // New service: clear any previously cached results so navigating back won't show stale data
     clearFinalReportCache();
@@ -848,14 +933,15 @@ export async function initPage() {
           const result = await runRunner(jsonArg); // fallback
           handleFinalResult(mergeClientWithRunner(_clientResults, result));
           // Fallback is synchronous to completion; re-enable controls now
-          _isRunning = false;
-          console.log("[Runner] Fallback completed, re-enabling controls");
-          showOverlay(false);
-          backBtn.disabled = false;
-          runBtn.disabled = false;
-          runBtn.removeAttribute("aria-disabled");
-          runBtn.removeAttribute("disabled");
-          backBtn.removeAttribute("disabled");
+        _isRunning = false;
+        console.log("[Runner] Fallback completed, re-enabling controls");
+        showOverlay(false);
+        if (runnerControls) runnerControls.hidden = true;
+        backBtn.disabled = false;
+        runBtn.disabled = false;
+        runBtn.removeAttribute("aria-disabled");
+        runBtn.removeAttribute("disabled");
+        backBtn.removeAttribute("disabled");
           console.log("[Runner] Controls re-enabled after fallback", {
             backBtnDisabled: backBtn.disabled,
             runBtnDisabled: runBtn.disabled,
@@ -868,6 +954,7 @@ export async function initPage() {
         _isRunning = false;
         console.log("[Runner] Shell fallback completed, re-enabling controls");
         showOverlay(false);
+        if (runnerControls) runnerControls.hidden = true;
         backBtn.disabled = false;
         runBtn.disabled = false;
         runBtn.removeAttribute("aria-disabled");
@@ -885,6 +972,7 @@ export async function initPage() {
       _isRunning = false;
       console.log("[Runner] Error handler re-enabling controls");
       showOverlay(false);
+      if (runnerControls) runnerControls.hidden = true;
       backBtn.disabled = false;
       runBtn.disabled = false;
       runBtn.removeAttribute("aria-disabled");
@@ -1153,6 +1241,10 @@ export async function initPage() {
               hasOverlay: !!currentOverlay,
             }
           );
+          const currentRunnerControls = document.getElementById("svc-runner-controls");
+          if (currentRunnerControls) {
+            currentRunnerControls.hidden = true;
+          }
           if (currentOverlay) {
             currentOverlay.hidden = true;
             console.log("[service_runner_done] Overlay hidden");
