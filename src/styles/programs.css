@@ -174,6 +174,42 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+.program-actions-menu {
+  position: relative;
+}
+.program-menu-trigger {
+  padding: 8px;
+  min-width: auto;
+}
+.program-menu-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+  min-width: 160px;
+}
+.program-menu-dropdown.open {
+  display: flex;
+}
+.program-menu-dropdown button {
+  width: 100%;
+  justify-content: flex-start;
+  padding: 8px 12px;
+  text-align: left;
+  white-space: nowrap;
+}
+.program-menu-dropdown button i {
+  margin-right: 8px;
+}
 
 /* Better hover to distinguish rows */
 .program-row:hover {
@@ -436,40 +472,6 @@
   font-size: 0.9rem;
   line-height: 1.4;
 }
-.stack-programs-preview {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.stack-program-preview {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-  border-radius: 6px;
-  background: #12151d;
-  border: 1px solid var(--border);
-}
-.stack-program-preview-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  background: #12151d;
-  border: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #a7b3cc;
-  font-size: 18px;
-}
-.stack-more {
-  color: var(--muted);
-  font-size: 0.85rem;
-  padding: 4px 8px;
-  background: #24314a;
-  border: 1px solid #2b416b;
-  border-radius: 6px;
-}
 .stack-programs-list {
   display: flex;
   flex-direction: column;
@@ -561,7 +563,9 @@
   background: var(--panel-2);
 }
 .program-selector-item {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 56px 1fr;
+  grid-template-areas: "checkbox logo info";
   align-items: center;
   gap: 12px;
   padding: 10px;
@@ -573,19 +577,21 @@
   background: var(--panel-hover);
 }
 .program-selector-item input[type="checkbox"] {
+  grid-area: checkbox;
   width: 18px;
   height: 18px;
   cursor: pointer;
   flex-shrink: 0;
 }
 .program-selector-preview {
-  width: 40px;
-  height: 40px;
+  grid-area: logo;
+  width: 56px;
+  height: 56px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  border-radius: 8px;
   background: #12151d;
   border: 1px solid var(--border);
 }
@@ -593,13 +599,14 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
-  border-radius: 6px;
+  border-radius: 8px;
 }
 .program-selector-preview i {
-  font-size: 24px;
+  font-size: 28px;
   color: #a7b3cc;
 }
 .program-selector-info {
+  grid-area: info;
   flex: 1;
   min-width: 0;
   display: flex;

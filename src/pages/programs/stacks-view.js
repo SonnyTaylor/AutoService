@@ -33,19 +33,6 @@ function renderStackCard(stack, programs) {
     .map((id) => programs.find((p) => p.id === id))
     .filter((p) => p !== undefined);
 
-  // Get preview programs (first 4)
-  const previewPrograms = stackPrograms.slice(0, 4);
-  const remainingCount = Math.max(0, stackPrograms.length - 4);
-
-  const previewHtml = previewPrograms
-    .map((p) => {
-      if (p.logo_data_url) {
-        return `<img class="stack-program-preview" src="${p.logo_data_url}" alt="${escapeHtml(p.name)}" title="${escapeHtml(p.name)}"/>`;
-      }
-      return `<i class="stack-program-preview-icon ${DEFAULT_LOGO}" aria-hidden="true" title="${escapeHtml(p.name)}"></i>`;
-    })
-    .join("");
-
   const programButtons = stackPrograms
     .map(
       (p) => `
@@ -70,10 +57,6 @@ function renderStackCard(stack, programs) {
           <span class="stack-count">${stackPrograms.length} program${stackPrograms.length !== 1 ? "s" : ""}</span>
         </div>
         ${stack.description ? `<div class="stack-desc" title="${escapeHtml(stack.description)}">${escapeHtml(stack.description)}</div>` : ""}
-        <div class="stack-programs-preview">
-          ${previewHtml}
-          ${remainingCount > 0 ? `<span class="stack-more">+${remainingCount}</span>` : ""}
-        </div>
         ${stackPrograms.length > 0 ? `<div class="stack-programs-list">${programButtons}</div>` : ""}
       </div>
       <div class="stack-actions">

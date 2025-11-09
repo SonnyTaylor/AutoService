@@ -16,6 +16,7 @@ import {
   LIST_SELECTOR,
   DEFAULT_LOGO,
   $,
+  $all,
   escapeHtml,
 } from "./state.js";
 import { openEditor } from "./editor.js";
@@ -65,11 +66,18 @@ function renderProgramRow(p) {
         <button data-action="open" class="ghost" title="Open folder in file explorer">
           <i class="ph ph-folder-open"></i> Open
         </button>
-        <button data-action="add-to-stack" class="ghost" title="Add to stack">
-          <i class="ph ph-stack"></i> Add to Stack
-        </button>
-        <button data-action="edit" class="secondary">Edit</button>
-        <button data-action="remove" class="ghost">Remove</button>
+        <div class="program-actions-menu">
+          <button class="ghost program-menu-trigger" title="More actions">
+            <i class="ph ph-dots-three"></i>
+          </button>
+          <div class="program-menu-dropdown">
+            <button data-action="add-to-stack" class="ghost" title="Add to stack">
+              <i class="ph ph-stack"></i> Add to Stack
+            </button>
+            <button data-action="edit" class="ghost">Edit</button>
+            <button data-action="remove" class="ghost">Remove</button>
+          </div>
+        </div>
       </div>
     </div>`;
 }
@@ -188,11 +196,40 @@ export function wireListActions() {
   const list = /** @type {HTMLElement|null} */ ($(LIST_SELECTOR));
   if (!list || list.dataset.bound === "true") return;
 
+  // Close dropdowns when clicking outside
+  document.addEventListener("click", (e) => {
+    if (!(e.target instanceof HTMLElement)) return;
+    const menu = e.target.closest(".program-actions-menu");
+    if (!menu) {
+      // Close all dropdowns
+      $all(".program-menu-dropdown").forEach((dropdown) => {
+        dropdown.classList.remove("open");
+      });
+    }
+  });
+
   list.addEventListener("click", async (e) => {
+    if (!(e.target instanceof HTMLElement)) return;
+
+    // Handle menu trigger clicks
+    const menuTrigger = e.target.closest(".program-menu-trigger");
+    if (menuTrigger) {
+      e.stopPropagation();
+      const menu = menuTrigger.closest(".program-actions-menu");
+      const dropdown = menu?.querySelector(".program-menu-dropdown");
+      if (dropdown) {
+        // Close other dropdowns
+        $all(".program-menu-dropdown").forEach((d) => {
+          if (d !== dropdown) d.classList.remove("open");
+        });
+        // Toggle this dropdown
+        dropdown.classList.toggle("open");
+      }
+      return;
+    }
+
     const btn = /** @type {HTMLElement|null} */ (
-      e.target instanceof HTMLElement
-        ? e.target.closest("button[data-action]")
-        : null
+      e.target.closest("button[data-action]")
     );
     if (!btn) return;
     const row = /** @type {HTMLElement|null} */ (btn.closest(".program-row"));
@@ -200,6 +237,12 @@ export function wireListActions() {
     if (!id) return;
     const prog = state.all.find((p) => p.id === id);
     if (!prog) return;
+
+    // Close dropdown after action
+    const dropdown = btn.closest(".program-menu-dropdown");
+    if (dropdown) {
+      dropdown.classList.remove("open");
+    }
 
     const action = btn.getAttribute("data-action");
     if (action === "launch") {
