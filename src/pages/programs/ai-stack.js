@@ -169,19 +169,19 @@ async function handleAISuggestClick() {
   const dialog = document.createElement("dialog");
   dialog.className = "ai-stack-input-dialog";
   dialog.innerHTML = `
-    <form method="dialog">
-      <h3><i class="ph ph-robot" aria-hidden="true"></i> AI Stack Generation</h3>
-      <p class="muted">Describe what you need, and AI will suggest a stack name, description, and relevant programs.</p>
+    <form method="dialog" class="ai-stack-form">
+      <h3 class="ai-stack-title"><i class="ph ph-robot" aria-hidden="true"></i> AI Stack Generation</h3>
+      <p class="ai-stack-description muted">Describe what you need, and AI will suggest a stack name, description, and relevant programs.</p>
       <div class="ai-stack-input-wrap">
         <textarea 
           id="ai-stack-query" 
           class="ai-stack-input" 
-          rows="4" 
+          rows="5" 
           placeholder="e.g., disk cleanup and optimization tools, system diagnostics suite, network troubleshooting utilities"
         ></textarea>
       </div>
       <div id="ai-stack-input-error" class="ai-stack-error" role="alert" style="display:none"></div>
-      <div class="ai-stack-input-actions">
+      <div class="ai-stack-actions">
         <button type="button" id="ai-stack-generate" class="primary">Generate</button>
         <button type="button" id="ai-stack-cancel" class="ghost">Cancel</button>
       </div>
@@ -292,9 +292,9 @@ async function showReplaceOrAddDialog() {
     const dialog = document.createElement("dialog");
     dialog.className = "ai-stack-mode-dialog";
     dialog.innerHTML = `
-      <form method="dialog">
-        <h3>Apply AI Suggestions</h3>
-        <p class="muted">This stack already has programs selected. How would you like to apply the AI suggestions?</p>
+      <form method="dialog" class="ai-stack-form">
+        <h3 class="ai-stack-title">Apply AI Suggestions</h3>
+        <p class="ai-stack-description muted">This stack already has programs selected. How would you like to apply the AI suggestions?</p>
         <div class="ai-stack-mode-actions">
           <button type="button" id="ai-stack-replace" class="primary">Replace Current Selection</button>
           <button type="button" id="ai-stack-add" class="secondary">Add to Current Selection</button>

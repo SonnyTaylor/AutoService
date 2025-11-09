@@ -551,6 +551,12 @@
   font-size: 1.25rem;
   font-weight: 600;
 }
+.program-selector-header {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  margin-bottom: 8px;
+}
 .program-selector-search {
   width: 100%;
   padding: 10px 12px;
@@ -558,7 +564,6 @@
   border: 1px solid var(--border);
   background: var(--panel-2);
   color: var(--text);
-  margin-bottom: 8px;
   box-sizing: border-box;
 }
 .program-selector-search:focus {
@@ -822,4 +827,104 @@
   padding: 8px 12px;
   font-size: 0.9rem;
   width: 100%;
+}
+
+/* AI Stack Generation Modal Styles */
+.ai-stack-input-dialog::backdrop,
+.ai-stack-mode-dialog::backdrop {
+  backdrop-filter: blur(2px);
+  background: rgba(0, 0, 0, 0.45);
+}
+.ai-stack-input-dialog,
+.ai-stack-mode-dialog {
+  width: min(820px, 92vw);
+  max-height: 88vh;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--text);
+  padding: 0;
+  overflow: hidden;
+}
+.ai-stack-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  overflow: hidden;
+}
+.ai-stack-title {
+  margin: 0 0 4px;
+  font-size: 1.25rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ai-stack-description {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+.ai-stack-input-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ai-stack-input {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 0.95rem;
+  font-family: inherit;
+  line-height: 1.5;
+  box-sizing: border-box;
+  min-height: 120px;
+}
+.ai-stack-input:focus {
+  outline: none;
+  border-color: #4a90e2;
+  background: var(--panel);
+}
+.ai-stack-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+.ai-stack-error {
+  border: 1px solid #a33a45;
+  background: #3b1d24;
+  color: #ffd7db;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+.ai-stack-mode-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+.ai-stack-mode-actions button {
+  width: 100%;
+  padding: 12px;
+  font-size: 0.95rem;
+}
+
+/* AI Suggest Button in Stack Editor */
+.ai-suggest-btn {
+  width: 100%;
+  margin-top: 8px;
+  margin-bottom: 8px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
