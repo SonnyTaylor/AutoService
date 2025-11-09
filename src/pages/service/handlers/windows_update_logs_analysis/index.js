@@ -90,6 +90,11 @@ export const definition = {
         // Get base URL - check provider-specific URLs first, then fallback
         const providerBaseUrls = ai.provider_base_urls || {};
         baseUrl = providerBaseUrls[provider] || ai.base_url || "";
+        
+        // For Ollama, ensure we have a base URL (use default if empty)
+        if (provider === "ollama" && !baseUrl) {
+          baseUrl = "http://localhost:11434";
+        }
       } catch (e) {
         console.error("Failed to load AI settings:", e);
       }
@@ -105,7 +110,7 @@ export const definition = {
       err_exe_path: errPath, // Pass Err.exe path to Python service
       api_key: apiKey || undefined, // Pass API key if AI analysis is enabled
       model: litellmModel,
-      base_url: baseUrl || undefined,
+      base_url: baseUrl && baseUrl.trim() ? baseUrl.trim() : undefined, // Pass base_url if provided (trimmed)
       max_errors: 50,
       ui_label: "Windows Update Error Analysis",
     };

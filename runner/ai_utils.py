@@ -224,7 +224,7 @@ class AIClient:
             provider = self.model.split("/")[0].lower()
             
             kwargs = {
-                "model": self.model,
+                "model": self.model,  # Keep full model name with provider prefix for LiteLLM
                 "messages": messages,
                 "temperature": temperature,
                 "timeout": self.timeout,
@@ -232,23 +232,22 @@ class AIClient:
 
             # Handle base_url for providers that need it (Ollama, Azure, custom endpoints)
             if self.base_url:
-                if provider == "ollama":
-                    # For Ollama, LiteLLM expects api_base parameter
-                    kwargs["api_base"] = self.base_url.rstrip("/")
-                elif provider == "azure":
-                    # Azure uses api_base for custom endpoints
-                    kwargs["api_base"] = self.base_url.rstrip("/")
-                else:
-                    # For other providers, use api_base for custom endpoints
-                    kwargs["api_base"] = self.base_url.rstrip("/")
+                # For Ollama, LiteLLM expects api_base parameter
+                kwargs["api_base"] = self.base_url.rstrip("/")
+            elif provider == "ollama":
+                # Ollama should always have a base_url (defaults to localhost:11434)
+                # If somehow it's None, set it now
+                kwargs["api_base"] = "http://localhost:11434"
 
             if max_tokens is not None:
                 kwargs["max_tokens"] = max_tokens
 
             # Enable JSON mode if requested (provider-specific handling)
             if json_mode:
-                # Different providers handle JSON mode differently
-                if provider in ["openai", "azure"]:
+                if provider == "ollama":
+                    # Ollama uses format="json" parameter, not response_format
+                    kwargs["format"] = "json"
+                elif provider in ["openai", "azure"]:
                     kwargs["response_format"] = {"type": "json_object"}
                 elif provider == "anthropic":
                     # Anthropic supports structured outputs, but we'll use system prompt for now
@@ -258,7 +257,7 @@ class AIClient:
                         system_msg["content"] += "\n\nIMPORTANT: You must respond with valid JSON only, no additional text."
                 # For other providers, rely on system messages to request JSON
 
-            logger.info(f"Calling LiteLLM with model: {self.model}, base_url: {self.base_url or 'default'}")
+            logger.info(f"Calling LiteLLM with model: {self.model}, api_base: {kwargs.get('api_base', 'default')}, provider: {provider}")
             sys.stderr.flush()
 
             response = litellm.completion(**kwargs)
