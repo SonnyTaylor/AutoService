@@ -97,24 +97,39 @@ fn get_data_dirs(state: tauri::State<AppState>) -> Result<serde_json::Value, Str
     }))
 }
 
-/// Writes a control signal to the control file to stop the service run.
-/// The current task will finish, then the run will stop.
+/// Kills the service runner process immediately.
+/// This terminates the process without waiting for the current task to finish.
 #[tauri::command]
 fn stop_service_run(state: tauri::State<AppState>) -> Result<(), String> {
-    let control_path = state.control_file_path.lock().unwrap();
-    if let Some(path) = control_path.as_ref() {
-        let control_data = serde_json::json!({
-            "action": "stop",
-            "timestamp": SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_secs()
-        });
-        std::fs::write(path, serde_json::to_string(&control_data).unwrap_or_default())
-            .map_err(|e| format!("Failed to write control file: {e}"))?;
+    // First, try to kill the process directly
+    let mut process_guard = state.runner_process.lock().unwrap();
+    if let Some(mut child) = process_guard.take() {
+        // Kill the process immediately
+        if let Err(e) = child.kill() {
+            // Process might have already exited, that's okay
+            eprintln!("Warning: Failed to kill runner process: {}", e);
+        }
+        // Wait for the process to actually terminate (with a timeout would be better, but this is simple)
+        let _ = child.wait();
         Ok(())
     } else {
-        Err("No active service run".to_string())
+        // No process handle, try the control file approach as fallback
+        drop(process_guard);
+        let control_path = state.control_file_path.lock().unwrap();
+        if let Some(path) = control_path.as_ref() {
+            let control_data = serde_json::json!({
+                "action": "stop",
+                "timestamp": SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs()
+            });
+            std::fs::write(path, serde_json::to_string(&control_data).unwrap_or_default())
+                .map_err(|e| format!("Failed to write control file: {e}"))?;
+            Ok(())
+        } else {
+            Err("No active service run".to_string())
+        }
     }
 }
 
@@ -240,19 +255,27 @@ fn start_service_run(
     let control_file = logs_dir.join(format!("run_control_{ts}.json"));
     let control_file_for_state = control_file.clone();
     
-    // Clear any existing control file and store new path in state
+    // Clear any existing control file and process handle, store new path in state
     {
         let mut control_path = state.control_file_path.lock().unwrap();
         if let Some(old_path) = control_path.as_ref() {
             let _ = std::fs::remove_file(old_path);
         }
         *control_path = Some(control_file_for_state.clone());
+        
+        // Clear any existing runner process
+        let mut process_guard = state.runner_process.lock().unwrap();
+        if let Some(mut old_child) = process_guard.take() {
+            let _ = old_child.kill();
+            let _ = old_child.wait();
+        }
     }
 
     let app_handle = app.clone();
     let runner_exe_clone = runner_exe.clone();
     let python_script_clone = python_script_path.clone();
     let control_file_env = control_file.clone();
+    let state_for_thread = state.inner().clone();
     std::thread::spawn(move || {
         // Choose command: exe or python fallback
         let spawn_result = if let Some(script) = python_script_clone.as_ref() {
@@ -326,9 +349,22 @@ fn start_service_run(
             let _ = buf_reader.read_to_string(&mut final_stdout);
         }
 
-        let _ = child.wait();
+        // Store the process handle in AppState so it can be killed on stop
+        // We store it after taking stderr/stdout so we can still use it locally
+        {
+            let mut process_guard = state_for_thread.runner_process.lock().unwrap();
+            *process_guard = Some(child);
+        }
+
+        // Wait for the process to complete
+        // We need to take it out of the Mutex to wait on it
+        let mut child_for_wait = {
+            let mut process_guard = state_for_thread.runner_process.lock().unwrap();
+            process_guard.take().unwrap()
+        };
+        let _ = child_for_wait.wait();
         
-        // Clear control file path when run completes
+        // Clear control file path and process handle when run completes
         {
             let app_state = app_handle.state::<AppState>();
             let mut control_path = app_state.control_file_path.lock().unwrap();
@@ -336,6 +372,10 @@ fn start_service_run(
                 let _ = std::fs::remove_file(path);
             }
             *control_path = None;
+            
+            // Clear process handle
+            let mut process_guard = app_state.runner_process.lock().unwrap();
+            *process_guard = None;
         }
 
         // Attempt to parse final JSON
@@ -380,6 +420,7 @@ pub fn run() {
         .manage(AppState {
             data_dir: Arc::new(data_root), // Manage application state with data directory
             control_file_path: Arc::new(Mutex::new(None)),
+            runner_process: Arc::new(Mutex::new(None)),
         })
         .plugin(tauri_plugin_opener::init()) // Opener plugin for opening files/URLs
         .plugin(tauri_plugin_dialog::init()) // Dialog plugin for file/folder dialogs
