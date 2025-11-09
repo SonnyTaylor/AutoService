@@ -58,7 +58,9 @@ function wireScriptActions() {
         try {
           await runScript(script);
           script.run_count = (script.run_count || 0) + 1;
-          await loadScripts(); // This will re-render the list
+          await loadScripts();
+          renderList();
+          wireScriptActions();
         } catch (error) {
           console.error("Error running script:", error);
           window.__TAURI__?.dialog?.message?.(String(error), {
@@ -71,7 +73,9 @@ function wireScriptActions() {
       } else if (action === "remove") {
         if (await confirmRemove(script.name)) {
           await removeScript(scriptId);
-          await loadScripts(); // This will re-render the list
+          await loadScripts();
+          renderList();
+          wireScriptActions();
         }
       }
     });
@@ -85,6 +89,18 @@ export async function initPage() {
   wireToolbar();
   wireEditor();
   initAIGenerate();
+  
+  // Refresh scripts list when editor saves or scripts are updated
+  window.addEventListener(
+    "scripts-updated",
+    async () => {
+      await loadScripts();
+      renderList();
+      wireScriptActions();
+    },
+    { once: false }
+  );
+  
   await loadScripts();
   renderList();
   wireScriptActions();

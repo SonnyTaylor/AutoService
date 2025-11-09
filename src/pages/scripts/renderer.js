@@ -26,11 +26,8 @@ export function renderList() {
     <div class="program-row" data-id="${script.id}">
       <div class="program-logo-wrap"></div>
       <div class="program-main">
-        <div class="program-title" title="${escapeHtml(script.name)}${
-        script.version ? ` — ${escapeHtml(script.version)}` : ""
-      }">
+        <div class="program-title" title="${escapeHtml(script.name)}">
           <span class="name">${escapeHtml(script.name)}</span>
-          <span class="ver">${escapeHtml(script.version || "")}</span>
           <span class="muted usage" title="Times run">(${
             script.run_count || 0
           })</span>

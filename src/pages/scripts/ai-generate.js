@@ -236,7 +236,7 @@ export function applyAISuggestions(suggestion) {
   const newScript = {
     id: crypto.randomUUID(),
     name: suggestion.name,
-    version: "",
+    version: "", // Version field removed from UI but still required by backend
     description: suggestion.description,
     runner: suggestion.runner,
     source: "inline",

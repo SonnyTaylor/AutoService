@@ -416,6 +416,7 @@ pub struct ScriptEntry {
     /// Display name of the script
     pub name: String,
     /// Version string of the script
+    #[serde(default)]
     pub version: String,
     /// Description of the script's functionality
     pub description: String,
