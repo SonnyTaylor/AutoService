@@ -454,6 +454,7 @@ def run_windows_update_logs_analysis(task: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Standardized result dict
     """
+    start_time = time.time()
     time_frame = task.get("time_frame", "week").lower()
     include_ai_analysis = task.get("include_ai_analysis", False)
     max_errors = task.get("max_errors", 50)
@@ -501,6 +502,7 @@ def run_windows_update_logs_analysis(task: Dict[str, Any]) -> Dict[str, Any]:
                 "error": "Failed to query event logs",
                 "stderr": query_result["stderr"],
             },
+            "duration_seconds": round(time.time() - start_time, 2),
         }
 
     errors = query_result["errors"]
@@ -632,5 +634,5 @@ def run_windows_update_logs_analysis(task: Dict[str, Any]) -> Dict[str, Any]:
             "exit_code": 0,
             "stderr_excerpt": query_result.get("stderr", "")[:500],
         },
-        "duration_seconds": time.time() % 1000,  # Placeholder
+        "duration_seconds": round(time.time() - start_time, 2),
     }

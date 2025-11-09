@@ -134,9 +134,10 @@ export function renderTech({ result, index }) {
   // Format time frame for display
   const timeFrameLabel =
     {
-      day: "Past 24 Hours",
+      today: "Past 24 Hours",
       week: "Past Week",
       month: "Past Month",
+      all: "All Time",
     }[timeFrame] || timeFrame;
 
   // Build KPI boxes
