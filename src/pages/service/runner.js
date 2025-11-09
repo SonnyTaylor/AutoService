@@ -101,13 +101,21 @@ async function processStatusLine(line) {
     const summaryEl = document.getElementById("svc-summary");
     if (!summaryEl) return; // Only when runner page is visible
     try {
-      const { getProgressMetrics } = await import("../../utils/task-state.js");
+      const { getProgressMetrics, getRunState } = await import("../../utils/task-state.js");
       const metrics = getProgressMetrics();
+      const runState = getRunState();
       const total = metrics.total || 0;
       const completed = metrics.completed || 0;
       const runningName = metrics.currentTask
         ? metrics.currentTask.label
         : null;
+      
+      // Check if run is completed - don't update if so (let showSummary handle it)
+      const overallStatus = runState?.overallStatus;
+      if (overallStatus === "completed" || overallStatus === "error" || overallStatus === "stopped") {
+        // Run is finished, don't overwrite the completion message
+        return;
+      }
 
       const summaryTitleEl = document.getElementById("svc-summary-title");
       const summarySubEl = document.getElementById("svc-summary-sub");
@@ -133,6 +141,11 @@ async function processStatusLine(line) {
         if (summaryTitleEl)
           summaryTitleEl.textContent = `Progress: ${completed}/${total} completed`;
         if (summarySubEl) summarySubEl.textContent = "Preparing next task…";
+      } else if (completed === total && total > 0) {
+        // All tasks completed but run not marked as finished yet
+        if (summaryTitleEl)
+          summaryTitleEl.textContent = `Progress: ${completed}/${total} completed`;
+        if (summarySubEl) summarySubEl.textContent = "Finalizing…";
       } else {
         if (summaryTitleEl) summaryTitleEl.textContent = "Starting…";
         if (summarySubEl)
@@ -368,6 +381,7 @@ async function processStatusLine(line) {
       if (isFinal) {
         const summaryEl = document.getElementById("svc-summary");
         const summaryTitleEl = document.getElementById("svc-summary-title");
+        const summarySubEl = document.getElementById("svc-summary-sub");
         const summaryIconEl = document.getElementById("svc-summary-icon");
 
         if (summaryEl) {
@@ -378,10 +392,19 @@ async function processStatusLine(line) {
               ? "All tasks completed"
               : "Completed with errors";
           }
+          if (summarySubEl) {
+            summarySubEl.textContent = ok
+              ? "Review the final report below."
+              : "Check the log and JSON report for details.";
+          }
           if (summaryIconEl) {
             summaryIconEl.textContent = ok ? "✔" : "!";
           }
           summaryEl.classList.toggle("ok", !!ok);
+          summaryEl.classList.toggle("fail", !ok);
+          // Hide progress bar when completed
+          const summaryProgWrap = document.getElementById("svc-summary-progress");
+          if (summaryProgWrap) summaryProgWrap.setAttribute("aria-hidden", "true");
         }
       } else {
         // Non-final progress JSON: update summary to reflect current progress
@@ -1334,9 +1357,10 @@ export async function initPage() {
           applyFinalStatusesFromReport(finalReport);
           const ok = finalReport?.overall_status === "success";
 
-          // Show summary
+          // Show summary with proper subtitle
           if (currentSummaryEl) {
             const summaryTitleEl = document.getElementById("svc-summary-title");
+            const summarySubEl = document.getElementById("svc-summary-sub");
             const summaryIconEl = document.getElementById("svc-summary-icon");
             currentSummaryEl.hidden = false;
             if (summaryTitleEl) {
@@ -1344,10 +1368,19 @@ export async function initPage() {
                 ? "All tasks completed"
                 : "Completed with errors";
             }
+            if (summarySubEl) {
+              summarySubEl.textContent = ok
+                ? "Review the final report below."
+                : "Check the log and JSON report for details.";
+            }
             if (summaryIconEl) {
               summaryIconEl.textContent = ok ? "✔" : "!";
             }
             currentSummaryEl.classList.toggle("ok", !!ok);
+            currentSummaryEl.classList.toggle("fail", !ok);
+            // Hide progress bar when completed
+            const summaryProgWrap = document.getElementById("svc-summary-progress");
+            if (summaryProgWrap) summaryProgWrap.setAttribute("aria-hidden", "true");
           }
 
           persistFinalReport(lastFinalJsonString);
