@@ -1533,14 +1533,65 @@ export async function initPage() {
     }
   }
 
-  function handleFinalResult(result) {
+  async function handleFinalResult(result) {
     try {
       const obj = typeof result === "string" ? JSON.parse(result) : result;
+      
+      // Check if AI summary is enabled in the run plan
+      let aiSummaryEnabled = false;
+      try {
+        const pendingRunRaw = sessionStorage.getItem("service.pendingRun");
+        if (pendingRunRaw) {
+          const pendingRun = JSON.parse(pendingRunRaw);
+          aiSummaryEnabled = pendingRun.ai_summary_enabled === true;
+        }
+      } catch (e) {
+        console.warn("Failed to check AI summary preference:", e);
+      }
+
+      // Generate AI summary if enabled
+      if (aiSummaryEnabled) {
+        try {
+          const { aiClient } = await import("../../utils/ai-client.js");
+          const isConfigured = await aiClient.isConfigured();
+          
+          if (isConfigured) {
+            // Generate summary asynchronously (don't block UI)
+            aiClient
+              .generateServiceSummary(obj)
+              .then((summary) => {
+                // Add summary to report object
+                obj.ai_summary = summary;
+                
+                // Update persisted report
+                const updatedJson = JSON.stringify(obj, null, 2);
+                persistFinalReport(updatedJson);
+                
+                // Update displayed JSON
+                const highlighted = hljs.highlight(updatedJson, {
+                  language: "json",
+                }).value;
+                finalJsonEl.innerHTML = `<code class="hljs language-json">${highlighted}</code>`;
+                
+                console.log("AI summary generated successfully");
+              })
+              .catch((error) => {
+                console.error("Failed to generate AI summary:", error);
+                // Don't block report display - continue without summary
+              });
+          } else {
+            console.warn("AI summary requested but AI is not configured");
+          }
+        } catch (error) {
+          console.error("Error checking AI configuration:", error);
+        }
+      }
+
       lastFinalJsonString = JSON.stringify(obj, null, 2);
       const highlighted = hljs.highlight(lastFinalJsonString, {
         language: "json",
       }).value;
-      finalJsonEl.innerHTML = `<code class=\"hljs language-json\">${highlighted}</code>`;
+      finalJsonEl.innerHTML = `<code class="hljs language-json">${highlighted}</code>`;
       applyFinalStatusesFromReport(obj);
       const ok = obj?.overall_status === "success";
       showSummary(ok, true); // Actual completion - trigger alerts

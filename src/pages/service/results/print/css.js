@@ -680,6 +680,42 @@ const BASE_CUSTOMER_PRINT_CSS = `
     line-height: 1.3;
   }
   
+  /* AI Summary Section */
+  .ai-summary-section {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 2px solid #e5e7eb;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  
+  .ai-summary-section .section-heading {
+    margin: 0 0 12px 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: -0.3px;
+  }
+  
+  .ai-summary-content {
+    font-size: 9.5pt;
+    color: #1e293b;
+    line-height: 1.6;
+  }
+  
+  .ai-summary-content p {
+    margin: 8px 0;
+    padding: 0;
+  }
+  
+  .ai-summary-content p:first-child {
+    margin-top: 0;
+  }
+  
+  .ai-summary-content p:last-child {
+    margin-bottom: 0;
+  }
+  
   /* Typography */
   h1, h2, h3, h4 {
     page-break-after: avoid;

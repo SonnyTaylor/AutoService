@@ -37,10 +37,12 @@ export async function buildCustomerPrintHtml(report, options = {}) {
     : "list";
   const showDiagnostics = options.showDiagnostics !== false; // defaults to true
   const colorCards = options.colorCards !== false; // defaults to true
+  const aiSummary = report?.ai_summary || null; // Extract AI summary from report
   const customerHeader = await buildCustomerHeader(title, overall, report);
   const customerSummary = await buildCustomerSummary(report, {
     layout,
     showDiagnostics,
+    aiSummary,
   });
   const body = `
     ${customerHeader}

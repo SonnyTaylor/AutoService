@@ -49,6 +49,21 @@
         <button id="svc-copy-json" class="ghost small">Copy JSON</button>
       </div>
       <pre id="svc-json" class="json-preview" aria-label="Generated JSON"></pre>
+      <div class="ai-summary-toggle" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(148, 163, 184, 0.3);">
+        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+          <input type="checkbox" id="svc-ai-summary-toggle" style="cursor: pointer;" />
+          <div style="flex: 1;">
+            <div style="font-weight: 600; font-size: 14px;">Generate AI Summary</div>
+            <div class="muted small" style="font-size: 12px; margin-top: 2px;">
+              Create a customer-friendly summary of changes and fixes
+            </div>
+          </div>
+        </label>
+        <div id="svc-ai-summary-warning" class="muted small" style="margin-top: 8px; display: none; color: #f59e0b; font-size: 11px;">
+          <i class="ph ph-warning" style="margin-right: 4px;"></i>
+          AI not configured. Configure in Settings to enable.
+        </div>
+      </div>
     </div>
   </div>
 </section>

@@ -476,4 +476,82 @@ export const aiClient = {
       throw transformError(error, settings);
     }
   },
+
+  /**
+   * Generate a customer-friendly summary of a service report
+   * @param {Object} report - The full service report object
+   * @returns {Promise<string>} Customer-friendly summary text
+   * @throws {Error} If AI call fails or not configured
+   */
+  async generateServiceSummary(report) {
+    if (!report || !report.results || !Array.isArray(report.results)) {
+      throw new Error("Invalid report data");
+    }
+
+    // Build a summary of what was done
+    const taskCount = report.results.length;
+    const successfulTasks = report.results.filter(
+      (r) => r.status === "success"
+    ).length;
+    const errorTasks = report.results.filter((r) => r.status === "error").length;
+    const warningTasks = report.results.filter(
+      (r) => r.status === "warning"
+    ).length;
+
+    // Extract task types and their outcomes
+    const taskSummaries = report.results.map((result) => {
+      const taskType = result.task_type || "unknown";
+      const status = result.status || "unknown";
+      const summary = result.summary?.human_readable || {};
+      const duration = result.duration_seconds
+        ? `${Math.round(result.duration_seconds)}s`
+        : "";
+
+      return {
+        type: taskType,
+        status,
+        summary,
+        duration,
+      };
+    });
+
+    // Create a customer-friendly prompt
+    const systemPrompt = `You are a helpful assistant that creates clear, friendly summaries of computer maintenance work for customers. 
+Write in plain language that non-technical people can understand. Focus on what was done, why it matters, and any important findings.
+Keep it concise but informative. Use a warm, professional tone.`;
+
+    const userPrompt = `Please create a customer-friendly summary of the following computer maintenance work:
+
+Total Tasks: ${taskCount}
+Successful: ${successfulTasks}
+With Errors: ${errorTasks}
+With Warnings: ${warningTasks}
+
+Task Details:
+${JSON.stringify(taskSummaries, null, 2)}
+
+Overall Status: ${report.overall_status || "unknown"}
+
+Please provide a clear, friendly summary that explains:
+1. What maintenance work was performed
+2. What issues were found (if any)
+3. What was fixed or improved
+4. Any recommendations for the customer
+
+Write in a way that a non-technical customer would understand.`;
+
+    try {
+      const summary = await this.generateText({
+        systemPrompt,
+        userPrompt,
+        temperature: 0.7,
+        maxTokens: 1000,
+      });
+
+      return summary.trim();
+    } catch (error) {
+      console.error("Failed to generate AI summary:", error);
+      throw error;
+    }
+  },
 };

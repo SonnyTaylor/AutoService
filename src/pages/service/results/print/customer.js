@@ -167,9 +167,10 @@ export async function buildCustomerHeader(title, overall, report) {
  * @param {Object} options - Layout and filtering options
  * @param {string} [options.layout='list'] - Layout type
  * @param {boolean} [options.showDiagnostics=true] - Show diagnostic results
+ * @param {string} [options.aiSummary] - Optional AI-generated summary text
  */
 export async function buildCustomerSummary(report, options = {}) {
-  const { layout = "list", showDiagnostics = true } = options;
+  const { layout = "list", showDiagnostics = true, aiSummary } = options;
   const resolvedLayout = normalizeLayout(layout);
   const results = report?.results || [];
 
@@ -214,6 +215,21 @@ export async function buildCustomerSummary(report, options = {}) {
     `
       : "";
 
+  // Build AI summary section (if available)
+  const aiSummaryMarkup = aiSummary
+    ? `
+      <div class="ai-summary-section">
+        <h3 class="section-heading">Service Summary</h3>
+        <div class="ai-summary-content">
+          ${aiSummary
+            .split("\n")
+            .map((line) => (line.trim() ? `<p>${line.trim()}</p>` : ""))
+            .join("")}
+        </div>
+      </div>
+    `
+    : "";
+
   // Get business settings for thank you message
   const business = await getBusinessSettings();
   const companyName =
@@ -233,6 +249,8 @@ export async function buildCustomerSummary(report, options = {}) {
 
       ${servicesMarkup}
       ${diagnosticsMarkup}
+
+      ${aiSummaryMarkup}
 
       <div class="footer-note">
         <p><strong>Thank you for choosing ${companyName}.</strong></p>
