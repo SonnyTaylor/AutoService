@@ -19,18 +19,24 @@
         Tasks
       </h2>
       <div class="runner-controls" id="svc-runner-controls" hidden>
-        <button id="svc-stop-btn" class="control-btn stop" title="Stop run after current task completes">
-          <i class="ph ph-stop-circle"></i>
-          Stop
-        </button>
-        <button id="svc-pause-btn" class="control-btn pause" title="Pause run after current task completes">
-          <i class="ph ph-pause-circle"></i>
-          Pause
-        </button>
-        <button id="svc-skip-btn" class="control-btn skip" title="Skip current task immediately">
-          <i class="ph ph-skip-forward-circle"></i>
-          Skip
-        </button>
+        <div class="runner-status-indicator" id="svc-runner-status">
+          <span class="status-icon" id="svc-status-icon"></span>
+          <span class="status-text" id="svc-status-text">Running</span>
+        </div>
+        <div class="runner-control-buttons">
+          <button id="svc-stop-btn" class="control-btn stop" title="Stop run after current task completes">
+            <i class="ph ph-stop-circle"></i>
+            Stop
+          </button>
+          <button id="svc-pause-resume-btn" class="control-btn pause" title="Pause run after current task completes">
+            <i class="ph ph-pause-circle"></i>
+            <span class="btn-text">Pause</span>
+          </button>
+          <button id="svc-skip-btn" class="control-btn skip" title="Skip current task immediately">
+            <i class="ph ph-skip-forward-circle"></i>
+            Skip
+          </button>
+        </div>
       </div>
       <ul
         id="svc-task-status"

@@ -709,12 +709,64 @@
 }
 [data-page="service-report"] .runner-controls {
   display: flex;
-  gap: 8px;
+  flex-direction: column;
+  gap: 10px;
   margin-bottom: 12px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--border);
 }
-[data-page="service-report"] .runner-controls .control-btn {
+[data-page="service-report"] .runner-status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+[data-page="service-report"] .runner-status-indicator .status-icon {
+  display: flex;
+  align-items: center;
+}
+[data-page="service-report"] .runner-status-indicator .status-icon i {
+  font-size: 1rem;
+}
+[data-page="service-report"] .runner-status-indicator.running {
+  border-color: #2b416b;
+  background: #1a2332;
+  color: #9cbcff;
+}
+[data-page="service-report"] .runner-status-indicator.paused {
+  border-color: #4a3b1a;
+  background: #2a1f0f;
+  color: #ffcc88;
+}
+[data-page="service-report"] .runner-status-indicator.stopped {
+  border-color: #5b2b2b;
+  background: #3a1a1a;
+  color: #ff9999;
+}
+[data-page="service-report"] .runner-status-indicator.completed {
+  border-color: #2d4a33;
+  background: #16221a;
+  color: #8bd17c;
+}
+[data-page="service-report"] .runner-status-indicator.error {
+  border-color: #522a2a;
+  background: #221616;
+  color: #f29a9a;
+}
+[data-page="service-report"] .runner-status-indicator.idle {
+  border-color: var(--border);
+  color: var(--muted);
+}
+[data-page="service-report"] .runner-control-buttons {
+  display: flex;
+  gap: 8px;
+}
+[data-page="service-report"] .runner-control-buttons .control-btn {
   flex: 1;
   display: flex;
   align-items: center;
@@ -729,35 +781,47 @@
   cursor: pointer;
   transition: all 0.2s ease;
 }
-[data-page="service-report"] .runner-controls .control-btn:hover {
+[data-page="service-report"] .runner-control-buttons .control-btn:hover:not(:disabled) {
   background: var(--panel-2);
   border-color: var(--border-hover);
 }
-[data-page="service-report"] .runner-controls .control-btn.stop {
+[data-page="service-report"] .runner-control-buttons .control-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+[data-page="service-report"] .runner-control-buttons .control-btn.stop {
   border-color: #5b2b2b;
   color: #ff9999;
 }
-[data-page="service-report"] .runner-controls .control-btn.stop:hover {
+[data-page="service-report"] .runner-control-buttons .control-btn.stop:hover:not(:disabled) {
   background: #3a1a1a;
   border-color: #7a3b3b;
 }
-[data-page="service-report"] .runner-controls .control-btn.pause {
+[data-page="service-report"] .runner-control-buttons .control-btn.pause {
   border-color: #4a3b1a;
   color: #ffcc88;
 }
-[data-page="service-report"] .runner-controls .control-btn.pause:hover {
+[data-page="service-report"] .runner-control-buttons .control-btn.pause:hover:not(:disabled) {
   background: #2a1f0f;
   border-color: #6a5b2a;
 }
-[data-page="service-report"] .runner-controls .control-btn.skip {
+[data-page="service-report"] .runner-control-buttons .control-btn.skip {
   border-color: #2b3b5b;
   color: #88ccff;
 }
-[data-page="service-report"] .runner-controls .control-btn.skip:hover {
+[data-page="service-report"] .runner-control-buttons .control-btn.skip:hover:not(:disabled) {
   background: #1a2332;
   border-color: #3b4b6b;
 }
-[data-page="service-report"] .runner-controls .control-btn i {
+[data-page="service-report"] .runner-control-buttons .control-btn.resume {
+  border-color: #2a4a2a;
+  color: #88ff88;
+}
+[data-page="service-report"] .runner-control-buttons .control-btn.resume:hover:not(:disabled) {
+  background: #1a2a1a;
+  border-color: #3a6a3a;
+}
+[data-page="service-report"] .runner-control-buttons .control-btn i {
   font-size: 1rem;
 }
 [data-page="service-report"] .runner-left,

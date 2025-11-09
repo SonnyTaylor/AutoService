@@ -173,11 +173,11 @@ def flush_logs():  # pragma: no cover - simple utility
 
 
 def check_control_file(control_file_path: Optional[str]) -> Tuple[Optional[str], Optional[int]]:
-    """Check control file for stop/pause/skip signals.
+    """Check control file for stop/pause/skip/resume signals.
     
     Returns:
         Tuple of (action, timestamp) or (None, None) if no signal or file doesn't exist.
-        action can be "stop", "pause", or "skip".
+        action can be "stop", "pause", "skip", or "resume".
     """
     if not control_file_path:
         return None, None
@@ -190,7 +190,7 @@ def check_control_file(control_file_path: Optional[str]) -> Tuple[Optional[str],
             data = json.load(f)
             action = data.get("action")
             timestamp = data.get("timestamp")
-            if action in ("stop", "pause", "skip"):
+            if action in ("stop", "pause", "skip", "resume"):
                 return action, timestamp
     except Exception:
         # File doesn't exist, is malformed, or other error - ignore
@@ -381,7 +381,7 @@ def main():
             run_paused = True
             logging.info("RUN_PAUSED:user_requested")
             flush_logs()
-            # Wait in pause loop until stopped or resumed (for now, pause is terminal)
+            # Wait in pause loop until stopped or resumed
             while run_paused:
                 time.sleep(0.5)
                 action, _ = check_control_file(control_file_path)
@@ -390,6 +390,17 @@ def main():
                     run_paused = False
                     logging.info("RUN_STOPPED:user_requested")
                     flush_logs()
+                    break
+                elif action == "resume":
+                    run_paused = False
+                    logging.info("RUN_RESUMED:user_requested")
+                    flush_logs()
+                    # Clear resume signal by removing control file
+                    if control_file_path and os.path.exists(control_file_path):
+                        try:
+                            os.remove(control_file_path)
+                        except Exception:
+                            pass
                     break
             if run_stopped:
                 break
@@ -570,6 +581,17 @@ def main():
                                 run_paused = False
                                 logging.info("RUN_STOPPED:user_requested")
                                 flush_logs()
+                                break
+                            elif action == "resume":
+                                run_paused = False
+                                logging.info("RUN_RESUMED:user_requested")
+                                flush_logs()
+                                # Clear resume signal by removing control file
+                                if control_file_path and os.path.exists(control_file_path):
+                                    try:
+                                        os.remove(control_file_path)
+                                    except Exception:
+                                        pass
                                 break
                         if run_stopped:
                             break

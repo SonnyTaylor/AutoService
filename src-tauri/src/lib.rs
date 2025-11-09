@@ -160,6 +160,26 @@ fn skip_current_task(state: tauri::State<AppState>) -> Result<(), String> {
     }
 }
 
+/// Writes a control signal to the control file to resume a paused service run.
+#[tauri::command]
+fn resume_service_run(state: tauri::State<AppState>) -> Result<(), String> {
+    let control_path = state.control_file_path.lock().unwrap();
+    if let Some(path) = control_path.as_ref() {
+        let control_data = serde_json::json!({
+            "action": "resume",
+            "timestamp": SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs()
+        });
+        std::fs::write(path, serde_json::to_string(&control_data).unwrap_or_default())
+            .map_err(|e| format!("Failed to write control file: {e}"))?;
+        Ok(())
+    } else {
+        Err("No active service run".to_string())
+    }
+}
+
 /// Starts the Python service runner executable and streams stderr lines as Tauri events.
 /// Frontend listens to `service_runner_line` (payload: {stream, line}) and
 /// `service_runner_done` (payload: { final_report, plan_file, log_file }).
@@ -373,6 +393,7 @@ pub fn run() {
             stop_service_run,
             pause_service_run,
             skip_current_task,
+            resume_service_run,
             list_programs,
             save_program,
             remove_program,
