@@ -72,6 +72,64 @@ export async function initPage() {
   });
 
   update();
+  
+  // Load and display time estimates for each preset
+  await updatePresetTimeEstimates();
+}
+
+/**
+ * Calculate and display time estimates for each preset
+ */
+async function updatePresetTimeEstimates() {
+  try {
+    const { getPreset } = await import("./handlers/presets.js");
+    const { calculateTotalTime, formatDuration } = await import("../../utils/task-time-estimates.js");
+    
+    const presetNames = ["diagnostics", "general", "complete"];
+    
+    for (const presetName of presetNames) {
+      const preset = getPreset(presetName);
+      if (!preset || !preset.services) continue;
+      
+      // Build task objects from preset services
+      const tasks = preset.services.map((item) => {
+        if (typeof item === "string") {
+          return { type: item, params: {} };
+        } else {
+          return { type: item.id, params: item.params || {} };
+        }
+      });
+      
+      // Calculate total time
+      const result = await calculateTotalTime(tasks);
+      
+      // Find the time display element
+      const timeEl = document.querySelector(`[data-preset-time="${presetName}"]`);
+      if (!timeEl) continue;
+      
+      const valueEl = timeEl.querySelector(".time-value");
+      const partialEl = timeEl.querySelector(".time-partial");
+      
+      if (result.totalSeconds > 0) {
+        const formatted = formatDuration(result.totalSeconds);
+        if (valueEl) valueEl.textContent = formatted;
+        timeEl.style.display = "block";
+        
+        // Show partial indicator if not all tasks have estimates
+        if (result.hasPartial && partialEl) {
+          partialEl.style.display = "inline";
+          partialEl.textContent = "(partial)";
+        } else if (partialEl) {
+          partialEl.style.display = "none";
+        }
+      } else {
+        // No estimates available yet
+        timeEl.style.display = "none";
+      }
+    }
+  } catch (error) {
+    console.warn("[Presets] Failed to update time estimates:", error);
+  }
 }
 
 // (Later) helper to fetch preset definitions from settings JSON

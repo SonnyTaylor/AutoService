@@ -193,3 +193,45 @@ export function hasEnoughSamples(records) {
   return Array.isArray(records) && records.length >= 3;
 }
 
+/**
+ * Calculate total estimated time for a list of tasks.
+ * 
+ * @param {Array<{type: string, params?: Object}>} tasks - Array of task objects with type and optional params
+ * @returns {Promise<{totalSeconds: number, hasPartial: boolean, estimatedCount: number, totalCount: number}>}
+ *   Total time in seconds, whether some tasks lack estimates, and counts
+ */
+export async function calculateTotalTime(tasks) {
+  if (!Array.isArray(tasks) || tasks.length === 0) {
+    return {
+      totalSeconds: 0,
+      hasPartial: false,
+      estimatedCount: 0,
+      totalCount: 0,
+    };
+  }
+
+  let totalSeconds = 0;
+  let estimatedCount = 0;
+  let totalCount = tasks.length;
+
+  for (const task of tasks) {
+    const taskType = task.type || task.task_type || task.id;
+    if (!taskType) continue;
+
+    const taskParams = task.params || {};
+    const estimate = await getEstimate(taskType, taskParams);
+    
+    if (estimate && estimate.sampleCount >= 3) {
+      totalSeconds += estimate.estimate;
+      estimatedCount++;
+    }
+  }
+
+  return {
+    totalSeconds,
+    hasPartial: estimatedCount > 0 && estimatedCount < totalCount,
+    estimatedCount,
+    totalCount,
+  };
+}
+

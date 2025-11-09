@@ -671,6 +671,9 @@ class BuilderUI {
       searchClear: document.getElementById("svc-search-clear"),
       aiSummaryToggle: document.getElementById("svc-ai-summary-toggle"),
       aiSummaryWarning: document.getElementById("svc-ai-summary-warning"),
+      totalTime: document.getElementById("svc-total-time"),
+      totalTimeValue: document.querySelector("#svc-total-time .time-value"),
+      totalTimePartial: document.querySelector("#svc-total-time .time-partial"),
     };
 
     this.builder.setElements(this.elements);
@@ -754,17 +757,20 @@ class BuilderUI {
       this.builder.selectAll();
       this.builder.persist();
       this.render();
+      this.updateTotalTime();
     });
 
     this.elements.btnDeselectAll?.addEventListener("click", () => {
       this.builder.deselectAll();
       this.builder.persist();
       this.render();
+      this.updateTotalTime();
     });
 
     this.elements.btnReset?.addEventListener("click", () => {
       this.builder.reset();
       this.render();
+      this.updateTotalTime();
     });
 
     this.elements.btnCopyJson?.addEventListener("click", async () => {
@@ -1037,7 +1043,7 @@ class BuilderUI {
       row.appendChild(this.renderGpuSubOptions());
     }
 
-    checkbox.addEventListener("change", () => {
+    checkbox.addEventListener("change", async () => {
       if (checkbox.checked) {
         this.builder.addTask(id);
       } else {
@@ -1045,6 +1051,7 @@ class BuilderUI {
       }
       this.builder.persist();
       this.render();
+      await this.updateTotalTime();
     });
 
     return li;
@@ -1351,6 +1358,69 @@ class BuilderUI {
     this.elements.json.innerHTML = `<code class="hljs language-json">${highlighted}</code>`;
     this.builder.persist();
     this.validateNext();
+    
+    // Update total time estimate
+    await this.updateTotalTime();
+  }
+
+  /**
+   * Update total time estimate display
+   */
+  async updateTotalTime() {
+    if (!this.elements.totalTime || !this.elements.totalTimeValue) {
+      return;
+    }
+
+    try {
+      const { calculateTotalTime, formatDuration } = await import("../../utils/task-time-estimates.js");
+      
+      // Get selected tasks with their parameters
+      const selectedTasks = [];
+      for (const id of this.builder.order) {
+        if (!this.builder.selection.has(id)) continue;
+        
+        const def = getServiceById(id);
+        if (!def) continue;
+
+        // Get task params
+        const params = this.builder.taskParams[id]?.params || {};
+        
+        // Build task object for time calculation
+        const task = {
+          type: id,
+          params: params,
+        };
+        
+        selectedTasks.push(task);
+      }
+
+      if (selectedTasks.length === 0) {
+        this.elements.totalTime.style.display = "none";
+        return;
+      }
+
+      const result = await calculateTotalTime(selectedTasks);
+      
+      if (result.totalSeconds > 0) {
+        const formatted = formatDuration(result.totalSeconds);
+        this.elements.totalTimeValue.textContent = formatted;
+        this.elements.totalTime.style.display = "block";
+        
+        // Show partial indicator if not all tasks have estimates
+        if (result.hasPartial) {
+          this.elements.totalTimePartial.style.display = "inline";
+          this.elements.totalTimePartial.textContent = `(partial - ${result.estimatedCount}/${result.totalCount} tasks)`;
+        } else {
+          this.elements.totalTimePartial.style.display = "none";
+        }
+      } else {
+        // No estimates available yet
+        this.elements.totalTime.style.display = "none";
+      }
+    } catch (error) {
+      console.warn("[Builder] Failed to update total time:", error);
+      this.elements.totalTime.style.display = "none";
+    }
   }
 
   /**
