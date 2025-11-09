@@ -1331,7 +1331,7 @@ export async function initPage() {
         _unlistenLine = unlisten;
       });
 
-      listen("service_runner_done", (evt) => {
+      listen("service_runner_done", async (evt) => {
         const payload = evt?.payload || {};
         const finalReport = payload.final_report || payload.finalReport || {};
 
@@ -1344,6 +1344,73 @@ export async function initPage() {
           const currentBackBtn = document.getElementById("svc-report-back");
           const currentRunBtn = document.getElementById("svc-report-run");
           const currentOverlay = document.getElementById("svc-log-overlay");
+
+          // Check if AI summary is enabled in the run plan
+          let aiSummaryEnabled = false;
+          try {
+            const pendingRunRaw = sessionStorage.getItem("service.pendingRun");
+            if (pendingRunRaw) {
+              const pendingRun = JSON.parse(pendingRunRaw);
+              aiSummaryEnabled = pendingRun.ai_summary_enabled === true;
+              console.log("[AI Summary] Checked preference:", aiSummaryEnabled, "from plan:", Object.keys(pendingRun));
+            } else {
+              console.log("[AI Summary] No pending run found in sessionStorage");
+            }
+          } catch (e) {
+            console.warn("[AI Summary] Failed to check preference:", e);
+          }
+
+          // Generate AI summary if enabled (before persisting)
+          if (aiSummaryEnabled) {
+            try {
+              const { aiClient } = await import("../../utils/ai-client.js");
+              const isConfigured = await aiClient.isConfigured();
+              
+              if (isConfigured) {
+                console.log("[AI Summary] Starting generation...");
+                // Generate summary asynchronously (don't block UI)
+                aiClient
+                  .generateServiceSummary(finalReport)
+                  .then((summary) => {
+                    console.log("[AI Summary] Generated successfully, length:", summary.length);
+                    // Add summary to report object
+                    finalReport.ai_summary = summary;
+                    
+                    // Update persisted report
+                    const updatedJson = JSON.stringify(finalReport, null, 2);
+                    persistFinalReport(updatedJson);
+                    lastFinalJsonString = updatedJson;
+                    
+                    // Update displayed JSON
+                    if (currentFinalJsonEl) {
+                      const highlighted = hljs.highlight(updatedJson, {
+                        language: "json",
+                      }).value;
+                      currentFinalJsonEl.innerHTML = `<code class="hljs language-json">${highlighted}</code>`;
+                    }
+                    
+                    // Dispatch event to notify results page that report was updated
+                    window.dispatchEvent(
+                      new CustomEvent("service-report-updated", {
+                        detail: { report: finalReport },
+                      })
+                    );
+                    
+                    console.log("[AI Summary] Report updated with summary");
+                  })
+                  .catch((error) => {
+                    console.error("[AI Summary] Failed to generate:", error);
+                    // Don't block report display - continue without summary
+                  });
+              } else {
+                console.warn("[AI Summary] Requested but AI is not configured");
+              }
+            } catch (error) {
+              console.error("[AI Summary] Error checking AI configuration:", error);
+            }
+          } else {
+            console.log("[AI Summary] Not enabled for this run");
+          }
 
           lastFinalJsonString = JSON.stringify(finalReport, null, 2);
 
@@ -1544,9 +1611,10 @@ export async function initPage() {
         if (pendingRunRaw) {
           const pendingRun = JSON.parse(pendingRunRaw);
           aiSummaryEnabled = pendingRun.ai_summary_enabled === true;
+          console.log("[AI Summary] Checked preference:", aiSummaryEnabled, "from plan:", pendingRun);
         }
       } catch (e) {
-        console.warn("Failed to check AI summary preference:", e);
+        console.warn("[AI Summary] Failed to check preference:", e);
       }
 
       // Generate AI summary if enabled
@@ -1556,10 +1624,12 @@ export async function initPage() {
           const isConfigured = await aiClient.isConfigured();
           
           if (isConfigured) {
+            console.log("[AI Summary] Starting generation...");
             // Generate summary asynchronously (don't block UI)
             aiClient
               .generateServiceSummary(obj)
               .then((summary) => {
+                console.log("[AI Summary] Generated successfully, length:", summary.length);
                 // Add summary to report object
                 obj.ai_summary = summary;
                 
@@ -1573,14 +1643,21 @@ export async function initPage() {
                 }).value;
                 finalJsonEl.innerHTML = `<code class="hljs language-json">${highlighted}</code>`;
                 
-                console.log("AI summary generated successfully");
+                // Dispatch event to notify results page that report was updated
+                window.dispatchEvent(
+                  new CustomEvent("service-report-updated", {
+                    detail: { report: obj },
+                  })
+                );
+                
+                console.log("[AI Summary] Report updated with summary");
               })
               .catch((error) => {
-                console.error("Failed to generate AI summary:", error);
+                console.error("[AI Summary] Failed to generate:", error);
                 // Don't block report display - continue without summary
               });
           } else {
-            console.warn("AI summary requested but AI is not configured");
+            console.warn("[AI Summary] Requested but AI is not configured");
           }
         } catch (error) {
           console.error("Error checking AI configuration:", error);

@@ -150,6 +150,13 @@ export async function initPage() {
     return;
   }
 
+  // Log if AI summary is present
+  if (report.ai_summary) {
+    console.log("[Results] Report loaded with AI summary");
+  } else {
+    console.log("[Results] Report loaded without AI summary");
+  }
+
   // Render summary and sections using exported functions
   renderResultsSummary(report, summaryEl);
   renderResultsSections(report, sectionsEl);
@@ -258,6 +265,9 @@ function setupPrintHandlers(report, sectionsEl) {
     : "list";
   let currentShowDiagnostics = customerDiagnosticsToggle?.checked ?? true;
   let currentColorCards = customerCardColorToggle?.checked ?? true;
+  
+  // Keep a reference to the current report that can be updated
+  let currentReport = report;
 
   // Prepare technician print preview
   if (techPreview) {
@@ -285,32 +295,36 @@ function setupPrintHandlers(report, sectionsEl) {
   }
 
   // Prepare customer print preview
-  if (customerPreview) {
-    customerPreview.innerHTML =
-      '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#64748b;"><div style="text-align:center;"><div class="spinner" style="width:24px;height:24px;border:3px solid #cbd5e1;border-top-color:#475569;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px;"></div><div style="font-size:14px;">Preparing preview...</div></div></div>';
-    const renderCustomerPreview = async () => {
-      if (!customerPreview) return;
-      try {
-        const customerHtml = await buildCustomerPrintHtml(report, {
+  const renderCustomerPreview = async () => {
+    if (!customerPreview) return;
+    try {
+      // Use currentReport which may have been updated with AI summary
+      const customerHtml = await buildCustomerPrintHtml(currentReport, {
+        layout: currentCustomerLayout,
+        showDiagnostics: currentShowDiagnostics,
+        colorCards: currentColorCards,
+      });
+      if (customerContainer) customerContainer.innerHTML = customerHtml;
+      renderPreviewIntoIframeFallback(
+        customerPreview,
+        await buildCustomerPrintDocumentHtml(currentReport, {
           layout: currentCustomerLayout,
           showDiagnostics: currentShowDiagnostics,
           colorCards: currentColorCards,
-        });
-        if (customerContainer) customerContainer.innerHTML = customerHtml;
-        renderPreviewIntoIframeFallback(
-          customerPreview,
-          await buildCustomerPrintDocumentHtml(report, {
-            layout: currentCustomerLayout,
-            showDiagnostics: currentShowDiagnostics,
-            colorCards: currentColorCards,
-          })
-        );
-      } catch (error) {
-        console.error("Customer preview generation error:", error);
+        })
+      );
+    } catch (error) {
+      console.error("Customer preview generation error:", error);
+      if (customerPreview) {
         customerPreview.innerHTML =
           '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:14px;text-align:center;padding:20px;">Preview unavailable. Use Print button to generate report.</div>';
       }
-    };
+    }
+  };
+  
+  if (customerPreview) {
+    customerPreview.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#64748b;"><div style="text-align:center;"><div class="spinner" style="width:24px;height:24px;border:3px solid #cbd5e1;border-top-color:#475569;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px;"></div><div style="font-size:14px;">Preparing preview...</div></div></div>';
     setTimeout(async () => {
       await renderCustomerPreview();
     }, 0);
@@ -351,14 +365,27 @@ function setupPrintHandlers(report, sectionsEl) {
       customerPrintBtn,
       "AutoService – Service Summary",
       async () =>
-        await buildCustomerPrintDocumentHtml(report, {
+        await buildCustomerPrintDocumentHtml(currentReport, {
           layout: currentCustomerLayout,
           showDiagnostics: currentShowDiagnostics,
           colorCards: currentColorCards,
         }),
       customerContainer,
-      report
+      currentReport
     );
+  });
+  
+  // Listen for report updates (e.g., when AI summary is generated)
+  window.addEventListener("service-report-updated", (event) => {
+    const updatedReport = event.detail?.report;
+    if (updatedReport) {
+      console.log("[Results] Report updated with AI summary, refreshing previews");
+      currentReport = updatedReport;
+      // Refresh customer preview
+      if (customerPreview) {
+        renderCustomerPreview();
+      }
+    }
   });
 }
 
