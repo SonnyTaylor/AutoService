@@ -386,41 +386,62 @@ async function callAIProvider(settings, query, pruned) {
       throw new Error("Empty response from AI provider");
     }
 
+    /**
+     * Strip markdown code block markers from text
+     * Handles cases like ```json\n{...}\n``` or ```\n{...}\n```
+     */
+    function stripMarkdownCodeBlocks(input) {
+      let cleaned = input.trim();
+      // Remove opening code block markers (```json, ```, etc.)
+      cleaned = cleaned.replace(/^```[a-z]*\n?/i, "");
+      // Remove closing code block markers
+      cleaned = cleaned.replace(/\n?```$/i, "");
+      return cleaned.trim();
+    }
+
     // Parse JSON response
     let parsed;
     try {
+      // First, try parsing directly
       parsed = JSON.parse(text);
     } catch (parseError) {
-      // Check if response looks like plain text (not JSON)
-      const trimmedText = text.trim();
-      const looksLikePlainText =
-        !trimmedText.startsWith("{") && !trimmedText.startsWith("[");
+      // If direct parse fails, try stripping markdown code blocks
+      let cleanedText = stripMarkdownCodeBlocks(text);
 
-      if (looksLikePlainText) {
-        // Model didn't follow JSON instructions - likely a capability issue
-        console.error(
-          "Model returned plain text instead of JSON. Response:",
-          text.substring(0, 500)
-        );
-        throw new Error("MODEL_INSTRUCTION_FAILURE");
-      }
-
-      // Try to extract JSON object from stray text
-      const match = text.match(/\{[\s\S]*\}/);
-      if (!match) {
-        console.error("Failed to parse JSON. Response text:", text);
-        throw new Error(
-          `Failed to parse response as JSON. Response: ${text.substring(
-            0,
-            200
-          )}`
-        );
-      }
       try {
-        parsed = JSON.parse(match[0]);
-      } catch (e) {
-        console.error("Failed to parse extracted JSON. Match:", match[0]);
-        throw new Error(`Failed to parse extracted JSON. ${e.message}`);
+        parsed = JSON.parse(cleanedText);
+      } catch (secondParseError) {
+        // Check if response looks like plain text (not JSON)
+        const trimmedText = cleanedText.trim();
+        const looksLikePlainText =
+          !trimmedText.startsWith("{") && !trimmedText.startsWith("[");
+
+        if (looksLikePlainText) {
+          // Model didn't follow JSON instructions - likely a capability issue
+          console.error(
+            "Model returned plain text instead of JSON. Response:",
+            text.substring(0, 500)
+          );
+          throw new Error("MODEL_INSTRUCTION_FAILURE");
+        }
+
+        // Try to extract JSON object from stray text
+        const match = cleanedText.match(/\{[\s\S]*\}/);
+        if (!match) {
+          console.error("Failed to parse JSON. Response text:", text);
+          throw new Error(
+            `Failed to parse response as JSON. Response: ${text.substring(
+              0,
+              200
+            )}`
+          );
+        }
+        try {
+          parsed = JSON.parse(match[0]);
+        } catch (e) {
+          console.error("Failed to parse extracted JSON. Match:", match[0]);
+          throw new Error(`Failed to parse extracted JSON. ${e.message}`);
+        }
       }
     }
 
