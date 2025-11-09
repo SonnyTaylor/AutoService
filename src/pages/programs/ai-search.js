@@ -44,8 +44,7 @@ export function initAISearch() {
   }
   // Always ensure the label uses a generic AI icon (handles pre-existing markup)
   if (btn)
-    btn.innerHTML =
-      '<i class="ph ph-robot" aria-hidden="true"></i> AI Search';
+    btn.innerHTML = '<i class="ph ph-robot" aria-hidden="true"></i> AI Search';
 
   // Ensure modal exists in DOM
   let modal = /** @type {HTMLDialogElement|null} */ (
@@ -104,8 +103,11 @@ export function initAISearch() {
     const settings = await getAISettings();
     if (settings.error) return showError(settings.error);
     if (!settings.hasKey) {
-      const providerName = settings.provider.charAt(0).toUpperCase() + settings.provider.slice(1);
-      return showError(`${providerName} API key is missing. Configure it in Settings.`);
+      const providerName =
+        settings.provider.charAt(0).toUpperCase() + settings.provider.slice(1);
+      return showError(
+        `${providerName} API key is missing. Configure it in Settings.`
+      );
     }
 
     // Prepare inputs
@@ -227,7 +229,8 @@ async function updateButtonState(btn) {
   const has = settings.hasKey;
   btn.disabled = !has;
   if (has) {
-    const providerName = settings.provider.charAt(0).toUpperCase() + settings.provider.slice(1);
+    const providerName =
+      settings.provider.charAt(0).toUpperCase() + settings.provider.slice(1);
     btn.title = `Search programs with AI (${providerName})`;
   } else {
     btn.title = "Configure AI API key in Settings";
@@ -240,18 +243,19 @@ async function getAISettings() {
     const ai = await settingsManager.get("ai");
     const provider = ai.provider || "openai";
     const model = ai.model || "gpt-4o-mini";
-    
+
     // Get provider-specific keys and base URLs
     const providerKeys = ai.provider_keys || {};
     const providerBaseUrls = ai.provider_base_urls || {};
-    
+
     // Get current provider's key and base URL
-    const apiKey = providerKeys[provider] || ai.api_key || ai.openai_api_key || "";
+    const apiKey =
+      providerKeys[provider] || ai.api_key || ai.openai_api_key || "";
     const baseUrl = providerBaseUrls[provider] || ai.base_url || "";
-    
+
     // Ollama doesn't need an API key, but needs base_url
     const hasKey = provider === "ollama" ? Boolean(baseUrl) : Boolean(apiKey);
-    
+
     return {
       provider,
       model,
@@ -297,7 +301,7 @@ function truncate(s, n) {
  */
 function createProviderModel(settings) {
   const { provider, model, apiKey, baseUrl } = settings;
-  
+
   switch (provider) {
     case "openai": {
       const openai = createOpenAI({
@@ -306,31 +310,33 @@ function createProviderModel(settings) {
       });
       return openai(model);
     }
-    
+
     case "anthropic": {
       const anthropic = createAnthropic({
         apiKey,
       });
       return anthropic(model);
     }
-    
+
     case "google": {
       const google = createGoogleGenerativeAI({
         apiKey,
       });
       return google(model);
     }
-    
+
     case "ollama": {
-      // Ollama provides an OpenAI-compatible API endpoint
+      // Ollama provides an OpenAI-compatible API endpoint at /v1
       const ollamaBaseUrl = baseUrl || "http://localhost:11434";
       const openai = createOpenAI({
         apiKey: "ollama", // Ollama doesn't require a real API key, but the SDK expects one
         baseURL: `${ollamaBaseUrl.replace(/\/$/, "")}/v1`, // Ollama's OpenAI-compatible endpoint
       });
-      return openai(model);
+      // Remove any provider prefix from model name for Ollama
+      const modelName = model.includes("/") ? model.split("/")[1] : model;
+      return openai(modelName);
     }
-    
+
     case "groq":
     case "xai":
     case "azure":
@@ -356,7 +362,7 @@ function createProviderModel(settings) {
  */
 async function callAIProvider(settings, query, pruned) {
   const system = `You are a system administrator helping users find tools.\nGiven a user's task description and a list of available programs,\nsuggest the top 1-3 most suitable programs from the list.\n\nReturn valid JSON with this exact structure:\n{\n  "results": []\n}\n\nEach result SHOULD include the original program's name, version, and (if available) id for reliable matching.\nOptionally add a short "reason" explaining why it matches.\nReturn an empty results array if no programs match.`;
-  
+
   const user = `Available programs (pruned):\n${JSON.stringify(
     pruned,
     null,
@@ -365,8 +371,8 @@ async function callAIProvider(settings, query, pruned) {
 
   try {
     const model = createProviderModel(settings);
-    
-    const { text } = await generateText({
+
+    const result = await generateText({
       model,
       system: system,
       prompt: user,
@@ -374,33 +380,93 @@ async function callAIProvider(settings, query, pruned) {
       maxTokens: 2000,
     });
 
+    const text = result.text;
+
+    if (!text) {
+      throw new Error("Empty response from AI provider");
+    }
+
     // Parse JSON response
     let parsed;
     try {
       parsed = JSON.parse(text);
-    } catch {
+    } catch (parseError) {
       // Try to extract JSON object from stray text
       const match = text.match(/\{[\s\S]*\}/);
-      if (!match) throw new Error("Failed to parse response");
-      parsed = JSON.parse(match[0]);
+      if (!match) {
+        console.error("Failed to parse JSON. Response text:", text);
+        throw new Error(
+          `Failed to parse response as JSON. Response: ${text.substring(
+            0,
+            200
+          )}`
+        );
+      }
+      try {
+        parsed = JSON.parse(match[0]);
+      } catch (e) {
+        console.error("Failed to parse extracted JSON. Match:", match[0]);
+        throw new Error(`Failed to parse extracted JSON. ${e.message}`);
+      }
     }
-    
-    if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.results)) {
-      throw new Error("Malformed AI response (missing results)");
+
+    if (!parsed || typeof parsed !== "object") {
+      throw new Error("Response is not a valid JSON object");
     }
-    
+
+    if (!Array.isArray(parsed.results)) {
+      throw new Error("Malformed AI response (missing results array)");
+    }
+
     return parsed;
   } catch (error) {
-    if (error.message?.includes("401") || error.message?.includes("Unauthorized")) {
+    console.error("AI provider error:", error);
+
+    // Handle specific error types
+    if (
+      error.message?.includes("401") ||
+      error.message?.includes("Unauthorized")
+    ) {
       throw new Error(`Invalid ${settings.provider} API key`);
     }
-    if (error.message?.includes("ENOTFOUND") || error.message?.includes("ECONNREFUSED")) {
+
+    if (
+      error.message?.includes("ENOTFOUND") ||
+      error.message?.includes("ECONNREFUSED") ||
+      error.message?.includes("fetch failed")
+    ) {
       if (settings.provider === "ollama") {
-        throw new Error("Cannot connect to Ollama. Make sure Ollama is running on your machine.");
+        throw new Error(
+          "Cannot connect to Ollama. Make sure Ollama is running on your machine."
+        );
       }
       throw new Error(`Cannot connect to ${settings.provider} API`);
     }
-    throw new Error(`${settings.provider} error: ${error.message || "Unknown error"}`);
+
+    // For Ollama, provide more helpful error messages
+    if (settings.provider === "ollama") {
+      if (
+        error.message?.includes("Failed to parse") ||
+        error.message?.includes("parse")
+      ) {
+        throw new Error(
+          "Ollama returned an invalid response. The model might not be installed or there was a communication error."
+        );
+      }
+      if (
+        error.message?.includes("404") ||
+        error.message?.includes("Not Found")
+      ) {
+        throw new Error(
+          `Ollama model "${settings.model}" not found. Make sure the model is installed.`
+        );
+      }
+    }
+
+    // Re-throw with provider context
+    throw new Error(
+      `${settings.provider} error: ${error.message || "Unknown error"}`
+    );
   }
 }
 
