@@ -104,6 +104,25 @@ async function toolPath(keyOrKeys) {
   if (Array.isArray(progs)) {
     for (const k of keys) {
       const lower = String(k || "").toLowerCase();
+      
+      // Special handling for "err" tool - must start with "Err" (case-insensitive)
+      // This prevents matching other tools that might contain "err" in their name/path
+      if (k === "err") {
+        const entry = progs.find((p) => {
+          if (!p.exe_exists || !p.exe_path) return false;
+          // Extract just the filename from the path
+          const exeName = p.exe_path.split(/[\\/]/).pop() || "";
+          // Must start with "Err" (case-insensitive)
+          return exeName.toLowerCase().startsWith("err");
+        });
+        if (entry && entry.exe_path) {
+          return resolveProgramFullPath(entry.exe_path, dirs);
+        }
+        // If no match found, don't fall through to fuzzy search
+        continue;
+      }
+      
+      // Default fuzzy matching for other tools
       const entry = progs.find((p) => {
         const hay = `${p.name} ${p.description} ${p.exe_path}`.toLowerCase();
         return p.exe_exists && hay.includes(lower);
