@@ -8,12 +8,22 @@
 import { wireEditor } from "./editor.js";
 import { wireListActions, loadPrograms, wireToolbar } from "./view.js";
 import { initAISearch } from "./ai-search.js";
+import { wireStackEditor, openStackEditor } from "./stack-editor.js";
+import { wireStackActions, loadStacks } from "./stacks-view.js";
+import { $ } from "./state.js";
 
 export async function initPage() {
   wireToolbar();
   wireListActions();
   wireEditor();
+  wireStackEditor();
+  wireStackActions();
   initAISearch();
+
+  // Wire "Add Stack" button
+  const stackAddBtn = /** @type {HTMLButtonElement|null} */ ($("#stack-add-btn"));
+  stackAddBtn?.addEventListener("click", () => openStackEditor());
+
   // Refresh programs list when editor saves
   window.addEventListener(
     "programs-updated",
@@ -22,5 +32,16 @@ export async function initPage() {
     },
     { once: false }
   );
-  await loadPrograms();
+
+  // Refresh stacks list when editor saves
+  window.addEventListener(
+    "stacks-updated",
+    () => {
+      loadStacks();
+    },
+    { once: false }
+  );
+
+  // Load initial data
+  await Promise.all([loadPrograms(), loadStacks()]);
 }

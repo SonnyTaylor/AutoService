@@ -439,3 +439,37 @@ pub struct ScriptEntry {
     #[serde(default, skip_serializing)]
     pub path_exists: bool,
 }
+
+/// Information about a program stack (group of programs).
+/// Used for categorizing and quickly accessing multiple programs together.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProgramStack {
+    /// Unique identifier for the stack
+    pub id: Uuid,
+    /// Display name of the stack
+    pub name: String,
+    /// Optional description of the stack's purpose
+    pub description: String,
+    /// List of program IDs that belong to this stack
+    pub program_ids: Vec<Uuid>,
+    /// Optional creation timestamp for sorting
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub created_at: Option<String>,
+}
+
+/// Disk-persisted version of program stack information.
+/// Similar to ProgramStack but optimized for storage and persistence.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProgramStackDiskEntry {
+    /// Unique identifier for the stack
+    pub id: Uuid,
+    /// Display name of the stack
+    pub name: String,
+    /// Optional description of the stack's purpose
+    pub description: String,
+    /// List of program IDs that belong to this stack
+    pub program_ids: Vec<Uuid>,
+    /// Optional creation timestamp for sorting
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub created_at: Option<String>,
+}

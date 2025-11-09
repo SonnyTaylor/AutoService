@@ -65,6 +65,9 @@ function renderProgramRow(p) {
         <button data-action="open" class="ghost" title="Open folder in file explorer">
           <i class="ph ph-folder-open"></i> Open
         </button>
+        <button data-action="add-to-stack" class="ghost" title="Add to stack">
+          <i class="ph ph-stack"></i> Add to Stack
+        </button>
         <button data-action="edit" class="secondary">Edit</button>
         <button data-action="remove" class="ghost">Remove</button>
       </div>
@@ -218,6 +221,11 @@ export function wireListActions() {
       }
       return;
     }
+    if (action === "add-to-stack") {
+      // Show stack selection dialog to add program to stack(s)
+      await showAddToStackDialog(prog);
+      return;
+    }
     if (action === "edit") {
       // Open modal editor with a copy of the program data.
       openEditor(prog);
@@ -253,4 +261,118 @@ export async function confirmRemove(name) {
     }
   }
   return window.confirm(`Remove ${name}?`);
+}
+
+/**
+ * Show dialog to add a program to one or more stacks.
+ * @param {import('./state.js').Program} program
+ */
+async function showAddToStackDialog(program) {
+  const { state, invoke, escapeHtml } = await import("./state.js");
+
+  // Load stacks if not already loaded
+  if (state.stacks.length === 0) {
+    state.stacks = await invoke("list_stacks");
+  }
+
+  // Create a simple modal dialog
+  const dialog = document.createElement("dialog");
+  dialog.className = "add-to-stack-dialog";
+  dialog.innerHTML = `
+    <form method="dialog">
+      <h3>Add "${escapeHtml(program.name)}" to Stack</h3>
+      <div class="stack-selection-list">
+        ${state.stacks.length === 0 
+          ? '<div class="muted">No stacks available. Create a stack first.</div>'
+          : state.stacks.map(stack => {
+              const isInStack = stack.program_ids.includes(program.id);
+              return `
+                <label class="stack-selection-item">
+                  <input 
+                    type="checkbox" 
+                    value="${stack.id}" 
+                    ${isInStack ? "checked disabled" : ""}
+                    data-stack-id="${stack.id}"
+                  />
+                  <div class="stack-selection-info">
+                    <div class="stack-selection-name">${escapeHtml(stack.name)}</div>
+                    ${stack.description ? `<div class="stack-selection-desc">${escapeHtml(stack.description)}</div>` : ""}
+                    ${isInStack ? '<span class="stack-selection-badge">Already in stack</span>' : ""}
+                  </div>
+                </label>
+              `;
+            }).join("")
+        }
+      </div>
+      <div class="stack-selection-actions">
+        <button type="button" id="add-to-stack-new" class="secondary">Create New Stack</button>
+        <div style="flex: 1"></div>
+        <button type="button" id="add-to-stack-cancel" class="ghost">Cancel</button>
+        <button type="button" id="add-to-stack-save">Add to Selected</button>
+      </div>
+    </form>
+  `;
+
+  document.body.appendChild(dialog);
+  dialog.showModal();
+
+  return new Promise((resolve) => {
+    const cancelBtn = dialog.querySelector("#add-to-stack-cancel");
+    const saveBtn = dialog.querySelector("#add-to-stack-save");
+    const newBtn = dialog.querySelector("#add-to-stack-new");
+
+    const cleanup = () => {
+      dialog.close();
+      document.body.removeChild(dialog);
+      resolve();
+    };
+
+    cancelBtn?.addEventListener("click", cleanup);
+
+    newBtn?.addEventListener("click", async () => {
+      cleanup();
+      // Create a new stack with this program pre-selected
+      const { openStackEditor } = await import("./stack-editor.js");
+      openStackEditor({
+        id: crypto.randomUUID(),
+        name: "",
+        description: "",
+        program_ids: [program.id],
+      });
+    });
+
+    saveBtn?.addEventListener("click", async () => {
+      const checkboxes = dialog.querySelectorAll("input[type='checkbox']:checked:not(:disabled)");
+      const selectedStackIds = Array.from(checkboxes).map((cb) => cb.getAttribute("data-stack-id"));
+
+      if (selectedStackIds.length === 0) {
+        alert("Please select at least one stack");
+        return;
+      }
+
+      try {
+        // Add program to each selected stack
+        for (const stackId of selectedStackIds) {
+          const stack = state.stacks.find((s) => s.id === stackId);
+          if (stack && !stack.program_ids.includes(program.id)) {
+            stack.program_ids.push(program.id);
+            await invoke("save_stack", { stack });
+          }
+        }
+        // Refresh stacks
+        window.dispatchEvent(new CustomEvent("stacks-updated"));
+        cleanup();
+      } catch (error) {
+        console.error("Failed to add program to stacks:", error);
+        alert(typeof error === "string" ? error : error?.message || "Failed to add program to stacks");
+      }
+    });
+
+    // Close on backdrop click
+    dialog.addEventListener("click", (e) => {
+      if (e.target === dialog) {
+        cleanup();
+      }
+    });
+  });
 }
