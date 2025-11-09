@@ -293,6 +293,9 @@ function setupPrintHandlers(report, sectionsEl) {
   const customerCardColorToggle = document.getElementById(
     "svc-print-customer-cardcolor"
   );
+  const customerAISummaryToggle = document.getElementById(
+    "svc-print-customer-aisummary"
+  );
   const customerLayouts = ["list", "two", "three", "masonry"];
   let currentCustomerLayout = customerLayouts.includes(
     customerLayoutSelect?.value || ""
@@ -301,6 +304,7 @@ function setupPrintHandlers(report, sectionsEl) {
     : "list";
   let currentShowDiagnostics = customerDiagnosticsToggle?.checked ?? true;
   let currentColorCards = customerCardColorToggle?.checked ?? true;
+  let currentShowAISummary = customerAISummaryToggle?.checked ?? true;
   
   // Keep a reference to the current report that can be updated
   let currentReport = report;
@@ -339,6 +343,7 @@ function setupPrintHandlers(report, sectionsEl) {
         layout: currentCustomerLayout,
         showDiagnostics: currentShowDiagnostics,
         colorCards: currentColorCards,
+        showAISummary: currentShowAISummary,
       });
       if (customerContainer) customerContainer.innerHTML = customerHtml;
       renderPreviewIntoIframeFallback(
@@ -347,6 +352,7 @@ function setupPrintHandlers(report, sectionsEl) {
           layout: currentCustomerLayout,
           showDiagnostics: currentShowDiagnostics,
           colorCards: currentColorCards,
+          showAISummary: currentShowAISummary,
         })
       );
     } catch (error) {
@@ -381,6 +387,11 @@ function setupPrintHandlers(report, sectionsEl) {
       currentColorCards = event.target.checked;
       renderCustomerPreview();
     });
+
+    customerAISummaryToggle?.addEventListener("change", (event) => {
+      currentShowAISummary = event.target.checked;
+      renderCustomerPreview();
+    });
   }
 
   // Technician print handler
@@ -405,6 +416,7 @@ function setupPrintHandlers(report, sectionsEl) {
           layout: currentCustomerLayout,
           showDiagnostics: currentShowDiagnostics,
           colorCards: currentColorCards,
+          showAISummary: currentShowAISummary,
         }),
       customerContainer,
       currentReport

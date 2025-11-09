@@ -787,6 +787,17 @@ const BASE_CUSTOMER_PRINT_CSS = `
     margin-bottom: 0;
   }
   
+  /* Ink saver: when card colors are disabled, neutralize AI summary colors */
+  .no-card-color .ai-summary-section .section-heading {
+    color: #0f172a !important;
+  }
+  
+  .no-card-color .ai-summary-content {
+    background: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    box-shadow: none !important;
+  }
+  
   /* Typography */
   h1, h2, h3, h4 {
     page-break-after: avoid;

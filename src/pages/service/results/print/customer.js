@@ -168,9 +168,10 @@ export async function buildCustomerHeader(title, overall, report) {
  * @param {string} [options.layout='list'] - Layout type
  * @param {boolean} [options.showDiagnostics=true] - Show diagnostic results
  * @param {string} [options.aiSummary] - Optional AI-generated summary text
+ * @param {boolean} [options.showAISummary=true] - Show AI summary section
  */
 export async function buildCustomerSummary(report, options = {}) {
-  const { layout = "list", showDiagnostics = true, aiSummary } = options;
+  const { layout = "list", showDiagnostics = true, aiSummary, showAISummary = true } = options;
   const resolvedLayout = normalizeLayout(layout);
   const results = report?.results || [];
 
@@ -215,8 +216,8 @@ export async function buildCustomerSummary(report, options = {}) {
     `
       : "";
 
-  // Build AI summary section (if available)
-  const aiSummaryMarkup = aiSummary
+  // Build AI summary section (if available and enabled)
+  const aiSummaryMarkup = aiSummary && showAISummary
     ? `
       <div class="ai-summary-section">
         <h3 class="section-heading">Service Summary</h3>
