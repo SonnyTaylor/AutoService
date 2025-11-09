@@ -5,10 +5,12 @@
 // Responsibilities:
 // - Open/seed the dialog with an existing stack or a new template
 // - Multi-select interface for choosing programs
+// - Search/filter programs using Fuse.js
 // - Validate and save via backend then notify listeners
 // -----------------------------------------------------------------------------
 /* global crypto */
 import { invoke, state, DEFAULT_LOGO, $, escapeHtml } from "./state.js";
+import Fuse from "fuse.js";
 
 /**
  * Open the stack editor with either a copy of the existing stack
@@ -34,17 +36,50 @@ export function openStackEditor(stack) {
   /** @type {HTMLInputElement} */ ($("#s-name")).value = state.editingStack.name;
   /** @type {HTMLTextAreaElement} */ ($("#s-desc")).value =
     state.editingStack.description || "";
+  /** @type {HTMLInputElement} */ ($("#s-program-search")).value = "";
+
+  // Build search index if needed
+  if (!programFuse && state.all.length > 0) {
+    buildProgramFuseIndex();
+  }
 
   // Render program selector
-  renderProgramSelector();
+  renderProgramSelector("");
 
   dlg.showModal();
 }
 
+// Fuse.js search index for programs
+let programFuse = null;
+
+/**
+ * Build or rebuild the Fuse.js search index for programs.
+ */
+function buildProgramFuseIndex() {
+  const items = state.all.map((p) => ({
+    id: p.id,
+    name: p.name || "",
+    description: p.description || "",
+    version: p.version || "",
+    raw: p,
+  }));
+  programFuse = new Fuse(items, {
+    keys: [
+      { name: "name", weight: 0.6 },
+      { name: "description", weight: 0.25 },
+      { name: "version", weight: 0.15 },
+    ],
+    threshold: 0.38,
+    ignoreLocation: true,
+    minMatchCharLength: 2,
+  });
+}
+
 /**
  * Render the program selector with checkboxes for all available programs.
+ * @param {string} [searchQuery] Optional search query to filter programs
  */
-function renderProgramSelector() {
+function renderProgramSelector(searchQuery = "") {
   const container = /** @type {HTMLElement|null} */ ($("#s-programs-selector"));
   if (!container) return;
 
@@ -53,7 +88,20 @@ function renderProgramSelector() {
     return;
   }
 
-  container.innerHTML = state.all
+  // Filter programs based on search query
+  let programsToShow = state.all;
+  if (searchQuery.trim()) {
+    if (!programFuse) buildProgramFuseIndex();
+    const results = programFuse.search(searchQuery.trim());
+    programsToShow = results.map((r) => r.item.raw);
+  }
+
+  if (programsToShow.length === 0) {
+    container.innerHTML = '<div class="muted">No programs match your search.</div>';
+    return;
+  }
+
+  container.innerHTML = programsToShow
     .map((program) => {
       const isChecked = state.editingStack.program_ids.includes(program.id);
       return `
@@ -92,9 +140,17 @@ export function wireStackEditor() {
   const cancel = /** @type {HTMLButtonElement|null} */ ($("#s-cancel"));
   const save = /** @type {HTMLButtonElement|null} */ ($("#s-save"));
   const selector = /** @type {HTMLElement|null} */ ($("#s-programs-selector"));
+  const searchInput = /** @type {HTMLInputElement|null} */ ($("#s-program-search"));
   if (!cancel || !save || !dlg || !selector) return;
 
-  // Handle checkbox changes
+  // Handle search input
+  if (searchInput) {
+    searchInput.addEventListener("input", () => {
+      renderProgramSelector(searchInput.value);
+    });
+  }
+
+  // Handle checkbox changes (use event delegation since items are re-rendered)
   selector.addEventListener("change", (e) => {
     if (!(e.target instanceof HTMLInputElement && e.target.type === "checkbox")) return;
     const programId = e.target.getAttribute("data-program-id");

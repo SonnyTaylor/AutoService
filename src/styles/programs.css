@@ -551,6 +551,21 @@
   font-size: 1.25rem;
   font-weight: 600;
 }
+.program-selector-search {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  margin-bottom: 8px;
+  box-sizing: border-box;
+}
+.program-selector-search:focus {
+  outline: none;
+  border-color: #4a90e2;
+  background: var(--panel);
+}
 .program-selector {
   display: flex;
   flex-direction: column;
