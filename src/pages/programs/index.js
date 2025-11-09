@@ -28,9 +28,6 @@ export async function initPage() {
   const stacksToggle = /** @type {HTMLButtonElement|null} */ ($("#stacks-toggle"));
   const stacksSection = /** @type {HTMLElement|null} */ ($(".stacks-section"));
   if (stacksToggle && stacksSection) {
-    // Start collapsed by default
-    stacksSection.classList.add("collapsed");
-    
     stacksToggle.addEventListener("click", () => {
       stacksSection.classList.toggle("collapsed");
     });
