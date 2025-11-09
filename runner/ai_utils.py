@@ -371,10 +371,20 @@ def parse_json_response(content: str) -> Optional[Dict[str, Any]]:
 
     Returns:
         Parsed JSON dict if successful, None otherwise
+        
+    Note:
+        Returns a special dict with key "_model_instruction_failure" = True
+        if the response appears to be plain text (not JSON) - this indicates
+        the model didn't follow JSON format instructions.
     """
+    if not content or not content.strip():
+        return None
+        
+    trimmed = content.strip()
+    
     try:
         # First try direct parsing
-        return json.loads(content.strip())
+        return json.loads(trimmed)
     except json.JSONDecodeError:
         pass
 
@@ -386,10 +396,19 @@ def parse_json_response(content: str) -> Optional[Dict[str, Any]]:
                 return json.loads(json_match.group(1))
 
         # Try to find any JSON object in the content
-        if not content.strip().startswith("{"):
+        if not trimmed.startswith("{") and not trimmed.startswith("["):
+            # Check if this looks like plain text (not JSON at all)
+            # If it doesn't start with { or [ and doesn't contain JSON-like structures
             json_match = re.search(r"(\{.*\})", content, re.DOTALL)
             if json_match:
-                return json.loads(json_match.group(1))
+                try:
+                    return json.loads(json_match.group(1))
+                except json.JSONDecodeError:
+                    pass
+            else:
+                # No JSON found at all - likely plain text response
+                # Return special marker to indicate model instruction failure
+                return {"_model_instruction_failure": True, "_raw_content": content[:500]}
 
     except json.JSONDecodeError:
         pass
@@ -449,6 +468,46 @@ def call_ai_analysis(
         return {
             "success": False,
             "error": f"Malformed JSON in AI response. Content: {content[:500]}",
+        }
+    
+    # Check if model failed to follow JSON instructions (returned plain text)
+    if isinstance(parsed, dict) and parsed.get("_model_instruction_failure"):
+        raw_content = parsed.get("_raw_content", content[:500])
+        # Determine provider and model name from model parameter
+        provider = "unknown"
+        model_name = model or "unknown"
+        if model:
+            if "/" in model:
+                parts = model.split("/", 1)
+                provider = parts[0].lower()
+                model_name = parts[1] if len(parts) > 1 else model
+            elif model.startswith("ollama/"):
+                provider = "ollama"
+                model_name = model.replace("ollama/", "")
+        
+        if provider == "ollama":
+            error_msg = (
+                f"The Ollama model \"{model_name}\" did not follow JSON format instructions. "
+                f"This model may not be capable enough for structured responses.\n\n"
+                f"Try using a more capable model like:\n"
+                f"• llama3.2 (or newer)\n"
+                f"• mistral\n"
+                f"• mixtral\n"
+                f"• qwen2.5\n\n"
+                f"Smaller models often struggle with strict JSON formatting.\n\n"
+                f"Response preview: {raw_content}"
+            )
+        else:
+            error_msg = (
+                f"The AI model \"{model_name}\" did not follow JSON format instructions. "
+                f"The model returned plain text instead of JSON.\n\n"
+                f"Response preview: {raw_content}"
+            )
+        
+        logger.error(f"Model instruction failure: {error_msg}")
+        return {
+            "success": False,
+            "error": error_msg,
         }
 
     # Validate required fields if specified
