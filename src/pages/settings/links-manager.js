@@ -3,35 +3,30 @@
  */
 
 import { escapeHtml } from "./utils.js";
-
-const { invoke } = window.__TAURI__.core;
+import { settingsManager } from "../../utils/settings-manager.js";
 
 /**
  * Manages technician links functionality.
  * @param {HTMLElement} root - The root element of the settings page.
  */
 export async function initializeTechnicianLinks(root) {
-  if (!invoke) return;
-
   let appSettings = {};
 
   /**
    * Loads app settings from the backend.
    */
   async function loadSettings() {
-    try {
-      appSettings = await invoke("load_app_settings");
-    } catch {
-      appSettings = {};
-    }
+    appSettings = await settingsManager.load();
     if (!appSettings.technician_links) appSettings.technician_links = [];
   }
 
   /**
    * Saves app settings to the backend.
    */
-  function saveSettings() {
-    return invoke("save_app_settings", { data: appSettings });
+  async function saveSettings() {
+    await settingsManager.batch((draft) => {
+      draft.technician_links = appSettings.technician_links;
+    });
   }
 
   /**
@@ -69,16 +64,15 @@ export async function initializeTechnicianLinks(root) {
     listElement
       .querySelectorAll('button[data-action="remove"]')
       .forEach((button) => {
-        button.addEventListener("click", (event) => {
+        button.addEventListener("click", async (event) => {
           event.stopPropagation();
           const linkId = button.closest(".row").getAttribute("data-id");
           appSettings.technician_links = appSettings.technician_links.filter(
             (link) => link.id !== linkId
           );
-          saveSettings().then(() => {
-            dispatchEvent(new Event("technician-links-updated"));
-            renderTechnicianLinks();
-          });
+          await saveSettings();
+          dispatchEvent(new Event("technician-links-updated"));
+          renderTechnicianLinks();
         });
       });
 

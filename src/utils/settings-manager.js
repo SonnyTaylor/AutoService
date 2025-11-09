@@ -134,6 +134,15 @@ const SentrySchema = z.object({
 });
 
 /**
+ * Technician link schema
+ */
+const TechnicianLinkSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  url: z.string(),
+});
+
+/**
  * Root application settings schema
  */
 const AppSettingsSchema = z.object({
@@ -144,6 +153,7 @@ const AppSettingsSchema = z.object({
   ai: AISchema.default({}),
   sentry: SentrySchema.default({}),
   sentry_enabled: z.boolean().default(true),
+  technician_links: z.array(TechnicianLinkSchema).default([]),
 });
 
 // ============================================================================
@@ -485,6 +495,7 @@ export const schemas = {
   Network: NetworkSchema,
   AI: AISchema,
   Sentry: SentrySchema,
+  TechnicianLink: TechnicianLinkSchema,
 };
 
 /**
@@ -496,4 +507,5 @@ export const schemas = {
  * @typedef {z.infer<typeof NetworkSchema>} NetworkSettings
  * @typedef {z.infer<typeof AISchema>} AISettings
  * @typedef {z.infer<typeof SentrySchema>} SentrySettings
+ * @typedef {z.infer<typeof TechnicianLinkSchema>} TechnicianLink
  */

@@ -298,7 +298,8 @@ async function refreshTechnicianTabs() {
   let settings = {};
   try {
     if (window.__TAURI__) {
-      settings = await window.__TAURI__.core.invoke("load_app_settings");
+      const { settingsManager } = await import("./utils/settings-manager.js");
+      settings = await settingsManager.load();
     }
   } catch {}
   const links = settings?.technician_links || [];

@@ -3,6 +3,8 @@
  * Handles creation, reuse, and visibility of webviews for technician links.
  */
 
+import { settingsManager } from "../../utils/settings-manager.js";
+
 /**
  * Displays a technician link in a persistent iframe container.
  * If the iframe for the link doesn't exist, it creates one; otherwise, reuses the existing one.
@@ -15,7 +17,7 @@ export async function showTechnicianLink(id) {
   // Load application settings to retrieve technician links configuration
   let settings = {};
   try {
-    settings = await window.__TAURI__.core.invoke("load_app_settings");
+    settings = await settingsManager.load();
   } catch (error) {
     console.warn("Failed to load app settings:", error);
   }
