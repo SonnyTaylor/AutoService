@@ -16,18 +16,33 @@ export function buildPrintableHtml(report, sectionsEl) {
   const overall = String(report.overall_status || "").toLowerCase();
   const head = "";
   
-  // Add AI summary section if present
+  // Add AI summary section if present (with XSS protection)
   let aiSummarySection = "";
-  if (report?.ai_summary) {
+  if (report?.ai_summary && report.ai_summary.trim().length >= 10) {
+    // Escape HTML to prevent XSS
+    const escapeHtml = (text) => {
+      return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    };
+    
+    const content = report.ai_summary
+      .trim()
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
+      .map((line) => `<p>${escapeHtml(line)}</p>`)
+      .join("");
+    
     aiSummarySection = `
       <section class="result-section ai-summary-section">
         <div class="card">
           <h3 class="section-title">AI Summary</h3>
           <div class="ai-summary-content">
-            ${report.ai_summary
-              .split("\n")
-              .map((line) => (line.trim() ? `<p>${line.trim()}</p>` : ""))
-              .join("")}
+            ${content}
           </div>
         </div>
       </section>

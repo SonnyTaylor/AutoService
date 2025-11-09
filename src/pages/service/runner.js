@@ -1497,6 +1497,21 @@ export async function initPage() {
                   })
                   .catch((error) => {
                     console.error("[AI Summary] Failed to generate:", error);
+                    
+                    // Extract user-friendly error message
+                    let errorMessage = "Failed to generate summary";
+                    if (error?.message) {
+                      if (error.message.includes("API key")) {
+                        errorMessage = "AI API key not configured";
+                      } else if (error.message.includes("connect") || error.message.includes("network")) {
+                        errorMessage = "Network error - check connection";
+                      } else if (error.message.includes("rate limit") || error.message.includes("quota")) {
+                        errorMessage = "API rate limit exceeded";
+                      } else {
+                        errorMessage = error.message;
+                      }
+                    }
+                    
                     // Update AI summary task status to "failure"
                     if (aiSummaryTaskIndex >= 0) {
                       // Update local task state
@@ -1508,6 +1523,10 @@ export async function initPage() {
                         updateGlobalTaskStatus(pythonTaskCount, "error");
                       }
                     }
+                    
+                    // Log user-friendly error
+                    appendLog(`[WARNING] AI Summary: ${errorMessage}`);
+                    
                     // Don't block report display - continue without summary
                   });
               } else {

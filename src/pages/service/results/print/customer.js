@@ -217,18 +217,37 @@ export async function buildCustomerSummary(report, options = {}) {
       : "";
 
   // Build AI summary section (if available and enabled)
-  const aiSummaryMarkup = aiSummary && showAISummary
-    ? `
+  // Validate summary is meaningful before displaying
+  const hasValidSummary = aiSummary && showAISummary && aiSummary.trim().length >= 10;
+  const aiSummaryMarkup = hasValidSummary
+    ? (() => {
+        // Escape HTML to prevent XSS
+        const escapeHtml = (text) => {
+          return String(text)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+        };
+        
+        const content = aiSummary
+          .trim()
+          .split("\n")
+          .map((line) => line.trim())
+          .filter((line) => line.length > 0)
+          .map((line) => `<p>${escapeHtml(line)}</p>`)
+          .join("");
+        
+        return `
       <div class="ai-summary-section">
         <h3 class="section-heading">Service Summary</h3>
         <div class="ai-summary-content">
-          ${aiSummary
-            .split("\n")
-            .map((line) => (line.trim() ? `<p>${line.trim()}</p>` : ""))
-            .join("")}
+          ${content}
         </div>
       </div>
-    `
+    `;
+      })()
     : "";
 
   // Get business settings for thank you message

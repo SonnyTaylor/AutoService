@@ -161,22 +161,53 @@ export async function initPage() {
   renderResultsSummary(report, summaryEl);
   renderResultsSections(report, sectionsEl);
   
-  // Add AI summary section to technician view if present
-  if (report.ai_summary && sectionsEl) {
+  // Helper function to escape HTML and render AI summary safely
+  const renderAISummary = (summaryText, container) => {
+    if (!summaryText || !container) return;
+    
+    // Validate summary is meaningful (at least 10 characters)
+    const trimmed = summaryText.trim();
+    if (trimmed.length < 10) {
+      console.warn("[AI Summary] Summary too short, skipping display");
+      return;
+    }
+    
     const aiSummarySection = document.createElement("section");
     aiSummarySection.className = "result-section ai-summary-section";
+    aiSummarySection.setAttribute("role", "region");
+    aiSummarySection.setAttribute("aria-label", "AI-generated service summary");
+    
+    // Escape HTML to prevent XSS
+    const escapeHtml = (text) => {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    };
+    
+    const content = trimmed
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
+      .map((line) => `<p>${escapeHtml(line)}</p>`)
+      .join("");
+    
     aiSummarySection.innerHTML = `
       <div class="card">
-        <h3 class="section-title">AI Summary</h3>
-        <div class="ai-summary-content">
-          ${report.ai_summary
-            .split("\n")
-            .map((line) => (line.trim() ? `<p>${line.trim()}</p>` : ""))
-            .join("")}
+        <h3 class="section-title">
+          <span aria-hidden="true">✨</span>
+          AI Summary
+        </h3>
+        <div class="ai-summary-content" role="article">
+          ${content}
         </div>
       </div>
     `;
-    sectionsEl.appendChild(aiSummarySection);
+    container.appendChild(aiSummarySection);
+  };
+  
+  // Add AI summary section to technician view if present
+  if (report.ai_summary && sectionsEl) {
+    renderAISummary(report.ai_summary, sectionsEl);
   }
 
   // Set up print handlers
@@ -435,20 +466,40 @@ function setupPrintHandlers(report, sectionsEl) {
         // Check if AI summary section already exists
         const existingAISection = sectionsEl.querySelector(".ai-summary-section");
         if (!existingAISection) {
-          const aiSummarySection = document.createElement("section");
-          aiSummarySection.className = "result-section ai-summary-section";
-          aiSummarySection.innerHTML = `
-            <div class="card">
-              <h3 class="section-title">AI Summary</h3>
-              <div class="ai-summary-content">
-                ${updatedReport.ai_summary
-                  .split("\n")
-                  .map((line) => (line.trim() ? `<p>${line.trim()}</p>` : ""))
-                  .join("")}
+          // Helper function to escape HTML and render AI summary safely
+          const escapeHtml = (text) => {
+            const div = document.createElement("div");
+            div.textContent = text;
+            return div.innerHTML;
+          };
+          
+          const trimmed = updatedReport.ai_summary.trim();
+          if (trimmed.length >= 10) {
+            const aiSummarySection = document.createElement("section");
+            aiSummarySection.className = "result-section ai-summary-section";
+            aiSummarySection.setAttribute("role", "region");
+            aiSummarySection.setAttribute("aria-label", "AI-generated service summary");
+            
+            const content = trimmed
+              .split("\n")
+              .map((line) => line.trim())
+              .filter((line) => line.length > 0)
+              .map((line) => `<p>${escapeHtml(line)}</p>`)
+              .join("");
+            
+            aiSummarySection.innerHTML = `
+              <div class="card">
+                <h3 class="section-title">
+                  <span aria-hidden="true">✨</span>
+                  AI Summary
+                </h3>
+                <div class="ai-summary-content" role="article">
+                  ${content}
+                </div>
               </div>
-            </div>
-          `;
-          sectionsEl.appendChild(aiSummarySection);
+            `;
+            sectionsEl.appendChild(aiSummarySection);
+          }
         }
       }
       
