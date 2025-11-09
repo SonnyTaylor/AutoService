@@ -42,6 +42,16 @@ export const DEFAULT_LOGO = "ph ph-wrench";
  */
 
 /**
+ * A program stack (group of programs).
+ * @typedef {Object} Stack
+ * @property {string} id Stable unique id used as the primary key.
+ * @property {string} name Display name shown in the list.
+ * @property {string} [description] Optional free-form description.
+ * @property {string[]} program_ids Array of program IDs in this stack.
+ * @property {string} [created_at] Optional creation timestamp.
+ */
+
+/**
  * View-model for the Programs page.
  * @typedef {Object} State
  * @property {Program[]} all Source list from backend.
@@ -49,6 +59,9 @@ export const DEFAULT_LOGO = "ph ph-wrench";
  * @property {string} query Current search text.
  * @property {"name-asc"|"name-desc"|"used-asc"|"used-desc"} sort Sort key.
  * @property {Program|null} editing Program currently in the editor, or null.
+ * @property {Stack[]} stacks Source list of stacks from backend.
+ * @property {Stack[]} stacksFiltered Derived list of stacks after filtering.
+ * @property {Stack|null} editingStack Stack currently in the editor, or null.
  */
 
 /** @type {State} */
@@ -58,6 +71,9 @@ export let state = {
   query: "",
   sort: "used-desc",
   editing: null,
+  stacks: [],
+  stacksFiltered: [],
+  editingStack: null,
 };
 
 /**

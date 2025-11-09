@@ -36,6 +36,21 @@
     </button>
     <!-- Opens the modal editor with a blank template -->
     <button id="program-add-btn">Add</button>
+    <!-- Opens the stack editor with a blank template -->
+    <button id="stack-add-btn" class="secondary">Add Stack</button>
+  </div>
+
+  <!-- Render target for the stacks list; content is replaced by stacks-view.renderStacks() -->
+  <div class="stacks-section">
+    <div class="stacks-header">
+      <h2>Stacks</h2>
+      <button type="button" id="stacks-toggle" class="stacks-toggle" title="Toggle stacks section">
+        <i class="ph ph-caret-down" aria-hidden="true"></i>
+      </button>
+    </div>
+    <div class="stacks-content">
+      <div class="stacks-list"></div>
+    </div>
   </div>
 
   <!-- Render target for the programs list; content is replaced by view.renderList() -->
@@ -93,6 +108,50 @@
         <button type="button" id="p-cancel" class="ghost">Cancel</button>
         <!-- Validates and saves via backend; page listens for `programs-updated` to refresh -->
         <button type="button" id="p-save">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="stack-editor" class="stack-editor">
+    <form method="dialog" id="stack-form">
+      <h2>Stack Editor</h2>
+      <div class="fields-col">
+        <label
+          >Name
+          <input id="s-name" type="text" required />
+        </label>
+        <label
+          >Description
+          <textarea id="s-desc" rows="3"></textarea>
+        </label>
+        <label
+          >Programs
+          <div class="program-selector-header">
+            <input
+              id="s-program-search"
+              type="search"
+              placeholder="Search programs..."
+              class="program-selector-search"
+            />
+          </div>
+          <button
+            type="button"
+            id="s-ai-suggest-btn"
+            class="secondary ai-suggest-btn"
+            title="Configure AI API key in Settings"
+            disabled
+          >
+            <i class="ph ph-robot" aria-hidden="true"></i> AI Suggest Programs
+          </button>
+          <div id="s-ai-error" class="ai-stack-error" role="alert" style="display:none"></div>
+          <div id="s-programs-selector" class="program-selector"></div>
+        </label>
+      </div>
+      <div class="editor-actions">
+        <!-- Closes the dialog without saving -->
+        <button type="button" id="s-cancel" class="ghost">Cancel</button>
+        <!-- Validates and saves via backend; page listens for `stacks-updated` to refresh -->
+        <button type="button" id="s-save">Save</button>
       </div>
     </form>
   </dialog>

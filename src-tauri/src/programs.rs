@@ -6,13 +6,14 @@
 //! - Resolve and launch Windows executables
 //! - Provide summarized availability ("tool statuses") for key utilities
 use std::{
+    collections::HashSet,
     fs,
     path::{Path, PathBuf},
 };
 use uuid::Uuid;
 
 use crate::icons::get_logo_from_exe;
-use crate::models::{ProgramDiskEntry, ProgramEntry, ToolStatus};
+use crate::models::{ProgramDiskEntry, ProgramEntry, ProgramStack, ProgramStackDiskEntry, ToolStatus};
 use crate::{paths, state::AppState};
 
 #[tauri::command]
@@ -361,6 +362,117 @@ fn write_programs_file(path: &Path, list: &Vec<ProgramEntry>) -> Result<(), Stri
             exe_path: p.exe_path.clone(),
             logo_data_url: p.logo_data_url.clone(),
             launch_count: p.launch_count,
+        })
+        .collect();
+    let data = serde_json::to_string_pretty(&disk).map_err(|e| e.to_string())?;
+    fs::write(path, data).map_err(|e| e.to_string())
+}
+
+// --- Stack Management Commands -------------------------------------------------
+
+#[tauri::command]
+/// Load saved stacks from `settings/stacks.json`.
+pub fn list_stacks(state: tauri::State<AppState>) -> Result<Vec<ProgramStack>, String> {
+    let data_root = state.data_dir.as_path();
+    let settings_path = stacks_json_path(data_root);
+    Ok(read_stacks_file(&settings_path))
+}
+
+#[tauri::command]
+/// Create or update a `ProgramStack` in `stacks.json`.
+/// Validates that all program IDs exist in the programs list.
+pub fn save_stack(
+    state: tauri::State<AppState>,
+    mut stack: ProgramStack,
+) -> Result<(), String> {
+    let data_root = state.data_dir.as_path();
+    let settings_path = stacks_json_path(data_root);
+    
+    // Validate program IDs exist
+    let programs = read_programs_file(&programs_json_path(data_root));
+    let program_ids: HashSet<Uuid> = programs.iter().map(|p| p.id).collect();
+    for program_id in &stack.program_ids {
+        if !program_ids.contains(program_id) {
+            return Err(format!("Program ID {} not found", program_id));
+        }
+    }
+    
+    // Set created_at if this is a new stack
+    if stack.created_at.is_none() {
+        let existing = read_stacks_file(&settings_path);
+        if !existing.iter().any(|s| s.id == stack.id) {
+            use std::time::{SystemTime, UNIX_EPOCH};
+            let timestamp = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs();
+            stack.created_at = Some(timestamp.to_string());
+        }
+    }
+    
+    let mut list = read_stacks_file(&settings_path);
+    match list.iter_mut().find(|s| s.id == stack.id) {
+        Some(existing) => *existing = stack,
+        None => list.push(stack),
+    }
+    write_stacks_file(&settings_path, &list)
+}
+
+#[tauri::command]
+/// Remove a stack by its `id` from `stacks.json`.
+pub fn remove_stack(state: tauri::State<AppState>, id: Uuid) -> Result<(), String> {
+    let settings_path = stacks_json_path(state.data_dir.as_path());
+    let mut list = read_stacks_file(&settings_path);
+    list.retain(|s| s.id != id);
+    write_stacks_file(&settings_path, &list)
+}
+
+// Build the full path to the persisted stacks index JSON within the settings directory.
+fn stacks_json_path(data_root: &Path) -> PathBuf {
+    let (_reports, _programs, settings, _resources) = paths::subdirs(data_root);
+    settings.join("stacks.json")
+}
+
+// Read `stacks.json` into runtime `ProgramStack` values.
+// Supports both the on-disk schema (`ProgramStackDiskEntry`) and the runtime schema for backward compatibility.
+fn read_stacks_file(path: &Path) -> Vec<ProgramStack> {
+    if let Ok(data) = fs::read_to_string(path) {
+        if let Ok(list) = serde_json::from_str::<Vec<ProgramStackDiskEntry>>(&data) {
+            return list
+                .into_iter()
+                .map(|d| ProgramStack {
+                    id: d.id,
+                    name: d.name,
+                    description: d.description,
+                    program_ids: d.program_ids,
+                    created_at: d.created_at,
+                })
+                .collect();
+        }
+        if let Ok(list) = serde_json::from_str::<Vec<ProgramStack>>(&data) {
+            return list;
+        }
+    }
+    Vec::new()
+}
+
+// Persist `ProgramStack` values to `stacks.json` using the portable on-disk schema.
+// Ensures the parent directory exists and pretty-prints the JSON for easier diffing.
+fn write_stacks_file(path: &Path, list: &Vec<ProgramStack>) -> Result<(), String> {
+    let parent = path
+        .parent()
+        .ok_or_else(|| "Invalid settings path".to_string())?;
+    if let Err(e) = fs::create_dir_all(parent) {
+        return Err(e.to_string());
+    }
+    let disk: Vec<ProgramStackDiskEntry> = list
+        .iter()
+        .map(|s| ProgramStackDiskEntry {
+            id: s.id,
+            name: s.name.clone(),
+            description: s.description.clone(),
+            program_ids: s.program_ids.clone(),
+            created_at: s.created_at.clone(),
         })
         .collect();
     let data = serde_json::to_string_pretty(&disk).map_err(|e| e.to_string())?;
