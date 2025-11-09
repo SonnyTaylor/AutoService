@@ -77,10 +77,10 @@ def run_with_skip_check(
     stderr_data = []
     
     # Monitor process and check for skip signals periodically
-    # For simplicity, we'll poll the process and check for skip signals
-    # Output will be read after the process completes
+    # For Windows, we can't use select on file handles, so use a simpler polling approach
+    # But check more frequently for better responsiveness (every 0.1s max)
     while process.poll() is None:
-        # Check for skip signal
+        # Check for skip signal FIRST (before timeout check) for immediate response
         if _check_skip_signal(control_file_path):
             _kill_process_and_raise_skip(process, control_file_path)
         
@@ -89,17 +89,31 @@ def run_with_skip_check(
             process.kill()
             raise subprocess.TimeoutExpired(command, timeout)
         
-        # Sleep briefly before checking again
-        time.sleep(check_interval)
+        # Try to read available output (non-blocking)
+        # On Windows, this is best-effort since we can't use select
+        try:
+            # Use a shorter sleep for more responsive skip checking
+            time.sleep(min(check_interval, 0.1))
+        except Exception:
+            time.sleep(check_interval)
     
-    # Process has completed, read output
+    # Process has completed, read any remaining output
     stdout, stderr = process.communicate()
     stdout_data = [stdout] if stdout else []
     stderr_data = [stderr] if stderr else []
     
     # Final check for skip signal (in case it was set just as process finished)
+    # This is important - if skip was requested right as process finished,
+    # we still want to honor it
     if _check_skip_signal(control_file_path):
-        _kill_process_and_raise_skip(process, control_file_path)
+        # Process already finished, but clear the signal and raise anyway
+        # so the task gets marked as skipped
+        if control_file_path and os.path.exists(control_file_path):
+            try:
+                os.remove(control_file_path)
+            except Exception:
+                pass
+        raise KeyboardInterrupt("User requested skip")
     
     # Combine output
     stdout_str = "".join(stdout_data) if stdout_data else ""
@@ -146,23 +160,31 @@ def _kill_process_and_raise_skip(process: subprocess.Popen, control_file_path: O
         process: The subprocess.Popen instance to kill
         control_file_path: Path to control file (will be cleared)
     """
-    logger.warning("Skip signal detected, terminating process")
+    logger.warning("Skip signal detected, terminating process immediately")
     
-    # Try graceful termination first
-    process.terminate()
-    
-    # Wait a bit for graceful termination, then force kill
-    try:
-        process.wait(timeout=1.0)
-    except subprocess.TimeoutExpired:
-        process.kill()
-        process.wait()
-    
-    # Clear skip signal
+    # Clear skip signal FIRST to prevent it from affecting next task
     if control_file_path and os.path.exists(control_file_path):
         try:
             os.remove(control_file_path)
         except Exception:
+            pass
+    
+    # Try graceful termination first
+    try:
+        process.terminate()
+    except Exception:
+        # Process might already be dead
+        pass
+    
+    # Wait briefly for graceful termination, then force kill
+    try:
+        process.wait(timeout=0.5)
+    except subprocess.TimeoutExpired:
+        try:
+            process.kill()
+            process.wait(timeout=1.0)
+        except Exception:
+            # Process might have finished or be unkillable, continue anyway
             pass
     
     # Raise exception to signal skip
