@@ -42,8 +42,15 @@
 
   <!-- Render target for the stacks list; content is replaced by stacks-view.renderStacks() -->
   <div class="stacks-section">
-    <h2>Stacks</h2>
-    <div class="stacks-list"></div>
+    <div class="stacks-header">
+      <h2>Stacks</h2>
+      <button type="button" id="stacks-toggle" class="stacks-toggle" title="Toggle stacks section">
+        <i class="ph ph-caret-down" aria-hidden="true"></i>
+      </button>
+    </div>
+    <div class="stacks-content">
+      <div class="stacks-list"></div>
+    </div>
   </div>
 
   <!-- Render target for the programs list; content is replaced by view.renderList() -->

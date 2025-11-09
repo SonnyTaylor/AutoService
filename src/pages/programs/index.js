@@ -24,6 +24,18 @@ export async function initPage() {
   const stackAddBtn = /** @type {HTMLButtonElement|null} */ ($("#stack-add-btn"));
   stackAddBtn?.addEventListener("click", () => openStackEditor());
 
+  // Wire stacks section toggle
+  const stacksToggle = /** @type {HTMLButtonElement|null} */ ($("#stacks-toggle"));
+  const stacksSection = /** @type {HTMLElement|null} */ ($(".stacks-section"));
+  if (stacksToggle && stacksSection) {
+    // Start collapsed by default
+    stacksSection.classList.add("collapsed");
+    
+    stacksToggle.addEventListener("click", () => {
+      stacksSection.classList.toggle("collapsed");
+    });
+  }
+
   // Refresh programs list when editor saves
   window.addEventListener(
     "programs-updated",
