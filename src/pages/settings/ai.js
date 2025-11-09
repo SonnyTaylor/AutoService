@@ -276,7 +276,6 @@ function updateProviderUI(provider) {
 export async function initializeAISettings(root) {
   if (!root || !invoke) return;
 
-  const form = root.querySelector("#ai-settings-form");
   const providerSelect = root.querySelector("#ai-provider-select");
   const modelSelect = root.querySelector("#ai-model-select");
   const apiKeyInput = root.querySelector("#ai-api-key-input");
@@ -321,7 +320,98 @@ export async function initializeAISettings(root) {
     apiKeyInput.dataset.originalKey = currentKey; // Store for comparison
   }
 
-  // Provider change handler
+  /**
+   * Save AI settings with status feedback
+   * @param {Object} options - Save options
+   * @param {boolean} [options.suppressStatus=false] - Don't show status message
+   */
+  async function saveAISettings(options = {}) {
+    const provider = providerSelect?.value || "openai";
+    const model = modelSelect?.value || "gpt-4o-mini";
+    const apiKey = apiKeyInput?.value?.trim() || "";
+    const baseUrl = baseUrlInput?.value?.trim() || "";
+
+    // Check if API key was changed (not just the masked placeholder)
+    const isKeyUnchanged =
+      apiKey.includes("...") && apiKeyInput?.dataset.hasKey === "true";
+    const actualKey = isKeyUnchanged
+      ? apiKeyInput?.dataset.originalKey || ""
+      : apiKey;
+
+    try {
+      // Batch save all AI settings
+      await settingsManager.batch((draft) => {
+        // Ensure provider_keys and provider_base_urls objects exist
+        if (!draft.ai.provider_keys) {
+          draft.ai.provider_keys = {};
+        }
+        if (!draft.ai.provider_base_urls) {
+          draft.ai.provider_base_urls = {};
+        }
+
+        // Save current provider settings
+        draft.ai.provider = provider;
+        draft.ai.model = model;
+        draft.ai.api_key = actualKey;
+        draft.ai.base_url = baseUrl;
+
+        // Save provider-specific key and base URL
+        draft.ai.provider_keys[provider] = actualKey;
+        draft.ai.provider_base_urls[provider] = baseUrl;
+
+        // Keep backward compatibility
+        if (provider === "openai") {
+          draft.ai.openai_api_key = actualKey;
+        }
+      });
+
+      if (!options.suppressStatus && status) {
+        status.className = "settings-status success";
+        if (!isKeyUnchanged) {
+          status.textContent = actualKey
+            ? `✓ Saved. ${
+                provider.charAt(0).toUpperCase() + provider.slice(1)
+              } settings updated.`
+            : "✓ Saved. API key cleared.";
+        } else {
+          status.textContent = `✓ Saved. Settings updated.`;
+        }
+
+        // Update input to masked value
+        if (actualKey && apiKeyInput) {
+          const maskedKey =
+            actualKey.substring(0, 3) + "..." + actualKey.slice(-4);
+          apiKeyInput.value = maskedKey;
+          apiKeyInput.dataset.hasKey = "true";
+          apiKeyInput.dataset.originalKey = actualKey;
+        } else if (apiKeyInput) {
+          apiKeyInput.value = "";
+          apiKeyInput.dataset.hasKey = "false";
+          apiKeyInput.dataset.originalKey = "";
+        }
+
+        setTimeout(() => {
+          status.textContent = "";
+          status.className = "";
+        }, 3000);
+      }
+
+      // Dispatch event so other parts of the app can react
+      const event = new CustomEvent("ai-settings-updated", {
+        detail: { provider, model, hasKey: Boolean(actualKey) },
+      });
+      dispatchEvent(event);
+    } catch (e) {
+      if (status) {
+        status.className = "settings-status error";
+        status.textContent = "✕ Failed to save settings.";
+      }
+      console.error(e);
+      throw e;
+    }
+  }
+
+  // Provider change handler - auto-save
   providerSelect?.addEventListener("change", async (e) => {
     const provider = e.target.value;
     updateProviderUI(provider);
@@ -363,9 +453,22 @@ export async function initializeAISettings(root) {
       const defaultModel = models.length > 0 ? models[0].value : "";
       await populateModelDropdown(provider, defaultModel);
     }
+
+    // Auto-save provider change
+    await saveAISettings();
   });
 
-  // Base URL change handler for Ollama (refetch models when base URL changes)
+  // Model change handler - auto-save
+  modelSelect?.addEventListener("change", async () => {
+    await saveAISettings();
+  });
+
+  // API key blur handler - auto-save
+  apiKeyInput?.addEventListener("blur", async () => {
+    await saveAISettings();
+  });
+
+  // Base URL blur handler - auto-save (and refetch Ollama models if needed)
   baseUrlInput?.addEventListener("blur", async () => {
     const provider = providerSelect?.value || "openai";
     if (provider === "ollama") {
@@ -373,104 +476,18 @@ export async function initializeAISettings(root) {
       const currentModel = modelSelect?.value || "";
       await populateModelDropdown(provider, currentModel, baseUrl);
     }
+    await saveAISettings();
   });
 
-  // Form submit handler
-  form?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    const provider = providerSelect?.value || "openai";
-    const model = modelSelect?.value || "gpt-4o-mini";
-    const apiKey = apiKeyInput?.value?.trim() || "";
-    const baseUrl = baseUrlInput?.value?.trim() || "";
-
-    // Check if API key was changed (not just the masked placeholder)
-    const isKeyUnchanged =
-      apiKey.includes("...") && apiKeyInput.dataset.hasKey === "true";
-    const actualKey = isKeyUnchanged
-      ? apiKeyInput.dataset.originalKey || ""
-      : apiKey;
-
-    try {
-      // Batch save all AI settings
-      await settingsManager.batch((draft) => {
-        // Ensure provider_keys and provider_base_urls objects exist
-        if (!draft.ai.provider_keys) {
-          draft.ai.provider_keys = {};
-        }
-        if (!draft.ai.provider_base_urls) {
-          draft.ai.provider_base_urls = {};
-        }
-
-        // Save current provider settings
-        draft.ai.provider = provider;
-        draft.ai.model = model;
-        draft.ai.api_key = actualKey;
-        draft.ai.base_url = baseUrl;
-
-        // Save provider-specific key and base URL
-        draft.ai.provider_keys[provider] = actualKey;
-        draft.ai.provider_base_urls[provider] = baseUrl;
-
-        // Keep backward compatibility
-        if (provider === "openai") {
-          draft.ai.openai_api_key = actualKey;
-        }
-      });
-
-      if (status) {
-        status.className = "settings-status success";
-        if (!isKeyUnchanged) {
-          status.textContent = actualKey
-            ? `✓ Saved. ${
-                provider.charAt(0).toUpperCase() + provider.slice(1)
-              } settings updated.`
-            : "✓ Saved. API key cleared.";
-        } else {
-          status.textContent = `✓ Saved. Provider and model updated.`;
-        }
-
-        // Update input to masked value
-        if (actualKey && apiKeyInput) {
-          const maskedKey =
-            actualKey.substring(0, 3) + "..." + actualKey.slice(-4);
-          apiKeyInput.value = maskedKey;
-          apiKeyInput.dataset.hasKey = "true";
-          apiKeyInput.dataset.originalKey = actualKey;
-        } else if (apiKeyInput) {
-          apiKeyInput.value = "";
-          apiKeyInput.dataset.hasKey = "false";
-          apiKeyInput.dataset.originalKey = "";
-        }
-
-        setTimeout(() => {
-          status.textContent = "";
-          status.className = "";
-        }, 3000);
-      }
-
-      // Dispatch event so other parts of the app can react
-      const event = new CustomEvent("ai-settings-updated", {
-        detail: { provider, model, hasKey: Boolean(actualKey) },
-      });
-      dispatchEvent(event);
-    } catch (e) {
-      if (status) {
-        status.className = "settings-status error";
-        status.textContent = "✕ Failed to save settings.";
-      }
-      console.error(e);
-    }
-  });
-
-  // Clear button
+  // Clear button - auto-save after clearing
   const clearBtn = root.querySelector("#ai-api-key-clear-btn");
-  clearBtn?.addEventListener("click", () => {
+  clearBtn?.addEventListener("click", async () => {
     if (apiKeyInput) {
       apiKeyInput.value = "";
       apiKeyInput.dataset.hasKey = "false";
       apiKeyInput.dataset.originalKey = "";
       apiKeyInput.focus();
+      await saveAISettings();
     }
   });
 }

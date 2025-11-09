@@ -14,11 +14,9 @@ const { invoke } = window.__TAURI__.core || {};
 export async function initializeNetworkSettings(root) {
   if (!root || !invoke) return;
 
-  const form = root.querySelector("#iperf-settings-form");
   const input = root.querySelector("#iperf-server-input");
   const status = root.querySelector("#iperf-settings-status");
 
-  const pingForm = root.querySelector("#ping-settings-form");
   const pingInput = root.querySelector("#ping-host-input");
   const pingStatus = root.querySelector("#ping-settings-status");
 
@@ -56,8 +54,8 @@ export async function initializeNetworkSettings(root) {
   input.value = network.iperf_server || "";
   if (pingInput) pingInput.value = network.ping_host || "8.8.8.8";
 
-  form?.addEventListener("submit", async (event) => {
-    event.preventDefault();
+  // iPerf server auto-save on blur
+  input?.addEventListener("blur", async () => {
     const value = (input.value || "").toString().trim();
 
     // Validate the input
@@ -88,9 +86,9 @@ export async function initializeNetworkSettings(root) {
     }
   });
 
-  pingForm?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const value = (pingInput?.value || "").toString().trim() || "8.8.8.8";
+  // Ping host auto-save on blur
+  pingInput?.addEventListener("blur", async () => {
+    const value = (pingInput.value || "").toString().trim() || "8.8.8.8";
 
     // Validate the input (ping host should not be empty)
     if (!isValidIPOrEmpty(value, false)) {

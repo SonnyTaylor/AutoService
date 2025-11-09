@@ -21,7 +21,6 @@ export async function initializeBusinessSettings(root) {
   const websiteInput = root.querySelector("#business-website-input");
   const tfnInput = root.querySelector("#business-tfn-input");
   const abnInput = root.querySelector("#business-abn-input");
-  const saveBtn = root.querySelector("#business-settings-save");
   const statusEl = root.querySelector("#business-settings-status");
 
   // Technician names management
@@ -36,7 +35,7 @@ export async function initializeBusinessSettings(root) {
     root.querySelector("#identification-category"),
   ].filter(Boolean);
 
-  if (!techModeToggle || !logoInput || !nameInput || !saveBtn) {
+  if (!techModeToggle || !logoInput || !nameInput) {
     console.warn("Business settings UI elements not found");
     return;
   }
@@ -85,13 +84,31 @@ export async function initializeBusinessSettings(root) {
     websiteInput.disabled = !enabled;
     tfnInput.disabled = !enabled;
     abnInput.disabled = !enabled;
-    saveBtn.disabled = !enabled;
 
     // Visual styling for disabled state - apply to category containers
     const opacity = enabled ? "1" : "0.5";
     categories.forEach((category) => {
       if (category) category.style.opacity = opacity;
     });
+  }
+
+  /**
+   * Save a single business field
+   * @param {string} field - Field name (e.g., 'name', 'address')
+   * @param {string} value - Field value
+   */
+  async function saveBusinessField(field, value) {
+    if (!techModeToggle.checked) {
+      return; // Don't save if technician mode is disabled
+    }
+
+    try {
+      await settingsManager.set(`business.${field}`, value);
+      showStatus(`${field.charAt(0).toUpperCase() + field.slice(1)} saved`, "success");
+    } catch (err) {
+      console.error(`Failed to save ${field}:`, err);
+      showStatus(`Failed to save ${field}`, "error");
+    }
   }
 
   /**
@@ -173,9 +190,12 @@ export async function initializeBusinessSettings(root) {
           // Store base64 data URL directly
           logoInput.value = dataUrl;
 
+          // Auto-save logo
+          await saveBusinessField("logo", dataUrl);
+
           // Show confirmation with file size info
           const sizeKB = Math.round((dataUrl.length * 0.75) / 1024);
-          showStatus(`Logo loaded (${sizeKB} KB)`, "success");
+          showStatus(`Logo loaded and saved (${sizeKB} KB)`, "success");
         }
       } catch (err) {
         console.error("Failed to load logo:", err);
@@ -184,61 +204,33 @@ export async function initializeBusinessSettings(root) {
     });
   }
 
-  // Handle save button
-  saveBtn.addEventListener("click", async () => {
-    if (!techModeToggle.checked) {
-      showStatus("Enable technician mode first", "error");
-      return;
-    }
-
-    // Collect all field values
-    const logo = logoInput.value.trim();
-    const name = nameInput.value.trim();
-    const address = addressInput.value.trim();
-    const phone = phoneInput.value.trim();
-    const email = emailInput.value.trim();
-    const website = websiteInput.value.trim();
-    const tfn = tfnInput.value.trim();
-    const abn = abnInput.value.trim();
-
-    try {
-      // Batch update all fields at once
-      await settingsManager.batch((draft) => {
-        draft.business.technician_mode = techModeToggle.checked;
-        draft.business.logo = logo;
-        draft.business.name = name;
-        draft.business.address = address;
-        draft.business.phone = phone;
-        draft.business.email = email;
-        draft.business.website = website;
-        draft.business.tfn = tfn;
-        draft.business.abn = abn;
-      });
-
-      showStatus("Business settings saved", "success");
-    } catch (err) {
-      console.error("Failed to save business settings:", err);
-      showStatus("Failed to save settings", "error");
-    }
+  // Auto-save handlers for all business fields
+  nameInput?.addEventListener("blur", async () => {
+    await saveBusinessField("name", nameInput.value.trim());
   });
 
-  // Allow Enter key in inputs to trigger save
-  [
-    logoInput,
-    nameInput,
-    addressInput,
-    phoneInput,
-    emailInput,
-    websiteInput,
-    tfnInput,
-    abnInput,
-  ].forEach((input) => {
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && techModeToggle.checked) {
-        e.preventDefault();
-        saveBtn.click();
-      }
-    });
+  addressInput?.addEventListener("blur", async () => {
+    await saveBusinessField("address", addressInput.value.trim());
+  });
+
+  phoneInput?.addEventListener("blur", async () => {
+    await saveBusinessField("phone", phoneInput.value.trim());
+  });
+
+  emailInput?.addEventListener("blur", async () => {
+    await saveBusinessField("email", emailInput.value.trim());
+  });
+
+  websiteInput?.addEventListener("blur", async () => {
+    await saveBusinessField("website", websiteInput.value.trim());
+  });
+
+  tfnInput?.addEventListener("blur", async () => {
+    await saveBusinessField("tfn", tfnInput.value.trim());
+  });
+
+  abnInput?.addEventListener("blur", async () => {
+    await saveBusinessField("abn", abnInput.value.trim());
   });
 
   /**
