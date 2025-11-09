@@ -90,14 +90,147 @@ const PROVIDER_INFO = {
 };
 
 /**
- * Populate model dropdown based on selected provider
+ * Fetch installed models from Ollama instance
+ * @param {string} baseUrl - Ollama base URL (defaults to http://localhost:11434)
+ * @returns {Promise<Array<{value: string, label: string}>>}
  */
-function populateModelDropdown(provider, currentModel) {
+async function fetchOllamaModels(baseUrl = "http://localhost:11434") {
+  try {
+    const url = `${baseUrl.replace(/\/$/, "")}/api/tags`;
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    if (!data.models || !Array.isArray(data.models)) {
+      throw new Error("Invalid response format from Ollama API");
+    }
+
+    // Transform Ollama models into dropdown options
+    return data.models.map((model) => {
+      const name = model.name || "";
+      const details = model.details || {};
+      const paramSize = details.parameter_size || "";
+      const family = details.family || "";
+      
+      // Create a descriptive label
+      let label = name;
+      if (paramSize) {
+        label += ` (${paramSize}`;
+        if (family) {
+          label += `, ${family}`;
+        }
+        label += ")";
+      } else if (family) {
+        label += ` (${family})`;
+      }
+      
+      return {
+        value: name,
+        label: label,
+      };
+    });
+  } catch (error) {
+    console.error("Failed to fetch Ollama models:", error);
+    throw error;
+  }
+}
+
+/**
+ * Populate model dropdown based on selected provider
+ * @param {string} provider - Provider name
+ * @param {string} currentModel - Currently selected model
+ * @param {string} baseUrl - Base URL (for Ollama)
+ */
+async function populateModelDropdown(provider, currentModel, baseUrl = "") {
   const modelSelect = document.getElementById("ai-model-select");
   if (!modelSelect) return;
 
+  // Show loading state for Ollama
+  if (provider === "ollama") {
+    modelSelect.innerHTML = '<option value="">Loading models...</option>';
+    modelSelect.disabled = true;
+    
+    try {
+      const ollamaBaseUrl = baseUrl || "http://localhost:11434";
+      const models = await fetchOllamaModels(ollamaBaseUrl);
+      
+      modelSelect.innerHTML = "";
+      modelSelect.disabled = false;
+      
+      if (models.length === 0) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "No models found";
+        modelSelect.appendChild(option);
+        return;
+      }
+      
+      models.forEach((model) => {
+        const option = document.createElement("option");
+        option.value = model.value;
+        option.textContent = model.label;
+        if (model.value === currentModel) {
+          option.selected = true;
+        }
+        modelSelect.appendChild(option);
+      });
+      
+      // If current model isn't in the list, add it as custom
+      if (currentModel && !models.find((m) => m.value === currentModel)) {
+        const option = document.createElement("option");
+        option.value = currentModel;
+        option.textContent = `${currentModel} (Custom)`;
+        option.selected = true;
+        modelSelect.appendChild(option);
+      }
+    } catch (error) {
+      // On error, show fallback options and allow manual entry
+      modelSelect.innerHTML = "";
+      modelSelect.disabled = false;
+      
+      // Show error option
+      const errorOption = document.createElement("option");
+      errorOption.value = "";
+      errorOption.textContent = `Error: ${error.message}`;
+      modelSelect.appendChild(errorOption);
+      
+      // Add common Ollama models as fallback
+      const fallbackModels = PROVIDER_MODELS.ollama || [];
+      fallbackModels.forEach((model) => {
+        const option = document.createElement("option");
+        option.value = model.value;
+        option.textContent = model.label;
+        if (model.value === currentModel) {
+          option.selected = true;
+        }
+        modelSelect.appendChild(option);
+      });
+      
+      // Always allow custom entry
+      if (currentModel && !fallbackModels.find((m) => m.value === currentModel)) {
+        const option = document.createElement("option");
+        option.value = currentModel;
+        option.textContent = `${currentModel} (Custom)`;
+        option.selected = true;
+        modelSelect.appendChild(option);
+      }
+    }
+    return;
+  }
+
+  // For non-Ollama providers, use static list
   const models = PROVIDER_MODELS[provider] || [];
   modelSelect.innerHTML = "";
+  modelSelect.disabled = false;
 
   models.forEach((model) => {
     const option = document.createElement("option");
@@ -169,8 +302,8 @@ export async function initializeAISettings(root) {
     providerSelect.value = currentProvider;
   }
 
-  // Populate models and set current
-  populateModelDropdown(currentProvider, currentModel);
+  // Populate models and set current (async for Ollama)
+  await populateModelDropdown(currentProvider, currentModel, currentBaseUrl);
 
   // Set base URL
   if (baseUrlInput) {
@@ -192,11 +325,6 @@ export async function initializeAISettings(root) {
   providerSelect?.addEventListener("change", async (e) => {
     const provider = e.target.value;
     updateProviderUI(provider);
-
-    // Load default model for provider
-    const models = PROVIDER_MODELS[provider] || [];
-    const defaultModel = models.length > 0 ? models[0].value : "";
-    populateModelDropdown(provider, defaultModel);
 
     // Load saved API key and base URL for this provider
     const ai = await settingsManager.get("ai");
@@ -223,6 +351,27 @@ export async function initializeAISettings(root) {
     // Update base URL input
     if (baseUrlInput) {
       baseUrlInput.value = savedBaseUrl;
+    }
+
+    // For Ollama, fetch models from the instance
+    if (provider === "ollama") {
+      const ollamaBaseUrl = savedBaseUrl || "http://localhost:11434";
+      await populateModelDropdown(provider, "", ollamaBaseUrl);
+    } else {
+      // Load default model for other providers
+      const models = PROVIDER_MODELS[provider] || [];
+      const defaultModel = models.length > 0 ? models[0].value : "";
+      await populateModelDropdown(provider, defaultModel);
+    }
+  });
+
+  // Base URL change handler for Ollama (refetch models when base URL changes)
+  baseUrlInput?.addEventListener("blur", async () => {
+    const provider = providerSelect?.value || "openai";
+    if (provider === "ollama") {
+      const baseUrl = baseUrlInput.value.trim() || "http://localhost:11434";
+      const currentModel = modelSelect?.value || "";
+      await populateModelDropdown(provider, currentModel, baseUrl);
     }
   });
 
