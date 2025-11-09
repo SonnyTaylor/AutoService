@@ -476,4 +476,111 @@ export const aiClient = {
       throw transformError(error, settings);
     }
   },
+
+  /**
+   * Generate a customer-friendly summary of a service report
+   * @param {Object} report - The full service report object
+   * @returns {Promise<string>} Customer-friendly summary text
+   * @throws {Error} If AI call fails or not configured
+   */
+  async generateServiceSummary(report) {
+    if (!report || !report.results || !Array.isArray(report.results)) {
+      throw new Error("Invalid report data");
+    }
+
+    // Build a summary of what was done
+    const taskCount = report.results.length;
+    const successfulTasks = report.results.filter(
+      (r) => r.status === "success"
+    ).length;
+    const errorTasks = report.results.filter((r) => r.status === "error").length;
+    const warningTasks = report.results.filter(
+      (r) => r.status === "warning"
+    ).length;
+
+    // Extract task types and their outcomes
+    const taskSummaries = report.results.map((result) => {
+      const taskType = result.task_type || "unknown";
+      const status = result.status || "unknown";
+      const summary = result.summary?.human_readable || {};
+      const duration = result.duration_seconds
+        ? `${Math.round(result.duration_seconds)}s`
+        : "";
+
+      return {
+        type: taskType,
+        status,
+        summary,
+        duration,
+      };
+    });
+
+    // Create a customer-friendly prompt with better structure
+    const systemPrompt = `You are a helpful assistant that creates brief, friendly summaries of computer maintenance work for customers. 
+Write in plain language that non-technical people can understand. Keep it SHORT - 2-3 sentences maximum.
+Focus on what was done and any important findings. Use a warm, professional tone.
+Do not include technical jargon or error codes. Write as if speaking directly to the customer.`;
+
+    // Build a more structured task summary for better AI understanding
+    const taskDescriptions = taskSummaries
+      .slice(0, 10) // Limit to first 10 tasks to avoid token limits
+      .map((task) => {
+        const taskName = task.type
+          .replace(/_/g, " ")
+          .replace(/\b\w/g, (l) => l.toUpperCase());
+        const status = task.status === "success" ? "completed successfully" : 
+                      task.status === "error" ? "encountered errors" :
+                      task.status === "warning" ? "completed with warnings" : "completed";
+        return `- ${taskName}: ${status}`;
+      })
+      .join("\n");
+
+    const userPrompt = `Please create a BRIEF customer-friendly summary (2-3 sentences maximum) of the following computer maintenance work:
+
+Total Tasks Completed: ${taskCount}
+Successful: ${successfulTasks}
+With Errors: ${errorTasks}
+With Warnings: ${warningTasks}
+
+Tasks Performed:
+${taskDescriptions}
+${taskCount > 10 ? `\n(and ${taskCount - 10} more tasks)` : ""}
+
+Overall Status: ${report.overall_status || "unknown"}
+
+Provide a SHORT, friendly summary (2-3 sentences) that:
+1. Briefly explains what maintenance work was performed
+2. Mentions any important findings or issues (if any)
+3. Provides overall system health status
+
+Write in a warm, professional tone as if speaking directly to the customer. Avoid technical jargon.`;
+
+    try {
+      const summary = await this.generateText({
+        systemPrompt,
+        userPrompt,
+        temperature: 0.7,
+        maxTokens: 250, // Slightly increased for better quality
+      });
+
+      const trimmed = summary.trim();
+      
+      // Validate summary quality
+      if (!trimmed || trimmed.length < 20) {
+        throw new Error("AI returned an empty or too-short summary");
+      }
+      
+      // Remove any markdown formatting that might slip through
+      const cleaned = trimmed
+        .replace(/^#+\s*/gm, "") // Remove markdown headers
+        .replace(/\*\*(.+?)\*\*/g, "$1") // Remove bold
+        .replace(/\*(.+?)\*/g, "$1") // Remove italic
+        .trim();
+      
+      return cleaned;
+    } catch (error) {
+      console.error("Failed to generate AI summary:", error);
+      throw error;
+    }
+  },
 };

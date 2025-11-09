@@ -193,6 +193,7 @@ class ServiceQueueBuilder {
       params: { furmarkMinutes: 1, heavyloadMinutes: 1 },
     };
     this.toolStatuses = [];
+    this.aiSummaryEnabled = false;
 
     // Search state
     this.fuse = null;
@@ -293,6 +294,7 @@ class ServiceQueueBuilder {
         state: this.taskParams,
         gpuSubs: this.gpuConfig.subs,
         gpuParams: this.gpuConfig.params,
+        aiSummaryEnabled: this.aiSummaryEnabled,
       };
       sessionStorage.setItem(PERSIST_KEY, JSON.stringify(data));
     } catch {}
@@ -320,6 +322,9 @@ class ServiceQueueBuilder {
       Object.assign(this.taskParams, data.state || {});
       Object.assign(this.gpuConfig.subs, data.gpuSubs || {});
       Object.assign(this.gpuConfig.params, data.gpuParams || {});
+      if (typeof data.aiSummaryEnabled === "boolean") {
+        this.aiSummaryEnabled = data.aiSummaryEnabled;
+      }
       return true;
     } catch {
       return false;
@@ -663,11 +668,14 @@ class BuilderUI {
       btnCopyJson: document.getElementById("svc-copy-json"),
       searchInput: document.getElementById("svc-search"),
       searchClear: document.getElementById("svc-search-clear"),
+      aiSummaryToggle: document.getElementById("svc-ai-summary-toggle"),
+      aiSummaryWarning: document.getElementById("svc-ai-summary-warning"),
     };
 
     this.builder.setElements(this.elements);
     this.setupEventListeners();
     this.setTitle();
+    this.setupAISummaryToggle();
   }
 
   /**
@@ -697,11 +705,12 @@ class BuilderUI {
       window.location.hash = "#/service";
     });
 
-    this.elements.nextBtn?.addEventListener("click", () => {
-      sessionStorage.setItem(
-        "service.pendingRun",
-        this.elements.json.textContent || "{}"
-      );
+    this.elements.nextBtn?.addEventListener("click", async () => {
+      // Get the actual JSON string (not the highlighted HTML)
+      const jsonString = this.lastJsonString || "{}";
+      console.log("[Builder] Saving run plan with AI summary enabled:", this.builder.aiSummaryEnabled);
+      console.log("[Builder] Run plan JSON:", jsonString.substring(0, 200) + "...");
+      sessionStorage.setItem("service.pendingRun", jsonString);
       window.location.hash = "#/service-report";
     });
 
@@ -775,6 +784,45 @@ class BuilderUI {
         this.builder.persist();
         this.render();
       }
+    });
+  }
+
+  /**
+   * Setup AI summary toggle and check AI configuration
+   */
+  async setupAISummaryToggle() {
+    const toggle = this.elements.aiSummaryToggle;
+    const warning = this.elements.aiSummaryWarning;
+    if (!toggle) return;
+
+    // Check AI configuration
+    try {
+      const { aiClient } = await import("../../utils/ai-client.js");
+      const isConfigured = await aiClient.isConfigured();
+      
+      if (!isConfigured) {
+        toggle.disabled = true;
+        if (warning) warning.style.display = "block";
+      } else {
+        toggle.disabled = false;
+        if (warning) warning.style.display = "none";
+      }
+    } catch (e) {
+      console.warn("Failed to check AI configuration:", e);
+      toggle.disabled = true;
+      if (warning) warning.style.display = "block";
+    }
+
+    // Set initial state from builder
+    toggle.checked = this.builder.aiSummaryEnabled;
+    console.log("[Builder] AI summary toggle initialized, checked:", toggle.checked);
+
+    // Listen for changes
+    toggle.addEventListener("change", () => {
+      this.builder.aiSummaryEnabled = toggle.checked;
+      console.log("[Builder] AI summary toggle changed to:", toggle.checked);
+      this.builder.persist();
+      this.updateJson();
     });
   }
 
@@ -1210,7 +1258,13 @@ class BuilderUI {
   async updateJson() {
     this.elements.json.textContent = "Generating...";
     const tasks = await this.builder.generateTasksArray();
-    this.lastJsonString = JSON.stringify({ tasks }, null, 2);
+    const plan = {
+      tasks,
+      ...(this.builder.aiSummaryEnabled && { ai_summary_enabled: true }),
+    };
+    this.lastJsonString = JSON.stringify(plan, null, 2);
+    console.log("[Builder] Updated JSON, AI summary enabled:", this.builder.aiSummaryEnabled);
+    console.log("[Builder] Plan keys:", Object.keys(plan));
     const highlighted = hljs.highlight(this.lastJsonString, {
       language: "json",
     }).value;

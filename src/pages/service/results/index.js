@@ -150,9 +150,65 @@ export async function initPage() {
     return;
   }
 
+  // Log if AI summary is present
+  if (report.ai_summary) {
+    console.log("[Results] Report loaded with AI summary");
+  } else {
+    console.log("[Results] Report loaded without AI summary");
+  }
+
   // Render summary and sections using exported functions
   renderResultsSummary(report, summaryEl);
   renderResultsSections(report, sectionsEl);
+  
+  // Helper function to escape HTML and render AI summary safely
+  const renderAISummary = (summaryText, container) => {
+    if (!summaryText || !container) return;
+    
+    // Validate summary is meaningful (at least 10 characters)
+    const trimmed = summaryText.trim();
+    if (trimmed.length < 10) {
+      console.warn("[AI Summary] Summary too short, skipping display");
+      return;
+    }
+    
+    const aiSummarySection = document.createElement("section");
+    aiSummarySection.className = "result-section ai-summary-section";
+    aiSummarySection.setAttribute("role", "region");
+    aiSummarySection.setAttribute("aria-label", "AI-generated service summary");
+    
+    // Escape HTML to prevent XSS
+    const escapeHtml = (text) => {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    };
+    
+    const content = trimmed
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
+      .map((line) => `<p>${escapeHtml(line)}</p>`)
+      .join("");
+    
+    aiSummarySection.innerHTML = `
+      <div class="card">
+        <h3 class="section-title">
+          <span aria-hidden="true">✨</span>
+          AI Summary
+        </h3>
+        <div class="ai-summary-content" role="article">
+          ${content}
+        </div>
+      </div>
+    `;
+    container.appendChild(aiSummarySection);
+  };
+  
+  // Add AI summary section to technician view if present
+  if (report.ai_summary && sectionsEl) {
+    renderAISummary(report.ai_summary, sectionsEl);
+  }
 
   // Set up print handlers
   setupPrintHandlers(report, sectionsEl);
@@ -161,8 +217,26 @@ export async function initPage() {
   setupSaveHandler(report, saveBtn);
 
   // Handle auto-save if not viewing from reports page
+  // But only if AI summary is not pending (wait for it to complete first)
   if (!viewingFromReports) {
-    handleAutoSaveOnPageLoad(report);
+    // Check if AI summary is expected but not yet present
+    let aiSummaryExpected = false;
+    try {
+      const pendingRunRaw = sessionStorage.getItem("service.pendingRun");
+      if (pendingRunRaw) {
+        const pendingRun = JSON.parse(pendingRunRaw);
+        aiSummaryExpected = pendingRun.ai_summary_enabled === true;
+      }
+    } catch (e) {
+      // Ignore
+    }
+    
+    // Only auto-save immediately if AI summary is not expected, or if it's already present
+    if (!aiSummaryExpected || report.ai_summary) {
+      handleAutoSaveOnPageLoad(report);
+    } else {
+      console.log("[AutoSave] Waiting for AI summary before auto-saving...");
+    }
   }
 
   if (container) container.hidden = false;
@@ -250,6 +324,9 @@ function setupPrintHandlers(report, sectionsEl) {
   const customerCardColorToggle = document.getElementById(
     "svc-print-customer-cardcolor"
   );
+  const customerAISummaryToggle = document.getElementById(
+    "svc-print-customer-aisummary"
+  );
   const customerLayouts = ["list", "two", "three", "masonry"];
   let currentCustomerLayout = customerLayouts.includes(
     customerLayoutSelect?.value || ""
@@ -258,6 +335,10 @@ function setupPrintHandlers(report, sectionsEl) {
     : "list";
   let currentShowDiagnostics = customerDiagnosticsToggle?.checked ?? true;
   let currentColorCards = customerCardColorToggle?.checked ?? true;
+  let currentShowAISummary = customerAISummaryToggle?.checked ?? true;
+  
+  // Keep a reference to the current report that can be updated
+  let currentReport = report;
 
   // Prepare technician print preview
   if (techPreview) {
@@ -285,32 +366,38 @@ function setupPrintHandlers(report, sectionsEl) {
   }
 
   // Prepare customer print preview
-  if (customerPreview) {
-    customerPreview.innerHTML =
-      '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#64748b;"><div style="text-align:center;"><div class="spinner" style="width:24px;height:24px;border:3px solid #cbd5e1;border-top-color:#475569;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px;"></div><div style="font-size:14px;">Preparing preview...</div></div></div>';
-    const renderCustomerPreview = async () => {
-      if (!customerPreview) return;
-      try {
-        const customerHtml = await buildCustomerPrintHtml(report, {
+  const renderCustomerPreview = async () => {
+    if (!customerPreview) return;
+    try {
+      // Use currentReport which may have been updated with AI summary
+      const customerHtml = await buildCustomerPrintHtml(currentReport, {
+        layout: currentCustomerLayout,
+        showDiagnostics: currentShowDiagnostics,
+        colorCards: currentColorCards,
+        showAISummary: currentShowAISummary,
+      });
+      if (customerContainer) customerContainer.innerHTML = customerHtml;
+      renderPreviewIntoIframeFallback(
+        customerPreview,
+        await buildCustomerPrintDocumentHtml(currentReport, {
           layout: currentCustomerLayout,
           showDiagnostics: currentShowDiagnostics,
           colorCards: currentColorCards,
-        });
-        if (customerContainer) customerContainer.innerHTML = customerHtml;
-        renderPreviewIntoIframeFallback(
-          customerPreview,
-          await buildCustomerPrintDocumentHtml(report, {
-            layout: currentCustomerLayout,
-            showDiagnostics: currentShowDiagnostics,
-            colorCards: currentColorCards,
-          })
-        );
-      } catch (error) {
-        console.error("Customer preview generation error:", error);
+          showAISummary: currentShowAISummary,
+        })
+      );
+    } catch (error) {
+      console.error("Customer preview generation error:", error);
+      if (customerPreview) {
         customerPreview.innerHTML =
           '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:14px;text-align:center;padding:20px;">Preview unavailable. Use Print button to generate report.</div>';
       }
-    };
+    }
+  };
+  
+  if (customerPreview) {
+    customerPreview.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#64748b;"><div style="text-align:center;"><div class="spinner" style="width:24px;height:24px;border:3px solid #cbd5e1;border-top-color:#475569;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px;"></div><div style="font-size:14px;">Preparing preview...</div></div></div>';
     setTimeout(async () => {
       await renderCustomerPreview();
     }, 0);
@@ -329,6 +416,11 @@ function setupPrintHandlers(report, sectionsEl) {
 
     customerCardColorToggle?.addEventListener("change", (event) => {
       currentColorCards = event.target.checked;
+      renderCustomerPreview();
+    });
+
+    customerAISummaryToggle?.addEventListener("change", (event) => {
+      currentShowAISummary = event.target.checked;
       renderCustomerPreview();
     });
   }
@@ -351,14 +443,75 @@ function setupPrintHandlers(report, sectionsEl) {
       customerPrintBtn,
       "AutoService – Service Summary",
       async () =>
-        await buildCustomerPrintDocumentHtml(report, {
+        await buildCustomerPrintDocumentHtml(currentReport, {
           layout: currentCustomerLayout,
           showDiagnostics: currentShowDiagnostics,
           colorCards: currentColorCards,
+          showAISummary: currentShowAISummary,
         }),
       customerContainer,
-      report
+      currentReport
     );
+  });
+  
+  // Listen for report updates (e.g., when AI summary is generated)
+  window.addEventListener("service-report-updated", (event) => {
+    const updatedReport = event.detail?.report;
+    if (updatedReport) {
+      console.log("[Results] Report updated with AI summary, refreshing previews");
+      currentReport = updatedReport;
+      
+      // Add AI summary to technician view if not already present
+      if (updatedReport.ai_summary && sectionsEl) {
+        // Check if AI summary section already exists
+        const existingAISection = sectionsEl.querySelector(".ai-summary-section");
+        if (!existingAISection) {
+          // Helper function to escape HTML and render AI summary safely
+          const escapeHtml = (text) => {
+            const div = document.createElement("div");
+            div.textContent = text;
+            return div.innerHTML;
+          };
+          
+          const trimmed = updatedReport.ai_summary.trim();
+          if (trimmed.length >= 10) {
+            const aiSummarySection = document.createElement("section");
+            aiSummarySection.className = "result-section ai-summary-section";
+            aiSummarySection.setAttribute("role", "region");
+            aiSummarySection.setAttribute("aria-label", "AI-generated service summary");
+            
+            const content = trimmed
+              .split("\n")
+              .map((line) => line.trim())
+              .filter((line) => line.length > 0)
+              .map((line) => `<p>${escapeHtml(line)}</p>`)
+              .join("");
+            
+            aiSummarySection.innerHTML = `
+              <div class="card">
+                <h3 class="section-title">
+                  <span aria-hidden="true">✨</span>
+                  AI Summary
+                </h3>
+                <div class="ai-summary-content" role="article">
+                  ${content}
+                </div>
+              </div>
+            `;
+            sectionsEl.appendChild(aiSummarySection);
+          }
+        }
+      }
+      
+      // Refresh customer preview
+      if (customerPreview) {
+        renderCustomerPreview();
+      }
+      // Trigger auto-save if enabled (now that AI summary is complete)
+      if (!viewingFromReports) {
+        handleAutoSaveOnPageLoad(updatedReport);
+      }
+    }
   });
 }
 

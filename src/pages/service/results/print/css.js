@@ -200,6 +200,63 @@ const BASE_PRINT_CSS = `
     white-space: pre-wrap; color: #334155; 
     font-family: 'Consolas', 'Monaco', monospace;
   }
+  
+  /* AI Summary Section */
+  .ai-summary-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 2px solid #e5e7eb;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  
+  .ai-summary-section .card {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border: 2px solid #93c5fd;
+    border-radius: 12px;
+    padding: 18px;
+    box-shadow: 0 2px 6px rgba(59, 130, 246, 0.1);
+  }
+  
+  .ai-summary-section .section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 14px 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: #1e40af;
+    letter-spacing: -0.2px;
+  }
+  
+  .ai-summary-section .section-title::before {
+    content: "✨";
+    font-size: 18px;
+    line-height: 1;
+  }
+  
+  .ai-summary-content {
+    font-size: 10pt;
+    line-height: 1.7;
+    color: #1e293b;
+    padding: 14px;
+    background: #ffffff;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+  }
+  
+  .ai-summary-content p {
+    margin: 0 0 10px 0;
+    padding: 0;
+  }
+  
+  .ai-summary-content p:first-child {
+    margin-top: 0;
+  }
+  
+  .ai-summary-content p:last-child {
+    margin-bottom: 0;
+  }
 `;
 
 /**
@@ -678,6 +735,67 @@ const BASE_CUSTOMER_PRINT_CSS = `
     color: #94a3b8 !important;
     font-style: italic;
     line-height: 1.3;
+  }
+  
+  /* AI Summary Section */
+  .ai-summary-section {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 2px solid #e5e7eb;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  
+  .ai-summary-section .section-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 14px 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: #1e40af;
+    letter-spacing: -0.3px;
+  }
+  
+  .ai-summary-section .section-heading::before {
+    content: "✨";
+    font-size: 18px;
+    line-height: 1;
+  }
+  
+  .ai-summary-content {
+    font-size: 10pt;
+    color: #1e293b;
+    line-height: 1.7;
+    padding: 16px;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border: 2px solid #93c5fd;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(59, 130, 246, 0.1);
+  }
+  
+  .ai-summary-content p {
+    margin: 0 0 10px 0;
+    padding: 0;
+  }
+  
+  .ai-summary-content p:first-child {
+    margin-top: 0;
+  }
+  
+  .ai-summary-content p:last-child {
+    margin-bottom: 0;
+  }
+  
+  /* Ink saver: when card colors are disabled, neutralize AI summary colors */
+  .no-card-color .ai-summary-section .section-heading {
+    color: #0f172a !important;
+  }
+  
+  .no-card-color .ai-summary-content {
+    background: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    box-shadow: none !important;
   }
   
   /* Typography */

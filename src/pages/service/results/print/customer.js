@@ -167,9 +167,11 @@ export async function buildCustomerHeader(title, overall, report) {
  * @param {Object} options - Layout and filtering options
  * @param {string} [options.layout='list'] - Layout type
  * @param {boolean} [options.showDiagnostics=true] - Show diagnostic results
+ * @param {string} [options.aiSummary] - Optional AI-generated summary text
+ * @param {boolean} [options.showAISummary=true] - Show AI summary section
  */
 export async function buildCustomerSummary(report, options = {}) {
-  const { layout = "list", showDiagnostics = true } = options;
+  const { layout = "list", showDiagnostics = true, aiSummary, showAISummary = true } = options;
   const resolvedLayout = normalizeLayout(layout);
   const results = report?.results || [];
 
@@ -214,6 +216,40 @@ export async function buildCustomerSummary(report, options = {}) {
     `
       : "";
 
+  // Build AI summary section (if available and enabled)
+  // Validate summary is meaningful before displaying
+  const hasValidSummary = aiSummary && showAISummary && aiSummary.trim().length >= 10;
+  const aiSummaryMarkup = hasValidSummary
+    ? (() => {
+        // Escape HTML to prevent XSS
+        const escapeHtml = (text) => {
+          return String(text)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+        };
+        
+        const content = aiSummary
+          .trim()
+          .split("\n")
+          .map((line) => line.trim())
+          .filter((line) => line.length > 0)
+          .map((line) => `<p>${escapeHtml(line)}</p>`)
+          .join("");
+        
+        return `
+      <div class="ai-summary-section">
+        <h3 class="section-heading">Service Summary</h3>
+        <div class="ai-summary-content">
+          ${content}
+        </div>
+      </div>
+    `;
+      })()
+    : "";
+
   // Get business settings for thank you message
   const business = await getBusinessSettings();
   const companyName =
@@ -233,6 +269,8 @@ export async function buildCustomerSummary(report, options = {}) {
 
       ${servicesMarkup}
       ${diagnosticsMarkup}
+
+      ${aiSummaryMarkup}
 
       <div class="footer-note">
         <p><strong>Thank you for choosing ${companyName}.</strong></p>

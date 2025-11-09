@@ -50,6 +50,12 @@
   background: var(--panel-2);
 }
 
+[data-page="service-report"] .task-status.ai-summary-separated {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(148, 163, 184, 0.3);
+}
+
 [data-page="service-report"] .task-status .left {
   display: flex;
   align-items: center;
@@ -1501,6 +1507,58 @@
   background-color: #e9ecef;
   color: #6c757d;
 }
+
+/* AI Summary Section Styling */
+[data-page="service-results"] .ai-summary-section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 2px solid var(--border, rgba(148, 163, 184, 0.2));
+}
+
+[data-page="service-results"] .ai-summary-section .card {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(147, 197, 253, 0.05) 100%);
+  border: 2px solid rgba(59, 130, 246, 0.25);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+[data-page="service-results"] .ai-summary-section .section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #3b82f6;
+  letter-spacing: -0.2px;
+}
+
+[data-page="service-results"] .ai-summary-section .section-title::before {
+  content: "✨";
+  font-size: 20px;
+  line-height: 1;
+}
+
+[data-page="service-results"] .ai-summary-content {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text, #e2e8f0);
+  padding: 16px;
+  background: rgba(15, 21, 34, 0.4);
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+[data-page="service-results"] .ai-summary-content p {
+  margin: 0 0 12px 0;
+  padding: 0;
+}
+
+[data-page="service-results"] .ai-summary-content p:last-child {
+  margin-bottom: 0;
+}
+
 /* Battery Health card-specific styles migrated to handler viewCSS */
 
 /* AI Browser Notification Optimizer screen styles migrated to handler viewCSS */
