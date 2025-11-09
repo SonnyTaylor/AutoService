@@ -1413,10 +1413,16 @@ export async function initPage() {
 
                 // Extract duration
                 const duration = result?.summary?.duration_seconds;
-                if (!Number.isFinite(duration) || duration <= 0) {
+                // Allow very small durations (>= 0.001) to account for rounding
+                // Tasks that round to 0.00 are still valid (just very fast)
+                if (!Number.isFinite(duration) || duration < 0) {
                   console.log(`[Task Time] Skipping task ${idx}: invalid duration=${duration}`);
                   return;
                 }
+                
+                // If duration is 0 or very small, use a minimum of 0.01 for storage
+                // This ensures we capture fast tasks while avoiding true 0 values
+                const durationToSave = Math.max(0.01, duration);
 
                 // Get task type
                 const taskType = result?.task_type || originalTasks[idx]?.type;
@@ -1441,7 +1447,7 @@ export async function initPage() {
                 timeRecords.push({
                   task_type: taskType,
                   params: paramsJson,
-                  duration_seconds: Number(duration),
+                  duration_seconds: Number(durationToSave),
                   timestamp: timestamp,
                 });
               });
