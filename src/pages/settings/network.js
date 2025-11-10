@@ -21,27 +21,55 @@ export async function initializeNetworkSettings(root) {
   const pingStatus = root.querySelector("#ping-settings-status");
 
   /**
-   * Validates if a value is a valid IPv4 or IPv6 address, or empty (for optional fields)
+   * Validates if a value is a valid IP address, hostname/FQDN, or hostname with port
    * @param {string} value - The value to validate
    * @param {boolean} allowEmpty - Whether to allow empty values
    * @returns {boolean} - True if valid or empty (if allowed)
    */
-  function isValidIPOrEmpty(value, allowEmpty = true) {
+  function isValidIPOrHostname(value, allowEmpty = true) {
     if (allowEmpty && (!value || value.trim() === "")) {
       return true;
     }
-    return validator.isIP(value.trim());
+    
+    const trimmed = value.trim();
+    
+    // Check if it's an IP address (IPv4 or IPv6)
+    if (validator.isIP(trimmed)) {
+      return true;
+    }
+    
+    // Check if it's a hostname with port (e.g., "iperf.example.com:5201")
+    const portMatch = trimmed.match(/^(.+):(\d+)$/);
+    if (portMatch) {
+      const hostname = portMatch[1];
+      const port = parseInt(portMatch[2], 10);
+      
+      // Validate port is in valid range (1-65535)
+      if (port < 1 || port > 65535) {
+        return false;
+      }
+      
+      // Validate hostname part (FQDN or IP)
+      return validator.isIP(hostname) || validator.isFQDN(hostname, { require_tld: false });
+    }
+    
+    // Check if it's a valid FQDN/hostname (allow subdomains and no TLD for local networks)
+    return validator.isFQDN(trimmed, { require_tld: false });
   }
 
   /**
    * Shows validation error message
    * @param {HTMLElement} statusElement - The status element to update
    * @param {string} fieldName - The name of the field being validated
+   * @param {boolean} allowHostnames - Whether to mention hostnames in the error message
    */
-  function showValidationError(statusElement, fieldName) {
+  function showValidationError(statusElement, fieldName, allowHostnames = true) {
     if (statusElement) {
       statusElement.className = "settings-status error";
-      statusElement.textContent = `✕ Please enter a valid IPv4 or IPv6 address for ${fieldName}.`;
+      const message = allowHostnames
+        ? `✕ Please enter a valid IP address or hostname for ${fieldName}.`
+        : `✕ Please enter a valid IPv4 or IPv6 address for ${fieldName}.`;
+      statusElement.textContent = message;
       statusElement.style.display = "inline-block";
       setTimeout(() => {
         statusElement.textContent = "";
@@ -60,9 +88,9 @@ export async function initializeNetworkSettings(root) {
   input?.addEventListener("blur", async () => {
     const value = (input.value || "").toString().trim();
 
-    // Validate the input
-    if (!isValidIPOrEmpty(value, true)) {
-      showValidationError(status, "iPerf server");
+    // Validate the input (allows IPs, hostnames, and hostnames with ports)
+    if (!isValidIPOrHostname(value, true)) {
+      showValidationError(status, "iPerf server", true);
       return;
     }
 
@@ -100,9 +128,9 @@ export async function initializeNetworkSettings(root) {
   pingInput?.addEventListener("blur", async () => {
     const value = (pingInput.value || "").toString().trim() || "8.8.8.8";
 
-    // Validate the input (ping host should not be empty)
-    if (!isValidIPOrEmpty(value, false)) {
-      showValidationError(pingStatus, "Ping host");
+    // Validate the input (ping host should not be empty, allows IPs and hostnames)
+    if (!isValidIPOrHostname(value, false)) {
+      showValidationError(pingStatus, "Ping host", true);
       return;
     }
 
