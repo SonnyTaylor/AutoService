@@ -1132,9 +1132,24 @@ class BuilderUI {
       const paramsHash = normalizeTaskParams(taskForEstimate);
       const taskParams = JSON.parse(paramsHash);
       
+      // Debug logging for ping tests
+      if (id === "ping_test" || taskForEstimate.type === "ping_test") {
+        console.log(`[Task Time] Ping test params:`, { taskForEstimate, paramsHash, taskParams });
+      }
+      
       // Get estimate using the task type from the built task (might differ from id)
       const taskType = taskForEstimate.type || id;
       const estimateData = await getEstimate(id, taskParams, taskType);
+      
+      // Debug logging for ping tests
+      if (id === "ping_test" || taskType === "ping_test") {
+        console.log(`[Task Time] Ping test estimate result:`, {
+          id,
+          taskType,
+          taskParams,
+          estimateData,
+        });
+      }
       
       // Find placeholder or existing badge element (look within the meta span to avoid matching other badges)
       const metaSpan = liElement?.querySelector(`.meta`);
@@ -1780,4 +1795,14 @@ export async function initPage() {
   // Initial render
   ui.render();
   document.getElementById("svc-run-builder").hidden = false;
+  
+  // Clear time estimate cache when page loads to ensure fresh estimates
+  // This is important when returning from the runner page after saving new records
+  try {
+    const { clearTaskTimeCache } = await import("../../utils/task-time-estimates.js");
+    clearTaskTimeCache();
+    console.log("[Builder] Cleared time estimate cache on page load");
+  } catch (e) {
+    console.warn("[Builder] Failed to clear time estimate cache:", e);
+  }
 }

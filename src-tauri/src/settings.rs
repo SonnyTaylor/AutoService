@@ -176,13 +176,26 @@ pub fn save_task_time(
         .collect();
 
     // Optional: Limit to last 100 records per task+params combination to prevent unbounded growth
-    // Group by task_type + params hash
+    // Group by task_type + params hash (using normalized params for consistency)
     use std::collections::HashMap;
+    use serde_json::Map;
     let mut grouped: HashMap<String, Vec<&TaskTimeRecord>> = HashMap::new();
     for record in &filtered_by_age {
-      // Create consistent key from task_type and params JSON string
-      let params_str = serde_json::to_string(&record.params).unwrap_or_default();
-      let key = format!("{}|{}", record.task_type, params_str);
+      // Create consistent key from task_type and normalized params JSON string
+      let params_normalized = match serde_json::to_value(&record.params) {
+          Ok(v) => {
+              if let serde_json::Value::Object(map) = v {
+                  let mut sorted: Vec<_> = map.into_iter().collect();
+                  sorted.sort_by_key(|(k, _)| k.clone());
+                  let sorted_map: Map<String, serde_json::Value> = sorted.into_iter().collect();
+                  serde_json::to_string(&serde_json::Value::Object(sorted_map)).unwrap_or_default()
+              } else {
+                  serde_json::to_string(&v).unwrap_or_default()
+              }
+          },
+          Err(_) => serde_json::to_string(&record.params).unwrap_or_default(),
+      };
+      let key = format!("{}|{}", record.task_type, params_normalized);
       grouped.entry(key).or_insert_with(Vec::new).push(record);
     }
 
@@ -242,16 +255,46 @@ pub fn get_task_time_estimate(
     let all_records = load_task_times(state)?;
 
     // Filter records matching task_type and params
-    // Compare params by JSON string for consistency
-    let params_str = serde_json::to_string(&params).unwrap_or_default();
+    // Compare params by normalizing both to sorted JSON strings
+    // This ensures consistent comparison regardless of key order or formatting
+    use serde_json::Map;
+    
+    let params_normalized = match serde_json::to_value(&params) {
+        Ok(v) => {
+            // Sort keys by converting to a sorted map
+            if let serde_json::Value::Object(map) = v {
+                let mut sorted: Vec<_> = map.into_iter().collect();
+                sorted.sort_by_key(|(k, _)| k.clone());
+                let sorted_map: Map<String, serde_json::Value> = sorted.into_iter().collect();
+                serde_json::to_string(&serde_json::Value::Object(sorted_map)).unwrap_or_default()
+            } else {
+                serde_json::to_string(&v).unwrap_or_default()
+            }
+        },
+        Err(_) => serde_json::to_string(&params).unwrap_or_default(),
+    };
+    
     let mut matching: Vec<f64> = all_records
         .into_iter()
         .filter(|r| {
             if r.task_type != task_type {
                 return false;
             }
-            let r_params_str = serde_json::to_string(&r.params).unwrap_or_default();
-            r_params_str == params_str
+            // Normalize stored params the same way
+            let r_params_normalized = match serde_json::to_value(&r.params) {
+                Ok(v) => {
+                    if let serde_json::Value::Object(map) = v {
+                        let mut sorted: Vec<_> = map.into_iter().collect();
+                        sorted.sort_by_key(|(k, _)| k.clone());
+                        let sorted_map: Map<String, serde_json::Value> = sorted.into_iter().collect();
+                        serde_json::to_string(&serde_json::Value::Object(sorted_map)).unwrap_or_default()
+                    } else {
+                        serde_json::to_string(&v).unwrap_or_default()
+                    }
+                },
+                Err(_) => serde_json::to_string(&r.params).unwrap_or_default(),
+            };
+            r_params_normalized == params_normalized
         })
         .map(|r| r.duration_seconds)
         .collect();

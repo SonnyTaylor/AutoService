@@ -1449,7 +1449,8 @@ export async function initPage() {
                   paramsJson = {};
                 }
 
-                console.log(`[Task Time] Capturing: ${taskType}, duration=${duration}s, params=`, paramsJson);
+                const paramsStr = JSON.stringify(paramsJson);
+                console.log(`[Task Time] Capturing: ${taskType}, duration=${duration}s, params=`, paramsJson, `paramsStr=`, paramsStr);
 
                 timeRecords.push({
                   task_type: taskType,

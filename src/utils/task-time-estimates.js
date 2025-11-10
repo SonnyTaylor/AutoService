@@ -154,6 +154,7 @@ export function normalizeTaskParams(task) {
   delete flatParams.command;
   
   const nestedParams = task.params || {};
+  // Merge flat params with nested params (nested takes precedence if both exist)
   const params = { ...flatParams, ...nestedParams };
   
   // Common duration parameters (affect execution time)
@@ -170,8 +171,16 @@ export function normalizeTaskParams(task) {
   // Task-specific parameters that affect duration
   if (taskType === "ping_test") {
     // Ping count affects duration (more pings = longer time)
-    if (typeof params.count === "number") {
-      relevantParams.count = params.count;
+    // Handle both string and number (from input fields)
+    // Also check the task object directly since built tasks have count at top level
+    const countValue = params.count !== undefined ? params.count : (task.count !== undefined ? task.count : undefined);
+    if (typeof countValue === "number") {
+      relevantParams.count = countValue;
+    } else if (typeof countValue === "string") {
+      const parsed = parseInt(countValue, 10);
+      if (!isNaN(parsed)) {
+        relevantParams.count = parsed;
+      }
     }
     // Host doesn't significantly affect duration, so we don't include it
   }
@@ -336,7 +345,8 @@ export async function getEstimate(taskType, taskParams, builtTaskType = null) {
     }
 
     // Normalize params to JSON value
-    const paramsHash = normalizeTaskParams({ params: taskParams || {} });
+    // IMPORTANT: include the actual task type so task-specific params (e.g., ping_test.count) are considered
+    const paramsHash = normalizeTaskParams({ type: actualTaskType, params: taskParams || {} });
     const paramsJson = JSON.parse(paramsHash);
 
     // Try multiple task type variations (handler ID, built type, mapped type)
@@ -355,6 +365,17 @@ export async function getEstimate(taskType, taskParams, builtTaskType = null) {
           taskType: tryType,
           params: paramsJson,
         });
+
+        // Debug logging for ping tests
+        if (tryType === "ping_test") {
+          const paramsStr = JSON.stringify(paramsJson);
+          console.log(`[Task Time] Ping test estimate lookup:`, {
+            taskType: tryType,
+            paramsJson,
+            paramsStr,
+            estimateData,
+          });
+        }
 
         if (estimateData !== null && estimateData !== undefined) {
           // Handle both snake_case (from Rust) and camelCase (if transformed)
