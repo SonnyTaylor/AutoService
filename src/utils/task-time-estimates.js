@@ -178,7 +178,10 @@ export function normalizeTaskParams(task) {
   
   if (taskType === "iperf_test") {
     // Duration is the main parameter
-    if (typeof params.minutes === "number") {
+    // Built tasks have duration_minutes at top level, but params may have minutes
+    if (typeof params.duration_minutes === "number") {
+      relevantParams.duration_minutes = params.duration_minutes;
+    } else if (typeof params.minutes === "number") {
       relevantParams.minutes = params.minutes;
     }
     // Protocol might affect duration slightly, but not significantly
@@ -298,9 +301,14 @@ export async function getEstimate(taskType, taskParams, builtTaskType = null) {
   
   // Check if this is a parameter-based task first
   if (isParameterBasedTask(actualTaskType)) {
-    // Build a task object to calculate duration from parameters
+    // For parameter-based tasks, we need to reconstruct the task structure
+    // taskParams may have duration_minutes (from built task) or minutes (from params)
+    // Build a task object that matches the actual built task structure
     const taskForCalculation = {
       type: actualTaskType,
+      // Spread taskParams at top level (for flat structures like iPerf with duration_minutes)
+      ...taskParams,
+      // Also include in params for nested structures
       params: taskParams || {},
     };
     
