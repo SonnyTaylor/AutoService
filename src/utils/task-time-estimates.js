@@ -289,7 +289,7 @@ export function clearTaskTimeCache() {
  * @param {string} taskType - Task type identifier (handler ID or actual task type)
  * @param {Object} taskParams - Task parameters object
  * @param {string} [builtTaskType] - Actual task type from built task (if available)
- * @returns {Promise<{estimate: number, sampleCount: number, isParameterBased?: boolean} | null>} Estimate and sample count, or null if insufficient data
+ * @returns {Promise<{estimate: number, sampleCount: number, variance: number, min: number, max: number, isParameterBased?: boolean, confidence?: string} | null>} Estimate with stats, or null if insufficient data
  */
 export async function getEstimate(taskType, taskParams, builtTaskType = null) {
   if (!taskType) {
@@ -317,7 +317,11 @@ export async function getEstimate(taskType, taskParams, builtTaskType = null) {
       return {
         estimate: duration,
         sampleCount: 1, // Always 1 for parameter-based (not from historical data)
+        variance: 0,
+        min: duration,
+        max: duration,
         isParameterBased: true,
+        confidence: "high", // Parameter-based estimates are always accurate
       };
     }
     // If calculation failed, fall through to historical lookup (shouldn't happen normally)
@@ -340,31 +344,29 @@ export async function getEstimate(taskType, taskParams, builtTaskType = null) {
     
     let bestEstimate = null;
     let bestSampleCount = 0;
+    let bestVariance = 0;
+    let bestMin = 0;
+    let bestMax = 0;
     
     for (const tryType of possibleTypes) {
       try {
-        // Get estimate from Rust backend (which calculates median)
-        const estimate = await invoke("get_task_time_estimate", {
+        // Get estimate from Rust backend (which returns estimate with sample count and variance)
+        const estimateData = await invoke("get_task_time_estimate", {
           taskType: tryType,
           params: paramsJson,
         });
 
-        if (estimate !== null && estimate !== undefined) {
-          // Get sample count by loading all records and filtering
-          const allRecords = await loadTaskTimeEstimates();
-          const matching = allRecords.filter((r) => {
-            if (r.task_type !== tryType) return false;
-            // Compare normalized params
-            const rParamsHash = normalizeTaskParams({ type: r.task_type, params: r.params });
-            return rParamsHash === paramsHash;
-          });
-
-          const sampleCount = matching.length;
+        if (estimateData !== null && estimateData !== undefined) {
+          // Handle both snake_case (from Rust) and camelCase (if transformed)
+          const sampleCount = estimateData.sample_count || estimateData.sampleCount || 0;
           
           // Use the estimate with the most samples
           if (sampleCount > bestSampleCount) {
-            bestEstimate = Number(estimate);
+            bestEstimate = Number(estimateData.estimate);
             bestSampleCount = sampleCount;
+            bestVariance = Number(estimateData.variance || 0);
+            bestMin = Number(estimateData.min || bestEstimate);
+            bestMax = Number(estimateData.max || bestEstimate);
           }
         }
       } catch (error) {
@@ -377,10 +379,16 @@ export async function getEstimate(taskType, taskParams, builtTaskType = null) {
       return null;
     }
 
+    const confidence = getConfidenceLevel(bestSampleCount, bestVariance, bestEstimate);
+
     return {
       estimate: bestEstimate,
       sampleCount: bestSampleCount,
+      variance: bestVariance,
+      min: bestMin,
+      max: bestMax,
       isParameterBased: false,
+      confidence,
     };
   } catch (error) {
     console.warn("Failed to get task time estimate:", error);
@@ -430,21 +438,49 @@ export function formatDuration(seconds) {
 }
 
 /**
+ * Minimum sample count required for reliable estimates.
+ * Historical estimates need at least 3 samples for reliability.
+ */
+const MIN_SAMPLE_COUNT = 3;
+
+/**
  * Check if there are enough samples for a reliable estimate.
  * 
- * @param {Array} records - Array of task time records
- * @returns {boolean} True if >= 1 sample exists
+ * @param {number} sampleCount - Number of samples
+ * @returns {boolean} True if >= MIN_SAMPLE_COUNT samples exist
  */
-export function hasEnoughSamples(records) {
-  return Array.isArray(records) && records.length >= 1;
+export function hasEnoughSamples(sampleCount) {
+  return typeof sampleCount === "number" && sampleCount >= MIN_SAMPLE_COUNT;
+}
+
+/**
+ * Get confidence level based on sample count and variance.
+ * 
+ * @param {number} sampleCount - Number of samples
+ * @param {number} variance - Variance of the estimates
+ * @param {number} estimate - The median estimate
+ * @returns {string} "high" | "medium" | "low"
+ */
+export function getConfidenceLevel(sampleCount, variance, estimate) {
+  if (sampleCount >= 10 && variance < estimate * 0.1) {
+    return "high";
+  }
+  if (sampleCount >= 5 && variance < estimate * 0.25) {
+    return "medium";
+  }
+  if (sampleCount >= MIN_SAMPLE_COUNT) {
+    return "low";
+  }
+  return "very_low";
 }
 
 /**
  * Calculate total estimated time for a list of tasks.
  * Uses parameter-based duration calculation for applicable tasks, falls back to historical estimates for others.
+ * Batches async calls for better performance.
  * 
  * @param {Array<{type: string, params?: Object}>} tasks - Array of task objects with type and optional params
- * @returns {Promise<{totalSeconds: number, hasPartial: boolean, estimatedCount: number, totalCount: number}>}
+ * @returns {Promise<{totalSeconds: number, hasPartial: boolean, estimatedCount: number, totalCount: number, lowConfidenceCount: number}>}
  *   Total time in seconds, whether some tasks lack estimates, and counts
  */
 export async function calculateTotalTime(tasks) {
@@ -454,16 +490,14 @@ export async function calculateTotalTime(tasks) {
       hasPartial: false,
       estimatedCount: 0,
       totalCount: 0,
+      lowConfidenceCount: 0,
     };
   }
 
-  let totalSeconds = 0;
-  let estimatedCount = 0;
-  let totalCount = tasks.length;
-
-  for (const task of tasks) {
+  // Prepare all estimate requests in parallel
+  const estimatePromises = tasks.map(async (task) => {
     const taskType = task.type || task.task_type || task.id;
-    if (!taskType) continue;
+    if (!taskType) return null;
 
     // Use the task's actual type if available (from built task)
     const builtTaskType = task.type || task.task_type;
@@ -480,11 +514,38 @@ export async function calculateTotalTime(tasks) {
     }
     
     // Pass built task type to help with type matching
-    const estimate = await getEstimate(taskType, taskParams, builtTaskType);
+    try {
+      const estimate = await getEstimate(taskType, taskParams, builtTaskType);
+      return { task, estimate };
+    } catch (error) {
+      console.warn(`[Task Time] Failed to get estimate for ${taskType}:`, error);
+      return { task, estimate: null };
+    }
+  });
+
+  // Wait for all estimates in parallel
+  const results = await Promise.all(estimatePromises);
+
+  let totalSeconds = 0;
+  let estimatedCount = 0;
+  let lowConfidenceCount = 0;
+  const totalCount = tasks.length;
+
+  for (const result of results) {
+    if (!result || !result.estimate) continue;
     
-    if (estimate && estimate.sampleCount >= 1) {
+    const { estimate } = result;
+    
+    // Count all estimates (even with low sample counts, they're still useful)
+    // Parameter-based estimates are always included
+    if (estimate && (estimate.isParameterBased || estimate.sampleCount >= 1)) {
       totalSeconds += estimate.estimate;
       estimatedCount++;
+      
+      // Track low confidence estimates (very_low or low confidence)
+      if (estimate.confidence === "very_low" || estimate.confidence === "low") {
+        lowConfidenceCount++;
+      }
     }
   }
 
@@ -493,6 +554,7 @@ export async function calculateTotalTime(tasks) {
     hasPartial: estimatedCount > 0 && estimatedCount < totalCount,
     estimatedCount,
     totalCount,
+    lowConfidenceCount,
   };
 }
 

@@ -505,6 +505,29 @@
   border-color: #2e3b55;
 }
 
+/* Confidence-based styling for time estimates */
+[data-page="service-run"] .badge.time-estimate-high {
+  background: #1d3a2d;
+  border-color: #2f6b4a;
+  color: #7dd3a0;
+}
+[data-page="service-run"] .badge.time-estimate-medium {
+  background: #2d3a2d;
+  border-color: #4a6b3f;
+  color: #a3d37d;
+}
+[data-page="service-run"] .badge.time-estimate-low {
+  background: #3a2d1d;
+  border-color: #6b5a2f;
+  color: #d3a37d;
+}
+[data-page="service-run"] .badge.time-estimate-very_low {
+  background: #3a1d1d;
+  border-color: #6b2f2f;
+  color: #d37d7d;
+  opacity: 0.7;
+}
+
 /* Preset time estimate badge styling */
 [data-page="service"] .preset-time {
   display: flex;

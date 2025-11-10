@@ -892,6 +892,9 @@ class BuilderUI {
           await this.updateJson();
           // Refresh individual task estimate after parameter change
           refreshTaskEstimate();
+          // Invalidate cache to ensure fresh estimates
+          const { clearTaskTimeCache } = await import("../../utils/task-time-estimates.js");
+          clearTaskTimeCache();
         },
       });
       if (customControls) {
@@ -1150,12 +1153,16 @@ class BuilderUI {
         return;
       }
 
-      if (estimateData.sampleCount < 1) {
-        console.log(`[Task Time] Insufficient samples for ${id}: ${estimateData.sampleCount} < 1`);
+      // Show estimates with 1+ samples (parameter-based always OK)
+      // We'll mark low sample counts as very low confidence in the UI
+      if (!estimateData.isParameterBased && (!estimateData.sampleCount || estimateData.sampleCount < 1)) {
+        console.log(`[Task Time] No samples for ${id}`);
         if (placeholder) placeholder.remove();
         if (existingBadge) existingBadge.remove();
         return;
       }
+      
+      const { formatDuration: formatDurationUtil } = await import("../../utils/task-time-estimates.js");
 
       const formatted = formatDuration(estimateData.estimate);
       if (!formatted) {
@@ -1165,19 +1172,46 @@ class BuilderUI {
         return;
       }
 
-      console.log(`[Task Time] Displaying estimate for ${id}: ${formatted} (${estimateData.sampleCount} samples)`);
+      // Build tooltip with confidence information
+      const confidence = estimateData.confidence || "unknown";
+      const confidenceLabels = {
+        high: "High confidence",
+        medium: "Medium confidence",
+        low: "Low confidence",
+        very_low: "Very low confidence",
+      };
+      
+      let tooltip = `Estimated time: ${formatted}`;
+      if (estimateData.isParameterBased) {
+        tooltip += "\nBased on task parameters (exact duration)";
+      } else {
+        tooltip += `\nBased on ${estimateData.sampleCount} previous run(s)`;
+        tooltip += `\n${confidenceLabels[confidence] || "Unknown confidence"}`;
+        
+        if (estimateData.min !== undefined && estimateData.max !== undefined && estimateData.min !== estimateData.max) {
+          const minFormatted = formatDurationUtil(estimateData.min);
+          const maxFormatted = formatDurationUtil(estimateData.max);
+          tooltip += `\nRange: ${minFormatted} - ${maxFormatted}`;
+        }
+      }
+
+      console.log(`[Task Time] Displaying estimate for ${id}: ${formatted} (${estimateData.sampleCount} samples, ${confidence} confidence)`);
+
+      // Determine badge class based on confidence
+      const badgeClass = `badge time-estimate time-estimate-${confidence}`;
 
       // Update existing badge or replace placeholder with new badge
       if (existingBadge) {
         // Update existing badge
         existingBadge.textContent = formatted;
-        existingBadge.title = `Estimated time based on ${estimateData.sampleCount} previous runs`;
+        existingBadge.className = badgeClass;
+        existingBadge.title = tooltip;
       } else if (placeholder) {
         // Replace placeholder with actual estimate as a badge
         const estimateEl = document.createElement("span");
-        estimateEl.className = "badge time-estimate";
+        estimateEl.className = badgeClass;
         estimateEl.textContent = formatted;
-        estimateEl.title = `Estimated time based on ${estimateData.sampleCount} previous runs`;
+        estimateEl.title = tooltip;
         placeholder.replaceWith(estimateEl);
       }
     } catch (error) {
@@ -1309,17 +1343,21 @@ class BuilderUI {
       const enabledTests = [];
       if (this.builder.gpuConfig.subs.furmark) enabledTests.push("FurMark");
       if (this.builder.gpuConfig.subs.heavyload) enabledTests.push("HeavyLoad");
-      const tooltip = `Estimated time for GPU stress test (${enabledTests.join(" + ")})`;
+      const tooltip = `Estimated time for GPU stress test (${enabledTests.join(" + ")})\nBased on task parameters (exact duration)`;
+
+      // GPU parent uses parameter-based estimates (always high confidence)
+      const badgeClass = "badge time-estimate time-estimate-high";
 
       // Update existing badge or replace placeholder with new badge
       if (existingBadge) {
         // Update existing badge
         existingBadge.textContent = formatted;
+        existingBadge.className = badgeClass;
         existingBadge.title = tooltip;
       } else if (placeholder) {
         // Create badge with combined estimate
         const estimateEl = document.createElement("span");
-        estimateEl.className = "badge time-estimate";
+        estimateEl.className = badgeClass;
         estimateEl.textContent = formatted;
         estimateEl.title = tooltip;
         placeholder.replaceWith(estimateEl);
@@ -1327,7 +1365,7 @@ class BuilderUI {
         // Neither placeholder nor badge exists - create badge in meta span
         // This can happen if placeholder was removed earlier
         const estimateEl = document.createElement("span");
-        estimateEl.className = "badge time-estimate";
+        estimateEl.className = badgeClass;
         estimateEl.textContent = formatted;
         estimateEl.title = tooltip;
         // Insert before the availability badge if it exists, otherwise just append
@@ -1658,13 +1696,20 @@ class BuilderUI {
         }
         
         // Set badge text with partial indicator if needed
+        let badgeText = formatted;
+        let badgeTitle = `Estimated time for ${result.totalCount} task(s)`;
+        
         if (result.hasPartial) {
-          badgeEl.textContent = `${formatted} (partial)`;
-          badgeEl.title = `Estimated time - ${result.estimatedCount}/${result.totalCount} tasks have estimates`;
-        } else {
-          badgeEl.textContent = formatted;
-          badgeEl.title = `Estimated time for all ${result.totalCount} tasks`;
+          badgeText += " (partial)";
+          badgeTitle = `Estimated time - ${result.estimatedCount}/${result.totalCount} tasks have estimates`;
         }
+        
+        if (result.lowConfidenceCount > 0) {
+          badgeTitle += `\n${result.lowConfidenceCount} task(s) have low confidence estimates`;
+        }
+        
+        badgeEl.textContent = badgeText;
+        badgeEl.title = badgeTitle;
         
         this.elements.totalTime.style.display = "flex";
         this.elements.totalTime.style.alignItems = "center";

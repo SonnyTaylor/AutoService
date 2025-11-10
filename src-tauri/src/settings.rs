@@ -159,11 +159,27 @@ pub fn save_task_time(
     // Append new records
     all_records.extend(records);
 
+    // Age-based cleanup: Remove records older than 12 months (31536000 seconds)
+    // This keeps estimates relevant to current system performance
+    const MAX_AGE_SECONDS: u64 = 12 * 30 * 24 * 60 * 60; // ~12 months
+    let current_timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    
+    let filtered_by_age: Vec<TaskTimeRecord> = all_records
+        .into_iter()
+        .filter(|record| {
+            let age = current_timestamp.saturating_sub(record.timestamp);
+            age <= MAX_AGE_SECONDS
+        })
+        .collect();
+
     // Optional: Limit to last 100 records per task+params combination to prevent unbounded growth
     // Group by task_type + params hash
     use std::collections::HashMap;
     let mut grouped: HashMap<String, Vec<&TaskTimeRecord>> = HashMap::new();
-    for record in &all_records {
+    for record in &filtered_by_age {
       // Create consistent key from task_type and params JSON string
       let params_str = serde_json::to_string(&record.params).unwrap_or_default();
       let key = format!("{}|{}", record.task_type, params_str);
@@ -204,15 +220,25 @@ pub fn load_task_times(state: tauri::State<AppState>) -> Result<Vec<TaskTimeReco
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskTimeEstimate {
+    pub estimate: f64,
+    pub sample_count: usize,
+    pub variance: f64,
+    pub min: f64,
+    pub max: f64,
+}
+
 #[tauri::command]
 /// Get median time estimate for a specific task type and parameter combination.
 ///
 /// Returns None if no samples exist for the given task+params.
+/// Returns estimate with sample count, variance, and min/max for confidence indicators.
 pub fn get_task_time_estimate(
     state: tauri::State<AppState>,
     task_type: String,
     params: serde_json::Value,
-) -> Result<Option<f64>, String> {
+) -> Result<Option<TaskTimeEstimate>, String> {
     let all_records = load_task_times(state)?;
 
     // Filter records matching task_type and params
@@ -242,7 +268,7 @@ pub fn get_task_time_estimate(
     let len = matching.len();
     
     // For small samples (1-3), just use the values as-is
-    if len <= 3 {
+    let (median, filtered_for_stats) = if len <= 3 {
         let median = if len == 1 {
             matching[0]
         } else if len == 2 {
@@ -250,50 +276,76 @@ pub fn get_task_time_estimate(
         } else {
             matching[1] // Middle of 3
         };
-        return Ok(Some(median));
-    }
-    
-    // For larger samples, filter outliers using IQR
-    let q1_idx = len / 4;
-    let q3_idx = (3 * len) / 4;
-    let q1 = matching[q1_idx];
-    let q3 = matching[q3_idx];
-    let iqr = q3 - q1;
-    
-    // Outlier bounds: Q1 - 1.5*IQR and Q3 + 1.5*IQR
-    let lower_bound = q1 - 1.5 * iqr;
-    let upper_bound = q3 + 1.5 * iqr;
-    
-    // Filter out outliers
-    let filtered: Vec<f64> = matching
-        .iter()
-        .filter(|&&x| x >= lower_bound && x <= upper_bound)
-        .copied()
-        .collect();
-    
-    // If filtering removed too many values, use original
-    if filtered.len() < len / 2 {
-        // Too many outliers removed, use original (median is already robust)
-        let median = if len % 2 == 0 {
-            (matching[len / 2 - 1] + matching[len / 2]) / 2.0
-        } else {
-            matching[len / 2]
-        };
-        return Ok(Some(median));
-    }
-    
-    // Use filtered values (already sorted from original)
-    let mut filtered_sorted = filtered;
-    filtered_sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-    
-    let filtered_len = filtered_sorted.len();
-    let median = if filtered_len % 2 == 0 {
-        (filtered_sorted[filtered_len / 2 - 1] + filtered_sorted[filtered_len / 2]) / 2.0
+        (median, matching)
     } else {
-        filtered_sorted[filtered_len / 2]
+        // For larger samples, filter outliers using IQR
+        let q1_idx = len / 4;
+        let q3_idx = (3 * len) / 4;
+        let q1 = matching[q1_idx];
+        let q3 = matching[q3_idx];
+        let iqr = q3 - q1;
+        
+        // Outlier bounds: Q1 - 1.5*IQR and Q3 + 1.5*IQR
+        let lower_bound = q1 - 1.5 * iqr;
+        let upper_bound = q3 + 1.5 * iqr;
+        
+        // Filter out outliers
+        let filtered: Vec<f64> = matching
+            .iter()
+            .filter(|&&x| x >= lower_bound && x <= upper_bound)
+            .copied()
+            .collect();
+        
+        // If filtering removed too many values, use original
+        let (median, stats_source) = if filtered.len() < len / 2 {
+            // Too many outliers removed, use original (median is already robust)
+            let median = if len % 2 == 0 {
+                (matching[len / 2 - 1] + matching[len / 2]) / 2.0
+            } else {
+                matching[len / 2]
+            };
+            (median, matching)
+        } else {
+            // Use filtered values (already sorted from original)
+            let mut filtered_sorted = filtered;
+            filtered_sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+            
+            let filtered_len = filtered_sorted.len();
+            let median = if filtered_len % 2 == 0 {
+                (filtered_sorted[filtered_len / 2 - 1] + filtered_sorted[filtered_len / 2]) / 2.0
+            } else {
+                filtered_sorted[filtered_len / 2]
+            };
+            (median, filtered_sorted)
+        };
+        
+        (median, stats_source)
+    };
+    
+    // Calculate variance and min/max from the data used for stats
+    let sample_count = filtered_for_stats.len();
+    let min = filtered_for_stats[0];
+    let max = filtered_for_stats[sample_count - 1];
+    
+    // Calculate variance (population variance for sample size)
+    let mean = filtered_for_stats.iter().sum::<f64>() / sample_count as f64;
+    let variance = if sample_count > 1 {
+        filtered_for_stats
+            .iter()
+            .map(|&x| (x - mean).powi(2))
+            .sum::<f64>()
+            / sample_count as f64
+    } else {
+        0.0
     };
 
-    Ok(Some(median))
+    Ok(Some(TaskTimeEstimate {
+        estimate: median,
+        sample_count,
+        variance,
+        min,
+        max,
+    }))
 }
 
 #[tauri::command]

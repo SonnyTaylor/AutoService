@@ -148,13 +148,20 @@ async function updatePresetTimeEstimates() {
         }
         
         // Set badge text with partial indicator if needed
+        let badgeText = formatted;
+        let badgeTitle = `Estimated time for ${result.totalCount} task(s)`;
+        
         if (result.hasPartial) {
-          badgeEl.textContent = `${formatted} (partial)`;
-          badgeEl.title = `Estimated time - ${result.estimatedCount}/${result.totalCount} tasks have estimates`;
-        } else {
-          badgeEl.textContent = formatted;
-          badgeEl.title = `Estimated time for all ${result.totalCount} tasks`;
+          badgeText += " (partial)";
+          badgeTitle = `Estimated time - ${result.estimatedCount}/${result.totalCount} tasks have estimates`;
         }
+        
+        if (result.lowConfidenceCount > 0) {
+          badgeTitle += `\n${result.lowConfidenceCount} task(s) have low confidence estimates`;
+        }
+        
+        badgeEl.textContent = badgeText;
+        badgeEl.title = badgeTitle;
         
         timeEl.style.display = "flex";
         timeEl.style.alignItems = "center";
