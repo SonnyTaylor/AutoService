@@ -31,10 +31,6 @@
 import { getToolPath, getToolStatuses } from "../../utils/tools.js";
 import Fuse from "fuse.js";
 import Sortable from "sortablejs";
-import hljs from "highlight.js/lib/core";
-import jsonLang from "highlight.js/lib/languages/json";
-import "highlight.js/styles/github-dark.css";
-hljs.registerLanguage("json", jsonLang);
 import {
   SERVICES,
   listServiceIds,
@@ -660,13 +656,11 @@ class BuilderUI {
       title: document.getElementById("svc-run-title"),
       palette: document.getElementById("svc-task-palette"),
       builder: document.getElementById("svc-run-builder"),
-      json: document.getElementById("svc-json"),
       nextBtn: document.getElementById("svc-run-next"),
       backBtn: document.getElementById("svc-run-back"),
       btnSelectAll: document.getElementById("svc-select-all"),
       btnDeselectAll: document.getElementById("svc-deselect-all"),
       btnReset: document.getElementById("svc-reset"),
-      btnCopyJson: document.getElementById("svc-copy-json"),
       searchInput: document.getElementById("svc-search"),
       searchClear: document.getElementById("svc-search-clear"),
       aiSummaryToggle: document.getElementById("svc-ai-summary-toggle"),
@@ -776,17 +770,6 @@ class BuilderUI {
       this.builder.reset();
       this.render();
       this.updateTotalTime();
-    });
-
-    this.elements.btnCopyJson?.addEventListener("click", async () => {
-      try {
-        await navigator.clipboard.writeText(this.lastJsonString || "{}");
-        this.elements.btnCopyJson.textContent = "Copied";
-        setTimeout(
-          () => (this.elements.btnCopyJson.textContent = "Copy JSON"),
-          1200
-        );
-      } catch {}
     });
 
     // Keyboard reordering
@@ -1628,10 +1611,9 @@ class BuilderUI {
   }
 
   /**
-   * Update JSON preview
+   * Update JSON (generates and stores JSON for runner, no UI preview)
    */
   async updateJson() {
-    this.elements.json.textContent = "Generating...";
     const tasks = await this.builder.generateTasksArray();
     const plan = {
       tasks,
@@ -1640,10 +1622,6 @@ class BuilderUI {
     this.lastJsonString = JSON.stringify(plan, null, 2);
     console.log("[Builder] Updated JSON, AI summary enabled:", this.builder.aiSummaryEnabled);
     console.log("[Builder] Plan keys:", Object.keys(plan));
-    const highlighted = hljs.highlight(this.lastJsonString, {
-      language: "json",
-    }).value;
-    this.elements.json.innerHTML = `<code class="hljs language-json">${highlighted}</code>`;
     this.builder.persist();
     this.validateNext();
     
