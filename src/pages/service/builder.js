@@ -1197,20 +1197,36 @@ class BuilderUI {
   async loadGpuParentTimeEstimate(liElement) {
     try {
       const { calculateParameterBasedDuration, formatDuration } = await import("../../utils/task-time-estimates.js");
-      const { getServiceById } = await import("./handlers/index.js");
+      // getServiceById is already imported at the top of the file from ./catalog.js
       
       // Find placeholder or existing badge element (look within the meta span to avoid matching other badges)
       const metaSpan = liElement?.querySelector(`.meta`);
-      const placeholder = metaSpan?.querySelector(`.time-estimate-placeholder[data-task-id="${GPU_PARENT_ID}"]`);
-      const existingBadge = metaSpan?.querySelector(`.badge.time-estimate`);
-      
-      // If neither exists, nothing to update
-      if (!placeholder && !existingBadge) {
+      if (!metaSpan) {
+        console.warn("[Task Time] GPU parent: meta span not found");
         return;
       }
+      
+      const placeholder = metaSpan.querySelector(`.time-estimate-placeholder[data-task-id="${GPU_PARENT_ID}"]`);
+      const existingBadge = metaSpan.querySelector(`.badge.time-estimate`);
+      
+      // Debug: Log what we found
+      console.log("[Task Time] GPU parent elements:", {
+        hasPlaceholder: !!placeholder,
+        hasExistingBadge: !!existingBadge,
+        hasMetaSpan: !!metaSpan
+      });
+      
+      // Note: We'll create badge even if placeholder doesn't exist (it might have been removed earlier)
 
       let totalSeconds = 0;
       let hasEstimate = false;
+
+      console.log("[Task Time] GPU parent config:", {
+        furmark: this.builder.gpuConfig.subs.furmark,
+        heavyload: this.builder.gpuConfig.subs.heavyload,
+        furmarkMinutes: this.builder.gpuConfig.params.furmarkMinutes,
+        heavyloadMinutes: this.builder.gpuConfig.params.heavyloadMinutes,
+      });
 
       // Check FurMark estimate if enabled (parameter-based)
       if (this.builder.gpuConfig.subs.furmark) {
@@ -1224,8 +1240,12 @@ class BuilderUI {
               getDataDirs,
             });
             
+            console.log("[Task Time] Built FurMark task:", builtFurmark);
+            
             // Calculate duration directly from parameters (parameter-based task)
             const furmarkDuration = calculateParameterBasedDuration(builtFurmark);
+            console.log("[Task Time] FurMark duration:", furmarkDuration);
+            
             if (furmarkDuration !== null && furmarkDuration > 0) {
               totalSeconds += furmarkDuration;
               hasEstimate = true;
@@ -1233,6 +1253,8 @@ class BuilderUI {
           } catch (error) {
             console.warn("[Task Time] Failed to get FurMark estimate for GPU parent:", error);
           }
+        } else {
+          console.warn("[Task Time] FurMark handler not found");
         }
       }
 
@@ -1248,8 +1270,12 @@ class BuilderUI {
               getDataDirs,
             });
             
+            console.log("[Task Time] Built HeavyLoad GPU task:", builtHeavyload);
+            
             // Calculate duration directly from parameters (parameter-based task)
             const heavyloadDuration = calculateParameterBasedDuration(builtHeavyload);
+            console.log("[Task Time] HeavyLoad GPU duration:", heavyloadDuration);
+            
             if (heavyloadDuration !== null && heavyloadDuration > 0) {
               totalSeconds += heavyloadDuration;
               hasEstimate = true;
@@ -1257,10 +1283,16 @@ class BuilderUI {
           } catch (error) {
             console.warn("[Task Time] Failed to get HeavyLoad GPU estimate for GPU parent:", error);
           }
+        } else {
+          console.warn("[Task Time] HeavyLoad GPU handler not found");
         }
       }
 
+      console.log("[Task Time] GPU parent total:", { totalSeconds, hasEstimate });
+
+      // Only show badge if at least one test is enabled and we have a valid estimate
       if (!hasEstimate || totalSeconds === 0) {
+        // If neither test is enabled, remove badge/placeholder
         if (placeholder) placeholder.remove();
         if (existingBadge) existingBadge.remove();
         return;
@@ -1273,18 +1305,38 @@ class BuilderUI {
         return;
       }
 
+      // Build enabled tests list for tooltip
+      const enabledTests = [];
+      if (this.builder.gpuConfig.subs.furmark) enabledTests.push("FurMark");
+      if (this.builder.gpuConfig.subs.heavyload) enabledTests.push("HeavyLoad");
+      const tooltip = `Estimated time for GPU stress test (${enabledTests.join(" + ")})`;
+
       // Update existing badge or replace placeholder with new badge
       if (existingBadge) {
         // Update existing badge
         existingBadge.textContent = formatted;
-        existingBadge.title = `Estimated time for GPU stress test (combined FurMark + HeavyLoad)`;
+        existingBadge.title = tooltip;
       } else if (placeholder) {
         // Create badge with combined estimate
         const estimateEl = document.createElement("span");
         estimateEl.className = "badge time-estimate";
         estimateEl.textContent = formatted;
-        estimateEl.title = `Estimated time for GPU stress test (combined FurMark + HeavyLoad)`;
+        estimateEl.title = tooltip;
         placeholder.replaceWith(estimateEl);
+      } else {
+        // Neither placeholder nor badge exists - create badge in meta span
+        // This can happen if placeholder was removed earlier
+        const estimateEl = document.createElement("span");
+        estimateEl.className = "badge time-estimate";
+        estimateEl.textContent = formatted;
+        estimateEl.title = tooltip;
+        // Insert before the availability badge if it exists, otherwise just append
+        const availabilityBadge = metaSpan.querySelector(".badge.availability");
+        if (availabilityBadge) {
+          metaSpan.insertBefore(estimateEl, availabilityBadge.nextSibling);
+        } else {
+          metaSpan.appendChild(estimateEl);
+        }
       }
     } catch (error) {
       console.warn("[Task Time] Failed to get GPU parent time estimate:", error);
