@@ -12,19 +12,19 @@
   },
   "devDependencies": {
     "@tauri-apps/api": "^2.9.0",
-    "@tauri-apps/cli": "^2.9.1",
-    "@tauri-apps/plugin-dialog": "^2.4.0",
-    "vite": "^7.1.12"
+    "@tauri-apps/cli": "^2.9.4",
+    "@tauri-apps/plugin-dialog": "^2.4.2",
+    "vite": "^7.2.2"
   },
   "dependencies": {
-    "ai": "^5.0.0",
-    "@ai-sdk/openai": "^2.0.0",
-    "@ai-sdk/anthropic": "^2.0.0",
-    "@ai-sdk/google": "^2.0.0",
+    "@ai-sdk/anthropic": "^2.0.43",
+    "@ai-sdk/google": "^2.0.30",
+    "@ai-sdk/openai": "^2.0.64",
     "@phosphor-icons/web": "^2.1.2",
-    "@tauri-apps/plugin-notification": "~2.3.1",
-    "@tauri-apps/plugin-shell": "~2.3.1",
-    "apexcharts": "^5.3.5",
+    "@tauri-apps/plugin-notification": "~2.3.3",
+    "@tauri-apps/plugin-shell": "~2.3.3",
+    "ai": "^5.0.90",
+    "apexcharts": "^5.3.6",
     "escape-html": "^1.0.3",
     "fuse.js": "^7.1.0",
     "highlight.js": "^11.11.1",
@@ -36,7 +36,7 @@
     "sortablejs": "^1.15.6",
     "store2": "^2.14.4",
     "tone": "^15.1.22",
-    "validator": "^13.15.20",
+    "validator": "^13.15.22",
     "zod": "^4.1.12"
   }
 }
