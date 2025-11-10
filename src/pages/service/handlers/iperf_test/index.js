@@ -86,6 +86,9 @@ export function renderTech({ result, index }) {
   const hr = s.human_readable || {};
   const throughput = hr.throughput || {};
   const throughput_over_time = s.throughput_over_time_mbps || [];
+  const error = s.error;
+  const reason = s.reason;
+  const isConnectionFailure = result.status === "failure" && (error || hr.verdict === "connection_failed");
 
   setTimeout(() => {
     const chartEl = document.getElementById(`iperf-chart-${index}`);
@@ -163,70 +166,107 @@ export function renderTech({ result, index }) {
   return html`
     <div class="card iperf">
       ${renderHeader("Network Throughput (iPerf)", result.status)}
-      <div class="kpi-row">
-        ${(() => {
-          const verdictRaw = hr.verdict ? String(hr.verdict) : "";
-          const verdict = verdictRaw
-            ? verdictRaw.charAt(0).toUpperCase() + verdictRaw.slice(1)
-            : "-";
-          const lower = verdictRaw.toLowerCase();
-          let variant = "";
-          if (lower.includes("excellent")) variant = "info";
-          else if (lower.includes("good")) variant = "ok";
-          else if (lower.includes("fair")) variant = "warn";
-          else if (lower.includes("poor")) variant = "fail";
-          return html`<div class="kpi verdict${variant ? ` ${variant}` : ""}">
-            <span class="lab">Verdict</span>
-            <span class="val">${verdict}</span>
-          </div>`;
-        })()}
-        ${kpiBox(
-          "Avg Throughput",
-          `${throughput.mean?.toFixed(1) || "?"} Mbps`
-        )}
-        ${kpiBox("Stability", `${hr.stability_score || "?"}/100`)}
-        ${kpiBox(
-          "Direction",
-          hr.direction
-            ? hr.direction.charAt(0).toUpperCase() + hr.direction.slice(1)
-            : "-"
-        )}
-        ${kpiBox("Protocol", hr.protocol ? hr.protocol.toUpperCase() : "-")}
-        ${kpiBox("Time", durationMin ? `${durationMin} min` : "-")}
-      </div>
-      ${Array.isArray(hr.notes) && hr.notes.length
-        ? html`<div class="pill-row">
-            ${map(hr.notes, (n) => {
-              const note = String(n || "").toLowerCase();
-              let variant = "warn";
-              if (
-                note.includes("low variability") ||
-                note.includes("low variation")
-              ) {
-                variant = "ok";
-              } else if (
-                note.includes("high variability") ||
-                note.includes("high variation") ||
-                note.includes("unstable")
-              ) {
-                variant = "fail";
-              } else if (
-                note.includes("medium variability") ||
-                note.includes("moderate variability")
-              ) {
-                variant = "warn";
-              }
-              return pill(n, variant);
-            })}
-          </div>`
+      
+      ${isConnectionFailure
+        ? html`
+            <div class="error-banner">
+              <div class="error-header">
+                <strong>⚠️ Connection Failed</strong>
+              </div>
+              ${error
+                ? html`<div class="error-message">${error}</div>`
+                : ""}
+              ${reason
+                ? html`
+                    <details class="error-details">
+                      <summary>Troubleshooting Steps</summary>
+                      <div class="error-reason">
+                        ${map(reason.split("\n"), (line) => {
+                          // Convert bullet points to proper formatting
+                          if (line.trim().startsWith("•")) {
+                            return html`<div class="troubleshoot-item">${line}</div>`;
+                          }
+                          return html`<div>${line || html`<br />`}</div>`;
+                        })}
+                      </div>
+                    </details>
+                  `
+                : ""}
+              <div class="error-server-info">
+                <strong>Server:</strong> ${s.server || "Not specified"}:${s.port || 5201}
+              </div>
+            </div>
+          `
         : ""}
-      <div class="chart-container">
-        ${throughput_over_time.length > 0
-          ? html`<div id="iperf-chart-${index}"></div>`
-          : html`<div class="muted">
-              No interval data available for chart.
-            </div>`}
-      </div>
+
+      ${!isConnectionFailure
+        ? html`
+            <div class="kpi-row">
+              ${(() => {
+                const verdictRaw = hr.verdict ? String(hr.verdict) : "";
+                const verdict = verdictRaw
+                  ? verdictRaw.charAt(0).toUpperCase() + verdictRaw.slice(1)
+                  : "-";
+                const lower = verdictRaw.toLowerCase();
+                let variant = "";
+                if (lower.includes("excellent")) variant = "info";
+                else if (lower.includes("good")) variant = "ok";
+                else if (lower.includes("fair")) variant = "warn";
+                else if (lower.includes("poor") || lower.includes("connection_failed")) variant = "fail";
+                return html`<div class="kpi verdict${variant ? ` ${variant}` : ""}">
+                  <span class="lab">Verdict</span>
+                  <span class="val">${verdict}</span>
+                </div>`;
+              })()}
+              ${kpiBox(
+                "Avg Throughput",
+                `${throughput.mean?.toFixed(1) || "?"} Mbps`
+              )}
+              ${kpiBox("Stability", `${hr.stability_score || "?"}/100`)}
+              ${kpiBox(
+                "Direction",
+                hr.direction
+                  ? hr.direction.charAt(0).toUpperCase() + hr.direction.slice(1)
+                  : "-"
+              )}
+              ${kpiBox("Protocol", hr.protocol ? hr.protocol.toUpperCase() : "-")}
+              ${kpiBox("Time", durationMin ? `${durationMin} min` : "-")}
+            </div>
+            ${Array.isArray(hr.notes) && hr.notes.length
+              ? html`<div class="pill-row">
+                  ${map(hr.notes, (n) => {
+                    const note = String(n || "").toLowerCase();
+                    let variant = "warn";
+                    if (
+                      note.includes("low variability") ||
+                      note.includes("low variation")
+                    ) {
+                      variant = "ok";
+                    } else if (
+                      note.includes("high variability") ||
+                      note.includes("high variation") ||
+                      note.includes("unstable")
+                    ) {
+                      variant = "fail";
+                    } else if (
+                      note.includes("medium variability") ||
+                      note.includes("moderate variability")
+                    ) {
+                      variant = "warn";
+                    }
+                    return pill(n, variant);
+                  })}
+                </div>`
+              : ""}
+            <div class="chart-container">
+              ${throughput_over_time.length > 0
+                ? html`<div id="iperf-chart-${index}"></div>`
+                : html`<div class="muted">
+                    No interval data available for chart.
+                  </div>`}
+            </div>
+          `
+        : ""}
     </div>
   `;
 }
@@ -300,4 +340,66 @@ export const printCSS = `
 
 export const viewCSS = `
   .card.iperf .chart-container { margin-top: 16px; }
+  
+  .card.iperf .error-banner {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  
+  .card.iperf .error-header {
+    color: #ef4444;
+    font-size: 16px;
+    margin-bottom: 8px;
+  }
+  
+  .card.iperf .error-message {
+    color: #fca5a5;
+    margin-bottom: 12px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  
+  .card.iperf .error-details {
+    margin-top: 12px;
+  }
+  
+  .card.iperf .error-details summary {
+    cursor: pointer;
+    color: #fca5a5;
+    font-weight: 500;
+    margin-bottom: 8px;
+    user-select: none;
+  }
+  
+  .card.iperf .error-details summary:hover {
+    color: #ef4444;
+  }
+  
+  .card.iperf .error-reason {
+    color: #e5e7eb;
+    font-size: 13px;
+    line-height: 1.6;
+    margin-top: 8px;
+    white-space: pre-line;
+  }
+  
+  .card.iperf .troubleshoot-item {
+    margin: 4px 0;
+    padding-left: 8px;
+  }
+  
+  .card.iperf .error-server-info {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(239, 68, 68, 0.2);
+    color: #d1d5db;
+    font-size: 13px;
+  }
+  
+  .card.iperf .error-server-info strong {
+    color: #fca5a5;
+  }
 `;

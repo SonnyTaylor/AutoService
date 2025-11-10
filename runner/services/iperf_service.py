@@ -623,15 +623,12 @@ def run_iperf_test(task: Dict[str, Any]) -> Dict[str, Any]:
             "command": command,
         }
 
-    summarized = _summarize_iperf_json(
-        parsed_json,
-        include_intervals=bool(summary_base.get("include_intervals")),
-        stability_threshold_bps=summary_base.get("stability_threshold_bps"),
-    )
-
     # Surface iperf3-reported error (top-level field in JSON) when present
+    # Check for errors BEFORE building summaries to avoid incorrect "excellent" ratings
     iperf_error: Optional[str] = None
     error_category: Optional[str] = None
+    has_connection_error = False
+    
     try:
         if isinstance(parsed_json, dict):
             err = parsed_json.get("error")
@@ -642,17 +639,51 @@ def run_iperf_test(task: Dict[str, Any]) -> Dict[str, Any]:
                 err_lower = iperf_error.lower()
                 if any(term in err_lower for term in ["unable to connect", "connection timed out", "connection refused"]):
                     error_category = "connection"
+                    has_connection_error = True
                 elif "server may have stopped" in err_lower or "firewall" in err_lower:
                     error_category = "server"
+                    has_connection_error = True
                 elif "no route" in err_lower or "host unreachable" in err_lower:
                     error_category = "network"
+                    has_connection_error = True
                 elif "port" in err_lower and ("in use" in err_lower or "invalid" in err_lower):
                     error_category = "port"
+                    has_connection_error = True
     except Exception:  # noqa: BLE001
         iperf_error = None
 
+    # Also check for connection errors in output text
+    if not has_connection_error:
+        connection_error_patterns = [
+            "unable to connect",
+            "connection refused",
+            "connection timed out",
+            "no route to host",
+            "connection reset",
+            "server may have stopped",
+        ]
+        combined_output = (stderr_text + " " + stdout_text).lower()
+        if any(pattern in combined_output for pattern in connection_error_patterns):
+            has_connection_error = True
+            if not error_category:
+                error_category = "connection"
+
+    # Only build summaries if we have valid data (no connection errors)
+    if not has_connection_error:
+        summarized = _summarize_iperf_json(
+            parsed_json,
+            include_intervals=bool(summary_base.get("include_intervals")),
+            stability_threshold_bps=summary_base.get("stability_threshold_bps"),
+        )
+    else:
+        # Create empty summary structure for connection errors
+        summarized = {
+            "aggregates": {},
+            "interval_stats": {"samples": 0},
+        }
+
     # Treat any iperf3-reported error as a failure regardless of exit code
-    status = "success" if (proc.returncode == 0 and not iperf_error) else "failure"
+    status = "success" if (proc.returncode == 0 and not iperf_error and not has_connection_error) else "failure"
     # For stability testing, even with non-zero exit, provide completed data but
     # mark as failure so the UI can highlight issues.
 
@@ -669,91 +700,91 @@ def run_iperf_test(task: Dict[str, Any]) -> Dict[str, Any]:
     }
 
     # Add human-readable helper section for quick interpretation
-    try:
-        final_summary["human_readable"] = _build_human_readable_summary(
-            summary_base, summarized
-        )
-    except Exception as _hr_err:  # noqa: BLE001
-        final_summary["human_readable_error"] = (
-            f"Failed to build human summary: {_hr_err}"
-        )
+    # Only build normal summary if we have valid data
+    if not has_connection_error and not iperf_error:
+        try:
+            final_summary["human_readable"] = _build_human_readable_summary(
+                summary_base, summarized
+            )
+        except Exception as _hr_err:  # noqa: BLE001
+            final_summary["human_readable_error"] = (
+                f"Failed to build human summary: {_hr_err}"
+            )
+    else:
+        # Create error-focused human-readable summary for connection failures
+        final_summary["human_readable"] = {
+            "protocol": summary_base.get("protocol", "tcp"),
+            "direction": "upload" if not summary_base.get("reverse") else "download",
+            "throughput": {
+                "unit": "Mbps",
+                "mean": None,
+                "median": None,
+                "min": None,
+                "max": None,
+                "samples": 0,
+            },
+            "stability_score": 0,
+            "verdict": "connection_failed",
+            "notes": ["Connection to server failed"],
+        }
 
     # Provide human-readable reason and include stdout excerpt on failures
     if status == "failure":
-        if iperf_error:
-            final_summary["error"] = iperf_error
+        if iperf_error or has_connection_error:
+            # Use the iperf_error if available, otherwise extract from output
+            error_message = iperf_error if iperf_error else "Connection failed"
+            final_summary["error"] = error_message
             
             # Provide context-specific guidance based on error category
             if error_category == "connection":
                 final_summary["reason"] = (
-                    f"Connection failed: {iperf_error}\n\n"
+                    f"Connection failed: {error_message}\n\n"
                     f"Troubleshooting steps:\n"
                     f"• Verify iPerf3 server is running on {summary_base.get('server')}:{summary_base.get('port')}\n"
                     f"• Check firewall rules allow connections on port {summary_base.get('port')}\n"
-                    f"• Ensure the server IP address is correct\n"
+                    f"• Ensure the server address/hostname is correct\n"
+                    f"• Test connectivity: ping {summary_base.get('server')}\n"
                     f"• Try: iperf3 -s -p {summary_base.get('port')} (on the server)"
                 )
             elif error_category == "server":
                 final_summary["reason"] = (
-                    f"Server error: {iperf_error}\n\n"
+                    f"Server error: {error_message}\n\n"
                     f"The iPerf3 server at {summary_base.get('server')}:{summary_base.get('port')} "
                     f"may have stopped or is not accepting connections. "
                     f"Restart the iPerf3 server and try again."
                 )
             elif error_category == "network":
                 final_summary["reason"] = (
-                    f"Network error: {iperf_error}\n\n"
+                    f"Network error: {error_message}\n\n"
                     f"Cannot reach {summary_base.get('server')}. "
                     f"Check network connectivity, routing, and firewall settings."
                 )
             elif error_category == "port":
                 final_summary["reason"] = (
-                    f"Port error: {iperf_error}\n\n"
+                    f"Port error: {error_message}\n\n"
                     f"Port {summary_base.get('port')} may be in use or invalid. "
                     f"Try a different port or verify the server configuration."
                 )
             else:
                 # Generic error with helpful context
                 final_summary["reason"] = (
-                    f"{iperf_error}\n\n"
+                    f"{error_message}\n\n"
                     f"Server: {summary_base.get('server')}:{summary_base.get('port')}\n"
                     f"Protocol: {summary_base.get('protocol', 'tcp').upper()}\n"
                     f"Exit code: {proc.returncode}"
                 )
+        elif proc.returncode != 0:
+            # Non-zero exit but no clear error message
+            final_summary["error"] = f"iperf3 test failed (exit code {proc.returncode})"
+            final_summary["reason"] = (
+                f"iperf3 exited with code {proc.returncode}. "
+                f"This may indicate a network issue, server problem, or configuration error.\n\n"
+                f"Output: {stdout_text[:500] or stderr_text[:500] or 'No output available'}"
+            )
         else:
-            # Check for common connection failure patterns in stderr/stdout
-            connection_errors = [
-                "unable to connect",
-                "connection refused",
-                "connection timed out",
-                "no route to host",
-                "connection reset",
-                "server may have stopped",
-            ]
-            combined_output = (stderr_text + " " + stdout_text).lower()
-            if any(err in combined_output for err in connection_errors):
-                final_summary["error"] = "Connection failed"
-                final_summary["reason"] = (
-                    f"Unable to connect to {summary_base.get('server')}:{summary_base.get('port')}.\n\n"
-                    f"Possible causes:\n"
-                    f"• iPerf3 server is not running (start with: iperf3 -s -p {summary_base.get('port')})\n"
-                    f"• Firewall is blocking the connection\n"
-                    f"• Incorrect server IP address or port\n"
-                    f"• Network connectivity issues\n\n"
-                    f"Error details: {stderr_text[:300] or stdout_text[:300]}"
-                )
-            elif proc.returncode != 0:
-                # Non-zero exit but no clear error message
-                final_summary["error"] = f"iperf3 test failed (exit code {proc.returncode})"
-                final_summary["reason"] = (
-                    f"iperf3 exited with code {proc.returncode}. "
-                    f"This may indicate a network issue, server problem, or configuration error.\n\n"
-                    f"Output: {stdout_text[:500] or stderr_text[:500] or 'No output available'}"
-                )
-            else:
-                # Exit code 0 but marked as failure (shouldn't happen, but handle gracefully)
-                final_summary["error"] = "Test completed with errors"
-                final_summary["reason"] = "Test completed but was marked as failed. Check output for details."
+            # Exit code 0 but marked as failure (shouldn't happen, but handle gracefully)
+            final_summary["error"] = "Test completed with errors"
+            final_summary["reason"] = "Test completed but was marked as failed. Check output for details."
         
         final_summary["stdout_excerpt"] = stdout_text[:1000]
         final_summary["stderr_excerpt"] = stderr_text[:1000]
