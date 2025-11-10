@@ -50,6 +50,80 @@ function getPossibleTaskTypes(handlerId, builtTaskType) {
 }
 
 /**
+ * Check if a task's duration is purely parameter-based (not dependent on system performance or network conditions).
+ * For these tasks, duration can be calculated directly from parameters without historical data.
+ * 
+ * @param {string} taskType - Task type identifier
+ * @returns {boolean} True if task duration is purely parameter-based
+ */
+export function isParameterBasedTask(taskType) {
+  if (!taskType) return false;
+  
+  // Tasks where duration is exactly determined by parameters
+  const parameterBasedTypes = [
+    "iperf_test",           // Duration = minutes * 60
+    "furmark_stress_test",  // Duration = minutes * 60 or duration_seconds
+    "heavyload_stress_test" // Duration = duration_minutes * 60
+  ];
+  
+  return parameterBasedTypes.includes(taskType);
+}
+
+/**
+ * Calculate duration directly from task parameters for parameter-based tasks.
+ * Returns null if task is not parameter-based or required parameters are missing.
+ * 
+ * @param {Object} task - Task definition object (may have params nested or flat)
+ * @returns {number|null} Duration in seconds, or null if cannot be calculated
+ */
+export function calculateParameterBasedDuration(task) {
+  if (!task || typeof task !== "object") {
+    return null;
+  }
+
+  const taskType = task.type || task.task_type || "";
+  if (!isParameterBasedTask(taskType)) {
+    return null;
+  }
+
+  // Extract params from both nested and flat structures
+  const flatParams = { ...task };
+  delete flatParams.type;
+  delete flatParams.task_type;
+  delete flatParams.ui_label;
+  delete flatParams.executable_path;
+  delete flatParams.extra_args;
+  delete flatParams.command;
+  
+  const nestedParams = task.params || {};
+  const params = { ...flatParams, ...nestedParams };
+
+  // Calculate duration based on task type
+  if (taskType === "iperf_test") {
+    // iPerf: duration_minutes parameter
+    const minutes = params.duration_minutes || params.minutes;
+    if (typeof minutes === "number" && minutes > 0) {
+      return minutes * 60;
+    }
+  } else if (taskType === "furmark_stress_test") {
+    // FurMark: duration_seconds (from built task) or minutes (from params)
+    if (typeof params.duration_seconds === "number" && params.duration_seconds > 0) {
+      return params.duration_seconds;
+    } else if (typeof params.minutes === "number" && params.minutes > 0) {
+      return params.minutes * 60;
+    }
+  } else if (taskType === "heavyload_stress_test") {
+    // HeavyLoad: duration_minutes parameter
+    const durationMinutes = params.duration_minutes || params.minutes;
+    if (typeof durationMinutes === "number" && durationMinutes > 0) {
+      return durationMinutes * 60;
+    }
+  }
+
+  return null;
+}
+
+/**
  * Normalize task parameters to create a consistent hash key for grouping.
  * Extracts relevant parameters that affect duration and creates a sorted JSON string.
  * 
@@ -205,19 +279,43 @@ export function clearTaskTimeCache() {
 
 /**
  * Get time estimate for a specific task type and parameters.
- * Calculates median from matching historical records.
+ * For parameter-based tasks, calculates duration directly from parameters.
+ * For other tasks, calculates median from matching historical records.
  * Tries multiple task type variations to handle handler ID vs actual task type mismatches.
  * 
  * @param {string} taskType - Task type identifier (handler ID or actual task type)
  * @param {Object} taskParams - Task parameters object
  * @param {string} [builtTaskType] - Actual task type from built task (if available)
- * @returns {Promise<{estimate: number, sampleCount: number} | null>} Estimate and sample count, or null if insufficient data
+ * @returns {Promise<{estimate: number, sampleCount: number, isParameterBased?: boolean} | null>} Estimate and sample count, or null if insufficient data
  */
 export async function getEstimate(taskType, taskParams, builtTaskType = null) {
   if (!taskType) {
     return null;
   }
 
+  // Use the built task type if available (most accurate)
+  const actualTaskType = builtTaskType || taskType;
+  
+  // Check if this is a parameter-based task first
+  if (isParameterBasedTask(actualTaskType)) {
+    // Build a task object to calculate duration from parameters
+    const taskForCalculation = {
+      type: actualTaskType,
+      params: taskParams || {},
+    };
+    
+    const duration = calculateParameterBasedDuration(taskForCalculation);
+    if (duration !== null && duration > 0) {
+      return {
+        estimate: duration,
+        sampleCount: 1, // Always 1 for parameter-based (not from historical data)
+        isParameterBased: true,
+      };
+    }
+    // If calculation failed, fall through to historical lookup (shouldn't happen normally)
+  }
+
+  // For non-parameter-based tasks, use historical estimates
   try {
     const { core } = window.__TAURI__ || {};
     const { invoke } = core || {};
@@ -274,6 +372,7 @@ export async function getEstimate(taskType, taskParams, builtTaskType = null) {
     return {
       estimate: bestEstimate,
       sampleCount: bestSampleCount,
+      isParameterBased: false,
     };
   } catch (error) {
     console.warn("Failed to get task time estimate:", error);
@@ -334,6 +433,7 @@ export function hasEnoughSamples(records) {
 
 /**
  * Calculate total estimated time for a list of tasks.
+ * Uses parameter-based duration calculation for applicable tasks, falls back to historical estimates for others.
  * 
  * @param {Array<{type: string, params?: Object}>} tasks - Array of task objects with type and optional params
  * @returns {Promise<{totalSeconds: number, hasPartial: boolean, estimatedCount: number, totalCount: number}>}
@@ -359,7 +459,17 @@ export async function calculateTotalTime(tasks) {
 
     // Use the task's actual type if available (from built task)
     const builtTaskType = task.type || task.task_type;
-    const taskParams = task.params || {};
+    
+    // Use normalizeTaskParams to extract params from both nested and flat structures
+    // This handles tasks where params are at the top level (flat) or nested in task.params
+    const normalizedParamsHash = normalizeTaskParams(task);
+    let taskParams;
+    try {
+      taskParams = JSON.parse(normalizedParamsHash);
+    } catch (e) {
+      // Fallback to task.params if normalization fails
+      taskParams = task.params || {};
+    }
     
     // Pass built task type to help with type matching
     const estimate = await getEstimate(taskType, taskParams, builtTaskType);

@@ -872,14 +872,26 @@ class BuilderUI {
       wrapper.addEventListener(evt, (e) => e.stopPropagation());
     });
 
+    // Helper function to refresh individual task estimate after parameter change
+    const refreshTaskEstimate = () => {
+      // Find the li element by traversing up from wrapper
+      let liElement = wrapper.closest("li.task-item");
+      if (liElement) {
+        // Refresh the estimate for this task
+        this.loadAndRenderTimeEstimate(id, liElement);
+      }
+    };
+
     // Check if handler provides custom parameter controls
     const handler = getHandlerModule(id);
     if (handler?.renderParamControls) {
       const customControls = handler.renderParamControls({
         params,
-        updateParam: (key, value) => {
+        updateParam: async (key, value) => {
           this.builder.updateTaskParam(id, key, value);
-          this.updateJson();
+          await this.updateJson();
+          // Refresh individual task estimate after parameter change
+          refreshTaskEstimate();
         },
       });
       if (customControls) {
@@ -910,14 +922,16 @@ class BuilderUI {
       ["mousedown", "pointerdown", "click"].forEach((evt) => {
         inp.addEventListener(evt, (e) => e.stopPropagation());
       });
-      inp.addEventListener("change", () => {
+      inp.addEventListener("change", async () => {
         this.builder.updateTaskParam(
           id,
           inp.dataset.param,
           Number(inp.value) ||
             this.builder.taskParams[id]?.params[inp.dataset.param]
         );
-        this.updateJson();
+        await this.updateJson();
+        // Refresh individual task estimate after parameter change
+        refreshTaskEstimate();
       });
     });
 
@@ -955,10 +969,22 @@ class BuilderUI {
       </div>
     `;
 
+    // Helper function to refresh GPU parent estimate after sub-option change
+    const refreshGpuParentEstimate = () => {
+      // Find the li element by traversing up from div
+      let liElement = div.closest("li.task-item");
+      if (liElement) {
+        // Refresh the estimate for GPU parent
+        this.loadGpuParentTimeEstimate(liElement);
+      }
+    };
+
     div.querySelectorAll('input[type="checkbox"]').forEach((cb) =>
-      cb.addEventListener("change", () => {
+      cb.addEventListener("change", async () => {
         this.builder.updateGpuSub(cb.dataset.sub, cb.checked);
-        this.updateJson();
+        await this.updateJson();
+        // Refresh GPU parent estimate after sub-option change
+        refreshGpuParentEstimate();
       })
     );
 
@@ -968,12 +994,14 @@ class BuilderUI {
           inp.addEventListener(evt, (e) => e.stopPropagation());
         }
       );
-      inp.addEventListener("change", () => {
+      inp.addEventListener("change", async () => {
         this.builder.updateGpuParam(
           inp.dataset.subDur,
           Number(inp.value) || this.builder.gpuConfig.params[inp.dataset.subDur]
         );
-        this.updateJson();
+        await this.updateJson();
+        // Refresh GPU parent estimate after duration change
+        refreshGpuParentEstimate();
       });
     });
 
@@ -1105,39 +1133,53 @@ class BuilderUI {
       const taskType = taskForEstimate.type || id;
       const estimateData = await getEstimate(id, taskParams, taskType);
       
-      // Find placeholder element
-      const placeholder = liElement?.querySelector(`.time-estimate-placeholder[data-task-id="${id}"]`);
-      if (!placeholder) {
+      // Find placeholder or existing badge element (look within the meta span to avoid matching other badges)
+      const metaSpan = liElement?.querySelector(`.meta`);
+      const placeholder = metaSpan?.querySelector(`.time-estimate-placeholder[data-task-id="${id}"]`);
+      const existingBadge = metaSpan?.querySelector(`.badge.time-estimate`);
+      
+      // If neither exists, nothing to update
+      if (!placeholder && !existingBadge) {
         return;
       }
 
       if (!estimateData) {
         console.log(`[Task Time] No estimate data for ${id}`);
-        placeholder.remove();
+        if (placeholder) placeholder.remove();
+        if (existingBadge) existingBadge.remove();
         return;
       }
 
       if (estimateData.sampleCount < 1) {
         console.log(`[Task Time] Insufficient samples for ${id}: ${estimateData.sampleCount} < 1`);
-        placeholder.remove();
+        if (placeholder) placeholder.remove();
+        if (existingBadge) existingBadge.remove();
         return;
       }
 
       const formatted = formatDuration(estimateData.estimate);
       if (!formatted) {
         console.log(`[Task Time] Failed to format duration for ${id}: ${estimateData.estimate}`);
-        placeholder.remove();
+        if (placeholder) placeholder.remove();
+        if (existingBadge) existingBadge.remove();
         return;
       }
 
       console.log(`[Task Time] Displaying estimate for ${id}: ${formatted} (${estimateData.sampleCount} samples)`);
 
-      // Replace placeholder with actual estimate as a badge
-      const estimateEl = document.createElement("span");
-      estimateEl.className = "badge time-estimate";
-      estimateEl.textContent = formatted;
-      estimateEl.title = `Estimated time based on ${estimateData.sampleCount} previous runs`;
-      placeholder.replaceWith(estimateEl);
+      // Update existing badge or replace placeholder with new badge
+      if (existingBadge) {
+        // Update existing badge
+        existingBadge.textContent = formatted;
+        existingBadge.title = `Estimated time based on ${estimateData.sampleCount} previous runs`;
+      } else if (placeholder) {
+        // Replace placeholder with actual estimate as a badge
+        const estimateEl = document.createElement("span");
+        estimateEl.className = "badge time-estimate";
+        estimateEl.textContent = formatted;
+        estimateEl.title = `Estimated time based on ${estimateData.sampleCount} previous runs`;
+        placeholder.replaceWith(estimateEl);
+      }
     } catch (error) {
       console.warn(`[Task Time] Failed to get time estimate for ${id}:`, error);
       const placeholder = liElement?.querySelector(`.time-estimate-placeholder[data-task-id="${id}"]`);
@@ -1150,21 +1192,27 @@ class BuilderUI {
   /**
    * Load and render combined time estimate for GPU parent task
    * GPU parent expands to furmark_stress_test and/or heavyload_stress_gpu
+   * Uses parameter-based duration calculation for these tasks
    */
   async loadGpuParentTimeEstimate(liElement) {
     try {
-      const { getEstimate, formatDuration } = await import("../../utils/task-time-estimates.js");
+      const { calculateParameterBasedDuration, formatDuration } = await import("../../utils/task-time-estimates.js");
       const { getServiceById } = await import("./handlers/index.js");
       
-      const placeholder = liElement?.querySelector(`.time-estimate-placeholder[data-task-id="${GPU_PARENT_ID}"]`);
-      if (!placeholder) {
+      // Find placeholder or existing badge element (look within the meta span to avoid matching other badges)
+      const metaSpan = liElement?.querySelector(`.meta`);
+      const placeholder = metaSpan?.querySelector(`.time-estimate-placeholder[data-task-id="${GPU_PARENT_ID}"]`);
+      const existingBadge = metaSpan?.querySelector(`.badge.time-estimate`);
+      
+      // If neither exists, nothing to update
+      if (!placeholder && !existingBadge) {
         return;
       }
 
       let totalSeconds = 0;
       let hasEstimate = false;
 
-      // Check FurMark estimate if enabled
+      // Check FurMark estimate if enabled (parameter-based)
       if (this.builder.gpuConfig.subs.furmark) {
         const furmarkDef = getServiceById("furmark_stress_test");
         if (furmarkDef) {
@@ -1176,15 +1224,10 @@ class BuilderUI {
               getDataDirs,
             });
             
-            // Use the built task's params (which has duration_seconds, not minutes)
-            const furmarkEstimate = await getEstimate(
-              "furmark_stress_test",
-              builtFurmark.params || { duration_seconds: furmarkMinutes * 60 },
-              builtFurmark.type
-            );
-            
-            if (furmarkEstimate && furmarkEstimate.sampleCount >= 1) {
-              totalSeconds += furmarkEstimate.estimate;
+            // Calculate duration directly from parameters (parameter-based task)
+            const furmarkDuration = calculateParameterBasedDuration(builtFurmark);
+            if (furmarkDuration !== null && furmarkDuration > 0) {
+              totalSeconds += furmarkDuration;
               hasEstimate = true;
             }
           } catch (error) {
@@ -1193,7 +1236,7 @@ class BuilderUI {
         }
       }
 
-      // Check HeavyLoad GPU estimate if enabled
+      // Check HeavyLoad GPU estimate if enabled (parameter-based)
       if (this.builder.gpuConfig.subs.heavyload) {
         const heavyloadDef = getServiceById("heavyload_stress_gpu");
         if (heavyloadDef) {
@@ -1205,14 +1248,10 @@ class BuilderUI {
               getDataDirs,
             });
             
-            const heavyloadEstimate = await getEstimate(
-              "heavyload_stress_gpu",
-              builtHeavyload.params || { minutes: heavyloadMinutes },
-              builtHeavyload.type
-            );
-            
-            if (heavyloadEstimate && heavyloadEstimate.sampleCount >= 1) {
-              totalSeconds += heavyloadEstimate.estimate;
+            // Calculate duration directly from parameters (parameter-based task)
+            const heavyloadDuration = calculateParameterBasedDuration(builtHeavyload);
+            if (heavyloadDuration !== null && heavyloadDuration > 0) {
+              totalSeconds += heavyloadDuration;
               hasEstimate = true;
             }
           } catch (error) {
@@ -1222,27 +1261,41 @@ class BuilderUI {
       }
 
       if (!hasEstimate || totalSeconds === 0) {
-        placeholder.remove();
+        if (placeholder) placeholder.remove();
+        if (existingBadge) existingBadge.remove();
         return;
       }
 
       const formatted = formatDuration(totalSeconds);
       if (!formatted) {
-        placeholder.remove();
+        if (placeholder) placeholder.remove();
+        if (existingBadge) existingBadge.remove();
         return;
       }
 
-      // Create badge with combined estimate
-      const estimateEl = document.createElement("span");
-      estimateEl.className = "badge time-estimate";
-      estimateEl.textContent = formatted;
-      estimateEl.title = `Estimated time for GPU stress test (combined FurMark + HeavyLoad)`;
-      placeholder.replaceWith(estimateEl);
+      // Update existing badge or replace placeholder with new badge
+      if (existingBadge) {
+        // Update existing badge
+        existingBadge.textContent = formatted;
+        existingBadge.title = `Estimated time for GPU stress test (combined FurMark + HeavyLoad)`;
+      } else if (placeholder) {
+        // Create badge with combined estimate
+        const estimateEl = document.createElement("span");
+        estimateEl.className = "badge time-estimate";
+        estimateEl.textContent = formatted;
+        estimateEl.title = `Estimated time for GPU stress test (combined FurMark + HeavyLoad)`;
+        placeholder.replaceWith(estimateEl);
+      }
     } catch (error) {
       console.warn("[Task Time] Failed to get GPU parent time estimate:", error);
-      const placeholder = liElement?.querySelector(`.time-estimate-placeholder[data-task-id="${GPU_PARENT_ID}"]`);
+      const metaSpan = liElement?.querySelector(`.meta`);
+      const placeholder = metaSpan?.querySelector(`.time-estimate-placeholder[data-task-id="${GPU_PARENT_ID}"]`);
+      const existingBadge = metaSpan?.querySelector(`.badge.time-estimate`);
       if (placeholder) {
         placeholder.remove();
+      }
+      if (existingBadge) {
+        existingBadge.remove();
       }
     }
   }

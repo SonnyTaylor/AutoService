@@ -1380,7 +1380,7 @@ export async function initPage() {
         try {
           // Capture task durations for time estimation
           try {
-            const { normalizeTaskParams } = await import("../../utils/task-time-estimates.js");
+            const { normalizeTaskParams, isParameterBasedTask } = await import("../../utils/task-time-estimates.js");
             const { core } = window.__TAURI__ || {};
             const { invoke } = core || {};
             
@@ -1411,6 +1411,20 @@ export async function initPage() {
                   return;
                 }
 
+                // Get task type
+                const taskType = result?.task_type || originalTasks[idx]?.type;
+                if (!taskType) {
+                  console.log(`[Task Time] Skipping task ${idx}: no task type`);
+                  return;
+                }
+
+                // Skip logging for parameter-based tasks (duration is exactly determined by parameters)
+                // These tasks don't need historical data since duration can be calculated directly from params
+                if (isParameterBasedTask(taskType)) {
+                  console.log(`[Task Time] Skipping parameter-based task ${taskType}: duration is determined by parameters`);
+                  return;
+                }
+
                 // Extract duration
                 const duration = result?.summary?.duration_seconds;
                 // Allow very small durations (>= 0.001) to account for rounding
@@ -1423,13 +1437,6 @@ export async function initPage() {
                 // If duration is 0 or very small, use a minimum of 0.01 for storage
                 // This ensures we capture fast tasks while avoiding true 0 values
                 const durationToSave = Math.max(0.01, duration);
-
-                // Get task type
-                const taskType = result?.task_type || originalTasks[idx]?.type;
-                if (!taskType) {
-                  console.log(`[Task Time] Skipping task ${idx}: no task type`);
-                  return;
-                }
 
                 // Get original task for params
                 const originalTask = originalTasks[idx] || {};
