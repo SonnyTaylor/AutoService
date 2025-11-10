@@ -47,6 +47,7 @@ from __future__ import annotations
 import subprocess
 import json
 import logging
+import os
 
 # Import subprocess utility with skip checking
 try:
@@ -246,9 +247,10 @@ def _build_iperf_command(task: Dict[str, Any]) -> Dict[str, Any]:
     duration_seconds = duration_minutes * 60
     cmd: List[str] = [exec_path, "-c", str(server), "-p", str(port), "--json"]
 
-    # Add connection timeout to fail fast if server is unreachable (default 5 seconds)
+    # Add connection timeout to fail fast if server is unreachable (default 10 seconds)
+    # Increased from 5 to 10 seconds to handle slower network conditions and server response times
     # This prevents iperf3 from hanging for the full test duration when server is down
-    connect_timeout = task.get("connect_timeout", 5)
+    connect_timeout = task.get("connect_timeout", 10)
     cmd += ["--connect-timeout", str(int(connect_timeout))]
 
     # Always include interval for regular reporting in iperf output
@@ -485,7 +487,7 @@ def run_iperf_test(task: Dict[str, Any]) -> Dict[str, Any]:
     command: List[str] = build["command"]
     summary_base = build["summary"]
     duration_seconds = summary_base.get("duration_seconds", 60)
-    connect_timeout = task.get("connect_timeout", 5)
+    connect_timeout = task.get("connect_timeout", 10)  # Match default in _build_iperf_command
 
     logger.info("Running iperf3: %s", " ".join(command))
 
@@ -499,6 +501,11 @@ def run_iperf_test(task: Dict[str, Any]) -> Dict[str, Any]:
     # Calculate timeout: test duration + connection timeout + 10 second buffer
     process_timeout = duration_seconds + connect_timeout + 10
 
+    # Set working directory to the executable's directory to ensure proper execution
+    # This helps with DLL loading and relative path resolution on Windows
+    exec_dir = os.path.dirname(command[0]) if command[0] else None
+    cwd = exec_dir if exec_dir and os.path.exists(exec_dir) else None
+
     try:
         proc = run_with_skip_check(
             command,
@@ -508,6 +515,7 @@ def run_iperf_test(task: Dict[str, Any]) -> Dict[str, Any]:
             errors="replace",
             check=False,
             timeout=process_timeout,
+            cwd=cwd,
         )
     except FileNotFoundError:
         return {

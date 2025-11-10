@@ -9,6 +9,7 @@ import os
 import json
 import time
 import logging
+import threading
 from typing import List, Optional, Dict, Any, Tuple
 
 logger = logging.getLogger(__name__)
@@ -73,34 +74,112 @@ def run_with_skip_check(
         process.stdin.close()
     
     start_time = time.time()
-    stdout_data = []
-    stderr_data = []
+    
+    # Use threads to read stdout/stderr during execution to prevent buffer overflow
+    # This is critical on Windows where pipes can block if not read continuously
+    stdout_result = {"data": "", "done": False, "error": None}
+    stderr_result = {"data": "", "done": False, "error": None}
+    
+    def read_stdout():
+        """Read stdout in a separate thread."""
+        try:
+            if process.stdout:
+                # Read all available data (blocks until EOF/pipe closes)
+                data = process.stdout.read()
+                stdout_result["data"] = data
+            stdout_result["done"] = True
+        except Exception as e:
+            logger.debug(f"Error reading stdout: {e}")
+            stdout_result["error"] = str(e)
+            stdout_result["done"] = True
+    
+    def read_stderr():
+        """Read stderr in a separate thread."""
+        try:
+            if process.stderr:
+                # Read all available data (blocks until EOF/pipe closes)
+                data = process.stderr.read()
+                stderr_result["data"] = data
+            stderr_result["done"] = True
+        except Exception as e:
+            logger.debug(f"Error reading stderr: {e}")
+            stderr_result["error"] = str(e)
+            stderr_result["done"] = True
+    
+    # Start reader threads if we're capturing output
+    stdout_thread = None
+    stderr_thread = None
+    if capture_output:
+        if process.stdout:
+            stdout_thread = threading.Thread(target=read_stdout, daemon=True)
+            stdout_thread.start()
+        if process.stderr:
+            stderr_thread = threading.Thread(target=read_stderr, daemon=True)
+            stderr_thread.start()
     
     # Monitor process and check for skip signals periodically
-    # For Windows, we can't use select on file handles, so use a simpler polling approach
-    # But check more frequently for better responsiveness (every 0.1s max)
-    while process.poll() is None:
+    # Use wait() with short timeouts to allow skip signal checking
+    process_finished = False
+    while not process_finished:
         # Check for skip signal FIRST (before timeout check) for immediate response
         if _check_skip_signal(control_file_path):
             _kill_process_and_raise_skip(process, control_file_path)
         
         # Check timeout
-        if timeout and (time.time() - start_time) > timeout:
+        elapsed = time.time() - start_time
+        if timeout and elapsed >= timeout:
             process.kill()
+            # Give threads a moment to finish reading
+            if stdout_thread:
+                stdout_thread.join(timeout=0.5)
+            if stderr_thread:
+                stderr_thread.join(timeout=0.5)
             raise subprocess.TimeoutExpired(command, timeout)
         
-        # Try to read available output (non-blocking)
-        # On Windows, this is best-effort since we can't use select
+        # Wait for process with a short timeout so we can check skip signals
+        wait_timeout = min(check_interval, 0.1)
+        if timeout:
+            remaining = timeout - elapsed
+            if remaining <= 0:
+                # Should have been caught above, but be safe
+                process.kill()
+                raise subprocess.TimeoutExpired(command, timeout)
+            wait_timeout = min(wait_timeout, remaining)
+        
+        # Check if process has already finished (poll is non-blocking)
+        returncode = process.poll()
+        if returncode is not None:
+            # Process has finished
+            process_finished = True
+            break
+        
+        # Process still running, wait a bit and check again
         try:
-            # Use a shorter sleep for more responsive skip checking
-            time.sleep(min(check_interval, 0.1))
-        except Exception:
-            time.sleep(check_interval)
+            process.wait(timeout=wait_timeout)
+            process_finished = True
+        except subprocess.TimeoutExpired:
+            # Process hasn't finished yet, continue loop to check skip/timeout
+            continue
     
-    # Process has completed, read any remaining output
-    stdout, stderr = process.communicate()
-    stdout_data = [stdout] if stdout else []
-    stderr_data = [stderr] if stderr else []
+    # Process has completed, close pipes to help threads finish reading
+    # On Windows, explicitly closing pipes helps threads complete
+    try:
+        if process.stdout and not stdout_result["done"]:
+            process.stdout.close()
+        if process.stderr and not stderr_result["done"]:
+            process.stderr.close()
+    except Exception:
+        pass
+    
+    # Wait for reader threads to finish (they should complete now that pipes are closed)
+    if stdout_thread:
+        stdout_thread.join(timeout=2.0)
+    if stderr_thread:
+        stderr_thread.join(timeout=2.0)
+    
+    # Get the output from threads
+    stdout_str = stdout_result["data"] if capture_output else ""
+    stderr_str = stderr_result["data"] if capture_output else ""
     
     # Final check for skip signal (in case it was set just as process finished)
     # This is important - if skip was requested right as process finished,
@@ -115,9 +194,7 @@ def run_with_skip_check(
                 pass
         raise KeyboardInterrupt("User requested skip")
     
-    # Combine output
-    stdout_str = "".join(stdout_data) if stdout_data else ""
-    stderr_str = "".join(stderr_data) if stderr_data else ""
+    # Output already collected in threads above
     
     result = subprocess.CompletedProcess(
         command,
