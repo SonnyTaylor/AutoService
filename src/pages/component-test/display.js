@@ -20,7 +20,8 @@ let displayState = {
   // State
   cycleTimer: null,
   cycleColors: ['#ff0000', '#00ff00', '#0000ff', '#000000', '#ffffff'],
-  currentCycleIndex: 0
+  currentCycleIndex: 0,
+  _wasMaximizedBeforeFullscreen: false
 };
 
 /**
@@ -41,6 +42,9 @@ export function initDisplay() {
 
   // Set up event listeners
   setupDisplayEventListeners();
+
+  // Restore maximize if user exits fullscreen via Esc or other means
+  document.addEventListener('fullscreenchange', onFullscreenChange);
 }
 
 /**
@@ -134,13 +138,103 @@ async function toggleFullscreen() {
 
   try {
     if (!document.fullscreenElement) {
+      // If running under Tauri, unmaximize first to avoid Windows taskbar black bar
+      const tauriWindowApi = (window.__TAURI__ && window.__TAURI__.window) || null;
+      const getCurrentWindow = tauriWindowApi && tauriWindowApi.getCurrentWindow;
+      if (getCurrentWindow) {
+        try {
+          const appWindow = getCurrentWindow();
+          const maximized = await appWindow.isMaximized();
+          if (maximized) {
+            // Remember original state to restore after exiting fullscreen
+            displayState._wasMaximizedBeforeFullscreen = true;
+            // Prefer toggleMaximize since permission is guaranteed in capabilities
+            await appWindow.toggleMaximize();
+            // Wait until actually unmaximized (poll up to ~500ms)
+            const start = Date.now();
+            while (await appWindow.isMaximized()) {
+              if (Date.now() - start > 500) break;
+              await new Promise((resolve) => setTimeout(resolve, 50));
+            }
+          } else {
+            displayState._wasMaximizedBeforeFullscreen = false;
+          }
+        } catch {
+          // If anything goes wrong with window calls, continue to fullscreen anyway
+        }
+      }
+      // Small additional settle delay to ensure bounds updated before fullscreen request
+      await new Promise((resolve) => setTimeout(resolve, 25));
       await displayState.dispArea.requestFullscreen?.();
     } else {
       await document.exitFullscreen?.();
+      // Small delay to let fullscreen exit complete
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      // Explicitly restore maximize state (fullscreenchange handler is backup for Escape key)
+      await restoreMaximizeIfNeeded();
     }
   } catch (error) {
     console.error('Fullscreen toggle failed:', error);
   }
+}
+
+/**
+ * Restore maximize state if it was maximized before fullscreen
+ */
+async function restoreMaximizeIfNeeded() {
+  const tauriWindowApi = (window.__TAURI__ && window.__TAURI__.window) || null;
+  const getCurrentWindow = tauriWindowApi && tauriWindowApi.getCurrentWindow;
+  if (!displayState._wasMaximizedBeforeFullscreen || !getCurrentWindow) {
+    displayState._wasMaximizedBeforeFullscreen = false;
+    return;
+  }
+
+  try {
+    const appWindow = getCurrentWindow();
+    // Give a moment for the system to settle after exiting fullscreen
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    
+    // Check current state and restore if needed
+    const isCurrentlyMaximized = await appWindow.isMaximized();
+    if (!isCurrentlyMaximized) {
+      // Prefer toggleMaximize() since it's allowed in capabilities; fallback to maximize()
+      if (typeof appWindow.toggleMaximize === 'function') {
+        await appWindow.toggleMaximize();
+      } else {
+        try {
+          await appWindow.maximize?.();
+        } catch {}
+      }
+      
+      // Verify it worked (poll briefly)
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      const verified = await appWindow.isMaximized();
+      if (!verified) {
+        try {
+          if (typeof appWindow.maximize === 'function') {
+            await appWindow.maximize();
+          } else if (typeof appWindow.toggleMaximize === 'function') {
+            await appWindow.toggleMaximize();
+          }
+        } catch {}
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to restore maximize state:', error);
+  } finally {
+    displayState._wasMaximizedBeforeFullscreen = false;
+  }
+}
+
+/**
+ * Handle fullscreen state changes to restore maximize if needed
+ */
+async function onFullscreenChange() {
+  // Only handle fullscreen exit (not entry)
+  if (document.fullscreenElement) return;
+  
+  // Restore maximize state when exiting fullscreen (e.g., via Escape key)
+  await restoreMaximizeIfNeeded();
 }
 
 /**
@@ -160,13 +254,20 @@ export function cleanupDisplay() {
 
   // Exit fullscreen if active
   if (document.fullscreenElement) {
-    document.exitFullscreen?.().catch(() => {
-      // Ignore fullscreen exit errors
-    });
+    document.exitFullscreen?.()
+      .then(async () => {
+        // fullscreenchange handler will restore maximize if needed
+      })
+      .catch(() => {
+        // Ignore fullscreen exit errors
+      });
   }
 
   // Reset display area
   if (displayState.dispArea) {
     displayState.dispArea.style.background = '';
   }
+
+  // Remove event listener
+  document.removeEventListener('fullscreenchange', onFullscreenChange);
 }
