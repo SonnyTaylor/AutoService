@@ -31,6 +31,7 @@ import sys
 import time
 import re
 from typing import Dict, Any, Optional, Tuple
+import platform
 
 logger = logging.getLogger(__name__)
 
@@ -174,6 +175,40 @@ def attempt_enable_system_protection() -> Tuple[bool, str]:
         return False, f"Enable attempt failed: {e}"
 
 
+def _get_recent_restore_point_age_minutes() -> Optional[float]:
+    """Return the age in minutes of the most recent restore point, or None if unknown/none."""
+    try:
+        ps = r"""
+          $rp = Get-ComputerRestorePoint -ErrorAction SilentlyContinue | Sort-Object -Property SequenceNumber -Descending | Select-Object -First 1
+          if ($null -eq $rp) { ''
+          } else {
+            # CreationTime is like 9/26/2024 4:40:36 PM
+            [DateTime]::Parse($rp.CreationTime, [System.Globalization.CultureInfo]::InvariantCulture).ToUniversalTime().ToString('o')
+          }
+        """
+        proc = subprocess.run(
+            ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps],
+            capture_output=True,
+            text=True,
+            timeout=20,
+            check=False,
+        )
+        iso = (proc.stdout or "").strip()
+        if not iso:
+            return None
+        # Compute delta
+        from datetime import datetime, timezone
+
+        created = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+        now = datetime.now(timezone.utc)
+        age_min = (now - created).total_seconds() / 60.0
+        if age_min < 0:
+            return None
+        return age_min
+    except Exception:
+        return None
+
+
 def run_system_restore(task: Dict[str, Any]) -> Dict[str, Any]:
     """Create a Windows System Restore point.
     
@@ -181,19 +216,50 @@ def run_system_restore(task: Dict[str, Any]) -> Dict[str, Any]:
     Requires administrator privileges and System Protection to be enabled.
     """
     start_time = time.time()
+
+    # Only supports Windows
+    if platform.system().lower() != "windows":
+        return {
+            "task_type": "system_restore",
+            "status": "skipped",
+            "summary": {
+                "human_readable": {
+                    "message": "System Restore is only available on Windows. Skipping on this OS."
+                },
+                "results": {
+                    "restore_point_created": False,
+                    "error_details": "Unsupported platform",
+                },
+            },
+            "duration_seconds": round(time.time() - start_time, 2),
+        }
     add_breadcrumb("Starting System Restore point creation", category="task", level="info")
     
-    description = "AutoService pre-run restore point"
+    # Parameters (optional)
+    restore_point_type = str(task.get("restore_point_type") or "MODIFY_SETTINGS").upper()
+    if restore_point_type not in {
+        "APPLICATION_INSTALL",
+        "APPLICATION_UNINSTALL",
+        "MODIFY_SETTINGS",
+        "CANCELLED_OPERATION",
+        "DEVICE_DRIVER_INSTALL",
+    }:
+        restore_point_type = "MODIFY_SETTINGS"
+
+    # Description with timestamp for easier identification
+    # If provided by caller, respect it; otherwise include timestamp
+    default_desc = f"AutoService restore point — {time.strftime('%Y-%m-%d %H:%M:%S')}"
+    description = str(task.get("description") or default_desc)
     
     # PowerShell command to create restore point
-    # MODIFY_SETTINGS is appropriate for maintenance operations
+    # Build PowerShell command
     command = [
         "powershell",
         "-NoProfile",
         "-ExecutionPolicy",
         "Bypass",
         "-Command",
-        f"Checkpoint-Computer -Description '{description}' -RestorePointType 'MODIFY_SETTINGS'"
+        f"Checkpoint-Computer -Description '{description}' -RestorePointType '{restore_point_type}'"
     ]
     
     logger.info("Creating System Restore point: %s", description)
@@ -207,6 +273,32 @@ def run_system_restore(task: Dict[str, Any]) -> Dict[str, Any]:
     )
     
     try:
+        # If a recent restore point exists (e.g., within 30 minutes), skip to avoid throttle
+        # Windows also has a 24h throttle by default; we proactively reduce noise for back-to-back runs.
+        recent_age_min = _get_recent_restore_point_age_minutes()
+        if recent_age_min is not None and recent_age_min <= 30:
+            add_breadcrumb(
+                "Recent restore point detected; skipping creation",
+                category="task",
+                level="info",
+                data={"age_minutes": recent_age_min},
+            )
+            return {
+                "task_type": "system_restore",
+                "status": "skipped",
+                "summary": {
+                    "human_readable": {
+                        "message": f"Skipped creating System Restore point (existing point {int(recent_age_min)} min ago).",
+                    },
+                    "results": {
+                        "restore_point_created": False,
+                        "description": description,
+                        "return_code": 0,
+                    },
+                },
+                "duration_seconds": round(time.time() - start_time, 2),
+            }
+
         proc = run_with_skip_check(
             command,
             capture_output=True,
@@ -337,6 +429,30 @@ def run_system_restore(task: Dict[str, Any]) -> Dict[str, Any]:
                         "output": combined_output[:500],
                         "remediation_attempt": enable_details,
                     }
+                },
+                "duration_seconds": round(duration, 2),
+            }
+
+        # Handle Windows 24-hour throttle message gracefully
+        if "created within the past 24 hours" in output_lower or "a new system restore point cannot be created" in output_lower:
+            add_breadcrumb(
+                "System Restore skipped due to 24-hour throttle",
+                category="task",
+                level="info",
+            )
+            return {
+                "task_type": "system_restore",
+                "status": "skipped",
+                "summary": {
+                    "human_readable": {
+                        "message": "Skipped: Windows only allows creating one restore point within 24 hours by default.",
+                    },
+                    "results": {
+                        "restore_point_created": False,
+                        "error_details": "24-hour throttle",
+                        "return_code": return_code,
+                        "output": combined_output[:500],
+                    },
                 },
                 "duration_seconds": round(duration, 2),
             }
