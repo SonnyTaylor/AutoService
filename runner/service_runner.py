@@ -107,6 +107,7 @@ from services.disk_space_service import run_disk_space_report  # type: ignore
 from services.battery_service import run_battery_health_report  # type: ignore
 from services.drivecleanup_service import run_drivecleanup_clean  # type: ignore
 from services.trellix_stinger_service import run_trellix_stinger_scan  # type: ignore
+from services.system_restore_service import run_system_restore  # type: ignore
 
 """NOTE ON REAL-TIME LOG STREAMING
 
@@ -302,6 +303,7 @@ TASK_HANDLERS: Dict[str, TaskHandler] = {
     "battery_health_report": run_battery_health_report,
     "drivecleanup_clean": run_drivecleanup_clean,
     "trellix_stinger_scan": run_trellix_stinger_scan,
+    "system_restore": run_system_restore,
     # "windows_defender_scan": run_windows_defender_scan, # Example for the future
 }
 
@@ -425,6 +427,20 @@ def main():
     flush_logs()
     for i, task in enumerate(tasks):
         logging.info(f"Task {i}: {task.get('type', 'unknown')}")
+        flush_logs()
+
+    # Reorder tasks: ensure system_restore runs first (if present)
+    # Also de-duplicate if multiple system_restore tasks exist
+    system_restore_tasks = [t for t in tasks if t.get("type") == "system_restore"]
+    other_tasks = [t for t in tasks if t.get("type") != "system_restore"]
+    
+    if system_restore_tasks:
+        # Take only the first system_restore task (de-duplicate)
+        tasks = [system_restore_tasks[0]] + other_tasks
+        if len(system_restore_tasks) > 1:
+            logging.info(f"Found {len(system_restore_tasks)} system_restore tasks, using only the first one")
+            flush_logs()
+        logging.info("Reordered tasks: system_restore will run first")
         flush_logs()
 
     # Get control file path from environment

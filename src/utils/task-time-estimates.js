@@ -64,6 +64,7 @@ export function isParameterBasedTask(taskType) {
     "iperf_test", // Duration = minutes * 60
     "furmark_stress_test", // Duration = minutes * 60 or duration_seconds
     "heavyload_stress_test", // Duration = duration_minutes * 60
+    "system_restore", // Fixed duration (~45 seconds)
   ];
 
   return parameterBasedTypes.includes(taskType);
@@ -121,6 +122,9 @@ export function calculateParameterBasedDuration(task) {
     if (typeof durationMinutes === "number" && durationMinutes > 0) {
       return durationMinutes * 60;
     }
+  } else if (taskType === "system_restore") {
+    // System Restore: fixed duration (typically 30-60 seconds)
+    return 45; // Fixed estimate of 45 seconds
   }
 
   return null;

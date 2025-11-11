@@ -227,6 +227,7 @@ class ServiceQueueBuilder {
     };
     this.toolStatuses = [];
     this.aiSummaryEnabled = false;
+    this.systemRestoreEnabled = false;
 
     // Search state
     this.fuse = null;
@@ -328,6 +329,7 @@ class ServiceQueueBuilder {
         gpuSubs: this.gpuConfig.subs,
         gpuParams: this.gpuConfig.params,
         aiSummaryEnabled: this.aiSummaryEnabled,
+        systemRestoreEnabled: this.systemRestoreEnabled,
       };
       sessionStorage.setItem(PERSIST_KEY, JSON.stringify(data));
     } catch {}
@@ -357,6 +359,9 @@ class ServiceQueueBuilder {
       Object.assign(this.gpuConfig.params, data.gpuParams || {});
       if (typeof data.aiSummaryEnabled === "boolean") {
         this.aiSummaryEnabled = data.aiSummaryEnabled;
+      }
+      if (typeof data.systemRestoreEnabled === "boolean") {
+        this.systemRestoreEnabled = data.systemRestoreEnabled;
       }
       return true;
     } catch {
@@ -550,9 +555,19 @@ class ServiceQueueBuilder {
   /**
    * Generate tasks array for JSON export
    * Expands GPU parent into individual FurMark/HeavyLoad tasks based on selection
+   * If system restore is enabled, injects it at position 0
    */
   async generateTasksArray() {
     const result = [];
+    
+    // If system restore is enabled, inject it at the beginning
+    if (this.systemRestoreEnabled) {
+      result.push({
+        type: "system_restore",
+        ui_label: "Create System Restore point",
+      });
+    }
+    
     for (const id of this.order) {
       if (!this.selection.has(id)) continue;
 
@@ -703,6 +718,7 @@ class BuilderUI {
       searchClear: document.getElementById("svc-search-clear"),
       aiSummaryToggle: document.getElementById("svc-ai-summary-toggle"),
       aiSummaryWarning: document.getElementById("svc-ai-summary-warning"),
+      systemRestoreToggle: document.getElementById("svc-system-restore-toggle"),
       totalTime: document.getElementById("svc-total-time"),
     };
 
@@ -710,6 +726,7 @@ class BuilderUI {
     this.setupEventListeners();
     this.setTitle();
     this.setupAISummaryToggle();
+    this.setupSystemRestoreToggle();
     this.setupAICreateButton();
     
     // Load time estimates asynchronously
@@ -877,6 +894,26 @@ class BuilderUI {
     toggle.addEventListener("change", () => {
       this.builder.aiSummaryEnabled = toggle.checked;
       console.log("[Builder] AI summary toggle changed to:", toggle.checked);
+      this.builder.persist();
+      this.updateJson();
+    });
+  }
+
+  /**
+   * Setup System Restore toggle
+   */
+  setupSystemRestoreToggle() {
+    const toggle = this.elements.systemRestoreToggle;
+    if (!toggle) return;
+
+    // Set initial state from builder
+    toggle.checked = this.builder.systemRestoreEnabled;
+    console.log("[Builder] System Restore toggle initialized, checked:", toggle.checked);
+
+    // Listen for changes
+    toggle.addEventListener("change", () => {
+      this.builder.systemRestoreEnabled = toggle.checked;
+      console.log("[Builder] System Restore toggle changed to:", toggle.checked);
       this.builder.persist();
       this.updateJson();
     });
