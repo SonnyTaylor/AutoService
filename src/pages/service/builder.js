@@ -661,6 +661,7 @@ class BuilderUI {
       btnSelectAll: document.getElementById("svc-select-all"),
       btnDeselectAll: document.getElementById("svc-deselect-all"),
       btnReset: document.getElementById("svc-reset"),
+      btnAICreate: document.getElementById("svc-ai-create"),
       searchInput: document.getElementById("svc-search"),
       searchClear: document.getElementById("svc-search-clear"),
       aiSummaryToggle: document.getElementById("svc-ai-summary-toggle"),
@@ -672,6 +673,7 @@ class BuilderUI {
     this.setupEventListeners();
     this.setTitle();
     this.setupAISummaryToggle();
+    this.setupAICreateButton();
     
     // Load time estimates asynchronously
     this.loadTimeEstimates();
@@ -835,6 +837,183 @@ class BuilderUI {
       this.builder.persist();
       this.updateJson();
     });
+  }
+
+  /**
+   * Setup AI Create button and check AI configuration
+   */
+  async setupAICreateButton() {
+    const btn = this.elements.btnAICreate;
+    if (!btn) return;
+
+    // Check AI configuration
+    try {
+      const { aiClient } = await import("../../utils/ai-client.js");
+      const isConfigured = await aiClient.isConfigured();
+      
+      if (!isConfigured) {
+        btn.disabled = true;
+        btn.title = "AI not configured. Configure in Settings to enable.";
+      } else {
+        btn.disabled = false;
+        btn.title = "Use AI to create a service plan based on your problem description";
+      }
+    } catch (e) {
+      console.warn("Failed to check AI configuration:", e);
+      btn.disabled = true;
+      btn.title = "AI not configured. Configure in Settings to enable.";
+    }
+
+    // Listen for AI settings changes
+    window.addEventListener("ai-settings-updated", async () => {
+      try {
+        const { aiClient } = await import("../../utils/ai-client.js");
+        const isConfigured = await aiClient.isConfigured();
+        btn.disabled = !isConfigured;
+        btn.title = isConfigured
+          ? "Use AI to create a service plan based on your problem description"
+          : "AI not configured. Configure in Settings to enable.";
+      } catch (e) {
+        console.warn("Failed to refresh AI configuration:", e);
+      }
+    });
+
+    // Add click handler
+    btn.addEventListener("click", () => this.handleAICreate());
+  }
+
+  /**
+   * Handle AI Create button click
+   * Opens modal, gets AI suggestions, and applies them to the builder
+   */
+  async handleAICreate() {
+    try {
+      const { openAIServiceModal } = await import("../../utils/ai-service-modal.js");
+      
+      // Check AI configuration again
+      const { aiClient } = await import("../../utils/ai-client.js");
+      const isConfigured = await aiClient.isConfigured();
+      if (!isConfigured) {
+        alert("AI is not configured. Please configure AI settings first.");
+        return;
+      }
+
+      // Create tool availability checker function
+      const isToolAvailable = (serviceId) => {
+        if (serviceId === GPU_PARENT_ID) {
+          // GPU parent: check if at least one GPU tool is available
+          return (
+            this.builder.isToolAvailable(["furmark", "furmark2"]) ||
+            this.builder.isToolAvailable(["heavyload"])
+          );
+        }
+        const toolKeys = toolKeysForService(serviceId);
+        if (!toolKeys || toolKeys.length === 0) return true; // Built-in service
+        return this.builder.isToolAvailable(toolKeys);
+      };
+
+      // Create function to check if there are existing tasks
+      const hasExistingTasks = () => {
+        return this.builder.selection.size > 0;
+      };
+
+      // Open modal and get result
+      console.log("[Builder] Opening AI service modal...");
+      const result = await openAIServiceModal(isToolAvailable, hasExistingTasks);
+      
+      console.log("[Builder] Modal returned result:", result);
+      
+      if (!result || !result.services || result.services.length === 0) {
+        console.log("[Builder] No services to apply (user cancelled or empty result)");
+        return; // User cancelled or no services selected
+      }
+
+      const mode = result.mode || "replace";
+      console.log(`[Builder] Applying ${result.services.length} service(s) from AI with mode "${mode}":`, result.services);
+
+      // If replacing, clear existing selection first
+      if (mode === "replace") {
+        console.log("[Builder] Replacing existing queue...");
+        // Clear all task params
+        Object.keys(this.builder.taskParams).forEach((id) => {
+          delete this.builder.taskParams[id];
+        });
+        // Reset GPU config
+        this.builder.gpuConfig.subs = { furmark: true, heavyload: false };
+        this.builder.gpuConfig.params = { furmarkMinutes: 1, heavyloadMinutes: 1 };
+        // Clear selection and order
+        this.builder.deselectAll();
+        this.builder.order = [];
+      } else {
+        console.log("[Builder] Appending to existing queue...");
+      }
+
+      // Apply services to builder
+      for (const service of result.services) {
+        console.log(`[Builder] Adding service: ${service.id} with params:`, service.params);
+        // Add to selection and order
+        this.builder.addTask(service.id);
+
+        // Handle GPU parent specially
+        if (service.id === GPU_PARENT_ID) {
+          // Apply GPU sub-options and parameters
+          if (Object.prototype.hasOwnProperty.call(service.params, "furmark")) {
+            this.builder.gpuConfig.subs.furmark = !!service.params.furmark;
+          }
+          if (Object.prototype.hasOwnProperty.call(service.params, "heavyload")) {
+            this.builder.gpuConfig.subs.heavyload = !!service.params.heavyload;
+          }
+          if (
+            Object.prototype.hasOwnProperty.call(service.params, "furmarkMinutes") &&
+            Number.isFinite(Number(service.params.furmarkMinutes))
+          ) {
+            this.builder.gpuConfig.params.furmarkMinutes = Number(
+              service.params.furmarkMinutes
+            );
+          }
+          if (
+            Object.prototype.hasOwnProperty.call(service.params, "heavyloadMinutes") &&
+            Number.isFinite(Number(service.params.heavyloadMinutes))
+          ) {
+            this.builder.gpuConfig.params.heavyloadMinutes = Number(
+              service.params.heavyloadMinutes
+            );
+          }
+        } else {
+          // Regular service: set parameters
+          if (Object.keys(service.params).length > 0) {
+            if (!this.builder.taskParams[service.id]) {
+              this.builder.taskParams[service.id] = { params: {} };
+            }
+            // Merge AI params with existing params
+            this.builder.taskParams[service.id].params = {
+              ...this.builder.taskParams[service.id].params,
+              ...service.params,
+            };
+          }
+        }
+      }
+
+      // Persist and re-render
+      console.log("[Builder] Persisting builder state...");
+      this.builder.persist();
+      console.log("[Builder] Re-rendering UI...");
+      this.render();
+      await this.updateTotalTime();
+
+      // Show success feedback
+      console.log(
+        `[Builder] Successfully applied ${result.services.length} AI-selected service(s)`,
+        result.reasoning
+      );
+      console.log("[Builder] Current selection:", Array.from(this.builder.selection));
+      console.log("[Builder] Current order:", this.builder.order);
+    } catch (error) {
+      console.error("[Builder] Failed to handle AI create:", error);
+      alert(
+        `Failed to create service plan: ${error.message || "Unknown error"}`
+      );
+    }
   }
 
   /**
