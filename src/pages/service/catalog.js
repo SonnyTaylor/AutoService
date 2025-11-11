@@ -52,7 +52,9 @@ export const SERVICES = getServiceDefinitions();
  * @returns {string[]} All service IDs in display order.
  */
 export function listServiceIds() {
-  return Object.keys(SERVICES);
+  // Exclude 'system_restore' from the selectable palette.
+  // System Restore is controlled via the sidebar toggle and injected automatically.
+  return Object.keys(SERVICES).filter((id) => id !== "system_restore");
 }
 
 /**
