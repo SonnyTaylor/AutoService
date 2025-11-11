@@ -35,11 +35,6 @@ let _unlistenDone = null;
 // Module-level log polling state
 let _logPoll = { timer: null, lastTextLen: 0, busy: false, path: null };
 
-// Module-level auto-pause controls
-let _autoPauseAfterEach = false;
-let _autoPauseAwaiting = false;
-let _autoPauseLastIdx = -1;
-
 /**
  * Process status line markers from Python runner (module-level for event persistence)
  * @param {string} line - Log line to process
@@ -196,8 +191,6 @@ async function processStatusLine(line) {
     updateTaskStatusDom(taskIndex, "success");
     appendToLog(`[SUCCESS] Completed: ${taskType}`);
     await updateSummaryFromGlobal();
-    // Request auto-pause after successful task if enabled
-    await maybeRequestAutoPause(taskIndex);
     return;
   }
 
@@ -216,8 +209,6 @@ async function processStatusLine(line) {
     updateTaskStatusDom(taskIndex, "failure");
     appendToLog(`[ERROR] Failed: ${taskType} - ${reason}`);
     await updateSummaryFromGlobal();
-    // Request auto-pause after failed task if enabled
-    await maybeRequestAutoPause(taskIndex);
     return;
   }
 
@@ -236,8 +227,6 @@ async function processStatusLine(line) {
     updateTaskStatusDom(taskIndex, "skipped");
     appendToLog(`[WARNING] Skipped: ${taskType} - ${reason}`);
     await updateSummaryFromGlobal();
-    // Request auto-pause after skipped task if enabled
-    await maybeRequestAutoPause(taskIndex);
     return;
   }
 
@@ -277,8 +266,6 @@ async function processStatusLine(line) {
   if (pausedMatch) {
     const reason = pausedMatch[1] || "User requested";
     appendToLog(`[INFO] Run paused: ${reason}`);
-    // Clear awaiting flag on pause
-    _autoPauseAwaiting = false;
     // Update global state
     let updateGlobalProgress = null;
     try {
@@ -316,8 +303,6 @@ async function processStatusLine(line) {
   if (resumedMatch) {
     const reason = resumedMatch[1] || "User requested";
     appendToLog(`[INFO] Run resumed: ${reason}`);
-    // Clear awaiting flag on resume (safety)
-    _autoPauseAwaiting = false;
     // Update global state
     let updateGlobalProgress = null;
     try {
@@ -429,31 +414,6 @@ async function processStatusLine(line) {
       console.warn("Failed to parse progress JSON:", e);
     }
     return;
-  }
-}
-
-/**
- * If auto-pause is enabled, request a pause after the given task index completes.
- * Guards against duplicates and skips when already paused.
- */
-async function maybeRequestAutoPause(taskIndex) {
-  try {
-    if (!_autoPauseAfterEach) return;
-    // Avoid duplicate requests for the same task
-    if (_autoPauseAwaiting && _autoPauseLastIdx === taskIndex) return;
-    // If already paused, do nothing
-    try {
-      const taskStateModule = await import("../../utils/task-state.js");
-      const state = taskStateModule.getRunState?.();
-      if (state && state.overallStatus === "paused") return;
-    } catch {}
-    const inv = window.__TAURI__?.core?.invoke;
-    if (typeof inv !== "function") return;
-    await inv("pause_service_run");
-    _autoPauseAwaiting = true;
-    _autoPauseLastIdx = taskIndex;
-  } catch (e) {
-    console.warn("Auto-pause request failed:", e);
   }
 }
 
@@ -715,16 +675,6 @@ export async function initPage() {
     if (pendingRunRaw) {
       const pendingRun = JSON.parse(pendingRunRaw);
       aiSummaryEnabled = pendingRun.ai_summary_enabled === true;
-    }
-  } catch (e) {
-    // Ignore
-  }
-  // Check if pause-between-tasks is enabled
-  try {
-    const pendingRunRaw = sessionStorage.getItem("service.pendingRun");
-    if (pendingRunRaw) {
-      const pendingRun = JSON.parse(pendingRunRaw);
-      _autoPauseAfterEach = pendingRun.pause_between_tasks === true;
     }
   } catch (e) {
     // Ignore
