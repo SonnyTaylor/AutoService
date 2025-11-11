@@ -41,6 +41,9 @@ importers:
       highlight.js:
         specifier: ^11.11.1
         version: 11.11.1
+      hotkeys-js:
+        specifier: ^3.13.15
+        version: 3.13.15
       html2canvas:
         specifier: ^1.4.1
         version: 1.4.1
@@ -576,6 +579,9 @@ packages:
     resolution: {integrity: sha512-Xwwo44whKBVCYoliBQwaPvtd/2tYFkRQtXDWj1nackaV2JPXx3L0+Jvd8/qCJ2p+ML0/XVkJ2q+Mr+UVdpJK5w==}
     engines: {node: '>=12.0.0'}
 
+  hotkeys-js@3.13.15:
+    resolution: {integrity: sha512-gHh8a/cPTCpanraePpjRxyIlxDFrIhYqjuh01UHWEwDpglJKCnvLW8kqSx5gQtOuSsJogNZXLhOdbSExpgUiqg==}
+
   html2canvas@1.4.1:
     resolution: {integrity: sha512-fPU6BHNpsyIhr8yyMpTLLxAbkaK8ArIBcmZIRiBLiDhjeqvXolaEmDGmELFuX9I4xDcaKKcJl+TKZLqruBbmWA==}
     engines: {node: '>=8.0.0'}
@@ -1042,6 +1048,8 @@ snapshots:
   fuse.js@7.1.0: {}
 
   highlight.js@11.11.1: {}
+
+  hotkeys-js@3.13.15: {}
 
   html2canvas@1.4.1:
     dependencies:

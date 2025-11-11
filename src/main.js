@@ -1,6 +1,7 @@
 // Router and page loader for AutoService frontend
 import "@phosphor-icons/web/regular";
 import { initWidget } from "./components/task-progress-widget.js";
+import hotkeys from "hotkeys-js";
 //
 // Responsibilities:
 // - Maintain a minimal hash-based router: #/<route>[?query]
@@ -290,6 +291,43 @@ async function onRouteChange() {
 }
 
 /**
+ * Initialize keyboard shortcuts for tab navigation.
+ * Maps Ctrl+1 through Ctrl+8 to the static navigation tabs.
+ */
+function initKeyboardShortcuts() {
+  // Configure hotkeys-js to work globally but skip when typing in input fields
+  hotkeys.filter = function (event) {
+    const target = event.target || event.srcElement;
+    const tagName = target?.tagName;
+    // Allow shortcuts when not typing in input, textarea, or contenteditable elements
+    return !(
+      tagName === "INPUT" ||
+      tagName === "TEXTAREA" ||
+      target?.isContentEditable
+    );
+  };
+
+  // Tab shortcuts mapping: Ctrl+1 through Ctrl+8
+  const tabShortcuts = [
+    { key: "ctrl+1", route: "service" },
+    { key: "ctrl+2", route: "system-info" },
+    { key: "ctrl+3", route: "component-test" },
+    { key: "ctrl+4", route: "shortcuts" },
+    { key: "ctrl+5", route: "programs" },
+    { key: "ctrl+6", route: "scripts" },
+    { key: "ctrl+7", route: "reports" },
+    { key: "ctrl+8", route: "settings" },
+  ];
+
+  tabShortcuts.forEach(({ key, route }) => {
+    hotkeys(key, (event) => {
+      event.preventDefault();
+      window.location.hash = `#/${route}`;
+    });
+  });
+}
+
+/**
  * Load app settings, rebuild dynamic technician tabs, and inject them into the header.
  * Emits no errors to the user; silently no-ops if settings are unavailable.
  */
@@ -373,4 +411,7 @@ window.addEventListener("DOMContentLoaded", () => {
   refreshTechnicianTabs();
   // Listen for custom event to refresh tabs when settings change
   window.addEventListener("technician-links-updated", refreshTechnicianTabs);
+
+  // Initialize keyboard shortcuts for tab navigation
+  initKeyboardShortcuts();
 });
