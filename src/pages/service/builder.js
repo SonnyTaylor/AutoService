@@ -779,15 +779,21 @@ class BuilderUI {
     });
 
     this.elements.searchInput?.addEventListener("input", () => {
-      this.builder.setFilterQuery(
-        (this.elements.searchInput.value || "").trim()
-      );
+      const query = (this.elements.searchInput.value || "").trim();
+      this.builder.setFilterQuery(query);
+      
+      // Show/hide clear button
+      if (this.elements.searchClear) {
+        this.elements.searchClear.style.display = query ? "flex" : "none";
+      }
+      
       this.render();
     });
 
     this.elements.searchClear?.addEventListener("click", () => {
       this.builder.setFilterQuery("");
       if (this.elements.searchInput) this.elements.searchInput.value = "";
+      if (this.elements.searchClear) this.elements.searchClear.style.display = "none";
       this.render();
     });
 

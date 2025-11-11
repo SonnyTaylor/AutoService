@@ -8,39 +8,51 @@
       </div>
     </div>
     <div class="run-actions">
-      <button id="svc-run-back" class="ghost">Back</button>
-      <button id="svc-run-next" disabled>Next</button>
+      <button id="svc-run-back" class="ghost">
+        <i class="ph ph-arrow-left" aria-hidden="true"></i> Back
+      </button>
+      <button id="svc-run-next" disabled>
+        Next <i class="ph ph-arrow-right" aria-hidden="true"></i>
+      </button>
     </div>
   </div>
 
   <div class="builder-layout" id="svc-run-builder" hidden>
     <div class="task-palette">
-      <h2 class="section-title">Tasks</h2>
-      <p class="muted small">Toggle & drag to set execution order.</p>
-      <div class="palette-actions search-row" aria-label="Search tasks">
-        <input
-          id="svc-search"
-          type="search"
-          placeholder="Search tasks…"
-          aria-label="Search tasks"
-          class="text-input"
-          style="flex: 1; min-width: 200px"
-        />
-        <button
-          id="svc-search-clear"
-          class="ghost small"
-          aria-label="Clear search"
-        >
-          Clear
-        </button>
+      <div class="palette-header">
+        <h2 class="section-title">Tasks</h2>
+        <p class="muted small">Toggle & drag to set execution order.</p>
       </div>
-      <div class="palette-actions" aria-label="Selection helpers">
-        <button id="svc-ai-create" class="ghost small" title="Use AI to create a service plan based on your problem description">
+      <div class="palette-actions search-row" aria-label="Search tasks">
+        <div class="search-wrapper">
+          <i class="ph ph-magnifying-glass search-icon" aria-hidden="true"></i>
+          <input
+            id="svc-search"
+            type="search"
+            placeholder="Search tasks…"
+            aria-label="Search tasks"
+            class="text-input search-input"
+          />
+          <button
+            id="svc-search-clear"
+            class="search-clear-btn"
+            aria-label="Clear search"
+            title="Clear search"
+            style="display: none;"
+          >
+            <i class="ph ph-x" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+      <div class="palette-actions action-buttons" aria-label="Selection helpers">
+        <button id="svc-ai-create" class="ghost small ai-create-btn" title="Use AI to create a service plan based on your problem description">
           <i class="ph ph-robot" aria-hidden="true"></i> AI Create
         </button>
-        <button id="svc-select-all" class="ghost small">Select All</button>
-        <button id="svc-deselect-all" class="ghost small">Deselect All</button>
-        <button id="svc-reset" class="ghost small">Reset</button>
+        <div class="button-group">
+          <button id="svc-select-all" class="ghost small">Select All</button>
+          <button id="svc-deselect-all" class="ghost small">Deselect All</button>
+          <button id="svc-reset" class="ghost small">Reset</button>
+        </div>
       </div>
       <ul
         id="svc-task-palette"
@@ -49,20 +61,24 @@
       ></ul>
     </div>
     <div class="task-preview">
-      <h2 class="section-title">Toggles</h2>
-      <div class="ai-summary-toggle" style="margin-top: 16px;">
-        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-          <input type="checkbox" id="svc-ai-summary-toggle" style="cursor: pointer;" />
-          <div style="flex: 1;">
-            <div style="font-weight: 600; font-size: 14px;">Generate AI Summary</div>
-            <div class="muted small" style="font-size: 12px; margin-top: 2px;">
+      <div class="preview-header">
+        <h2 class="section-title">Options</h2>
+      </div>
+      <div class="ai-summary-toggle">
+        <label class="toggle-label">
+          <input type="checkbox" id="svc-ai-summary-toggle" />
+          <div class="toggle-content">
+            <div class="toggle-title">
+              <i class="ph ph-sparkle" aria-hidden="true"></i> Generate AI Summary
+            </div>
+            <div class="muted small toggle-description">
               Create a customer-friendly summary of changes and fixes
             </div>
           </div>
         </label>
-        <div id="svc-ai-summary-warning" class="muted small" style="margin-top: 8px; display: none; color: #f59e0b; font-size: 11px;">
-          <i class="ph ph-warning" style="margin-right: 4px;"></i>
-          AI not configured. Configure in Settings to enable.
+        <div id="svc-ai-summary-warning" class="ai-warning" style="display: none;">
+          <i class="ph ph-warning" aria-hidden="true"></i>
+          <span>AI not configured. Configure in Settings to enable.</span>
         </div>
       </div>
     </div>
