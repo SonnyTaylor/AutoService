@@ -555,7 +555,7 @@ class SpeakerTester {
     );
     this.elements.stopBtn?.addEventListener("click", () => this.stopAll());
     this.elements.sweepBtn?.addEventListener("click", () => this.startSweep());
-    this.elements.altToggle?.addEventListener("click", () =>
+    this.elements.altToggle?.addEventListener("change", () =>
       this.toggleAlternate()
     );
     this.elements.altSpeed?.addEventListener("input", () =>
@@ -653,7 +653,9 @@ class SpeakerTester {
     if (this.altTimer) {
       clearInterval(this.altTimer);
       this.altTimer = 0;
-      this.elements.altToggle?.classList.remove("active");
+      if (this.elements.altToggle) {
+        this.elements.altToggle.checked = false;
+      }
     }
 
     this.setStatus("Idle");
@@ -665,18 +667,32 @@ class SpeakerTester {
   toggleAlternate() {
     if (!this.synth) return;
 
-    if (this.altTimer) {
-      clearInterval(this.altTimer);
-      this.altTimer = 0;
-      this.elements.altToggle?.classList.remove("active");
+    const isChecked = this.elements.altToggle?.checked || false;
+
+    if (!isChecked) {
+      // Stopping alternator
+      if (this.altTimer) {
+        clearInterval(this.altTimer);
+        this.altTimer = 0;
+      }
       this.setStatus("Idle");
       return;
     }
 
+    // Starting alternator
     const getMs = () => parseInt(this.elements.altSpeed?.value || "500", 10);
 
     let left = true;
     const tick = () => {
+      if (!this.elements.altToggle?.checked) {
+        // Checkbox was unchecked, stop
+        if (this.altTimer) {
+          clearInterval(this.altTimer);
+          this.altTimer = 0;
+        }
+        this.setStatus("Idle");
+        return;
+      }
       const note = this.elements.freqSelect?.value || "A4";
       this.playTone(note, "8n", left ? "Left" : "Right");
       this.setStatus(`Alternating ${left ? "L" : "R"}`);
@@ -685,7 +701,6 @@ class SpeakerTester {
 
     tick();
     this.altTimer = setInterval(tick, getMs());
-    this.elements.altToggle?.classList.add("active");
   }
 
   /**
@@ -698,7 +713,7 @@ class SpeakerTester {
     }
 
     // If running, restart interval with new speed
-    if (this.altTimer) {
+    if (this.altTimer && this.elements.altToggle?.checked) {
       clearInterval(this.altTimer);
       this.altTimer = 0;
       this.toggleAlternate();

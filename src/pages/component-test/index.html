@@ -231,61 +231,72 @@
             class="device-select"
             aria-label="Select speakers"
           ></select>
-          <div class="btn-group grow">
-            <button id="spk-left" title="Play tone on left channel">
-              Left
-            </button>
-            <button id="spk-right" title="Play tone on right channel">
-              Right
-            </button>
-            <button id="spk-both" title="Play tone on both channels">
-              Both
-            </button>
-            <button
-              id="spk-sweep"
-              class="ghost"
-              title="Sweep from low to high frequency"
-            >
-              Stereo sweep
-            </button>
+          <div class="btn-group">
             <button id="spk-stop" class="ghost" title="Stop playback">
               Stop
             </button>
           </div>
         </div>
 
-        <!-- Useful speaker tools: tone frequency and L/R alternator -->
-        <div class="row wrap" style="gap: 12px">
-          <label for="spk-freq">Tone</label>
-          <select id="spk-freq" aria-label="Select test tone">
-            <option value="C3">C3 (131 Hz)</option>
-            <option value="A4" selected>A4 (440 Hz)</option>
-            <option value="C5">C5 (523 Hz)</option>
-            <option value="C6">C6 (1046 Hz)</option>
-            <option value="C7">C7 (2093 Hz)</option>
-          </select>
+        <div class="spk-controls-grid">
+          <div class="spk-control-group">
+            <label for="spk-freq" class="spk-control-label">Tone frequency</label>
+            <select id="spk-freq" class="spk-control-select" aria-label="Select test tone">
+              <option value="C3">C3 (131 Hz)</option>
+              <option value="A4" selected>A4 (440 Hz)</option>
+              <option value="C5">C5 (523 Hz)</option>
+              <option value="C6">C6 (1046 Hz)</option>
+              <option value="C7">C7 (2093 Hz)</option>
+            </select>
+          </div>
+
+          <div class="spk-control-group">
+            <label class="spk-control-label">Channel test</label>
+            <div class="spk-channel-buttons">
+              <button id="spk-left" class="spk-channel-btn" title="Play tone on left channel">
+                <i class="ph ph-speaker-simple-low" aria-hidden="true"></i> Left
+              </button>
+              <button id="spk-right" class="spk-channel-btn" title="Play tone on right channel">
+                <i class="ph ph-speaker-simple-low" aria-hidden="true"></i> Right
+              </button>
+              <button id="spk-both" class="spk-channel-btn" title="Play tone on both channels">
+                <i class="ph ph-speaker-high" aria-hidden="true"></i> Both
+              </button>
+            </div>
+          </div>
+
+          <div class="spk-control-group">
+            <label class="spk-control-label">Sweep test</label>
+            <button
+              id="spk-sweep"
+              class="spk-sweep-btn"
+              title="Sweep from low to high frequency"
+            >
+              <i class="ph ph-waveform" aria-hidden="true"></i> Stereo sweep
+            </button>
+          </div>
         </div>
 
-        <div class="row wrap" style="gap: 12px">
-          <button
-            id="spk-alt-toggle"
-            class="ghost"
-            title="Alternate sounds between left and right channels"
-          >
-            Alternate L/R
-          </button>
-          <label for="spk-alt-speed">Interval</label>
-          <input
-            id="spk-alt-speed"
-            type="range"
-            min="200"
-            max="1500"
-            step="50"
-            value="500"
-          />
-          <span id="spk-alt-speed-label" class="muted" aria-live="polite"
-            >500 ms</span
-          >
+        <div class="spk-alternate-section">
+          <div class="spk-alternate-header">
+            <label class="toggle muted">
+              <input type="checkbox" id="spk-alt-toggle" />
+              <span>Alternate L/R</span>
+            </label>
+            <div class="spk-alternate-controls">
+              <label for="spk-alt-speed" class="spk-alt-label">Interval</label>
+              <input
+                id="spk-alt-speed"
+                type="range"
+                min="200"
+                max="1500"
+                step="50"
+                value="500"
+                class="spk-alt-slider"
+              />
+              <span id="spk-alt-speed-label" class="muted spk-alt-value" aria-live="polite">500 ms</span>
+            </div>
+          </div>
         </div>
 
         <p id="spk-note" class="muted audio-note">

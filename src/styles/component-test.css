@@ -395,7 +395,13 @@
 }
 
 [data-page="component-test"] .audio-note {
-  margin: 2px 0 0;
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+[data-page="component-test"] .audio-card.spk .audio-note {
+  margin-top: 4px;
 }
 
 /* Normalize control sizing */
@@ -424,6 +430,192 @@
   justify-self: end;
 }
 
+/* Speaker section - completely redesigned to match microphone structure */
+[data-page="component-test"] .audio-card.spk {
+  display: grid;
+  gap: 14px;
+}
+
+[data-page="component-test"] .audio-card.spk .device-row {
+  margin-bottom: 0;
+}
+
+/* Controls grid - matches microphone KPI grid structure */
+[data-page="component-test"] .spk-controls-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-top: 4px;
+}
+
+[data-page="component-test"] .spk-control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+[data-page="component-test"] .spk-control-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+[data-page="component-test"] .spk-control-select {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 0.9rem;
+  width: 100%;
+}
+
+/* Channel test buttons */
+[data-page="component-test"] .spk-channel-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+[data-page="component-test"] .spk-channel-btn {
+  flex: 1;
+  min-width: 80px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-weight: 500;
+  padding: 10px 12px;
+  transition: all 0.2s ease;
+}
+
+[data-page="component-test"] .spk-channel-btn i {
+  font-size: 16px;
+}
+
+[data-page="component-test"] .spk-channel-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Sweep button */
+[data-page="component-test"] .spk-sweep-btn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-weight: 500;
+  padding: 10px 12px;
+  transition: all 0.2s ease;
+}
+
+[data-page="component-test"] .spk-sweep-btn i {
+  font-size: 16px;
+}
+
+[data-page="component-test"] .spk-sweep-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Alternate L/R section - matches microphone toggle style */
+[data-page="component-test"] .spk-alternate-section {
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  margin-top: 4px;
+}
+
+[data-page="component-test"] .spk-alternate-header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+[data-page="component-test"] .spk-alternate-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: 24px;
+}
+
+[data-page="component-test"] .spk-alt-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+  min-width: 60px;
+}
+
+[data-page="component-test"] .spk-alt-slider {
+  flex: 1;
+  max-width: 300px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--panel-accent);
+  outline: none;
+  -webkit-appearance: none;
+}
+
+[data-page="component-test"] .spk-alt-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+  border: 2px solid var(--panel-2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+[data-page="component-test"] .spk-alt-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+  border: 2px solid var(--panel-2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+[data-page="component-test"] .spk-alt-slider:hover::-webkit-slider-thumb {
+  background: var(--primary-700);
+  transform: scale(1.1);
+}
+
+[data-page="component-test"] .spk-alt-slider:hover::-moz-range-thumb {
+  background: var(--primary-700);
+  transform: scale(1.1);
+}
+
+[data-page="component-test"] .spk-alt-value {
+  min-width: 60px;
+  text-align: right;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+[data-page="component-test"] .spk-alternate-section .toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+[data-page="component-test"] .spk-alternate-section .toggle input[type="checkbox"] {
+  cursor: pointer;
+}
+
+[data-page="component-test"] .spk-alternate-section .toggle span {
+  font-weight: 500;
+  color: var(--text);
+}
+
 /* Mid-width improvements for audio layout */
 @media (max-width: 1100px) and (min-width: 681px) {
   [data-page="component-test"] .audio-grid {
@@ -434,6 +626,9 @@
   }
   [data-page="component-test"] .audio-card .device-row .btn-group {
     justify-self: start;
+  }
+  [data-page="component-test"] .audio-card.spk .row {
+    grid-template-columns: auto 1fr;
   }
 }
 
@@ -459,6 +654,16 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
     gap: 8px;
+  }
+  [data-page="component-test"] .spk-controls-grid {
+    grid-template-columns: 1fr;
+  }
+  [data-page="component-test"] .spk-alternate-controls {
+    flex-wrap: wrap;
+    margin-left: 0;
+  }
+  [data-page="component-test"] .spk-alt-slider {
+    max-width: 100%;
   }
 }
 
