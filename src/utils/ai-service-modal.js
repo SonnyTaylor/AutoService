@@ -250,6 +250,18 @@ export async function openAIServiceModal(isToolAvailable, hasExistingTasks) {
       }
     });
 
+    // Prevent scroll propagation to background when scrolling inside modal
+    modal.addEventListener("wheel", (e) => {
+      // Stop propagation for all wheel events inside the modal
+      e.stopPropagation();
+    }, { passive: true });
+
+    // Prevent touch scroll propagation
+    modal.addEventListener("touchmove", (e) => {
+      // Stop propagation for all touch events inside the modal
+      e.stopPropagation();
+    }, { passive: true });
+
     // Close on Escape key
     modal.addEventListener("cancel", () => {
       console.log("[AI Service Modal] User closed via Escape");

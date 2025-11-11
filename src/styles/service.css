@@ -1712,13 +1712,18 @@
   color: var(--text);
   padding: 0;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 .ai-service-form {
   display: flex;
   flex-direction: column;
   gap: 16px;
   padding: 20px;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: 88vh;
+  box-sizing: border-box;
 }
 .ai-service-title {
   margin: 0 0 4px;
@@ -1808,16 +1813,18 @@
 .ai-service-preview {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
   padding: 16px;
   background: var(--panel-2);
   border-radius: 8px;
   border: 1px solid var(--border);
+  flex-shrink: 0;
 }
 .ai-service-reasoning {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  margin-bottom: 8px;
 }
 .ai-service-reasoning strong {
   font-size: 0.9rem;
@@ -1834,6 +1841,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  margin-top: 12px;
 }
 .ai-service-selected strong {
   font-size: 0.9rem;
