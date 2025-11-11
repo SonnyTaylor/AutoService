@@ -23,9 +23,10 @@ import { GPU_PARENT_ID } from "../pages/service/handlers/presets.js";
 
 /**
  * Build a comprehensive description of all available services for the AI prompt.
+ * @param {Function} isToolAvailable - Function to check tool availability
  * @returns {string} Formatted service catalog description
  */
-function buildServiceCatalogDescription() {
+function buildServiceCatalogDescription(isToolAvailable) {
   const serviceIds = listServiceIds();
   const descriptions = [];
 
@@ -71,9 +72,24 @@ function buildServiceCatalogDescription() {
         const paramDesc = Object.keys(params).length > 0
           ? ` (params: ${JSON.stringify(params)})`
           : "";
-        const toolDesc = service.toolKeys && service.toolKeys.length > 0
-          ? ` [requires: ${service.toolKeys.join(", ")}]`
-          : " [built-in]";
+        
+        // Check tool availability if function provided
+        let toolDesc = "";
+        if (id === GPU_PARENT_ID) {
+          const hasFurmark = isToolAvailable ? isToolAvailable("furmark_stress_test") : true;
+          const hasHeavyload = isToolAvailable ? isToolAvailable("heavyload_stress_gpu") : true;
+          toolDesc = hasFurmark || hasHeavyload 
+            ? " [tools available]" 
+            : " [tools missing - may not work]";
+        } else if (service.toolKeys && service.toolKeys.length > 0) {
+          const available = isToolAvailable ? isToolAvailable(id) : true;
+          toolDesc = available 
+            ? ` [requires: ${service.toolKeys.join(", ")} - available]`
+            : ` [requires: ${service.toolKeys.join(", ")} - MISSING]`;
+        } else {
+          toolDesc = " [built-in - always available]";
+        }
+        
         descriptions.push(
           `  - ${id}: ${service.label}${paramDesc}${toolDesc}`
         );
@@ -118,7 +134,7 @@ export async function selectServicesWithAI(userInput, isToolAvailable) {
     throw new Error("User input is required");
   }
 
-  const serviceCatalog = buildServiceCatalogDescription();
+  const serviceCatalog = buildServiceCatalogDescription(isToolAvailable);
   const paramSchema = buildParameterSchemaDescription();
 
   const systemPrompt = `You are an expert computer technician assistant. Your task is to analyze a user's problem description and select appropriate diagnostic/maintenance services from the available catalog.
@@ -134,8 +150,9 @@ INSTRUCTIONS:
 4. For stress tests, use reasonable durations (1-10 minutes for quick tests, 10-30 for thorough tests)
 5. For GPU stress testing, use the gpu_stress_parent service with appropriate furmark/heavyload settings
 6. Prefer built-in services when possible (they don't require external tools)
-7. If a service requires tools that might not be available, still include it but note in reasoning
-8. Return a JSON object with:
+7. Services marked with "MISSING" tools may not work - prefer alternatives if available
+8. Services marked "available" or "always available" are safe to use
+9. Return a JSON object with:
    - services: Array of { id: string, params: object }
    - reasoning: Brief explanation of your selections
 

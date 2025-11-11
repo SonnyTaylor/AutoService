@@ -1865,14 +1865,58 @@
   border-radius: 6px;
   border: 1px solid var(--border);
 }
+.ai-service-item-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
 .ai-service-item-name {
   font-size: 0.95rem;
   font-weight: 500;
   color: var(--text);
+  flex: 1;
 }
-.ai-service-item-meta {
+.ai-service-item-badge {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--panel-accent);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+.ai-service-item-params {
   font-size: 0.85rem;
   color: var(--muted);
+  margin-top: 4px;
+  display: block;
+}
+.ai-service-error {
+  display: flex;
+  flex-direction: column;
+}
+.ai-service-error #ai-service-error-message {
+  margin-bottom: 0;
+}
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
 }
 
 /* AI Create button styling */

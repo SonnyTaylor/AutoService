@@ -58,7 +58,10 @@ export async function openAIServiceModal(isToolAvailable, hasExistingTasks) {
             placeholder="e.g., My computer is slow, Network connection issues, System errors, Full diagnostic check..."
           ></textarea>
         </div>
-        <div id="ai-service-error" class="ai-service-error" role="alert" style="display: none;"></div>
+        <div id="ai-service-error" class="ai-service-error" role="alert" style="display: none;">
+          <div id="ai-service-error-message"></div>
+          <button type="button" id="ai-service-retry" class="ghost small" style="display: none; margin-top: 8px;">Retry</button>
+        </div>
         <div id="ai-service-loading" class="ai-service-loading" style="display: none;">
           <div class="ai-service-spinner"></div>
           <span>AI is analyzing your request...</span>
@@ -86,6 +89,8 @@ export async function openAIServiceModal(isToolAvailable, hasExistingTasks) {
     // Get elements
     const input = modal.querySelector("#ai-service-input");
     const error = modal.querySelector("#ai-service-error");
+    const errorMessage = modal.querySelector("#ai-service-error-message");
+    const retryBtn = modal.querySelector("#ai-service-retry");
     const loading = modal.querySelector("#ai-service-loading");
     const preview = modal.querySelector("#ai-service-preview");
     const reasoningText = modal.querySelector("#ai-service-reasoning-text");
@@ -102,12 +107,16 @@ export async function openAIServiceModal(isToolAvailable, hasExistingTasks) {
     // Helper functions
     const hideError = () => {
       error.style.display = "none";
-      error.textContent = "";
+      if (errorMessage) errorMessage.textContent = "";
+      if (retryBtn) retryBtn.style.display = "none";
     };
 
-    const showError = (msg) => {
+    const showError = (msg, showRetry = false) => {
       error.style.display = "block";
-      error.textContent = msg;
+      if (errorMessage) errorMessage.textContent = msg;
+      if (retryBtn) {
+        retryBtn.style.display = showRetry ? "block" : "none";
+      }
     };
 
     const showLoading = () => {
@@ -148,32 +157,45 @@ export async function openAIServiceModal(isToolAvailable, hasExistingTasks) {
       // Show reasoning
       reasoningText.textContent = result.reasoning || "Services selected based on your description.";
 
-      // Show selected services
+      // Show selected services with better formatting
       selectedList.innerHTML = "";
       result.services.forEach((service) => {
         const li = document.createElement("li");
         const serviceDef =
           service.id === GPU_PARENT_ID
-            ? { label: "GPU Stress (FurMark + HeavyLoad)", group: "Stress" }
+            ? { label: "GPU Stress (FurMark + HeavyLoad)", group: "Stress", category: "Stress" }
             : getServiceById(service.id);
 
         const label = serviceDef?.label || service.id;
-        const group = serviceDef?.group || "";
-        const paramsStr =
-          Object.keys(service.params).length > 0
-            ? ` (${JSON.stringify(service.params)})`
-            : "";
+        const group = serviceDef?.group || serviceDef?.category || "";
+        
+        // Format parameters more nicely
+        const params = service.params || {};
+        const paramsList = [];
+        if (params.minutes) paramsList.push(`${params.minutes} min`);
+        if (params.seconds) paramsList.push(`${params.seconds} sec`);
+        if (params.furmark !== undefined) paramsList.push(`FurMark: ${params.furmark ? "Yes" : "No"}`);
+        if (params.heavyload !== undefined) paramsList.push(`HeavyLoad: ${params.heavyload ? "Yes" : "No"}`);
+        if (params.furmarkMinutes) paramsList.push(`FurMark: ${params.furmarkMinutes} min`);
+        if (params.heavyloadMinutes) paramsList.push(`HeavyLoad: ${params.heavyloadMinutes} min`);
+        if (params.host) paramsList.push(`Host: ${params.host}`);
+        if (params.count) paramsList.push(`Count: ${params.count}`);
+        
+        const paramsStr = paramsList.length > 0 ? paramsList.join(" • ") : "";
 
         li.innerHTML = `
-          <span class="ai-service-item-name">${label}</span>
-          <span class="ai-service-item-meta">${group}${paramsStr}</span>
+          <div class="ai-service-item-header">
+            <span class="ai-service-item-name">${label}</span>
+            <span class="ai-service-item-badge">${group}</span>
+          </div>
+          ${paramsStr ? `<span class="ai-service-item-params">${paramsStr}</span>` : ""}
         `;
         selectedList.appendChild(li);
       });
     };
 
-    // Generate button handler
-    generateBtn.addEventListener("click", async () => {
+    // Generate function (reusable for button and retry)
+    const generateServices = async () => {
       const userInput = (input.value || "").trim();
       if (!userInput) {
         showError("Please describe the problem or what you need.");
@@ -193,8 +215,22 @@ export async function openAIServiceModal(isToolAvailable, hasExistingTasks) {
         const errorMsg =
           err.message ||
           "Failed to generate service suggestions. Please try again.";
-        showError(errorMsg);
+        showError(errorMsg, true); // Show retry button
         console.error("AI service selection error:", err);
+      }
+    };
+
+    // Generate button handler
+    generateBtn.addEventListener("click", generateServices);
+
+    // Retry button handler
+    retryBtn?.addEventListener("click", generateServices);
+
+    // Enter key to generate (when input is focused)
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        generateServices();
       }
     });
 
