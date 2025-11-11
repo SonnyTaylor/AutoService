@@ -49,6 +49,7 @@ import * as batteryHealthReport from "./battery_health_report/index.js";
 import * as drivecleanupClean from "./drivecleanup_clean/index.js";
 import * as trellixStingerScan from "./trellix_stinger_scan/index.js";
 import * as windowsUpdateLogsAnalysis from "./windows_update_logs_analysis/index.js";
+import * as systemRestore from "./system_restore/index.js";
 
 // =============================================================================
 // REGISTRY CONSTRUCTION
@@ -87,6 +88,7 @@ const HANDLERS = {
   drivecleanup_clean: drivecleanupClean,
   trellix_stinger_scan: trellixStingerScan,
   windows_update_logs_analysis: windowsUpdateLogsAnalysis,
+  system_restore: systemRestore,
 };
 
 // =============================================================================
