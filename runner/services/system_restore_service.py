@@ -251,6 +251,10 @@ def run_system_restore(task: Dict[str, Any]) -> Dict[str, Any]:
     default_desc = f"AutoService restore point — {time.strftime('%Y-%m-%d %H:%M:%S')}"
     description = str(task.get("description") or default_desc)
     
+    # Escape single quotes in description for PowerShell (double them)
+    # This prevents command injection and syntax errors
+    escaped_description = description.replace("'", "''")
+    
     # PowerShell command to create restore point
     # Build PowerShell command
     command = [
@@ -259,7 +263,7 @@ def run_system_restore(task: Dict[str, Any]) -> Dict[str, Any]:
         "-ExecutionPolicy",
         "Bypass",
         "-Command",
-        f"Checkpoint-Computer -Description '{description}' -RestorePointType '{restore_point_type}'"
+        f"Checkpoint-Computer -Description '{escaped_description}' -RestorePointType '{restore_point_type}'"
     ]
     
     logger.info("Creating System Restore point: %s", description)
@@ -558,6 +562,28 @@ def run_system_restore(task: Dict[str, Any]) -> Dict[str, Any]:
                 "results": {
                     "restore_point_created": False,
                     "error_details": "PowerShell command not found",
+                }
+            },
+            "duration_seconds": round(duration, 2),
+        }
+    except KeyboardInterrupt:
+        # Handle skip signal from run_with_skip_check
+        duration = time.time() - start_time
+        add_breadcrumb(
+            "System Restore skipped by user request",
+            category="task",
+            level="info",
+        )
+        return {
+            "task_type": "system_restore",
+            "status": "skipped",
+            "summary": {
+                "human_readable": {
+                    "message": "System Restore point creation was skipped by user request.",
+                },
+                "results": {
+                    "restore_point_created": False,
+                    "error_details": "User requested skip",
                 }
             },
             "duration_seconds": round(duration, 2),
