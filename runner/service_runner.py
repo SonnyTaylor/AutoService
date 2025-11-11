@@ -173,20 +173,22 @@ def flush_logs():  # pragma: no cover - simple utility
         pass
 
 
-def check_control_file(control_file_path: Optional[str]) -> Tuple[Optional[str], Optional[int]]:
+def check_control_file(
+    control_file_path: Optional[str],
+) -> Tuple[Optional[str], Optional[int]]:
     """Check control file for stop/pause/skip/resume signals.
-    
+
     Returns:
         Tuple of (action, timestamp) or (None, None) if no signal or file doesn't exist.
         action can be "stop", "pause", "skip", or "resume".
     """
     if not control_file_path:
         return None, None
-    
+
     try:
         if not os.path.exists(control_file_path):
             return None, None
-        
+
         with open(control_file_path, "r", encoding="utf-8") as f:
             data = json.load(f)
             action = data.get("action")
@@ -196,13 +198,13 @@ def check_control_file(control_file_path: Optional[str]) -> Tuple[Optional[str],
     except Exception:
         # File doesn't exist, is malformed, or other error - ignore
         pass
-    
+
     return None, None
 
 
 def clear_control_file(control_file_path: Optional[str]) -> None:
     """Clear the control file by removing it.
-    
+
     Args:
         control_file_path: Path to the control file to clear
     """
@@ -220,24 +222,24 @@ def execute_task_with_skip_monitoring(
     check_interval: float = 0.2,
 ) -> TaskResult:
     """Execute a task handler with periodic skip signal monitoring.
-    
+
     This function runs the handler and periodically checks for skip signals.
     If a skip signal is detected, it raises KeyboardInterrupt to immediately stop the task.
-    
+
     For handlers that use subprocess calls, the subprocess_utils.run_with_skip_check
     will handle skip detection within those subprocess calls. This wrapper provides
     additional monitoring for handlers that don't use subprocess calls or have
     long-running Python code between subprocess calls.
-    
+
     Args:
         handler: The task handler function to execute
         task: The task dictionary to pass to the handler
         control_file_path: Path to the control file for skip signal checking
         check_interval: How often to check for skip signals (seconds)
-    
+
     Returns:
         TaskResult from the handler
-    
+
     Raises:
         KeyboardInterrupt: If skip signal is detected during execution
     """
@@ -246,17 +248,17 @@ def execute_task_with_skip_monitoring(
     # For handlers with long Python code, they should check periodically themselves
     # This wrapper just ensures we catch skip signals that might be set right before
     # or during handler execution
-    
+
     # Check for skip signal before starting
     action, _ = check_control_file(control_file_path)
     if action == "skip":
         clear_control_file(control_file_path)
         raise KeyboardInterrupt("User requested skip")
-    
+
     # Call handler directly - subprocess calls within will handle skip signals
     # For pure Python code, the handler should check periodically if needed
     result = handler(task)
-    
+
     # Check for skip signal after handler completes (in case it was set during execution
     # but handler didn't check for it - this shouldn't happen with proper subprocess usage)
     action, _ = check_control_file(control_file_path)
@@ -264,7 +266,7 @@ def execute_task_with_skip_monitoring(
         clear_control_file(control_file_path)
         # Handler already completed, but skip was requested - mark as skipped anyway
         raise KeyboardInterrupt("User requested skip")
-    
+
     return result
 
 
@@ -433,27 +435,42 @@ def main():
     # Also de-duplicate if multiple system_restore tasks exist
     system_restore_tasks = [t for t in tasks if t.get("type") == "system_restore"]
     other_tasks = [t for t in tasks if t.get("type") != "system_restore"]
-    
+
     if system_restore_tasks:
         # Take only the first system_restore task (de-duplicate)
         tasks = [system_restore_tasks[0]] + other_tasks
         if len(system_restore_tasks) > 1:
-            logging.info(f"Found {len(system_restore_tasks)} system_restore tasks, using only the first one")
+            logging.info(
+                f"Found {len(system_restore_tasks)} system_restore tasks, using only the first one"
+            )
             flush_logs()
         logging.info("Reordered tasks: system_restore will run first")
         flush_logs()
 
     # Get control file path from environment
     control_file_path = os.environ.get("AUTOSERVICE_CONTROL_FILE")
-    
+
     # Control state
     run_stopped = False
     run_paused = False
-    
+    # pending_auto_pause no longer used; immediate pause is enforced after each task
+
+    # Determine if we should automatically pause between tasks (frontend hint)
+    auto_pause_between_tasks = False
+    try:
+        if isinstance(input_data, dict):
+            auto_pause_between_tasks = bool(
+                input_data.get("pause_between_tasks", False)
+            )
+    except Exception:
+        auto_pause_between_tasks = False
+
     all_results = []
     overall_success = True
 
     for idx, task in enumerate(tasks):
+        # Note: auto-pause is handled immediately after each task completion
+
         # CRITICAL: Clear any lingering skip signal before checking for next task
         # This prevents skipping the wrong task if a skip signal wasn't cleared properly
         action, _ = check_control_file(control_file_path)
@@ -462,7 +479,7 @@ def main():
             clear_control_file(control_file_path)
             logging.info("Cleared stale skip signal before starting task %d", idx)
             flush_logs()
-        
+
         # Check for control signals before starting task
         action, _ = check_control_file(control_file_path)
         if action == "stop":
@@ -495,7 +512,11 @@ def main():
                 break
         elif action == "skip":
             # Skip current task before it starts
-            logging.warning("TASK_SKIP:%d:%s - User requested skip", idx, task.get("type", "unknown"))
+            logging.warning(
+                "TASK_SKIP:%d:%s - User requested skip",
+                idx,
+                task.get("type", "unknown"),
+            )
             flush_logs()
             skipped_result = {
                 "task_type": task.get("type", "unknown"),
@@ -529,22 +550,22 @@ def main():
                 try:
                     # Track execution time for all tasks
                     task_start_time = time.time()
-                    
+
                     # Execute handler with skip monitoring for immediate skip detection
                     # Subprocess calls within handlers use run_with_skip_check for skip detection
                     result = execute_task_with_skip_monitoring(
                         handler, task, control_file_path, check_interval=0.2
                     )
-                    
+
                     # Calculate duration and add to summary if not already present
                     task_duration = time.time() - task_start_time
                     if not result.get("summary"):
                         result["summary"] = {}
                     if "duration_seconds" not in result.get("summary", {}):
                         result["summary"]["duration_seconds"] = round(task_duration, 2)
-                    
+
                     status = result.get("status", "unknown")
-                    
+
                     # Check for stop/pause after task completes
                     action, _ = check_control_file(control_file_path)
                     if action == "stop":
@@ -614,6 +635,34 @@ def main():
 
                     flush_logs()
 
+                    # Auto-pause immediately after task completion if enabled (before progressing)
+                    if (
+                        auto_pause_between_tasks
+                        and not run_stopped
+                        and idx < len(tasks) - 1
+                    ):
+                        if not run_paused:
+                            run_paused = True
+                            logging.info("RUN_PAUSED:auto_pause_between_tasks")
+                            flush_logs()
+                        # Wait until user explicitly resumes or stops
+                        while run_paused:
+                            time.sleep(0.5)
+                            action, _ = check_control_file(control_file_path)
+                            if action == "stop":
+                                run_stopped = True
+                                run_paused = False
+                                logging.info("RUN_STOPPED:user_requested")
+                                flush_logs()
+                                break
+                            elif action == "resume":
+                                run_paused = False
+                                logging.info("RUN_RESUMED:user_requested")
+                                flush_logs()
+                                # Clear resume signal by removing control file
+                                clear_control_file(control_file_path)
+                                break
+
                     # Log additional details if available
                     summary = result.get("summary", {})
                     if summary and isinstance(summary, dict):
@@ -657,7 +706,9 @@ def main():
                         flush_logs()
                     except Exception:
                         pass
-                    
+
+                    # Note: no pending auto-pause; immediate pause already handled above
+
                     # If stopped or paused after task, break or pause
                     if run_stopped:
                         logging.info("RUN_STOPPED:user_requested")
@@ -681,7 +732,9 @@ def main():
                                 logging.info("RUN_RESUMED:user_requested")
                                 flush_logs()
                                 # Clear resume signal by removing control file
-                                if control_file_path and os.path.exists(control_file_path):
+                                if control_file_path and os.path.exists(
+                                    control_file_path
+                                ):
                                     try:
                                         os.remove(control_file_path)
                                     except Exception:
@@ -693,7 +746,9 @@ def main():
                 except KeyboardInterrupt as e:
                     # Handle skip signal
                     if "skip" in str(e).lower() or "User requested skip" in str(e):
-                        logging.warning("TASK_SKIP:%d:%s - User requested skip", idx, task_type)
+                        logging.warning(
+                            "TASK_SKIP:%d:%s - User requested skip", idx, task_type
+                        )
                         flush_logs()
                         skipped_result = {
                             "task_type": task_type,
@@ -811,7 +866,7 @@ def main():
         final_status = "success"
     else:
         final_status = "completed_with_errors"
-    
+
     final_report = {
         "overall_status": final_status,
         "results": all_results,

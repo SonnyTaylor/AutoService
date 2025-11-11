@@ -228,6 +228,7 @@ class ServiceQueueBuilder {
     this.toolStatuses = [];
     this.aiSummaryEnabled = false;
     this.systemRestoreEnabled = false;
+    this.pauseBetweenTasks = false;
 
     // Search state
     this.fuse = null;
@@ -330,6 +331,7 @@ class ServiceQueueBuilder {
         gpuParams: this.gpuConfig.params,
         aiSummaryEnabled: this.aiSummaryEnabled,
         systemRestoreEnabled: this.systemRestoreEnabled,
+        pauseBetweenTasks: this.pauseBetweenTasks,
       };
       sessionStorage.setItem(PERSIST_KEY, JSON.stringify(data));
     } catch {}
@@ -362,6 +364,9 @@ class ServiceQueueBuilder {
       }
       if (typeof data.systemRestoreEnabled === "boolean") {
         this.systemRestoreEnabled = data.systemRestoreEnabled;
+      }
+      if (typeof data.pauseBetweenTasks === "boolean") {
+        this.pauseBetweenTasks = data.pauseBetweenTasks;
       }
       return true;
     } catch {
@@ -719,6 +724,7 @@ class BuilderUI {
       aiSummaryToggle: document.getElementById("svc-ai-summary-toggle"),
       aiSummaryWarning: document.getElementById("svc-ai-summary-warning"),
       systemRestoreToggle: document.getElementById("svc-system-restore-toggle"),
+      pauseBetweenToggle: document.getElementById("svc-pause-between-toggle"),
       totalTime: document.getElementById("svc-total-time"),
     };
 
@@ -727,6 +733,7 @@ class BuilderUI {
     this.setTitle();
     this.setupAISummaryToggle();
     this.setupSystemRestoreToggle();
+    this.setupPauseBetweenToggle();
     this.setupAICreateButton();
     
     // Load time estimates asynchronously
@@ -914,6 +921,26 @@ class BuilderUI {
     toggle.addEventListener("change", () => {
       this.builder.systemRestoreEnabled = toggle.checked;
       console.log("[Builder] System Restore toggle changed to:", toggle.checked);
+      this.builder.persist();
+      this.updateJson();
+    });
+  }
+
+  /**
+   * Setup Pause Between Tasks toggle
+   */
+  setupPauseBetweenToggle() {
+    const toggle = this.elements.pauseBetweenToggle;
+    if (!toggle) return;
+
+    // Set initial state from builder
+    toggle.checked = this.builder.pauseBetweenTasks;
+    console.log("[Builder] Pause Between Tasks toggle initialized, checked:", toggle.checked);
+
+    // Listen for changes
+    toggle.addEventListener("change", () => {
+      this.builder.pauseBetweenTasks = toggle.checked;
+      console.log("[Builder] Pause Between Tasks toggle changed to:", toggle.checked);
       this.builder.persist();
       this.updateJson();
     });
@@ -1884,6 +1911,7 @@ class BuilderUI {
     const plan = {
       tasks,
       ...(this.builder.aiSummaryEnabled && { ai_summary_enabled: true }),
+      ...(this.builder.pauseBetweenTasks && { pause_between_tasks: true }),
     };
     this.lastJsonString = JSON.stringify(plan, null, 2);
     console.log("[Builder] Updated JSON, AI summary enabled:", this.builder.aiSummaryEnabled);
