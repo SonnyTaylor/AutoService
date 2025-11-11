@@ -24,6 +24,74 @@ async function ensureNotificationApi() {
   return notifyApi;
 }
 
+// Live log highlighting helpers
+const MAX_LOG_LINES = 2000;
+/** @type {string[]} */
+let rawLogLines = [];
+const escapeHtml = (str) =>
+  String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+function highlightLogLine(line) {
+  const safe = escapeHtml(line);
+  const tagMatch = safe.match(/^(\[[A-Z_]+(?:\])(?:\s*\[[A-Z_]+\])*)\s*/);
+  let rest = safe;
+  let tagsHtml = "";
+  if (tagMatch) {
+    const tags = tagMatch[1]
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((t) => t.replace(/^\[|\]$/g, ""));
+    rest = safe.slice(tagMatch[0].length);
+    tagsHtml = tags
+      .map((t) => {
+        const upper = t.toUpperCase();
+        let cls = "log-tag";
+        if (upper === "INFO") cls += " log-level-info";
+        else if (upper === "SUCCESS") cls += " log-level-success";
+        else if (upper === "ERROR" || upper === "FAIL" || upper === "FAILED")
+          cls += " log-level-error";
+        else if (upper === "WARN" || upper === "WARNING")
+          cls += " log-level-warn";
+        else if (upper === "SR") cls += " log-tag-sr";
+        else if (upper === "PROGRESS") cls += " log-tag-progress";
+        else if (upper.startsWith("TASK")) cls += " log-tag-task";
+        return `<span class="${cls}">[${t}]</span>`;
+      })
+      .join(" ");
+  }
+  const filepathRe =
+    /(?:(?:[A-Za-z]:\\|\\\\)[^:*?"<>|\r\n]+(?:\\[^:*?"<>|\r\n]+)*)/g;
+  const withPaths = rest.replace(
+    filepathRe,
+    (m) => `<span class="log-filepath">${m}</span>`
+  );
+  return `<span class="log-line">${tagsHtml}${tagsHtml ? " " : ""}${withPaths}</span>`;
+}
+
+// Shared appender for live log (module-level so all sources use consistent rendering)
+function appendToLiveLog(message) {
+  const logEl = document.getElementById("svc-log");
+  if (!logEl) return;
+  const hadAny = rawLogLines.length > 0;
+  rawLogLines.push(String(message));
+  if (rawLogLines.length > MAX_LOG_LINES) {
+    rawLogLines = rawLogLines.slice(-MAX_LOG_LINES);
+  }
+  logEl.innerHTML = rawLogLines.map(highlightLogLine).join("\n");
+  logEl.scrollTop = logEl.scrollHeight;
+  if (!hadAny) {
+    const overlay = document.getElementById("svc-log-overlay");
+    if (overlay) overlay.hidden = true;
+  }
+  try {
+    sessionStorage.setItem("service.runnerLog", rawLogLines.join("\n"));
+  } catch {}
+}
+
 // Module-level flag to track if native events have been registered globally
 // This persists across page navigations to prevent duplicate listener registration
 let _globalEventsRegistered = false;
@@ -58,19 +126,7 @@ async function processStatusLine(line) {
 
   // Helper to append to log with fresh DOM reference
   const appendToLog = (message) => {
-    if (!logEl) return; // Skip if not on page
-    const first = !logEl.textContent;
-    logEl.textContent += (logEl.textContent ? "\n" : "") + message;
-    logEl.scrollTop = logEl.scrollHeight;
-
-    if (first) {
-      const overlay = document.getElementById("svc-log-overlay");
-      if (overlay) overlay.hidden = true;
-    }
-
-    try {
-      sessionStorage.setItem("service.runnerLog", logEl.textContent);
-    } catch {}
+    appendToLiveLog(message);
   };
 
   // Helper to update task status DOM
@@ -722,7 +778,8 @@ export async function initPage() {
     try {
       const savedLog = sessionStorage.getItem("service.runnerLog");
       if (savedLog && logEl) {
-        logEl.textContent = savedLog;
+        rawLogLines = String(savedLog).split("\n");
+        logEl.innerHTML = rawLogLines.map(highlightLogLine).join("\n");
         // Scroll to bottom
         logEl.scrollTop = logEl.scrollHeight;
       }
@@ -736,6 +793,9 @@ export async function initPage() {
       sessionStorage.removeItem("service.notifiedRunId");
       sessionStorage.removeItem("taskWidget.dismissedRunId");
     } catch {}
+    // Clear live log DOM and buffer
+    rawLogLines = [];
+    if (logEl) logEl.innerHTML = "";
   }
 
   renderTaskList();
@@ -1356,28 +1416,10 @@ export async function initPage() {
           ) {
             const summary = summarizeProgressLine(line);
             if (summary) {
-              const first = !currentLogEl.textContent;
-              currentLogEl.textContent +=
-                (currentLogEl.textContent ? "\n" : "") + summary;
-              currentLogEl.scrollTop = currentLogEl.scrollHeight;
-
-              // Auto-hide overlay after first real log line
-              if (first) {
-                const overlay = document.getElementById("svc-log-overlay");
-                if (overlay) overlay.hidden = true;
-              }
+              appendToLiveLog(summary);
             }
           } else {
-            const first = !currentLogEl.textContent;
-            currentLogEl.textContent +=
-              (currentLogEl.textContent ? "\n" : "") + `[SR] ${line}`;
-            currentLogEl.scrollTop = currentLogEl.scrollHeight;
-
-            // Auto-hide overlay after first real log line
-            if (first) {
-              const overlay = document.getElementById("svc-log-overlay");
-              if (overlay) overlay.hidden = true;
-            }
+            appendToLiveLog(`[SR] ${line}`);
           }
         } catch (e) {
           console.warn("service_runner_line listener failed", e);
@@ -2212,24 +2254,16 @@ export async function initPage() {
   }
 
   function clearLog() {
-    logEl.textContent = "";
+    rawLogLines = [];
+    if (logEl) logEl.innerHTML = "";
     // Clear saved log when starting new run
     try {
       sessionStorage.removeItem("service.runnerLog");
     } catch {}
   }
   function appendLog(line) {
-    const first = !logEl.textContent;
-    logEl.textContent += (logEl.textContent ? "\n" : "") + line;
-    logEl.scrollTop = logEl.scrollHeight;
-    // Auto-hide overlay after first real log line
-    if (first) {
-      showOverlay(false);
-    }
-    // Save log to sessionStorage for restoration
-    try {
-      sessionStorage.setItem("service.runnerLog", logEl.textContent);
-    } catch {}
+    appendToLiveLog(line);
+    showOverlay(false);
   }
   function showOverlay(show) {
     // If showing, ensure it's visible; otherwise hide.

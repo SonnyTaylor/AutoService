@@ -1498,6 +1498,51 @@
   }
 }
 
+/* Live log syntax highlighting */
+[data-page="service-report"] .log-view .log-line {
+  display: inline;
+  white-space: pre-wrap;
+}
+[data-page="service-report"] .log-view .log-tag {
+  display: inline-block;
+  padding: 0 6px;
+  margin-right: 4px;
+  border-radius: 999px;
+  background: #162035;
+  color: var(--muted);
+  font-weight: 600;
+}
+[data-page="service-report"] .log-view .log-level-info {
+  background: #162035;
+  color: #8ab4ff;
+}
+[data-page="service-report"] .log-view .log-level-success {
+  background: #0f2a1a;
+  color: var(--success-color);
+}
+[data-page="service-report"] .log-view .log-level-error {
+  background: #2a1416;
+  color: var(--danger-color);
+}
+[data-page="service-report"] .log-view .log-level-warn {
+  background: #2a2514;
+  color: var(--warning-color);
+}
+[data-page="service-report"] .log-view .log-tag-sr {
+  background: #1b1f30;
+  color: #aab1ff;
+}
+[data-page="service-report"] .log-view .log-tag-progress {
+  background: #18222f;
+  color: #9fd3ff;
+}
+[data-page="service-report"] .log-view .log-tag-task {
+  background: #1a2633;
+  color: #b8e994;
+}
+[data-page="service-report"] .log-view .log-filepath {
+  color: #e6d58f;
+}
 /* Service results page */
 [data-page="service-results"] .run-header {
   display: flex;
