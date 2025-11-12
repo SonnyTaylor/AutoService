@@ -69,7 +69,9 @@ function highlightLogLine(line) {
     filepathRe,
     (m) => `<span class="log-filepath">${m}</span>`
   );
-  return `<span class="log-line">${tagsHtml}${tagsHtml ? " " : ""}${withPaths}</span>`;
+  return `<span class="log-line">${tagsHtml}${
+    tagsHtml ? " " : ""
+  }${withPaths}</span>`;
 }
 
 // Shared appender for live log (module-level so all sources use consistent rendering)
@@ -103,6 +105,98 @@ let _unlistenDone = null;
 // Module-level log polling state
 let _logPoll = { timer: null, lastTextLen: 0, busy: false, path: null };
 
+// Module-level task status sync timer for parallel execution
+let _taskStatusSyncTimer = null;
+
+/**
+ * Sync task statuses from global state to DOM (for parallel execution)
+ * This catches any tasks that completed before their DOM elements were ready
+ */
+async function syncTaskStatusesFromGlobal() {
+  const taskListEl = document.getElementById("svc-task-status");
+  if (!taskListEl) return;
+  
+  try {
+    const { getRunState } = await import("../../utils/task-state.js");
+    const runState = getRunState();
+    if (runState?.tasks && Array.isArray(runState.tasks)) {
+      runState.tasks.forEach((task, idx) => {
+        if (task?.status) {
+          const tasks = Array.from(taskListEl.children);
+          if (tasks[idx]) {
+            const taskElement = tasks[idx];
+            const statusMap = {
+              success: "success",
+              error: "failure",
+              warning: "failure",
+              skip: "skipped",
+              running: "running",
+              pending: "pending",
+            };
+            const domStatus = statusMap[task.status] || task.status;
+            
+            // Only update if status actually changed (avoid unnecessary DOM updates)
+            const currentStatus = taskElement.className.match(/task-status\s+(\w+)/)?.[1];
+            if (currentStatus !== domStatus) {
+              taskElement.className = taskElement.className
+                .split(" ")
+                .filter((c) => !["pending", "running", "success", "failure", "skipped"].includes(c))
+                .join(" ");
+              taskElement.className = `${taskElement.className} task-status ${domStatus}`.trim();
+              const badge = taskElement.querySelector(".right");
+              if (badge) {
+                if (domStatus === "success") {
+                  badge.innerHTML = '<span class="badge ok">Success</span>';
+                } else if (domStatus === "failure") {
+                  badge.innerHTML = '<span class="badge fail">Failure</span>';
+                } else if (domStatus === "skipped") {
+                  badge.innerHTML = '<span class="badge skipped">Skipped</span>';
+                } else if (domStatus === "running") {
+                  badge.innerHTML = '<span class="badge running"><span class="dot"></span> Running</span>';
+                } else if (domStatus === "pending") {
+                  badge.innerHTML = '<span class="badge pending">Pending</span>';
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+  } catch (e) {
+    // Ignore sync errors
+  }
+}
+
+/**
+ * Start periodic task status sync (for parallel execution)
+ */
+function startTaskStatusSync() {
+  // Clear any existing timer
+  if (_taskStatusSyncTimer) {
+    clearInterval(_taskStatusSyncTimer);
+  }
+  
+  // Sync every 500ms while running (catches fast parallel tasks)
+  _taskStatusSyncTimer = setInterval(() => {
+    if (_isRunning) {
+      syncTaskStatusesFromGlobal();
+    } else {
+      // Stop syncing when run is complete
+      stopTaskStatusSync();
+    }
+  }, 500);
+}
+
+/**
+ * Stop periodic task status sync
+ */
+function stopTaskStatusSync() {
+  if (_taskStatusSyncTimer) {
+    clearInterval(_taskStatusSyncTimer);
+    _taskStatusSyncTimer = null;
+  }
+}
+
 /**
  * Process status line markers from Python runner (module-level for event persistence)
  * @param {string} line - Log line to process
@@ -130,26 +224,47 @@ async function processStatusLine(line) {
   };
 
   // Helper to update task status DOM
+  // Uses requestAnimationFrame to ensure DOM updates happen even with rapid parallel updates
   const updateTaskStatusDom = (taskIndex, status) => {
     if (!taskListEl) return; // Skip if not on page
 
-    const tasks = Array.from(taskListEl.children);
-    if (tasks[taskIndex]) {
-      tasks[taskIndex].className = `task-status ${status}`;
-      const badge = tasks[taskIndex].querySelector(".right");
-      if (badge) {
-        if (status === "running") {
-          badge.innerHTML =
-            '<span class="badge running"><span class="dot"></span> Running</span>';
-        } else if (status === "success") {
-          badge.innerHTML = '<span class="badge ok">Success</span>';
-        } else if (status === "failure") {
-          badge.innerHTML = '<span class="badge fail">Failure</span>';
-        } else if (status === "skipped") {
-          badge.innerHTML = '<span class="badge skipped">Skipped</span>';
+    // Use requestAnimationFrame to batch rapid updates and ensure DOM is ready
+    requestAnimationFrame(() => {
+      // Re-query the element list in case it changed
+      const tasks = Array.from(taskListEl.children);
+      if (tasks[taskIndex]) {
+        const taskElement = tasks[taskIndex];
+        // Update class name
+        taskElement.className = taskElement.className
+          .split(" ")
+          .filter(
+            (c) =>
+              !["pending", "running", "success", "failure", "skipped"].includes(
+                c
+              )
+          )
+          .join(" ");
+        taskElement.className =
+          `${taskElement.className} task-status ${status}`.trim();
+
+        // Update badge
+        const badge = taskElement.querySelector(".right");
+        if (badge) {
+          if (status === "running") {
+            badge.innerHTML =
+              '<span class="badge running"><span class="dot"></span> Running</span>';
+          } else if (status === "success") {
+            badge.innerHTML = '<span class="badge ok">Success</span>';
+          } else if (status === "failure") {
+            badge.innerHTML = '<span class="badge fail">Failure</span>';
+          } else if (status === "skipped") {
+            badge.innerHTML = '<span class="badge skipped">Skipped</span>';
+          } else if (status === "pending") {
+            badge.innerHTML = '<span class="badge pending">Pending</span>';
+          }
         }
       }
-    }
+    });
   };
 
   // Helper to update the summary UI from global state metrics (when on runner page)
@@ -157,7 +272,9 @@ async function processStatusLine(line) {
     const summaryEl = document.getElementById("svc-summary");
     if (!summaryEl) return; // Only when runner page is visible
     try {
-      const { getProgressMetrics, getRunState } = await import("../../utils/task-state.js");
+      const { getProgressMetrics, getRunState } = await import(
+        "../../utils/task-state.js"
+      );
       const metrics = getProgressMetrics();
       const runState = getRunState();
       const total = metrics.total || 0;
@@ -165,10 +282,14 @@ async function processStatusLine(line) {
       const runningName = metrics.currentTask
         ? metrics.currentTask.label
         : null;
-      
+
       // Check if run is completed - don't update if so (let showSummary handle it)
       const overallStatus = runState?.overallStatus;
-      if (overallStatus === "completed" || overallStatus === "error" || overallStatus === "stopped") {
+      if (
+        overallStatus === "completed" ||
+        overallStatus === "error" ||
+        overallStatus === "stopped"
+      ) {
         // Run is finished, don't overwrite the completion message
         return;
       }
@@ -243,8 +364,37 @@ async function processStatusLine(line) {
       updateGlobalTaskStatus(taskIndex, "success");
     }
 
-    // Then update DOM if available
-    updateTaskStatusDom(taskIndex, "success");
+    // Then update DOM immediately (don't wait for requestAnimationFrame for completion)
+    // This ensures fast tasks update immediately, even if they complete before TASK_START is processed
+    if (taskListEl) {
+      // Use a small retry mechanism in case DOM isn't ready yet (for very fast parallel tasks)
+      const updateDom = (retries = 5) => {
+        const tasks = Array.from(taskListEl.children);
+        if (tasks[taskIndex]) {
+          const taskElement = tasks[taskIndex];
+          taskElement.className = taskElement.className
+            .split(" ")
+            .filter(
+              (c) =>
+                !["pending", "running", "success", "failure", "skipped"].includes(
+                  c
+                )
+            )
+            .join(" ");
+          taskElement.className =
+            `${taskElement.className} task-status success`.trim();
+          const badge = taskElement.querySelector(".right");
+          if (badge) {
+            badge.innerHTML = '<span class="badge ok">Success</span>';
+          }
+        } else if (retries > 0) {
+          // DOM element not ready yet, retry after a short delay
+          setTimeout(() => updateDom(retries - 1), 100);
+        }
+      };
+      updateDom();
+    }
+
     appendToLog(`[SUCCESS] Completed: ${taskType}`);
     await updateSummaryFromGlobal();
     return;
@@ -261,8 +411,34 @@ async function processStatusLine(line) {
       updateGlobalTaskStatus(taskIndex, "error");
     }
 
-    // Then update DOM if available
-    updateTaskStatusDom(taskIndex, "failure");
+    // Then update DOM immediately with retry for fast parallel tasks
+    if (taskListEl) {
+      const updateDom = (retries = 5) => {
+        const tasks = Array.from(taskListEl.children);
+        if (tasks[taskIndex]) {
+          const taskElement = tasks[taskIndex];
+          taskElement.className = taskElement.className
+            .split(" ")
+            .filter(
+              (c) =>
+                !["pending", "running", "success", "failure", "skipped"].includes(
+                  c
+                )
+            )
+            .join(" ");
+          taskElement.className =
+            `${taskElement.className} task-status failure`.trim();
+          const badge = taskElement.querySelector(".right");
+          if (badge) {
+            badge.innerHTML = '<span class="badge fail">Failure</span>';
+          }
+        } else if (retries > 0) {
+          setTimeout(() => updateDom(retries - 1), 100);
+        }
+      };
+      updateDom();
+    }
+
     appendToLog(`[ERROR] Failed: ${taskType} - ${reason}`);
     await updateSummaryFromGlobal();
     return;
@@ -279,8 +455,34 @@ async function processStatusLine(line) {
       updateGlobalTaskStatus(taskIndex, "skip");
     }
 
-    // Then update DOM if available
-    updateTaskStatusDom(taskIndex, "skipped");
+    // Then update DOM immediately with retry for fast parallel tasks
+    if (taskListEl) {
+      const updateDom = (retries = 5) => {
+        const tasks = Array.from(taskListEl.children);
+        if (tasks[taskIndex]) {
+          const taskElement = tasks[taskIndex];
+          taskElement.className = taskElement.className
+            .split(" ")
+            .filter(
+              (c) =>
+                !["pending", "running", "success", "failure", "skipped"].includes(
+                  c
+                )
+            )
+            .join(" ");
+          taskElement.className =
+            `${taskElement.className} task-status skipped`.trim();
+          const badge = taskElement.querySelector(".right");
+          if (badge) {
+            badge.innerHTML = '<span class="badge skipped">Skipped</span>';
+          }
+        } else if (retries > 0) {
+          setTimeout(() => updateDom(retries - 1), 100);
+        }
+      };
+      updateDom();
+    }
+
     appendToLog(`[WARNING] Skipped: ${taskType} - ${reason}`);
     await updateSummaryFromGlobal();
     return;
@@ -421,6 +623,49 @@ async function processStatusLine(line) {
           };
           if (status && statusMap[status]) {
             updateGlobalTaskStatus(idx, statusMap[status]);
+            // Also update DOM immediately for parallel execution
+            updateTaskStatusDom(idx, statusMap[status]);
+          }
+        });
+      }
+
+      // Also sync from results array if available (for parallel execution)
+      // This is critical for parallel execution where tasks complete out of order
+      if (obj?.results && Array.isArray(obj.results) && taskListEl) {
+        obj.results.forEach((result, idx) => {
+          if (result?.task_type) {
+            let status = "pending";
+            const resultStatus = result.status?.toLowerCase();
+            if (resultStatus === "success") {
+              status = "success";
+            } else if (resultStatus === "failure" || resultStatus === "error") {
+              status = "failure";
+            } else if (resultStatus === "skipped") {
+              status = "skipped";
+            }
+            // Only update if we have a valid status
+            if (status !== "pending") {
+              // Update immediately (synchronously) to catch fast tasks
+              const tasks = Array.from(taskListEl.children);
+              if (tasks[idx]) {
+                const taskElement = tasks[idx];
+                taskElement.className = taskElement.className
+                  .split(" ")
+                  .filter((c) => !["pending", "running", "success", "failure", "skipped"].includes(c))
+                  .join(" ");
+                taskElement.className = `${taskElement.className} task-status ${status}`.trim();
+                const badge = taskElement.querySelector(".right");
+                if (badge) {
+                  if (status === "success") {
+                    badge.innerHTML = '<span class="badge ok">Success</span>';
+                  } else if (status === "failure") {
+                    badge.innerHTML = '<span class="badge fail">Failure</span>';
+                  } else if (status === "skipped") {
+                    badge.innerHTML = '<span class="badge skipped">Skipped</span>';
+                  }
+                }
+              }
+            }
           }
         });
       }
@@ -459,12 +704,42 @@ async function processStatusLine(line) {
           summaryEl.classList.toggle("ok", !!ok);
           summaryEl.classList.toggle("fail", !ok);
           // Hide progress bar when completed
-          const summaryProgWrap = document.getElementById("svc-summary-progress");
-          if (summaryProgWrap) summaryProgWrap.setAttribute("aria-hidden", "true");
+          const summaryProgWrap = document.getElementById(
+            "svc-summary-progress"
+          );
+          if (summaryProgWrap)
+            summaryProgWrap.setAttribute("aria-hidden", "true");
         }
       } else {
         // Non-final progress JSON: update summary to reflect current progress
         await updateSummaryFromGlobal();
+      }
+
+      // Sync all task statuses from global state to DOM (for parallel execution)
+      // This ensures UI stays in sync even with rapid updates
+      if (taskListEl && updateGlobalTaskStatus) {
+        try {
+          const { getRunState } = await import("../../utils/task-state.js");
+          const runState = getRunState();
+          if (runState?.tasks && Array.isArray(runState.tasks)) {
+            runState.tasks.forEach((task, idx) => {
+              if (task?.status) {
+                const statusMap = {
+                  success: "success",
+                  error: "failure",
+                  warning: "failure",
+                  skip: "skipped",
+                  running: "running",
+                  pending: "pending",
+                };
+                const domStatus = statusMap[task.status] || task.status;
+                updateTaskStatusDom(idx, domStatus);
+              }
+            });
+          }
+        } catch (e) {
+          // Ignore sync errors
+        }
       }
     } catch (e) {
       console.warn("Failed to parse progress JSON:", e);
@@ -723,7 +998,7 @@ export async function initPage() {
     label: (t && t.ui_label) || friendlyTaskLabel(t.type),
     status: "pending", // pending | running | success | failure | skipped
   }));
-  
+
   // Check if AI summary is enabled and add it as a task
   let aiSummaryEnabled = false;
   try {
@@ -735,7 +1010,7 @@ export async function initPage() {
   } catch (e) {
     // Ignore
   }
-  
+
   if (aiSummaryEnabled) {
     taskState.push({
       id: taskState.length,
@@ -1074,6 +1349,10 @@ export async function initPage() {
     if (stopBtn) stopBtn.disabled = false;
     if (pauseResumeBtn) pauseResumeBtn.disabled = false;
     if (skipBtn) skipBtn.disabled = false;
+    
+    // Start periodic task status sync for parallel execution
+    // This ensures fast tasks that complete before DOM is ready get updated
+    startTaskStatusSync();
     // Keep back button enabled so users can navigate away during run
     // New service: clear any previously cached results so navigating back won't show stale data
     clearFinalReportCache();
@@ -1178,6 +1457,7 @@ export async function initPage() {
         });
 
         _isRunning = false;
+        stopTaskStatusSync();
         console.log("[Runner] Client-only run completed, re-enabling controls");
         showOverlay(false);
         backBtn.disabled = false;
@@ -1198,7 +1478,7 @@ export async function initPage() {
         tasks: runnerTasks,
       };
 
-      // Include pause_between_tasks preference if enabled in the pending run
+      // Include pause_between_tasks and parallel_execution preferences if enabled in the pending run
       try {
         const pendingRunRaw = sessionStorage.getItem("service.pendingRun");
         if (pendingRunRaw) {
@@ -1206,9 +1486,15 @@ export async function initPage() {
           if (pendingRun.pause_between_tasks === true) {
             runPlanPayload.pause_between_tasks = true;
           }
+          if (pendingRun.parallel_execution === true) {
+            runPlanPayload.parallel_execution = true;
+          }
         }
       } catch (e) {
-        console.warn("[Runner] Failed to include pause_between_tasks in plan:", e);
+        console.warn(
+          "[Runner] Failed to include execution preferences in plan:",
+          e
+        );
       }
 
       // Add metadata if available
@@ -1267,6 +1553,7 @@ export async function initPage() {
           handleFinalResult(mergeClientWithRunner(_clientResults, result));
           // Fallback is synchronous to completion; re-enable controls now
           _isRunning = false;
+          stopTaskStatusSync();
           console.log("[Runner] Fallback completed, re-enabling controls");
           showOverlay(false);
           if (runnerControls) runnerControls.hidden = true;
@@ -1285,6 +1572,7 @@ export async function initPage() {
         const result = await runRunner(jsonArg);
         handleFinalResult(mergeClientWithRunner(_clientResults, result));
         _isRunning = false;
+        stopTaskStatusSync();
         console.log("[Runner] Shell fallback completed, re-enabling controls");
         showOverlay(false);
         if (runnerControls) runnerControls.hidden = true;
@@ -1303,6 +1591,7 @@ export async function initPage() {
       console.error("[Runner] Caught error during run:", e);
       showSummary(false, true); // Error during run - trigger alerts
       _isRunning = false;
+      stopTaskStatusSync();
       console.log("[Runner] Error handler re-enabling controls");
       showOverlay(false);
       if (runnerControls) runnerControls.hidden = true;
@@ -1435,34 +1724,46 @@ export async function initPage() {
         try {
           // Capture task durations for time estimation
           try {
-            const { normalizeTaskParams, isParameterBasedTask } = await import("../../utils/task-time-estimates.js");
+            const { normalizeTaskParams, isParameterBasedTask } = await import(
+              "../../utils/task-time-estimates.js"
+            );
             const { core } = window.__TAURI__ || {};
             const { invoke } = core || {};
-            
+
             if (invoke && Array.isArray(finalReport.results)) {
               // Get original task definitions from run plan
               let originalTasks = [];
               try {
-                const pendingRunRaw = sessionStorage.getItem("service.pendingRun");
+                const pendingRunRaw =
+                  sessionStorage.getItem("service.pendingRun");
                 if (pendingRunRaw) {
                   const pendingRun = JSON.parse(pendingRunRaw);
-                  originalTasks = Array.isArray(pendingRun.tasks) ? pendingRun.tasks : [];
+                  originalTasks = Array.isArray(pendingRun.tasks)
+                    ? pendingRun.tasks
+                    : [];
                 }
               } catch (e) {
-                console.warn("[Task Time] Failed to load original tasks for time capture:", e);
+                console.warn(
+                  "[Task Time] Failed to load original tasks for time capture:",
+                  e
+                );
               }
 
               const timeRecords = [];
               const timestamp = Math.floor(Date.now() / 1000);
 
-              console.log(`[Task Time] Processing ${finalReport.results.length} results for time capture`);
+              console.log(
+                `[Task Time] Processing ${finalReport.results.length} results for time capture`
+              );
 
               // Match results to original tasks by index
               finalReport.results.forEach((result, idx) => {
                 // Only save successful tasks
                 const status = String(result?.status || "").toLowerCase();
                 if (status !== "success") {
-                  console.log(`[Task Time] Skipping task ${idx}: status=${status}`);
+                  console.log(
+                    `[Task Time] Skipping task ${idx}: status=${status}`
+                  );
                   return;
                 }
 
@@ -1476,7 +1777,9 @@ export async function initPage() {
                 // Skip logging for parameter-based tasks (duration is exactly determined by parameters)
                 // These tasks don't need historical data since duration can be calculated directly from params
                 if (isParameterBasedTask(taskType)) {
-                  console.log(`[Task Time] Skipping parameter-based task ${taskType}: duration is determined by parameters`);
+                  console.log(
+                    `[Task Time] Skipping parameter-based task ${taskType}: duration is determined by parameters`
+                  );
                   return;
                 }
 
@@ -1485,10 +1788,12 @@ export async function initPage() {
                 // Allow very small durations (>= 0.001) to account for rounding
                 // Tasks that round to 0.00 are still valid (just very fast)
                 if (!Number.isFinite(duration) || duration < 0) {
-                  console.log(`[Task Time] Skipping task ${idx}: invalid duration=${duration}`);
+                  console.log(
+                    `[Task Time] Skipping task ${idx}: invalid duration=${duration}`
+                  );
                   return;
                 }
-                
+
                 // If duration is 0 or very small, use a minimum of 0.01 for storage
                 // This ensures we capture fast tasks while avoiding true 0 values
                 const durationToSave = Math.max(0.01, duration);
@@ -1500,12 +1805,20 @@ export async function initPage() {
                 try {
                   paramsJson = JSON.parse(paramsHash);
                 } catch (e) {
-                  console.warn(`[Task Time] Failed to parse params hash for ${taskType}:`, e);
+                  console.warn(
+                    `[Task Time] Failed to parse params hash for ${taskType}:`,
+                    e
+                  );
                   paramsJson = {};
                 }
 
                 const paramsStr = JSON.stringify(paramsJson);
-                console.log(`[Task Time] Capturing: ${taskType}, duration=${duration}s, params=`, paramsJson, `paramsStr=`, paramsStr);
+                console.log(
+                  `[Task Time] Capturing: ${taskType}, duration=${duration}s, params=`,
+                  paramsJson,
+                  `paramsStr=`,
+                  paramsStr
+                );
 
                 timeRecords.push({
                   task_type: taskType,
@@ -1519,26 +1832,38 @@ export async function initPage() {
               if (timeRecords.length > 0) {
                 try {
                   await invoke("save_task_time", { records: timeRecords });
-                  console.log(`[Task Time] Successfully saved ${timeRecords.length} duration record(s)`);
-                  
+                  console.log(
+                    `[Task Time] Successfully saved ${timeRecords.length} duration record(s)`
+                  );
+
                   // Clear cache so estimates refresh
                   try {
-                    const { clearTaskTimeCache } = await import("../../utils/task-time-estimates.js");
+                    const { clearTaskTimeCache } = await import(
+                      "../../utils/task-time-estimates.js"
+                    );
                     clearTaskTimeCache();
                   } catch (e) {
                     // Ignore cache clear errors
                   }
                 } catch (saveError) {
-                  console.error("[Task Time] Failed to save duration records:", saveError);
+                  console.error(
+                    "[Task Time] Failed to save duration records:",
+                    saveError
+                  );
                 }
               } else {
                 console.log("[Task Time] No valid duration records to save");
               }
             } else {
-              console.log("[Task Time] No invoke available or results not an array");
+              console.log(
+                "[Task Time] No invoke available or results not an array"
+              );
             }
           } catch (error) {
-            console.error("[Task Time] Failed to capture task durations:", error);
+            console.error(
+              "[Task Time] Failed to capture task durations:",
+              error
+            );
             // Don't block report processing if time capture fails
           }
 
@@ -1558,9 +1883,16 @@ export async function initPage() {
             if (pendingRunRaw) {
               const pendingRun = JSON.parse(pendingRunRaw);
               aiSummaryEnabled = pendingRun.ai_summary_enabled === true;
-              console.log("[AI Summary] Checked preference:", aiSummaryEnabled, "from plan:", Object.keys(pendingRun));
+              console.log(
+                "[AI Summary] Checked preference:",
+                aiSummaryEnabled,
+                "from plan:",
+                Object.keys(pendingRun)
+              );
             } else {
-              console.log("[AI Summary] No pending run found in sessionStorage");
+              console.log(
+                "[AI Summary] No pending run found in sessionStorage"
+              );
             }
           } catch (e) {
             console.warn("[AI Summary] Failed to check preference:", e);
@@ -1568,16 +1900,18 @@ export async function initPage() {
 
           // Generate AI summary if enabled (before persisting)
           let aiSummaryPromise = null;
-          const aiSummaryTaskIndex = aiSummaryEnabled ? taskState.findIndex(t => t.type === "ai_summary") : -1;
-          
+          const aiSummaryTaskIndex = aiSummaryEnabled
+            ? taskState.findIndex((t) => t.type === "ai_summary")
+            : -1;
+
           if (aiSummaryEnabled) {
             try {
               const { aiClient } = await import("../../utils/ai-client.js");
               const isConfigured = await aiClient.isConfigured();
-              
+
               if (isConfigured) {
                 console.log("[AI Summary] Starting generation...");
-                
+
                 // Update AI summary task status to "running"
                 if (aiSummaryTaskIndex >= 0) {
                   // Update local task state
@@ -1585,7 +1919,8 @@ export async function initPage() {
                   renderTaskList();
                   // Update global task state (AI summary is at index = number of Python tasks)
                   if (updateGlobalTaskStatus) {
-                    const pythonTaskCount = finalReport?.results?.length || tasks.length;
+                    const pythonTaskCount =
+                      finalReport?.results?.length || tasks.length;
                     updateGlobalTaskStatus(pythonTaskCount, "running");
                   }
                   // Update summary UI to show progress with AI summary running
@@ -1594,11 +1929,18 @@ export async function initPage() {
                     const completed = taskState.filter((t) =>
                       ["success", "failure", "skipped"].includes(t.status)
                     ).length;
-                    const summaryTitleEl = document.getElementById("svc-summary-title");
-                    const summarySubEl = document.getElementById("svc-summary-sub");
-                    const summaryIconEl = document.getElementById("svc-summary-icon");
-                    const summaryProgWrap = document.getElementById("svc-summary-progress");
-                    const summaryProgBar = document.getElementById("svc-summary-progress-bar");
+                    const summaryTitleEl =
+                      document.getElementById("svc-summary-title");
+                    const summarySubEl =
+                      document.getElementById("svc-summary-sub");
+                    const summaryIconEl =
+                      document.getElementById("svc-summary-icon");
+                    const summaryProgWrap = document.getElementById(
+                      "svc-summary-progress"
+                    );
+                    const summaryProgBar = document.getElementById(
+                      "svc-summary-progress-bar"
+                    );
                     if (summaryTitleEl) {
                       summaryTitleEl.textContent = `Progress: ${completed}/${total} completed`;
                     }
@@ -1606,25 +1948,31 @@ export async function initPage() {
                       summarySubEl.textContent = "Generating AI summary...";
                     }
                     if (summaryIconEl) {
-                      summaryIconEl.innerHTML = '<span class="spinner" aria-hidden="true"></span>';
+                      summaryIconEl.innerHTML =
+                        '<span class="spinner" aria-hidden="true"></span>';
                     }
-                    if (summaryProgWrap) summaryProgWrap.removeAttribute("aria-hidden");
+                    if (summaryProgWrap)
+                      summaryProgWrap.removeAttribute("aria-hidden");
                     if (summaryProgBar) {
-                      const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+                      const pct =
+                        total > 0 ? Math.round((completed / total) * 100) : 0;
                       summaryProgBar.style.width = `${pct}%`;
                     }
                     currentSummaryEl.classList.remove("ok", "fail");
                   }
                 }
-                
+
                 // Generate summary - store promise to wait for it
                 aiSummaryPromise = aiClient
                   .generateServiceSummary(finalReport)
                   .then((summary) => {
-                    console.log("[AI Summary] Generated successfully, length:", summary.length);
+                    console.log(
+                      "[AI Summary] Generated successfully, length:",
+                      summary.length
+                    );
                     // Add summary to report object
                     finalReport.ai_summary = summary;
-                    
+
                     // Update AI summary task status to "success"
                     if (aiSummaryTaskIndex >= 0) {
                       // Update local task state
@@ -1632,16 +1980,17 @@ export async function initPage() {
                       renderTaskList();
                       // Update global task state (AI summary is at index = number of Python tasks)
                       if (updateGlobalTaskStatus) {
-                        const pythonTaskCount = finalReport?.results?.length || tasks.length;
+                        const pythonTaskCount =
+                          finalReport?.results?.length || tasks.length;
                         updateGlobalTaskStatus(pythonTaskCount, "success");
                       }
                     }
-                    
+
                     // Update persisted report
                     const updatedJson = JSON.stringify(finalReport, null, 2);
                     persistFinalReport(updatedJson);
                     lastFinalJsonString = updatedJson;
-                    
+
                     // Update displayed JSON
                     if (currentFinalJsonEl) {
                       const highlighted = hljs.highlight(updatedJson, {
@@ -1649,33 +1998,39 @@ export async function initPage() {
                       }).value;
                       currentFinalJsonEl.innerHTML = `<code class="hljs language-json">${highlighted}</code>`;
                     }
-                    
+
                     // Dispatch event to notify results page that report was updated
                     window.dispatchEvent(
                       new CustomEvent("service-report-updated", {
                         detail: { report: finalReport },
                       })
                     );
-                    
+
                     console.log("[AI Summary] Report updated with summary");
                   })
                   .catch((error) => {
                     console.error("[AI Summary] Failed to generate:", error);
-                    
+
                     // Extract user-friendly error message
                     let errorMessage = "Failed to generate summary";
                     if (error?.message) {
                       if (error.message.includes("API key")) {
                         errorMessage = "AI API key not configured";
-                      } else if (error.message.includes("connect") || error.message.includes("network")) {
+                      } else if (
+                        error.message.includes("connect") ||
+                        error.message.includes("network")
+                      ) {
                         errorMessage = "Network error - check connection";
-                      } else if (error.message.includes("rate limit") || error.message.includes("quota")) {
+                      } else if (
+                        error.message.includes("rate limit") ||
+                        error.message.includes("quota")
+                      ) {
                         errorMessage = "API rate limit exceeded";
                       } else {
                         errorMessage = error.message;
                       }
                     }
-                    
+
                     // Update AI summary task status to "failure"
                     if (aiSummaryTaskIndex >= 0) {
                       // Update local task state
@@ -1683,14 +2038,15 @@ export async function initPage() {
                       renderTaskList();
                       // Update global task state (AI summary is at index = number of Python tasks)
                       if (updateGlobalTaskStatus) {
-                        const pythonTaskCount = finalReport?.results?.length || tasks.length;
+                        const pythonTaskCount =
+                          finalReport?.results?.length || tasks.length;
                         updateGlobalTaskStatus(pythonTaskCount, "error");
                       }
                     }
-                    
+
                     // Log user-friendly error
                     appendLog(`[WARNING] AI Summary: ${errorMessage}`);
-                    
+
                     // Don't block report display - continue without summary
                   });
               } else {
@@ -1702,20 +2058,25 @@ export async function initPage() {
                   renderTaskList();
                   // Update global task state (AI summary is at index = number of Python tasks)
                   if (updateGlobalTaskStatus) {
-                    const pythonTaskCount = finalReport?.results?.length || tasks.length;
+                    const pythonTaskCount =
+                      finalReport?.results?.length || tasks.length;
                     updateGlobalTaskStatus(pythonTaskCount, "error");
                   }
                 }
               }
             } catch (error) {
-              console.error("[AI Summary] Error checking AI configuration:", error);
+              console.error(
+                "[AI Summary] Error checking AI configuration:",
+                error
+              );
               if (aiSummaryTaskIndex >= 0) {
                 // Update local task state
                 updateTaskStatus(aiSummaryTaskIndex, "failure");
                 renderTaskList();
                 // Update global task state (AI summary is at index = number of Python tasks)
                 if (updateGlobalTaskStatus) {
-                  const pythonTaskCount = finalReport?.results?.length || tasks.length;
+                  const pythonTaskCount =
+                    finalReport?.results?.length || tasks.length;
                   updateGlobalTaskStatus(pythonTaskCount, "error");
                 }
               }
@@ -1739,21 +2100,26 @@ export async function initPage() {
           // Function to update summary UI
           const updateSummaryUI = (isAIGenerating = false) => {
             if (currentSummaryEl) {
-              const summaryTitleEl = document.getElementById("svc-summary-title");
+              const summaryTitleEl =
+                document.getElementById("svc-summary-title");
               const summarySubEl = document.getElementById("svc-summary-sub");
               const summaryIconEl = document.getElementById("svc-summary-icon");
-              const summaryProgWrap = document.getElementById("svc-summary-progress");
-              const summaryProgBar = document.getElementById("svc-summary-progress-bar");
-              
+              const summaryProgWrap = document.getElementById(
+                "svc-summary-progress"
+              );
+              const summaryProgBar = document.getElementById(
+                "svc-summary-progress-bar"
+              );
+
               currentSummaryEl.hidden = false;
-              
+
               // Calculate progress including AI summary task
               const total = taskState.length;
               const completed = taskState.filter((t) =>
                 ["success", "failure", "skipped"].includes(t.status)
               ).length;
               const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
-              
+
               if (isAIGenerating) {
                 // Show progress while AI summary is being created
                 if (summaryTitleEl) {
@@ -1763,10 +2129,12 @@ export async function initPage() {
                   summarySubEl.textContent = "Generating AI summary...";
                 }
                 if (summaryIconEl) {
-                  summaryIconEl.innerHTML = '<span class="spinner" aria-hidden="true"></span>';
+                  summaryIconEl.innerHTML =
+                    '<span class="spinner" aria-hidden="true"></span>';
                 }
                 // Keep progress bar visible and update it
-                if (summaryProgWrap) summaryProgWrap.removeAttribute("aria-hidden");
+                if (summaryProgWrap)
+                  summaryProgWrap.removeAttribute("aria-hidden");
                 if (summaryProgBar) summaryProgBar.style.width = `${pct}%`;
                 // Don't turn green yet - still running
                 currentSummaryEl.classList.remove("ok", "fail");
@@ -1786,7 +2154,8 @@ export async function initPage() {
                   summaryIconEl.textContent = ok ? "✔" : "!";
                 }
                 // Hide progress bar when fully completed
-                if (summaryProgWrap) summaryProgWrap.setAttribute("aria-hidden", "true");
+                if (summaryProgWrap)
+                  summaryProgWrap.setAttribute("aria-hidden", "true");
                 // Now we can turn green/red
                 currentSummaryEl.classList.toggle("ok", !!ok);
                 currentSummaryEl.classList.toggle("fail", !ok);
@@ -1834,14 +2203,18 @@ export async function initPage() {
               .then(() => {
                 if (currentViewResultsBtn) {
                   currentViewResultsBtn.removeAttribute("disabled");
-                  console.log("[AI Summary] View Results button enabled after summary completion");
+                  console.log(
+                    "[AI Summary] View Results button enabled after summary completion"
+                  );
                 }
               })
               .catch(() => {
                 // Even if AI summary fails, enable the button
                 if (currentViewResultsBtn) {
                   currentViewResultsBtn.removeAttribute("disabled");
-                  console.log("[AI Summary] View Results button enabled (summary failed)");
+                  console.log(
+                    "[AI Summary] View Results button enabled (summary failed)"
+                  );
                 }
               });
           } else {
@@ -1931,6 +2304,7 @@ export async function initPage() {
 
           // Native run completed – re-enable UI controls
           _isRunning = false;
+          stopTaskStatusSync();
           console.log(
             "[service_runner_done] Run completed, re-enabling controls",
             {
@@ -2000,7 +2374,7 @@ export async function initPage() {
   async function handleFinalResult(result) {
     try {
       const obj = typeof result === "string" ? JSON.parse(result) : result;
-      
+
       // Check if AI summary is enabled in the run plan
       let aiSummaryEnabled = false;
       try {
@@ -2008,7 +2382,12 @@ export async function initPage() {
         if (pendingRunRaw) {
           const pendingRun = JSON.parse(pendingRunRaw);
           aiSummaryEnabled = pendingRun.ai_summary_enabled === true;
-          console.log("[AI Summary] Checked preference:", aiSummaryEnabled, "from plan:", pendingRun);
+          console.log(
+            "[AI Summary] Checked preference:",
+            aiSummaryEnabled,
+            "from plan:",
+            pendingRun
+          );
         }
       } catch (e) {
         console.warn("[AI Summary] Failed to check preference:", e);
@@ -2019,34 +2398,37 @@ export async function initPage() {
         try {
           const { aiClient } = await import("../../utils/ai-client.js");
           const isConfigured = await aiClient.isConfigured();
-          
+
           if (isConfigured) {
             console.log("[AI Summary] Starting generation...");
             // Generate summary asynchronously (don't block UI)
             aiClient
               .generateServiceSummary(obj)
               .then((summary) => {
-                console.log("[AI Summary] Generated successfully, length:", summary.length);
+                console.log(
+                  "[AI Summary] Generated successfully, length:",
+                  summary.length
+                );
                 // Add summary to report object
                 obj.ai_summary = summary;
-                
+
                 // Update persisted report
                 const updatedJson = JSON.stringify(obj, null, 2);
                 persistFinalReport(updatedJson);
-                
+
                 // Update displayed JSON
                 const highlighted = hljs.highlight(updatedJson, {
                   language: "json",
                 }).value;
                 finalJsonEl.innerHTML = `<code class="hljs language-json">${highlighted}</code>`;
-                
+
                 // Dispatch event to notify results page that report was updated
                 window.dispatchEvent(
                   new CustomEvent("service-report-updated", {
                     detail: { report: obj },
                   })
                 );
-                
+
                 console.log("[AI Summary] Report updated with summary");
               })
               .catch((error) => {
@@ -2101,7 +2483,9 @@ export async function initPage() {
       const li = document.createElement("li");
       const isAISummary = t.type === "ai_summary";
       const isLastTask = idx === taskState.length - 1;
-      li.className = `task-status ${t.status}${isAISummary ? " ai-summary-task" : ""}${isLastTask && isAISummary ? " ai-summary-separated" : ""}`;
+      li.className = `task-status ${t.status}${
+        isAISummary ? " ai-summary-task" : ""
+      }${isLastTask && isAISummary ? " ai-summary-separated" : ""}`;
       li.innerHTML = `
         <div class="left">
           <span class="idx">${String(idx + 1).padStart(2, "0")}</span>
