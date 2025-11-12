@@ -857,8 +857,15 @@ def main():
     try:
         if isinstance(input_data, dict):
             parallel_execution = bool(input_data.get("parallel_execution", False))
+            if parallel_execution:
+                logging.info("Parallel execution flag detected in input data")
+            else:
+                logging.info("Parallel execution flag not found or disabled")
     except Exception:
         parallel_execution = False
+        logging.warning(
+            "Failed to read parallel_execution flag, defaulting to sequential"
+        )
 
     all_results = []
     overall_success = True
