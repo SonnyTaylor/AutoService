@@ -229,6 +229,7 @@ class ServiceQueueBuilder {
     this.aiSummaryEnabled = false;
     this.systemRestoreEnabled = false;
     this.pauseBetweenTasks = false;
+    this.parallelExecution = false;
 
     // Search state
     this.fuse = null;
@@ -332,6 +333,7 @@ class ServiceQueueBuilder {
         aiSummaryEnabled: this.aiSummaryEnabled,
         systemRestoreEnabled: this.systemRestoreEnabled,
         pauseBetweenTasks: this.pauseBetweenTasks,
+        parallelExecution: this.parallelExecution,
       };
       sessionStorage.setItem(PERSIST_KEY, JSON.stringify(data));
     } catch {}
@@ -367,6 +369,9 @@ class ServiceQueueBuilder {
       }
       if (typeof data.pauseBetweenTasks === "boolean") {
         this.pauseBetweenTasks = data.pauseBetweenTasks;
+      }
+      if (typeof data.parallelExecution === "boolean") {
+        this.parallelExecution = data.parallelExecution;
       }
       return true;
     } catch {
@@ -725,6 +730,7 @@ class BuilderUI {
       aiSummaryWarning: document.getElementById("svc-ai-summary-warning"),
       systemRestoreToggle: document.getElementById("svc-system-restore-toggle"),
       pauseBetweenToggle: document.getElementById("svc-pause-between-toggle"),
+      parallelExecutionToggle: document.getElementById("svc-parallel-execution-toggle"),
       totalTime: document.getElementById("svc-total-time"),
     };
 
@@ -734,6 +740,7 @@ class BuilderUI {
     this.setupAISummaryToggle();
     this.setupSystemRestoreToggle();
     this.setupPauseBetweenToggle();
+    this.setupParallelExecutionToggle();
     this.setupAICreateButton();
     
     // Load time estimates asynchronously
@@ -941,6 +948,26 @@ class BuilderUI {
     toggle.addEventListener("change", () => {
       this.builder.pauseBetweenTasks = toggle.checked;
       console.log("[Builder] Pause Between Tasks toggle changed to:", toggle.checked);
+      this.builder.persist();
+      this.updateJson();
+    });
+  }
+
+  /**
+   * Setup Parallel Execution toggle
+   */
+  setupParallelExecutionToggle() {
+    const toggle = this.elements.parallelExecutionToggle;
+    if (!toggle) return;
+
+    // Set initial state from builder
+    toggle.checked = this.builder.parallelExecution;
+    console.log("[Builder] Parallel Execution toggle initialized, checked:", toggle.checked);
+
+    // Listen for changes
+    toggle.addEventListener("change", () => {
+      this.builder.parallelExecution = toggle.checked;
+      console.log("[Builder] Parallel Execution toggle changed to:", toggle.checked);
       this.builder.persist();
       this.updateJson();
     });
@@ -1912,6 +1939,7 @@ class BuilderUI {
       tasks,
       ...(this.builder.aiSummaryEnabled && { ai_summary_enabled: true }),
       ...(this.builder.pauseBetweenTasks && { pause_between_tasks: true }),
+      ...(this.builder.parallelExecution && { parallel_execution: true }),
     };
     this.lastJsonString = JSON.stringify(plan, null, 2);
     console.log("[Builder] Updated JSON, AI summary enabled:", this.builder.aiSummaryEnabled);

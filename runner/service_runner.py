@@ -7,6 +7,7 @@ report to stdout. Windows elevation is requested automatically when needed.
 
 import sys, os, ctypes, json, subprocess, argparse, logging, time
 from typing import List, Dict, Any, Callable, Optional, Tuple
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Import Sentry configuration early for error tracking
 try:
@@ -279,6 +280,237 @@ TaskResult = Dict[str, Any]
 TaskHandler = Callable[[Task], TaskResult]
 
 
+def execute_single_task(
+    task: Task,
+    task_index: int,
+    total_tasks: int,
+    control_file_path: Optional[str],
+    all_results: List[TaskResult],
+    overall_success_ref: List[bool],
+) -> Optional[TaskResult]:
+    """Execute a single task and return its result.
+
+    This is a helper function used by both sequential and parallel execution.
+    It handles task execution, logging, error handling, and result collection.
+
+    Args:
+        task: The task dictionary to execute
+        task_index: Index of the task in the task list
+        total_tasks: Total number of tasks
+        control_file_path: Path to control file for skip signals
+        all_results: List to append results to (for progress updates)
+        overall_success_ref: List with single bool element to track overall success
+
+    Returns:
+        TaskResult dictionary or None if task was skipped
+    """
+    # Check for skip signal before starting
+    action, _ = check_control_file(control_file_path)
+    if action == "skip":
+        clear_control_file(control_file_path)
+        task_type = task.get("type", "unknown")
+        logging.warning(
+            "TASK_SKIP:%d:%s - User requested skip",
+            task_index,
+            task_type,
+        )
+        flush_logs()
+        skipped_result = {
+            "task_type": task_type,
+            "status": "skipped",
+            "summary": {"reason": "User requested skip"},
+        }
+        return skipped_result
+
+    task_type = task.get("type", "")
+    handler = TASK_HANDLERS.get(task_type) if task_type else None
+
+    if not handler:
+        logging.warning(
+            "TASK_SKIP:%d:%s - No handler found for task type",
+            task_index,
+            task_type,
+        )
+        flush_logs()
+        add_breadcrumb(
+            f"No handler found for task type: {task_type}",
+            category="task",
+            level="warning",
+            task_type=task_type,
+        )
+        skipped_result = {
+            "task_type": task_type,
+            "status": "skipped",
+            "summary": {"reason": f"No handler implemented for this task type."},
+        }
+        return skipped_result
+
+    logging.info("TASK_START:%d:%s", task_index, task_type)
+    logging.info("Starting task %d/%d: %s", task_index + 1, total_tasks, task_type)
+    flush_logs()
+
+    # Add Sentry breadcrumb for task start
+    add_breadcrumb(
+        f"Starting task: {task_type}",
+        category="task",
+        level="info",
+        task_type=task_type,
+        task_index=task_index,
+        total_tasks=total_tasks,
+    )
+
+    # Wrap task execution in Sentry span for performance tracking
+    with create_task_span(task_type, task_index, total_tasks, task) as span:
+        try:
+            # Track execution time for all tasks
+            task_start_time = time.time()
+
+            # Execute handler with skip monitoring for immediate skip detection
+            result = execute_task_with_skip_monitoring(
+                handler, task, control_file_path, check_interval=0.2
+            )
+
+            # Calculate duration and add to summary if not already present
+            task_duration = time.time() - task_start_time
+            if not result.get("summary"):
+                result["summary"] = {}
+            if "duration_seconds" not in result.get("summary", {}):
+                result["summary"]["duration_seconds"] = round(task_duration, 2)
+
+            status = result.get("status", "unknown")
+
+            # Handle both "failure" and "error" as error conditions
+            if status in ("failure", "error"):
+                overall_success_ref[0] = False
+                failure_reason = result.get("summary", {}).get("reason") or result.get(
+                    "summary", {}
+                ).get("error", "Unknown error")
+                logging.error(
+                    "TASK_FAIL:%d:%s - %s",
+                    task_index,
+                    task_type,
+                    failure_reason,
+                )
+                # Capture task failure in Sentry
+                capture_task_failure(
+                    task_type=task_type,
+                    failure_reason=failure_reason,
+                    task_data=task,
+                    extra_context={
+                        "task_index": task_index,
+                        "total_tasks": total_tasks,
+                        "result_summary": result.get("summary", {}),
+                        "status_type": status,
+                    },
+                )
+                add_breadcrumb(
+                    f"Task failed: {task_type}",
+                    category="task",
+                    level="error",
+                    task_type=task_type,
+                    reason=failure_reason,
+                    status=status,
+                )
+            elif status == "skipped":
+                logging.warning(
+                    "TASK_SKIP:%d:%s - %s",
+                    task_index,
+                    task_type,
+                    result.get("summary", {}).get("reason", "Skipped"),
+                )
+                add_breadcrumb(
+                    f"Task skipped: {task_type}",
+                    category="task",
+                    level="warning",
+                    task_type=task_type,
+                    reason=result.get("summary", {}).get("reason", "Skipped"),
+                )
+            else:
+                logging.info("TASK_OK:%d:%s", task_index, task_type)
+                add_breadcrumb(
+                    f"Task completed successfully: {task_type}",
+                    category="task",
+                    level="info",
+                    task_type=task_type,
+                )
+                if span:
+                    span.set_tag("status", "success")
+
+            flush_logs()
+
+            # Log additional details if available
+            summary = result.get("summary", {})
+            if summary and isinstance(summary, dict):
+                if "output" in summary:
+                    out_text = str(summary["output"])
+                    logging.info(
+                        "Task %s completed with output: %s",
+                        task_type,
+                        out_text[:MAX_LOG_SNIPPET] + "..."
+                        if len(out_text) > MAX_LOG_SNIPPET
+                        else out_text,
+                    )
+                    flush_logs()
+                if "duration_seconds" in summary:
+                    logging.info(
+                        "Task %s took %.2f seconds",
+                        task_type,
+                        summary["duration_seconds"],
+                    )
+                    flush_logs()
+                    if span:
+                        span.set_data("duration_seconds", summary["duration_seconds"])
+
+            return result
+
+        except KeyboardInterrupt as e:
+            # Handle skip signal
+            if "skip" in str(e).lower() or "User requested skip" in str(e):
+                logging.warning(
+                    "TASK_SKIP:%d:%s - User requested skip",
+                    task_index,
+                    task_type,
+                )
+                flush_logs()
+                skipped_result = {
+                    "task_type": task_type,
+                    "status": "skipped",
+                    "summary": {"reason": "User requested skip"},
+                }
+                clear_control_file(control_file_path)
+                return skipped_result
+            else:
+                raise
+        except Exception as e:
+            overall_success_ref[0] = False
+            logging.error(
+                "TASK_FAIL:%d:%s - Exception: %s", task_index, task_type, str(e)
+            )
+            flush_logs()
+
+            # Capture exception with Sentry
+            capture_task_exception(
+                e,
+                task_type=task_type,
+                task_data=task,
+                extra_context={
+                    "task_index": task_index,
+                    "total_tasks": total_tasks,
+                },
+            )
+
+            if span:
+                span.set_tag("status", "error")
+                span.set_tag("error", True)
+
+            failure_result = {
+                "task_type": task_type,
+                "status": "failure",
+                "summary": {"reason": f"Exception during execution: {str(e)}"},
+            }
+            return failure_result
+
+
 # --- Modular Task Dispatcher ---
 # To add a new tool (e.g., 'kvrt_scan'), add a new function like 'run_kvrt_scan'
 # and then add it to this dictionary.
@@ -308,6 +540,161 @@ TASK_HANDLERS: Dict[str, TaskHandler] = {
     "system_restore": run_system_restore,
     # "windows_defender_scan": run_windows_defender_scan, # Example for the future
 }
+
+
+def execute_tasks_parallel(
+    tasks: List[Task],
+    control_file_path: Optional[str],
+    all_results: List[TaskResult],
+    overall_success_ref: List[bool],
+) -> None:
+    """Execute tasks in parallel using ThreadPoolExecutor.
+
+    System restore tasks are always run first sequentially, then remaining
+    tasks are executed in parallel.
+
+    Args:
+        tasks: List of tasks to execute
+        control_file_path: Path to control file for stop/skip signals
+        all_results: List to collect results in (maintains order)
+        overall_success_ref: List with single bool element to track overall success
+    """
+    # Separate system_restore tasks from others
+    system_restore_tasks = [t for t in tasks if t.get("type") == "system_restore"]
+    other_tasks = [t for t in tasks if t.get("type") != "system_restore"]
+
+    # Track original indices for proper result ordering
+    task_indices = {}
+    original_idx = 0
+    for task in tasks:
+        task_indices[id(task)] = original_idx
+        original_idx += 1
+
+    # Run system_restore first if present (sequential)
+    if system_restore_tasks:
+        logging.info("Running system_restore task first (sequential)")
+        flush_logs()
+        for task in system_restore_tasks:
+            idx = task_indices[id(task)]
+            result = execute_single_task(
+                task,
+                idx,
+                len(tasks),
+                control_file_path,
+                all_results,
+                overall_success_ref,
+            )
+            if result:
+                all_results.append(result)
+                # Emit progress update
+                try:
+                    progress_obj = {
+                        "type": "progress",
+                        "completed": len(all_results),
+                        "total": len(tasks),
+                        "last_result": result,
+                        "results": all_results,
+                        "overall_status": "success"
+                        if overall_success_ref[0]
+                        else "completed_with_errors",
+                    }
+                    logging.info("PROGRESS_JSON:%s", json.dumps(progress_obj))
+                    flush_logs()
+                except Exception:
+                    pass
+
+            # Check for stop signal after system restore
+            action, _ = check_control_file(control_file_path)
+            if action == "stop":
+                logging.info("RUN_STOPPED:user_requested")
+                flush_logs()
+                return
+
+    # If no other tasks, we're done
+    if not other_tasks:
+        return
+
+    # Now run remaining tasks in parallel
+    logging.info(f"Running {len(other_tasks)} tasks in parallel")
+    flush_logs()
+
+    # Use ThreadPoolExecutor with reasonable worker limit
+    max_workers = min(
+        len(other_tasks), os.cpu_count() or 4, 8
+    )  # Cap at 8 to avoid resource exhaustion
+
+    # Dictionary to store results by original index for proper ordering
+    results_by_index = {}
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Submit all tasks
+        future_to_task = {}
+        for task in other_tasks:
+            idx = task_indices[id(task)]
+            future = executor.submit(
+                execute_single_task,
+                task,
+                idx,
+                len(tasks),
+                control_file_path,
+                all_results,
+                overall_success_ref,
+            )
+            future_to_task[future] = (task, idx)
+
+        # Process completed tasks as they finish
+        for future in as_completed(future_to_task):
+            # Check for stop signal periodically
+            action, _ = check_control_file(control_file_path)
+            if action == "stop":
+                logging.info("RUN_STOPPED:user_requested - Cancelling remaining tasks")
+                flush_logs()
+                # Cancel all remaining futures
+                for f in future_to_task:
+                    if not f.done():
+                        f.cancel()
+                # Shutdown executor immediately
+                executor.shutdown(wait=False, cancel_futures=True)
+                break
+
+            # Get result
+            task, idx = future_to_task[future]
+            try:
+                result = future.result()
+                if result:
+                    results_by_index[idx] = result
+            except Exception as e:
+                # Task raised an exception (should be handled in execute_single_task, but catch just in case)
+                logging.error(f"Task {idx} raised exception: {e}")
+                flush_logs()
+                failure_result = {
+                    "task_type": task.get("type", "unknown"),
+                    "status": "failure",
+                    "summary": {"reason": f"Unexpected exception: {str(e)}"},
+                }
+                results_by_index[idx] = failure_result
+                overall_success_ref[0] = False
+
+    # Add results in original order
+    for idx in sorted(results_by_index.keys()):
+        result = results_by_index[idx]
+        all_results.append(result)
+        # Emit progress update
+        try:
+            progress_obj = {
+                "type": "progress",
+                "completed": len(all_results),
+                "total": len(tasks),
+                "last_result": result,
+                "results": all_results,
+                "overall_status": "success"
+                if overall_success_ref[0]
+                else "completed_with_errors",
+            }
+            logging.info("PROGRESS_JSON:%s", json.dumps(progress_obj))
+            flush_logs()
+        except Exception:
+            pass
 
 
 def main():
@@ -465,365 +852,407 @@ def main():
     except Exception:
         auto_pause_between_tasks = False
 
+    # Determine if we should run tasks in parallel (experimental)
+    parallel_execution = False
+    try:
+        if isinstance(input_data, dict):
+            parallel_execution = bool(input_data.get("parallel_execution", False))
+    except Exception:
+        parallel_execution = False
+
     all_results = []
     overall_success = True
 
-    for idx, task in enumerate(tasks):
-        # Note: auto-pause is handled immediately after each task completion
+    # Branch based on parallel_execution flag
+    if parallel_execution:
+        # Parallel execution mode
+        logging.info("Parallel execution mode enabled")
+        flush_logs()
 
-        # CRITICAL: Clear any lingering skip signal before checking for next task
-        # This prevents skipping the wrong task if a skip signal wasn't cleared properly
-        action, _ = check_control_file(control_file_path)
-        if action == "skip":
-            # Clear stale skip signal before starting new task
-            clear_control_file(control_file_path)
-            logging.info("Cleared stale skip signal before starting task %d", idx)
-            flush_logs()
+        # Use list reference for overall_success so it can be modified by parallel tasks
+        overall_success_ref = [overall_success]
 
-        # Check for control signals before starting task
+        execute_tasks_parallel(
+            tasks, control_file_path, all_results, overall_success_ref
+        )
+
+        # Update overall_success from reference
+        overall_success = overall_success_ref[0]
+
+        # Check final stop signal
         action, _ = check_control_file(control_file_path)
         if action == "stop":
             run_stopped = True
             logging.info("RUN_STOPPED:user_requested")
             flush_logs()
-            break
-        elif action == "pause":
-            run_paused = True
-            logging.info("RUN_PAUSED:user_requested")
-            flush_logs()
-            # Wait in pause loop until stopped or resumed
-            while run_paused:
-                time.sleep(0.5)
-                action, _ = check_control_file(control_file_path)
-                if action == "stop":
-                    run_stopped = True
-                    run_paused = False
-                    logging.info("RUN_STOPPED:user_requested")
-                    flush_logs()
-                    break
-                elif action == "resume":
-                    run_paused = False
-                    logging.info("RUN_RESUMED:user_requested")
-                    flush_logs()
-                    # Clear resume signal by removing control file
-                    clear_control_file(control_file_path)
-                    break
-            if run_stopped:
+    else:
+        # Sequential execution mode (existing logic)
+        for idx, task in enumerate(tasks):
+            # Note: auto-pause is handled immediately after each task completion
+
+            # CRITICAL: Clear any lingering skip signal before checking for next task
+            # This prevents skipping the wrong task if a skip signal wasn't cleared properly
+            action, _ = check_control_file(control_file_path)
+            if action == "skip":
+                # Clear stale skip signal before starting new task
+                clear_control_file(control_file_path)
+                logging.info("Cleared stale skip signal before starting task %d", idx)
+                flush_logs()
+
+            # Check for control signals before starting task
+            action, _ = check_control_file(control_file_path)
+            if action == "stop":
+                run_stopped = True
+                logging.info("RUN_STOPPED:user_requested")
+                flush_logs()
                 break
-        elif action == "skip":
-            # Skip current task before it starts
-            logging.warning(
-                "TASK_SKIP:%d:%s - User requested skip",
-                idx,
-                task.get("type", "unknown"),
-            )
-            flush_logs()
-            skipped_result = {
-                "task_type": task.get("type", "unknown"),
-                "status": "skipped",
-                "summary": {"reason": "User requested skip"},
-            }
-            all_results.append(skipped_result)
-            # Clear skip signal immediately
-            clear_control_file(control_file_path)
-            continue
-        task_type = task.get("type", "")
-        handler = TASK_HANDLERS.get(task_type) if task_type else None
-
-        if handler:
-            logging.info("TASK_START:%d:%s", idx, task_type)
-            logging.info("Starting task %d/%d: %s", idx + 1, len(tasks), task_type)
-            flush_logs()
-
-            # Add Sentry breadcrumb for task start
-            add_breadcrumb(
-                f"Starting task: {task_type}",
-                category="task",
-                level="info",
-                task_type=task_type,
-                task_index=idx,
-                total_tasks=len(tasks),
-            )
-
-            # Wrap task execution in Sentry span for performance tracking
-            with create_task_span(task_type, idx, len(tasks), task) as span:
-                try:
-                    # Track execution time for all tasks
-                    task_start_time = time.time()
-
-                    # Execute handler with skip monitoring for immediate skip detection
-                    # Subprocess calls within handlers use run_with_skip_check for skip detection
-                    result = execute_task_with_skip_monitoring(
-                        handler, task, control_file_path, check_interval=0.2
-                    )
-
-                    # Calculate duration and add to summary if not already present
-                    task_duration = time.time() - task_start_time
-                    if not result.get("summary"):
-                        result["summary"] = {}
-                    if "duration_seconds" not in result.get("summary", {}):
-                        result["summary"]["duration_seconds"] = round(task_duration, 2)
-
-                    status = result.get("status", "unknown")
-
-                    # Check for stop/pause after task completes
+            elif action == "pause":
+                run_paused = True
+                logging.info("RUN_PAUSED:user_requested")
+                flush_logs()
+                # Wait in pause loop until stopped or resumed
+                while run_paused:
+                    time.sleep(0.5)
                     action, _ = check_control_file(control_file_path)
                     if action == "stop":
                         run_stopped = True
-                    elif action == "pause":
-                        run_paused = True
+                        run_paused = False
+                        logging.info("RUN_STOPPED:user_requested")
+                        flush_logs()
+                        break
+                    elif action == "resume":
+                        run_paused = False
+                        logging.info("RUN_RESUMED:user_requested")
+                        flush_logs()
+                        # Clear resume signal by removing control file
+                        clear_control_file(control_file_path)
+                        break
+                if run_stopped:
+                    break
+            elif action == "skip":
+                # Skip current task before it starts
+                logging.warning(
+                    "TASK_SKIP:%d:%s - User requested skip",
+                    idx,
+                    task.get("type", "unknown"),
+                )
+                flush_logs()
+                skipped_result = {
+                    "task_type": task.get("type", "unknown"),
+                    "status": "skipped",
+                    "summary": {"reason": "User requested skip"},
+                }
+                all_results.append(skipped_result)
+                # Clear skip signal immediately
+                clear_control_file(control_file_path)
+                continue
+            task_type = task.get("type", "")
+            handler = TASK_HANDLERS.get(task_type) if task_type else None
 
-                    # Handle both "failure" and "error" as error conditions
-                    if status in ("failure", "error"):
-                        overall_success = False
-                        failure_reason = result.get("summary", {}).get(
-                            "reason"
-                        ) or result.get("summary", {}).get("error", "Unknown error")
-                        logging.error(
-                            "TASK_FAIL:%d:%s - %s",
-                            idx,
-                            task_type,
-                            failure_reason,
+            if handler:
+                logging.info("TASK_START:%d:%s", idx, task_type)
+                logging.info("Starting task %d/%d: %s", idx + 1, len(tasks), task_type)
+                flush_logs()
+
+                # Add Sentry breadcrumb for task start
+                add_breadcrumb(
+                    f"Starting task: {task_type}",
+                    category="task",
+                    level="info",
+                    task_type=task_type,
+                    task_index=idx,
+                    total_tasks=len(tasks),
+                )
+
+                # Wrap task execution in Sentry span for performance tracking
+                with create_task_span(task_type, idx, len(tasks), task) as span:
+                    try:
+                        # Track execution time for all tasks
+                        task_start_time = time.time()
+
+                        # Execute handler with skip monitoring for immediate skip detection
+                        # Subprocess calls within handlers use run_with_skip_check for skip detection
+                        result = execute_task_with_skip_monitoring(
+                            handler, task, control_file_path, check_interval=0.2
                         )
-                        # Capture task failure in Sentry with proper fingerprinting
-                        capture_task_failure(
+
+                        # Calculate duration and add to summary if not already present
+                        task_duration = time.time() - task_start_time
+                        if not result.get("summary"):
+                            result["summary"] = {}
+                        if "duration_seconds" not in result.get("summary", {}):
+                            result["summary"]["duration_seconds"] = round(
+                                task_duration, 2
+                            )
+
+                        status = result.get("status", "unknown")
+
+                        # Check for stop/pause after task completes
+                        action, _ = check_control_file(control_file_path)
+                        if action == "stop":
+                            run_stopped = True
+                        elif action == "pause":
+                            run_paused = True
+
+                        # Handle both "failure" and "error" as error conditions
+                        if status in ("failure", "error"):
+                            overall_success = False
+                            failure_reason = result.get("summary", {}).get(
+                                "reason"
+                            ) or result.get("summary", {}).get("error", "Unknown error")
+                            logging.error(
+                                "TASK_FAIL:%d:%s - %s",
+                                idx,
+                                task_type,
+                                failure_reason,
+                            )
+                            # Capture task failure in Sentry with proper fingerprinting
+                            capture_task_failure(
+                                task_type=task_type,
+                                failure_reason=failure_reason,
+                                task_data=task,
+                                extra_context={
+                                    "task_index": idx,
+                                    "total_tasks": len(tasks),
+                                    "result_summary": result.get("summary", {}),
+                                    "status_type": status,  # Track whether it was "failure" or "error"
+                                },
+                            )
+                            # Add breadcrumb for task failure (not exception, just failure/error status)
+                            add_breadcrumb(
+                                f"Task failed: {task_type}",
+                                category="task",
+                                level="error",
+                                task_type=task_type,
+                                reason=failure_reason,
+                                status=status,
+                            )
+                        elif status == "skipped":
+                            logging.warning(
+                                "TASK_SKIP:%d:%s - %s",
+                                idx,
+                                task_type,
+                                result.get("summary", {}).get("reason", "Skipped"),
+                            )
+                            add_breadcrumb(
+                                f"Task skipped: {task_type}",
+                                category="task",
+                                level="warning",
+                                task_type=task_type,
+                                reason=result.get("summary", {}).get(
+                                    "reason", "Skipped"
+                                ),
+                            )
+                        else:
+                            logging.info("TASK_OK:%d:%s", idx, task_type)
+                            add_breadcrumb(
+                                f"Task completed successfully: {task_type}",
+                                category="task",
+                                level="info",
+                                task_type=task_type,
+                            )
+
+                            # Set success status on span if available
+                            if span:
+                                span.set_tag("status", "success")
+
+                        flush_logs()
+
+                        # Auto-pause immediately after task completion if enabled (before progressing)
+                        if (
+                            auto_pause_between_tasks
+                            and not run_stopped
+                            and idx < len(tasks) - 1
+                        ):
+                            if not run_paused:
+                                run_paused = True
+                                logging.info("RUN_PAUSED:auto_pause_between_tasks")
+                                flush_logs()
+                            # Wait until user explicitly resumes or stops
+                            while run_paused:
+                                time.sleep(0.5)
+                                action, _ = check_control_file(control_file_path)
+                                if action == "stop":
+                                    run_stopped = True
+                                    run_paused = False
+                                    logging.info("RUN_STOPPED:user_requested")
+                                    flush_logs()
+                                    break
+                                elif action == "resume":
+                                    run_paused = False
+                                    logging.info("RUN_RESUMED:user_requested")
+                                    flush_logs()
+                                    # Clear resume signal by removing control file
+                                    clear_control_file(control_file_path)
+                                    break
+
+                        # Log additional details if available
+                        summary = result.get("summary", {})
+                        if summary and isinstance(summary, dict):
+                            if "output" in summary:
+                                out_text = str(
+                                    summary["output"]
+                                )  # ensure sliceable string
+                                logging.info(
+                                    "Task %s completed with output: %s",
+                                    task_type,
+                                    out_text[:MAX_LOG_SNIPPET] + "..."
+                                    if len(out_text) > MAX_LOG_SNIPPET
+                                    else out_text,
+                                )
+                                flush_logs()
+                            if "duration_seconds" in summary:
+                                logging.info(
+                                    "Task %s took %.2f seconds",
+                                    task_type,
+                                    summary["duration_seconds"],
+                                )
+                                flush_logs()
+                                # Add duration to span if available
+                                if span:
+                                    span.set_data(
+                                        "duration_seconds", summary["duration_seconds"]
+                                    )
+
+                        all_results.append(result)
+                        # Emit incremental progress JSON line for UI consumption
+                        try:
+                            progress_obj = {
+                                "type": "progress",
+                                "completed": len(all_results),
+                                "total": len(tasks),
+                                "last_result": result,
+                                "results": all_results,
+                                "overall_status": "success"
+                                if overall_success
+                                else "completed_with_errors",
+                            }
+                            logging.info("PROGRESS_JSON:%s", json.dumps(progress_obj))
+                            flush_logs()
+                        except Exception:
+                            pass
+
+                        # Note: no pending auto-pause; immediate pause already handled above
+
+                        # If stopped or paused after task, break or pause
+                        if run_stopped:
+                            logging.info("RUN_STOPPED:user_requested")
+                            flush_logs()
+                            break
+                        elif run_paused:
+                            logging.info("RUN_PAUSED:user_requested")
+                            flush_logs()
+                            # Wait in pause loop
+                            while run_paused:
+                                time.sleep(0.5)
+                                action, _ = check_control_file(control_file_path)
+                                if action == "stop":
+                                    run_stopped = True
+                                    run_paused = False
+                                    logging.info("RUN_STOPPED:user_requested")
+                                    flush_logs()
+                                    break
+                                elif action == "resume":
+                                    run_paused = False
+                                    logging.info("RUN_RESUMED:user_requested")
+                                    flush_logs()
+                                    # Clear resume signal by removing control file
+                                    if control_file_path and os.path.exists(
+                                        control_file_path
+                                    ):
+                                        try:
+                                            os.remove(control_file_path)
+                                        except Exception:
+                                            pass
+                                    break
+                            if run_stopped:
+                                break
+
+                    except KeyboardInterrupt as e:
+                        # Handle skip signal
+                        if "skip" in str(e).lower() or "User requested skip" in str(e):
+                            logging.warning(
+                                "TASK_SKIP:%d:%s - User requested skip", idx, task_type
+                            )
+                            flush_logs()
+                            skipped_result = {
+                                "task_type": task_type,
+                                "status": "skipped",
+                                "summary": {"reason": "User requested skip"},
+                            }
+                            all_results.append(skipped_result)
+                            # Clear skip signal immediately (should already be cleared, but ensure it)
+                            clear_control_file(control_file_path)
+                            # Continue to next task
+                            continue
+                        else:
+                            raise
+                    except Exception as e:
+                        overall_success = False
+                        logging.error(
+                            "TASK_FAIL:%d:%s - Exception: %s", idx, task_type, str(e)
+                        )
+                        flush_logs()
+
+                        # Capture exception with Sentry with proper fingerprinting
+                        capture_task_exception(
+                            e,
                             task_type=task_type,
-                            failure_reason=failure_reason,
                             task_data=task,
                             extra_context={
                                 "task_index": idx,
                                 "total_tasks": len(tasks),
-                                "result_summary": result.get("summary", {}),
-                                "status_type": status,  # Track whether it was "failure" or "error"
                             },
                         )
-                        # Add breadcrumb for task failure (not exception, just failure/error status)
-                        add_breadcrumb(
-                            f"Task failed: {task_type}",
-                            category="task",
-                            level="error",
-                            task_type=task_type,
-                            reason=failure_reason,
-                            status=status,
-                        )
-                    elif status == "skipped":
-                        logging.warning(
-                            "TASK_SKIP:%d:%s - %s",
-                            idx,
-                            task_type,
-                            result.get("summary", {}).get("reason", "Skipped"),
-                        )
-                        add_breadcrumb(
-                            f"Task skipped: {task_type}",
-                            category="task",
-                            level="warning",
-                            task_type=task_type,
-                            reason=result.get("summary", {}).get("reason", "Skipped"),
-                        )
-                    else:
-                        logging.info("TASK_OK:%d:%s", idx, task_type)
-                        add_breadcrumb(
-                            f"Task completed successfully: {task_type}",
-                            category="task",
-                            level="info",
-                            task_type=task_type,
-                        )
 
-                        # Set success status on span if available
+                        # Set error status on span if available
                         if span:
-                            span.set_tag("status", "success")
+                            span.set_tag("status", "error")
+                            span.set_tag("error", True)
 
-                    flush_logs()
-
-                    # Auto-pause immediately after task completion if enabled (before progressing)
-                    if (
-                        auto_pause_between_tasks
-                        and not run_stopped
-                        and idx < len(tasks) - 1
-                    ):
-                        if not run_paused:
-                            run_paused = True
-                            logging.info("RUN_PAUSED:auto_pause_between_tasks")
-                            flush_logs()
-                        # Wait until user explicitly resumes or stops
-                        while run_paused:
-                            time.sleep(0.5)
-                            action, _ = check_control_file(control_file_path)
-                            if action == "stop":
-                                run_stopped = True
-                                run_paused = False
-                                logging.info("RUN_STOPPED:user_requested")
-                                flush_logs()
-                                break
-                            elif action == "resume":
-                                run_paused = False
-                                logging.info("RUN_RESUMED:user_requested")
-                                flush_logs()
-                                # Clear resume signal by removing control file
-                                clear_control_file(control_file_path)
-                                break
-
-                    # Log additional details if available
-                    summary = result.get("summary", {})
-                    if summary and isinstance(summary, dict):
-                        if "output" in summary:
-                            out_text = str(summary["output"])  # ensure sliceable string
-                            logging.info(
-                                "Task %s completed with output: %s",
-                                task_type,
-                                out_text[:MAX_LOG_SNIPPET] + "..."
-                                if len(out_text) > MAX_LOG_SNIPPET
-                                else out_text,
-                            )
-                            flush_logs()
-                        if "duration_seconds" in summary:
-                            logging.info(
-                                "Task %s took %.2f seconds",
-                                task_type,
-                                summary["duration_seconds"],
-                            )
-                            flush_logs()
-                            # Add duration to span if available
-                            if span:
-                                span.set_data(
-                                    "duration_seconds", summary["duration_seconds"]
-                                )
-
-                    all_results.append(result)
-                    # Emit incremental progress JSON line for UI consumption
-                    try:
-                        progress_obj = {
-                            "type": "progress",
-                            "completed": len(all_results),
-                            "total": len(tasks),
-                            "last_result": result,
-                            "results": all_results,
-                            "overall_status": "success"
-                            if overall_success
-                            else "completed_with_errors",
-                        }
-                        logging.info("PROGRESS_JSON:%s", json.dumps(progress_obj))
-                        flush_logs()
-                    except Exception:
-                        pass
-
-                    # Note: no pending auto-pause; immediate pause already handled above
-
-                    # If stopped or paused after task, break or pause
-                    if run_stopped:
-                        logging.info("RUN_STOPPED:user_requested")
-                        flush_logs()
-                        break
-                    elif run_paused:
-                        logging.info("RUN_PAUSED:user_requested")
-                        flush_logs()
-                        # Wait in pause loop
-                        while run_paused:
-                            time.sleep(0.5)
-                            action, _ = check_control_file(control_file_path)
-                            if action == "stop":
-                                run_stopped = True
-                                run_paused = False
-                                logging.info("RUN_STOPPED:user_requested")
-                                flush_logs()
-                                break
-                            elif action == "resume":
-                                run_paused = False
-                                logging.info("RUN_RESUMED:user_requested")
-                                flush_logs()
-                                # Clear resume signal by removing control file
-                                if control_file_path and os.path.exists(
-                                    control_file_path
-                                ):
-                                    try:
-                                        os.remove(control_file_path)
-                                    except Exception:
-                                        pass
-                                break
-                        if run_stopped:
-                            break
-
-                except KeyboardInterrupt as e:
-                    # Handle skip signal
-                    if "skip" in str(e).lower() or "User requested skip" in str(e):
-                        logging.warning(
-                            "TASK_SKIP:%d:%s - User requested skip", idx, task_type
-                        )
-                        flush_logs()
-                        skipped_result = {
+                        failure_result = {
                             "task_type": task_type,
-                            "status": "skipped",
-                            "summary": {"reason": "User requested skip"},
+                            "status": "failure",
+                            "summary": {
+                                "reason": f"Exception during execution: {str(e)}"
+                            },
                         }
-                        all_results.append(skipped_result)
-                        # Clear skip signal immediately (should already be cleared, but ensure it)
-                        clear_control_file(control_file_path)
-                        # Continue to next task
-                        continue
-                    else:
-                        raise
-                except Exception as e:
-                    overall_success = False
-                    logging.error(
-                        "TASK_FAIL:%d:%s - Exception: %s", idx, task_type, str(e)
-                    )
-                    flush_logs()
+                        all_results.append(failure_result)
+                        try:
+                            progress_obj = {
+                                "type": "progress",
+                                "completed": len(all_results),
+                                "total": len(tasks),
+                                "last_result": failure_result,
+                                "results": all_results,
+                                "overall_status": "success"
+                                if overall_success
+                                else "completed_with_errors",
+                            }
+                            logging.info("PROGRESS_JSON:%s", json.dumps(progress_obj))
+                            flush_logs()
+                        except Exception:
+                            pass
 
-                    # Capture exception with Sentry with proper fingerprinting
-                    capture_task_exception(
-                        e,
-                        task_type=task_type,
-                        task_data=task,
-                        extra_context={
-                            "task_index": idx,
-                            "total_tasks": len(tasks),
-                        },
-                    )
-
-                    # Set error status on span if available
-                    if span:
-                        span.set_tag("status", "error")
-                        span.set_tag("error", True)
-
-                    failure_result = {
-                        "task_type": task_type,
-                        "status": "failure",
-                        "summary": {"reason": f"Exception during execution: {str(e)}"},
-                    }
-                    all_results.append(failure_result)
-                    try:
-                        progress_obj = {
-                            "type": "progress",
-                            "completed": len(all_results),
-                            "total": len(tasks),
-                            "last_result": failure_result,
-                            "results": all_results,
-                            "overall_status": "success"
-                            if overall_success
-                            else "completed_with_errors",
-                        }
-                        logging.info("PROGRESS_JSON:%s", json.dumps(progress_obj))
-                        flush_logs()
-                    except Exception:
-                        pass
-
-        else:
-            logging.warning(
-                "TASK_SKIP:%d:%s - No handler found for task type", idx, task_type
-            )
-            flush_logs()
-            add_breadcrumb(
-                f"No handler found for task type: {task_type}",
-                category="task",
-                level="warning",
-                task_type=task_type,
-            )
-            skipped_result = {
-                "task_type": task_type,
-                "status": "skipped",
-                "summary": {"reason": f"No handler implemented for this task type."},
-            }
-            all_results.append(skipped_result)
+            else:
+                logging.warning(
+                    "TASK_SKIP:%d:%s - No handler found for task type", idx, task_type
+                )
+                flush_logs()
+                add_breadcrumb(
+                    f"No handler found for task type: {task_type}",
+                    category="task",
+                    level="warning",
+                    task_type=task_type,
+                )
+                skipped_result = {
+                    "task_type": task_type,
+                    "status": "skipped",
+                    "summary": {
+                        "reason": f"No handler implemented for this task type."
+                    },
+                }
+                all_results.append(skipped_result)
             try:
                 progress_obj = {
                     "type": "progress",
