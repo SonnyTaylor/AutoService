@@ -1103,10 +1103,8 @@ export async function initPage() {
   });
 
   // Track whether a run is currently in progress to prevent duplicate clicks
-  // For new pending runs, always start with _isRunning = false
-  let _isRunning = hasNewPendingRun
-    ? false
-    : globalState && globalState.overallStatus === "running";
+  // Always derive from global state (source of truth) - will be synced below
+  let _isRunning = false;
   // Hold results for client-only tasks (not executed by Python runner)
   let _clientResults = [];
   // Prevent duplicate notifications per run - track in sessionStorage to persist across page loads
@@ -1157,9 +1155,26 @@ export async function initPage() {
     }
   }
 
+  // Check global state to determine if run is active (derive from source of truth)
+  const currentGlobalState = getRunState();
+  const isRunActiveFromGlobal = currentGlobalState && (
+    currentGlobalState.overallStatus === "running" ||
+    currentGlobalState.overallStatus === "paused"
+  );
+  
+  // Sync module-level _isRunning with global state
+  _isRunning = isRunActiveFromGlobal;
+
   // If we're reconnecting to an active run, wire up native events and update UI
   if (_isRunning) {
+    // CRITICAL: Always ensure listeners are registered when reconnecting
+    // Even if _globalEventsRegistered is true, call wireNativeEvents() to ensure
+    // DOM references are fresh and listeners are properly established
     wireNativeEvents();
+    
+    // Restart task status sync timer for active runs
+    startTaskStatusSync();
+    
     showOverlay(false);
     updateSummaryDuringRun();
     // Disable run button while running (but keep back button enabled)
@@ -1168,9 +1183,8 @@ export async function initPage() {
     runBtn.setAttribute("aria-disabled", "true");
     // Show control buttons and update status
     if (runnerControls) runnerControls.hidden = false;
-    const currentState = getRunState();
     // Use the actual state from global state, default to "running" if not set
-    const status = currentState?.overallStatus || "running";
+    const status = currentGlobalState?.overallStatus || "running";
     updateRunnerStatus(status);
     // Enable control buttons if run is active
     if (status === "running" || status === "paused") {
@@ -1644,12 +1658,13 @@ export async function initPage() {
   }
 
   function wireNativeEvents() {
-    // Only register global event listeners once
-    // But always allow this function to run to update DOM references
+    // Make this function idempotent - safe to call multiple times
+    // Always ensures listeners are registered and DOM references are fresh
     if (!window.__TAURI__?.event?.listen) return;
     const { listen } = window.__TAURI__.event;
 
-    // Register global listeners only once
+    // Register global listeners only once (idempotent check)
+    // If already registered, skip registration but function still completes successfully
     if (!_globalEventsRegistered) {
       _globalEventsRegistered = true;
 
@@ -3231,25 +3246,48 @@ export async function initPage() {
 /**
  * Cleanup function to be called when leaving the runner page.
  * Removes native event listeners to prevent memory leaks.
+ * Preserves global event listeners if a run is still active.
  */
-export function cleanupPage() {
+export async function cleanupPage() {
   console.log("[Runner] Cleaning up page resources...");
 
-  // Unlisten native event listeners
-  if (_unlistenLine) {
-    _unlistenLine();
-    _unlistenLine = null;
+  // Check if there's an active run - preserve listeners if so
+  let runIsActive = false;
+  try {
+    const { getRunState } = await import("../../utils/task-state.js");
+    const state = getRunState();
+    runIsActive = state && (
+      state.overallStatus === "running" ||
+      state.overallStatus === "paused"
+    );
+  } catch (e) {
+    console.warn("[Runner] Failed to check run state during cleanup:", e);
   }
 
-  if (_unlistenDone) {
-    _unlistenDone();
-    _unlistenDone = null;
+  // Stop task status sync timer (always stop, will restart if needed on return)
+  stopTaskStatusSync();
+
+  // Only unregister global event listeners if run is NOT active
+  // If run is active, keep listeners so they continue updating global state
+  if (!runIsActive) {
+    // Unlisten native event listeners
+    if (_unlistenLine) {
+      _unlistenLine();
+      _unlistenLine = null;
+    }
+
+    if (_unlistenDone) {
+      _unlistenDone();
+      _unlistenDone = null;
+    }
+
+    // Reset the registration flag only if run is complete
+    _globalEventsRegistered = false;
+  } else {
+    console.log("[Runner] Run is active, preserving global event listeners");
   }
 
-  // Reset the registration flag
-  _globalEventsRegistered = false;
-
-  // Clear log polling timer if active
+  // Clear log polling timer if active (this is page-specific, always clear)
   if (_logPoll && _logPoll.timer) {
     clearInterval(_logPoll.timer);
     _logPoll.timer = null;
