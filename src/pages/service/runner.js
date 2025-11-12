@@ -132,26 +132,47 @@ async function processStatusLine(line) {
   };
 
   // Helper to update task status DOM
+  // Uses requestAnimationFrame to ensure DOM updates happen even with rapid parallel updates
   const updateTaskStatusDom = (taskIndex, status) => {
     if (!taskListEl) return; // Skip if not on page
 
-    const tasks = Array.from(taskListEl.children);
-    if (tasks[taskIndex]) {
-      tasks[taskIndex].className = `task-status ${status}`;
-      const badge = tasks[taskIndex].querySelector(".right");
-      if (badge) {
-        if (status === "running") {
-          badge.innerHTML =
-            '<span class="badge running"><span class="dot"></span> Running</span>';
-        } else if (status === "success") {
-          badge.innerHTML = '<span class="badge ok">Success</span>';
-        } else if (status === "failure") {
-          badge.innerHTML = '<span class="badge fail">Failure</span>';
-        } else if (status === "skipped") {
-          badge.innerHTML = '<span class="badge skipped">Skipped</span>';
+    // Use requestAnimationFrame to batch rapid updates and ensure DOM is ready
+    requestAnimationFrame(() => {
+      // Re-query the element list in case it changed
+      const tasks = Array.from(taskListEl.children);
+      if (tasks[taskIndex]) {
+        const taskElement = tasks[taskIndex];
+        // Update class name
+        taskElement.className = taskElement.className
+          .split(" ")
+          .filter(
+            (c) =>
+              !["pending", "running", "success", "failure", "skipped"].includes(
+                c
+              )
+          )
+          .join(" ");
+        taskElement.className =
+          `${taskElement.className} task-status ${status}`.trim();
+
+        // Update badge
+        const badge = taskElement.querySelector(".right");
+        if (badge) {
+          if (status === "running") {
+            badge.innerHTML =
+              '<span class="badge running"><span class="dot"></span> Running</span>';
+          } else if (status === "success") {
+            badge.innerHTML = '<span class="badge ok">Success</span>';
+          } else if (status === "failure") {
+            badge.innerHTML = '<span class="badge fail">Failure</span>';
+          } else if (status === "skipped") {
+            badge.innerHTML = '<span class="badge skipped">Skipped</span>';
+          } else if (status === "pending") {
+            badge.innerHTML = '<span class="badge pending">Pending</span>';
+          }
         }
       }
-    }
+    });
   };
 
   // Helper to update the summary UI from global state metrics (when on runner page)
@@ -251,8 +272,30 @@ async function processStatusLine(line) {
       updateGlobalTaskStatus(taskIndex, "success");
     }
 
-    // Then update DOM if available
-    updateTaskStatusDom(taskIndex, "success");
+    // Then update DOM immediately (don't wait for requestAnimationFrame for completion)
+    // This ensures fast tasks update immediately
+    if (taskListEl) {
+      const tasks = Array.from(taskListEl.children);
+      if (tasks[taskIndex]) {
+        const taskElement = tasks[taskIndex];
+        taskElement.className = taskElement.className
+          .split(" ")
+          .filter(
+            (c) =>
+              !["pending", "running", "success", "failure", "skipped"].includes(
+                c
+              )
+          )
+          .join(" ");
+        taskElement.className =
+          `${taskElement.className} task-status success`.trim();
+        const badge = taskElement.querySelector(".right");
+        if (badge) {
+          badge.innerHTML = '<span class="badge ok">Success</span>';
+        }
+      }
+    }
+
     appendToLog(`[SUCCESS] Completed: ${taskType}`);
     await updateSummaryFromGlobal();
     return;
@@ -269,8 +312,29 @@ async function processStatusLine(line) {
       updateGlobalTaskStatus(taskIndex, "error");
     }
 
-    // Then update DOM if available
-    updateTaskStatusDom(taskIndex, "failure");
+    // Then update DOM immediately
+    if (taskListEl) {
+      const tasks = Array.from(taskListEl.children);
+      if (tasks[taskIndex]) {
+        const taskElement = tasks[taskIndex];
+        taskElement.className = taskElement.className
+          .split(" ")
+          .filter(
+            (c) =>
+              !["pending", "running", "success", "failure", "skipped"].includes(
+                c
+              )
+          )
+          .join(" ");
+        taskElement.className =
+          `${taskElement.className} task-status failure`.trim();
+        const badge = taskElement.querySelector(".right");
+        if (badge) {
+          badge.innerHTML = '<span class="badge fail">Failure</span>';
+        }
+      }
+    }
+
     appendToLog(`[ERROR] Failed: ${taskType} - ${reason}`);
     await updateSummaryFromGlobal();
     return;
@@ -287,8 +351,29 @@ async function processStatusLine(line) {
       updateGlobalTaskStatus(taskIndex, "skip");
     }
 
-    // Then update DOM if available
-    updateTaskStatusDom(taskIndex, "skipped");
+    // Then update DOM immediately
+    if (taskListEl) {
+      const tasks = Array.from(taskListEl.children);
+      if (tasks[taskIndex]) {
+        const taskElement = tasks[taskIndex];
+        taskElement.className = taskElement.className
+          .split(" ")
+          .filter(
+            (c) =>
+              !["pending", "running", "success", "failure", "skipped"].includes(
+                c
+              )
+          )
+          .join(" ");
+        taskElement.className =
+          `${taskElement.className} task-status skipped`.trim();
+        const badge = taskElement.querySelector(".right");
+        if (badge) {
+          badge.innerHTML = '<span class="badge skipped">Skipped</span>';
+        }
+      }
+    }
+
     appendToLog(`[WARNING] Skipped: ${taskType} - ${reason}`);
     await updateSummaryFromGlobal();
     return;
@@ -429,6 +514,29 @@ async function processStatusLine(line) {
           };
           if (status && statusMap[status]) {
             updateGlobalTaskStatus(idx, statusMap[status]);
+            // Also update DOM immediately for parallel execution
+            updateTaskStatusDom(idx, statusMap[status]);
+          }
+        });
+      }
+
+      // Also sync from results array if available (for parallel execution)
+      if (obj?.results && Array.isArray(obj.results) && taskListEl) {
+        obj.results.forEach((result, idx) => {
+          if (result?.task_type) {
+            let status = "pending";
+            const resultStatus = result.status?.toLowerCase();
+            if (resultStatus === "success") {
+              status = "success";
+            } else if (resultStatus === "failure" || resultStatus === "error") {
+              status = "failure";
+            } else if (resultStatus === "skipped") {
+              status = "skipped";
+            }
+            // Only update if we have a valid status
+            if (status !== "pending") {
+              updateTaskStatusDom(idx, status);
+            }
           }
         });
       }
@@ -476,6 +584,33 @@ async function processStatusLine(line) {
       } else {
         // Non-final progress JSON: update summary to reflect current progress
         await updateSummaryFromGlobal();
+      }
+
+      // Sync all task statuses from global state to DOM (for parallel execution)
+      // This ensures UI stays in sync even with rapid updates
+      if (taskListEl && updateGlobalTaskStatus) {
+        try {
+          const { getRunState } = await import("../../utils/task-state.js");
+          const runState = getRunState();
+          if (runState?.tasks && Array.isArray(runState.tasks)) {
+            runState.tasks.forEach((task, idx) => {
+              if (task?.status) {
+                const statusMap = {
+                  success: "success",
+                  error: "failure",
+                  warning: "failure",
+                  skip: "skipped",
+                  running: "running",
+                  pending: "pending",
+                };
+                const domStatus = statusMap[task.status] || task.status;
+                updateTaskStatusDom(idx, domStatus);
+              }
+            });
+          }
+        } catch (e) {
+          // Ignore sync errors
+        }
       }
     } catch (e) {
       console.warn("Failed to parse progress JSON:", e);
