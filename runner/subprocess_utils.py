@@ -56,7 +56,8 @@ def run_with_skip_check(
     control_file_path = os.environ.get("AUTOSERVICE_CONTROL_FILE")
     
     # Use Popen so we can monitor and kill the process
-    stdin_arg = subprocess.PIPE if input is not None else None
+    # Use DEVNULL for stdin when no input is provided to prevent processes from waiting for user input
+    stdin_arg = subprocess.PIPE if input is not None else subprocess.DEVNULL
     process = subprocess.Popen(
         command,
         stdin=stdin_arg,

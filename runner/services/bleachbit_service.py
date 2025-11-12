@@ -328,6 +328,17 @@ def run_bleachbit_clean(task: Dict[str, Any]) -> Dict[str, Any]:
             },
         }
 
+    # Ensure BleachBit config directory exists to prevent permission errors and hangs
+    # BleachBit tries to write to AppData\Roaming\BleachBit\bleachbit.ini
+    # If it can't write, it may retry indefinitely causing a hang
+    try:
+        import pathlib
+        config_dir = pathlib.Path.home() / "AppData" / "Roaming" / "BleachBit"
+        config_dir.mkdir(parents=True, exist_ok=True)
+        logger.debug(f"Ensured BleachBit config directory exists: {config_dir}")
+    except Exception as e:
+        logger.warning(f"Could not create BleachBit config directory: {e}. Continuing anyway.")
+
     command = [exec_path, "--clean", *options]
     logger.info(f"Executing command: {' '.join(command)}")
 
