@@ -326,6 +326,99 @@ function transformError(error, settings) {
 }
 
 // ============================================================================
+// REPORT SUMMARIZATION FOR AI
+// ============================================================================
+
+/**
+ * Configuration constants for report summarization
+ */
+const MAX_ARRAY_SIZE_BEFORE_SUMMARY = 50; // Arrays larger than this get summarized
+const ARRAY_SAMPLE_SIZE = 3; // Number of sample items to include
+const MAX_STRING_LENGTH = 500; // Truncate very long strings if needed
+
+/**
+ * Summarize large arrays in a report object for AI processing
+ * Recursively processes the report and replaces large arrays with compact summaries
+ * @param {any} value - The value to process (can be object, array, or primitive)
+ * @param {string} [key] - The key name (for context)
+ * @returns {any} Processed value with large arrays summarized
+ */
+function summarizeReportForAI(value, key = "") {
+  // Handle null/undefined
+  if (value === null || value === undefined) {
+    return value;
+  }
+
+  // Handle arrays
+  if (Array.isArray(value)) {
+    // If array is small, process each item recursively but keep the array
+    if (value.length <= MAX_ARRAY_SIZE_BEFORE_SUMMARY) {
+      return value.map((item, index) => summarizeReportForAI(item, `${key}[${index}]`));
+    }
+
+    // Large array - create summary
+    const sample = value.slice(0, ARRAY_SAMPLE_SIZE).map((item) =>
+      summarizeReportForAI(item, `${key}[sample]`)
+    );
+
+    // Calculate total_size_bytes if items have size_bytes property
+    let totalSizeBytes = null;
+    if (value.length > 0 && typeof value[0] === "object" && value[0] !== null) {
+      const hasSizeBytes = value.some(
+        (item) => typeof item === "object" && item !== null && "size_bytes" in item
+      );
+      if (hasSizeBytes) {
+        totalSizeBytes = value.reduce((sum, item) => {
+          if (typeof item === "object" && item !== null && typeof item.size_bytes === "number") {
+            return sum + item.size_bytes;
+          }
+          return sum;
+        }, 0);
+      }
+    }
+
+    // Create a descriptive note
+    const itemType = key.includes("file") ? "files" : "items";
+    const note = `${value.length} ${itemType}${key.includes("deleted") ? " deleted" : ""} (showing ${ARRAY_SAMPLE_SIZE} samples)`;
+
+    return {
+      _summary_type: "array_summary",
+      count: value.length,
+      sample,
+      ...(totalSizeBytes !== null && { total_size_bytes: totalSizeBytes }),
+      note,
+    };
+  }
+
+  // Handle objects
+  if (typeof value === "object") {
+    const summarized = {};
+    for (const [objKey, objValue] of Object.entries(value)) {
+      // Preserve important scalar values and metadata
+      if (
+        typeof objValue !== "object" ||
+        objValue === null ||
+        Array.isArray(objValue)
+      ) {
+        summarized[objKey] = summarizeReportForAI(objValue, objKey);
+      } else {
+        // Recursively process nested objects
+        summarized[objKey] = summarizeReportForAI(objValue, objKey);
+      }
+    }
+    return summarized;
+  }
+
+  // Handle strings - truncate if too long
+  if (typeof value === "string" && value.length > MAX_STRING_LENGTH) {
+    return value.substring(0, MAX_STRING_LENGTH) + "... (truncated)";
+  }
+
+  // Return primitives as-is
+  return value;
+}
+
+// ============================================================================
 // AI CLIENT API
 // ============================================================================
 
@@ -488,7 +581,10 @@ export const aiClient = {
       throw new Error("Invalid report data");
     }
 
-    // Build a summary of what was done
+    // Summarize the report to handle large arrays before processing
+    const summarizedReport = summarizeReportForAI(report);
+
+    // Build a summary of what was done (using original report for counts)
     const taskCount = report.results.length;
     const successfulTasks = report.results.filter(
       (r) => r.status === "success"
@@ -498,11 +594,37 @@ export const aiClient = {
       (r) => r.status === "warning"
     ).length;
 
-    // Extract task types and their outcomes
-    const taskSummaries = report.results.map((result) => {
+    // Extract task types and their outcomes from summarized report
+    // This ensures we don't include massive arrays in the task summaries
+    const taskSummaries = summarizedReport.results.map((result) => {
       const taskType = result.task_type || "unknown";
       const status = result.status || "unknown";
+      
+      // Extract only essential summary data (counts, totals) - avoid large arrays
       const summary = result.summary?.human_readable || {};
+      const essentialSummary = {};
+      
+      // Preserve important scalar values and totals
+      for (const [key, value] of Object.entries(summary)) {
+        // Keep scalar values, small arrays, and important totals
+        if (
+          typeof value !== "object" ||
+          value === null ||
+          (Array.isArray(value) && value.length <= 10) ||
+          key.includes("bytes") ||
+          key.includes("count") ||
+          key.includes("total") ||
+          key.includes("files_deleted") ||
+          key.includes("space_recovered")
+        ) {
+          essentialSummary[key] = value;
+        } else if (typeof value === "object" && value._summary_type === "array_summary") {
+          // Include array summaries (they're already compact)
+          essentialSummary[key] = value;
+        }
+        // Skip large arrays that weren't summarized (shouldn't happen, but safety check)
+      }
+      
       const duration = result.duration_seconds
         ? `${Math.round(result.duration_seconds)}s`
         : "";
@@ -510,7 +632,7 @@ export const aiClient = {
       return {
         type: taskType,
         status,
-        summary,
+        summary: essentialSummary,
         duration,
       };
     });
@@ -522,6 +644,7 @@ Focus on what was done and any important findings. Use a warm, professional tone
 Do not include technical jargon or error codes. Write as if speaking directly to the customer.`;
 
     // Build a more structured task summary for better AI understanding
+    // Include key metrics from summaries (like space recovered, files deleted, etc.)
     const taskDescriptions = taskSummaries
       .slice(0, 10) // Limit to first 10 tasks to avoid token limits
       .map((task) => {
@@ -531,7 +654,33 @@ Do not include technical jargon or error codes. Write as if speaking directly to
         const status = task.status === "success" ? "completed successfully" : 
                       task.status === "error" ? "encountered errors" :
                       task.status === "warning" ? "completed with warnings" : "completed";
-        return `- ${taskName}: ${status}`;
+        
+        // Add key metrics if available
+        const metrics = [];
+        const summary = task.summary || {};
+        
+        // Check for space recovered (in bytes, convert to MB/GB)
+        if (summary.space_recovered_bytes) {
+          const mb = (summary.space_recovered_bytes / (1024 * 1024)).toFixed(1);
+          metrics.push(`${mb}MB freed`);
+        }
+        
+        // Check for files deleted count
+        if (summary.files_deleted !== undefined) {
+          metrics.push(`${summary.files_deleted} files removed`);
+        } else if (summary.deleted_files?._summary_type === "array_summary") {
+          metrics.push(`${summary.deleted_files.count} files removed`);
+        }
+        
+        // Check for array summaries with counts
+        for (const [key, value] of Object.entries(summary)) {
+          if (value?._summary_type === "array_summary" && key !== "deleted_files") {
+            metrics.push(`${value.count} ${key.replace(/_/g, " ")}`);
+          }
+        }
+        
+        const metricsStr = metrics.length > 0 ? ` (${metrics.join(", ")})` : "";
+        return `- ${taskName}: ${status}${metricsStr}`;
       })
       .join("\n");
 
