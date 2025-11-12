@@ -109,6 +109,27 @@ let _logPoll = { timer: null, lastTextLen: 0, busy: false, path: null };
 let _taskStatusSyncTimer = null;
 
 /**
+ * Helper function to check if a run is currently active (running or paused).
+ * This is the single source of truth for determining if a run is in progress.
+ * @param {Object} [state] - Optional state object. If not provided, fetches from global state.
+ * @returns {boolean}
+ */
+function isRunActive(state = null) {
+  if (state === null) {
+    try {
+      state = getRunState();
+    } catch (e) {
+      console.warn("[Runner] Failed to get run state:", e);
+      return false;
+    }
+  }
+  return state && (
+    state.overallStatus === "running" ||
+    state.overallStatus === "paused"
+  );
+}
+
+/**
  * Sync task statuses from global state to DOM (for parallel execution)
  * This catches any tasks that completed before their DOM elements were ready
  */
@@ -1088,8 +1109,8 @@ export async function initPage() {
     const currentState = getRunState();
     const status = currentState?.overallStatus || "idle";
     updateRunnerStatus(status);
-    // Re-enable buttons if run is active
-    if (status === "running" || status === "paused") {
+    // Re-enable buttons if run is active (use helper for consistency)
+    if (isRunActive(currentState)) {
       if (stopBtn) stopBtn.disabled = false;
       if (pauseResumeBtn) pauseResumeBtn.disabled = false;
       if (skipBtn) skipBtn.disabled = false;
@@ -1156,11 +1177,9 @@ export async function initPage() {
   }
 
   // Check global state to determine if run is active (derive from source of truth)
+  // Cache the state to avoid multiple calls
   const currentGlobalState = getRunState();
-  const isRunActiveFromGlobal = currentGlobalState && (
-    currentGlobalState.overallStatus === "running" ||
-    currentGlobalState.overallStatus === "paused"
-  );
+  const isRunActiveFromGlobal = isRunActive(currentGlobalState);
   
   // Sync module-level _isRunning with global state
   _isRunning = isRunActiveFromGlobal;
@@ -1186,8 +1205,8 @@ export async function initPage() {
     // Use the actual state from global state, default to "running" if not set
     const status = currentGlobalState?.overallStatus || "running";
     updateRunnerStatus(status);
-    // Enable control buttons if run is active
-    if (status === "running" || status === "paused") {
+    // Enable control buttons if run is active (use helper for consistency)
+    if (isRunActive(currentGlobalState)) {
       if (stopBtn) stopBtn.disabled = false;
       if (pauseResumeBtn) pauseResumeBtn.disabled = false;
       if (skipBtn) skipBtn.disabled = false;
@@ -1206,7 +1225,8 @@ export async function initPage() {
 
   // Wire up control button handlers
   stopBtn?.addEventListener("click", async () => {
-    if (!_isRunning) return;
+    // Check global state directly to avoid stale local flag
+    if (!isRunActive()) return;
     try {
       const { core } = window.__TAURI__ || {};
       const { invoke: invokeCmd } = core || {};
@@ -1236,7 +1256,8 @@ export async function initPage() {
         await invokeCmd("resume_service_run");
         appendLog("[INFO] Resume signal sent. Run will resume.");
       } else {
-        if (!_isRunning) return;
+        // Check global state directly to avoid stale local flag
+        if (!isRunActive(state)) return;
         await invokeCmd("pause_service_run");
         appendLog(
           "[INFO] Pause signal sent. Current task will finish, then run will pause."
@@ -1248,7 +1269,8 @@ export async function initPage() {
   });
 
   skipBtn?.addEventListener("click", async () => {
-    if (!_isRunning) return;
+    // Check global state directly to avoid stale local flag
+    if (!isRunActive()) return;
     try {
       const { core } = window.__TAURI__ || {};
       const { invoke: invokeCmd } = core || {};
@@ -1327,7 +1349,8 @@ export async function initPage() {
 
   runBtn?.addEventListener("click", async () => {
     if (!tasks.length) return;
-    if (_isRunning) return; // guard against double clicks
+    // Check global state directly to avoid stale local flag
+    if (isRunActive()) return; // guard against double clicks
 
     // Prompt for service metadata if business mode is enabled
     const serviceMetadata = await promptServiceMetadata();
@@ -3252,16 +3275,16 @@ export async function cleanupPage() {
   console.log("[Runner] Cleaning up page resources...");
 
   // Check if there's an active run - preserve listeners if so
+  // Use helper function for consistency
   let runIsActive = false;
   try {
     const { getRunState } = await import("../../utils/task-state.js");
     const state = getRunState();
-    runIsActive = state && (
-      state.overallStatus === "running" ||
-      state.overallStatus === "paused"
-    );
+    runIsActive = isRunActive(state);
   } catch (e) {
     console.warn("[Runner] Failed to check run state during cleanup:", e);
+    // On error, assume run is not active to avoid resource leaks
+    runIsActive = false;
   }
 
   // Stop task status sync timer (always stop, will restart if needed on return)
