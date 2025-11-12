@@ -105,6 +105,98 @@ let _unlistenDone = null;
 // Module-level log polling state
 let _logPoll = { timer: null, lastTextLen: 0, busy: false, path: null };
 
+// Module-level task status sync timer for parallel execution
+let _taskStatusSyncTimer = null;
+
+/**
+ * Sync task statuses from global state to DOM (for parallel execution)
+ * This catches any tasks that completed before their DOM elements were ready
+ */
+async function syncTaskStatusesFromGlobal() {
+  const taskListEl = document.getElementById("svc-task-status");
+  if (!taskListEl) return;
+  
+  try {
+    const { getRunState } = await import("../../utils/task-state.js");
+    const runState = getRunState();
+    if (runState?.tasks && Array.isArray(runState.tasks)) {
+      runState.tasks.forEach((task, idx) => {
+        if (task?.status) {
+          const tasks = Array.from(taskListEl.children);
+          if (tasks[idx]) {
+            const taskElement = tasks[idx];
+            const statusMap = {
+              success: "success",
+              error: "failure",
+              warning: "failure",
+              skip: "skipped",
+              running: "running",
+              pending: "pending",
+            };
+            const domStatus = statusMap[task.status] || task.status;
+            
+            // Only update if status actually changed (avoid unnecessary DOM updates)
+            const currentStatus = taskElement.className.match(/task-status\s+(\w+)/)?.[1];
+            if (currentStatus !== domStatus) {
+              taskElement.className = taskElement.className
+                .split(" ")
+                .filter((c) => !["pending", "running", "success", "failure", "skipped"].includes(c))
+                .join(" ");
+              taskElement.className = `${taskElement.className} task-status ${domStatus}`.trim();
+              const badge = taskElement.querySelector(".right");
+              if (badge) {
+                if (domStatus === "success") {
+                  badge.innerHTML = '<span class="badge ok">Success</span>';
+                } else if (domStatus === "failure") {
+                  badge.innerHTML = '<span class="badge fail">Failure</span>';
+                } else if (domStatus === "skipped") {
+                  badge.innerHTML = '<span class="badge skipped">Skipped</span>';
+                } else if (domStatus === "running") {
+                  badge.innerHTML = '<span class="badge running"><span class="dot"></span> Running</span>';
+                } else if (domStatus === "pending") {
+                  badge.innerHTML = '<span class="badge pending">Pending</span>';
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+  } catch (e) {
+    // Ignore sync errors
+  }
+}
+
+/**
+ * Start periodic task status sync (for parallel execution)
+ */
+function startTaskStatusSync() {
+  // Clear any existing timer
+  if (_taskStatusSyncTimer) {
+    clearInterval(_taskStatusSyncTimer);
+  }
+  
+  // Sync every 500ms while running (catches fast parallel tasks)
+  _taskStatusSyncTimer = setInterval(() => {
+    if (_isRunning) {
+      syncTaskStatusesFromGlobal();
+    } else {
+      // Stop syncing when run is complete
+      stopTaskStatusSync();
+    }
+  }, 500);
+}
+
+/**
+ * Stop periodic task status sync
+ */
+function stopTaskStatusSync() {
+  if (_taskStatusSyncTimer) {
+    clearInterval(_taskStatusSyncTimer);
+    _taskStatusSyncTimer = null;
+  }
+}
+
 /**
  * Process status line markers from Python runner (module-level for event persistence)
  * @param {string} line - Log line to process
@@ -273,27 +365,34 @@ async function processStatusLine(line) {
     }
 
     // Then update DOM immediately (don't wait for requestAnimationFrame for completion)
-    // This ensures fast tasks update immediately
+    // This ensures fast tasks update immediately, even if they complete before TASK_START is processed
     if (taskListEl) {
-      const tasks = Array.from(taskListEl.children);
-      if (tasks[taskIndex]) {
-        const taskElement = tasks[taskIndex];
-        taskElement.className = taskElement.className
-          .split(" ")
-          .filter(
-            (c) =>
-              !["pending", "running", "success", "failure", "skipped"].includes(
-                c
-              )
-          )
-          .join(" ");
-        taskElement.className =
-          `${taskElement.className} task-status success`.trim();
-        const badge = taskElement.querySelector(".right");
-        if (badge) {
-          badge.innerHTML = '<span class="badge ok">Success</span>';
+      // Use a small retry mechanism in case DOM isn't ready yet (for very fast parallel tasks)
+      const updateDom = (retries = 5) => {
+        const tasks = Array.from(taskListEl.children);
+        if (tasks[taskIndex]) {
+          const taskElement = tasks[taskIndex];
+          taskElement.className = taskElement.className
+            .split(" ")
+            .filter(
+              (c) =>
+                !["pending", "running", "success", "failure", "skipped"].includes(
+                  c
+                )
+            )
+            .join(" ");
+          taskElement.className =
+            `${taskElement.className} task-status success`.trim();
+          const badge = taskElement.querySelector(".right");
+          if (badge) {
+            badge.innerHTML = '<span class="badge ok">Success</span>';
+          }
+        } else if (retries > 0) {
+          // DOM element not ready yet, retry after a short delay
+          setTimeout(() => updateDom(retries - 1), 100);
         }
-      }
+      };
+      updateDom();
     }
 
     appendToLog(`[SUCCESS] Completed: ${taskType}`);
@@ -312,27 +411,32 @@ async function processStatusLine(line) {
       updateGlobalTaskStatus(taskIndex, "error");
     }
 
-    // Then update DOM immediately
+    // Then update DOM immediately with retry for fast parallel tasks
     if (taskListEl) {
-      const tasks = Array.from(taskListEl.children);
-      if (tasks[taskIndex]) {
-        const taskElement = tasks[taskIndex];
-        taskElement.className = taskElement.className
-          .split(" ")
-          .filter(
-            (c) =>
-              !["pending", "running", "success", "failure", "skipped"].includes(
-                c
-              )
-          )
-          .join(" ");
-        taskElement.className =
-          `${taskElement.className} task-status failure`.trim();
-        const badge = taskElement.querySelector(".right");
-        if (badge) {
-          badge.innerHTML = '<span class="badge fail">Failure</span>';
+      const updateDom = (retries = 5) => {
+        const tasks = Array.from(taskListEl.children);
+        if (tasks[taskIndex]) {
+          const taskElement = tasks[taskIndex];
+          taskElement.className = taskElement.className
+            .split(" ")
+            .filter(
+              (c) =>
+                !["pending", "running", "success", "failure", "skipped"].includes(
+                  c
+                )
+            )
+            .join(" ");
+          taskElement.className =
+            `${taskElement.className} task-status failure`.trim();
+          const badge = taskElement.querySelector(".right");
+          if (badge) {
+            badge.innerHTML = '<span class="badge fail">Failure</span>';
+          }
+        } else if (retries > 0) {
+          setTimeout(() => updateDom(retries - 1), 100);
         }
-      }
+      };
+      updateDom();
     }
 
     appendToLog(`[ERROR] Failed: ${taskType} - ${reason}`);
@@ -351,27 +455,32 @@ async function processStatusLine(line) {
       updateGlobalTaskStatus(taskIndex, "skip");
     }
 
-    // Then update DOM immediately
+    // Then update DOM immediately with retry for fast parallel tasks
     if (taskListEl) {
-      const tasks = Array.from(taskListEl.children);
-      if (tasks[taskIndex]) {
-        const taskElement = tasks[taskIndex];
-        taskElement.className = taskElement.className
-          .split(" ")
-          .filter(
-            (c) =>
-              !["pending", "running", "success", "failure", "skipped"].includes(
-                c
-              )
-          )
-          .join(" ");
-        taskElement.className =
-          `${taskElement.className} task-status skipped`.trim();
-        const badge = taskElement.querySelector(".right");
-        if (badge) {
-          badge.innerHTML = '<span class="badge skipped">Skipped</span>';
+      const updateDom = (retries = 5) => {
+        const tasks = Array.from(taskListEl.children);
+        if (tasks[taskIndex]) {
+          const taskElement = tasks[taskIndex];
+          taskElement.className = taskElement.className
+            .split(" ")
+            .filter(
+              (c) =>
+                !["pending", "running", "success", "failure", "skipped"].includes(
+                  c
+                )
+            )
+            .join(" ");
+          taskElement.className =
+            `${taskElement.className} task-status skipped`.trim();
+          const badge = taskElement.querySelector(".right");
+          if (badge) {
+            badge.innerHTML = '<span class="badge skipped">Skipped</span>';
+          }
+        } else if (retries > 0) {
+          setTimeout(() => updateDom(retries - 1), 100);
         }
-      }
+      };
+      updateDom();
     }
 
     appendToLog(`[WARNING] Skipped: ${taskType} - ${reason}`);
@@ -521,6 +630,7 @@ async function processStatusLine(line) {
       }
 
       // Also sync from results array if available (for parallel execution)
+      // This is critical for parallel execution where tasks complete out of order
       if (obj?.results && Array.isArray(obj.results) && taskListEl) {
         obj.results.forEach((result, idx) => {
           if (result?.task_type) {
@@ -535,7 +645,26 @@ async function processStatusLine(line) {
             }
             // Only update if we have a valid status
             if (status !== "pending") {
-              updateTaskStatusDom(idx, status);
+              // Update immediately (synchronously) to catch fast tasks
+              const tasks = Array.from(taskListEl.children);
+              if (tasks[idx]) {
+                const taskElement = tasks[idx];
+                taskElement.className = taskElement.className
+                  .split(" ")
+                  .filter((c) => !["pending", "running", "success", "failure", "skipped"].includes(c))
+                  .join(" ");
+                taskElement.className = `${taskElement.className} task-status ${status}`.trim();
+                const badge = taskElement.querySelector(".right");
+                if (badge) {
+                  if (status === "success") {
+                    badge.innerHTML = '<span class="badge ok">Success</span>';
+                  } else if (status === "failure") {
+                    badge.innerHTML = '<span class="badge fail">Failure</span>';
+                  } else if (status === "skipped") {
+                    badge.innerHTML = '<span class="badge skipped">Skipped</span>';
+                  }
+                }
+              }
             }
           }
         });
@@ -1220,6 +1349,10 @@ export async function initPage() {
     if (stopBtn) stopBtn.disabled = false;
     if (pauseResumeBtn) pauseResumeBtn.disabled = false;
     if (skipBtn) skipBtn.disabled = false;
+    
+    // Start periodic task status sync for parallel execution
+    // This ensures fast tasks that complete before DOM is ready get updated
+    startTaskStatusSync();
     // Keep back button enabled so users can navigate away during run
     // New service: clear any previously cached results so navigating back won't show stale data
     clearFinalReportCache();
@@ -1324,6 +1457,7 @@ export async function initPage() {
         });
 
         _isRunning = false;
+        stopTaskStatusSync();
         console.log("[Runner] Client-only run completed, re-enabling controls");
         showOverlay(false);
         backBtn.disabled = false;
@@ -1419,6 +1553,7 @@ export async function initPage() {
           handleFinalResult(mergeClientWithRunner(_clientResults, result));
           // Fallback is synchronous to completion; re-enable controls now
           _isRunning = false;
+          stopTaskStatusSync();
           console.log("[Runner] Fallback completed, re-enabling controls");
           showOverlay(false);
           if (runnerControls) runnerControls.hidden = true;
@@ -1437,6 +1572,7 @@ export async function initPage() {
         const result = await runRunner(jsonArg);
         handleFinalResult(mergeClientWithRunner(_clientResults, result));
         _isRunning = false;
+        stopTaskStatusSync();
         console.log("[Runner] Shell fallback completed, re-enabling controls");
         showOverlay(false);
         if (runnerControls) runnerControls.hidden = true;
@@ -1455,6 +1591,7 @@ export async function initPage() {
       console.error("[Runner] Caught error during run:", e);
       showSummary(false, true); // Error during run - trigger alerts
       _isRunning = false;
+      stopTaskStatusSync();
       console.log("[Runner] Error handler re-enabling controls");
       showOverlay(false);
       if (runnerControls) runnerControls.hidden = true;
@@ -2167,6 +2304,7 @@ export async function initPage() {
 
           // Native run completed – re-enable UI controls
           _isRunning = false;
+          stopTaskStatusSync();
           console.log(
             "[service_runner_done] Run completed, re-enabling controls",
             {
