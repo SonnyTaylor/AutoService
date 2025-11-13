@@ -1,13 +1,13 @@
 """Trellix Stinger antivirus scan service.
 
-Executes Trellix Stinger (stinger64.exe) with configurable command-line options,
+Executes Trellix Stinger (stinger64.exe or stinger32.exe) with configurable command-line options,
 captures results, and parses the generated HTML log file for structured output.
 
 Features health monitoring during execution to detect hangs and ensure progress.
 
 Task schema (dict expected):
   type: "trellix_stinger_scan"
-  executable_path: str (required) - path to stinger64.exe or folder containing it
+  executable_path: str (required) - path to stinger64.exe, stinger32.exe, or folder containing it
   action: str (optional, default "delete") - "report" or "delete"
   include_pups: bool (optional, default False) - detect potentially unwanted programs
   logs_dir: str (optional) - directory for HTML log output (defaults to data/logs/Stinger/)
@@ -94,16 +94,16 @@ except ImportError:
 def _resolve_stinger_path(executable_path: Optional[str]) -> Optional[str]:
     """Resolve the path to Stinger executable.
 
-    Accepts either the direct path to stinger64.exe/stinger.exe or a directory
+    Accepts either the direct path to stinger64.exe, stinger32.exe, stinger.exe or a directory
     containing it. Returns None if not found.
     """
     if not executable_path:
         return None
     path = str(executable_path)
 
-    # If it's a directory, look for stinger64.exe or stinger.exe
+    # If it's a directory, look for stinger64.exe, stinger32.exe, or stinger.exe
     if os.path.isdir(path):
-        for candidate_name in ["stinger64.exe", "stinger.exe"]:
+        for candidate_name in ["stinger64.exe", "stinger32.exe", "stinger.exe"]:
             candidate = os.path.join(path, candidate_name)
             if os.path.exists(candidate):
                 return candidate
@@ -116,6 +116,23 @@ def _resolve_stinger_path(executable_path: Optional[str]) -> Optional[str]:
     return None
 
 
+def _quote_path_if_needed(path: str) -> str:
+    """Return path as-is when using subprocess.Popen with a list.
+
+    When using subprocess.Popen with a list of arguments (not shell=True),
+    Python handles argument separation automatically. We should NOT manually
+    add quotes as they become part of the argument value, which can confuse
+    the target process.
+
+    Args:
+        path: The path string (returned as-is)
+
+    Returns:
+        The path unchanged
+    """
+    return path
+
+
 def _build_stinger_command(task: Dict[str, Any]) -> Dict[str, Any]:
     """Build the Stinger command list and normalized summary of intent.
 
@@ -126,7 +143,7 @@ def _build_stinger_command(task: Dict[str, Any]) -> Dict[str, Any]:
     if not exec_path:
         return {
             "error": "'executable_path' invalid or Stinger executable not found",
-            "error_hint": "Ensure the path points to stinger64.exe or a folder containing it",
+            "error_hint": "Ensure the path points to stinger64.exe, stinger32.exe, or a folder containing it",
         }
 
     # Validate executable exists and is accessible
@@ -234,6 +251,7 @@ def _build_stinger_command(task: Dict[str, Any]) -> Dict[str, Any]:
                 "error": f"Could not create logs directory: {logs_dir_path} - {str(e)}",
                 "error_hint": "Check if the path is valid and accessible",
             }
+        # Use --REPORTPATH=path format (subprocess.Popen handles spaces automatically)
         cmd.append(f"--REPORTPATH={logs_dir_path}")
         intent["logs_dir"] = logs_dir_path
     else:
@@ -244,6 +262,7 @@ def _build_stinger_command(task: Dict[str, Any]) -> Dict[str, Any]:
     # Scan scope
     if scan_path:
         scan_path_str = str(scan_path)
+        # Use --SCANPATH=path format (subprocess.Popen handles spaces automatically)
         cmd.append(f"--SCANPATH={scan_path_str}")
         intent["scan_path"] = scan_path_str
 

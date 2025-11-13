@@ -21,7 +21,7 @@ Trellix Stinger is a specialized standalone antivirus scanner designed to detect
 ### Required
 
 - `type`: `"trellix_stinger_scan"`
-- `executable_path`: Path to `stinger64.exe` or its containing directory
+- `executable_path`: Path to `stinger64.exe`, `stinger32.exe`, or its containing directory
 
 ### Optional
 

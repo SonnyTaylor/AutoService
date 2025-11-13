@@ -40,8 +40,8 @@ export const REQUIRED_TOOLS = [
   {
     key: "trellix_stinger",
     name: "Trellix Stinger",
-    match: ["trellix_stinger", "stinger64.exe"],
-    hint: "stinger64.exe",
+    match: ["trellix_stinger", "stinger64.exe", "stinger32.exe"],
+    hint: "stinger64.exe or stinger32.exe",
     icon: "ph ph-virus",
   },
   // Prefer the CLI smartctl.exe explicitly; avoid matching gsmartcontrol.exe
