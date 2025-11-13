@@ -559,6 +559,7 @@ def _monitor_stinger_process(
     check_interval = 10  # Check every 10 seconds
     checks_performed = 0
     last_log_mtime = None
+    last_log_update_time = None  # Track when we last saw the log file update
     max_idle_seconds = 300  # 5 minutes without log activity suggests hang
 
     health_status = {
@@ -640,8 +641,12 @@ def _monitor_stinger_process(
                 latest_log = _find_latest_stinger_log(logs_dir)
                 if latest_log:
                     current_mtime = os.path.getmtime(latest_log)
+                    current_time = time.time()
+
                     if last_log_mtime is None:
+                        # First time seeing the log file - initialize tracking
                         last_log_mtime = current_mtime
+                        last_log_update_time = current_time
                         logger.debug(f"Detected Stinger log file: {latest_log}")
                         add_breadcrumb(
                             "Stinger log file detected",
@@ -650,26 +655,30 @@ def _monitor_stinger_process(
                             data={"log_file": latest_log},
                         )
                     else:
-                        idle_time = elapsed - (current_mtime - start_time)
-                        health_status["last_log_activity"] = idle_time
-
+                        # Check if log file was updated since last check
                         if current_mtime > last_log_mtime:
                             # Log file was updated - process is active
                             last_log_mtime = current_mtime
+                            last_log_update_time = current_time
                             logger.debug(
                                 f"Stinger log updated at {elapsed:.1f}s - process is active"
                             )
-                        elif idle_time > max_idle_seconds:
-                            # No log activity for too long - possible hang
-                            logger.warning(
-                                f"Stinger log hasn't been updated for {idle_time:.0f}s - possible hang"
-                            )
-                            add_breadcrumb(
-                                f"No log activity for {idle_time:.0f}s - possible hang",
-                                category="subprocess",
-                                level="warning",
-                                data={"idle_seconds": idle_time},
-                            )
+                        else:
+                            # Log file hasn't been updated - calculate idle time
+                            idle_time = current_time - last_log_update_time
+                            health_status["last_log_activity"] = idle_time
+
+                            if idle_time > max_idle_seconds:
+                                # No log activity for too long - possible hang
+                                logger.warning(
+                                    f"Stinger log hasn't been updated for {idle_time:.0f}s - possible hang"
+                                )
+                                add_breadcrumb(
+                                    f"No log activity for {idle_time:.0f}s - possible hang",
+                                    category="subprocess",
+                                    level="warning",
+                                    data={"idle_seconds": idle_time},
+                                )
             except Exception as e:
                 logger.debug(f"Error checking log file activity: {e}")
 
