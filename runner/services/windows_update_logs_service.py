@@ -433,6 +433,20 @@ Format your response as JSON with the following structure:
             "priority": analysis.get("priority", "medium").lower(),
         }
 
+    except OSError as e:
+        # OSError with errno 22 often indicates invalid URL or file path passed as base_url
+        error_msg = str(e)
+        logger.error(
+            f"AI analysis failed with OSError (likely invalid base_url or API configuration): {error_msg}"
+        )
+        sys.stderr.flush()
+        add_breadcrumb(
+            "AI analysis failed (OSError)",
+            category="task",
+            level="error",
+            data={"error": error_msg, "error_type": "OSError"},
+        )
+        return None
     except Exception as e:
         logger.warning(f"AI analysis failed: {e}")
         sys.stderr.flush()

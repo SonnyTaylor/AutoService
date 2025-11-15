@@ -19,6 +19,7 @@ import os
 import re
 import sys
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +101,7 @@ class AIClient:
             # Set API key in environment for LiteLLM
             # LiteLLM reads from environment variables based on provider
             provider_prefix = self.model.split("/")[0].lower()
-            
+
             # Map providers to their environment variable names
             provider_env_map = {
                 "openai": "OPENAI_API_KEY",
@@ -111,7 +112,7 @@ class AIClient:
                 "azure": "AZURE_API_KEY",
                 "ollama": None,  # Ollama doesn't use API keys
             }
-            
+
             # Set the appropriate environment variable
             env_var = provider_env_map.get(provider_prefix)
             if env_var and self.api_key:
@@ -119,7 +120,7 @@ class AIClient:
             elif provider_prefix == "google" and self.api_key:
                 # Google also accepts GEMINI_API_KEY
                 os.environ["GEMINI_API_KEY"] = self.api_key
-            
+
             # Handle Ollama base_url (default to localhost if not provided)
             if provider_prefix == "ollama":
                 if not self.base_url:
@@ -128,7 +129,9 @@ class AIClient:
                 if not self.api_key:
                     self.api_key = "ollama"  # LiteLLM may check for key presence
 
-            logger.info(f"Initialized AI client with LiteLLM, model: {self.model}, provider: {provider_prefix}")
+            logger.info(
+                f"Initialized AI client with LiteLLM, model: {self.model}, provider: {provider_prefix}"
+            )
         else:
             logger.info(
                 f"Initialized AI client with requests fallback, model: {self.model}"
@@ -169,7 +172,7 @@ class AIClient:
             provider = self.model.split("/")[0].lower()
         else:
             provider = "openai"  # Default if no prefix
-        
+
         if provider != "ollama" and not self.api_key:
             return {
                 "success": False,
@@ -222,7 +225,7 @@ class AIClient:
         """Use LiteLLM for completion (multi-provider support)."""
         try:
             provider = self.model.split("/")[0].lower()
-            
+
             kwargs = {
                 "model": self.model,  # Keep full model name with provider prefix for LiteLLM
                 "messages": messages,
@@ -232,8 +235,42 @@ class AIClient:
 
             # Handle base_url for providers that need it (Ollama, Azure, custom endpoints)
             if self.base_url:
-                # For Ollama, LiteLLM expects api_base parameter
-                kwargs["api_base"] = self.base_url.rstrip("/")
+                # Validate that base_url is a valid URL (not a file path)
+                base_url_clean = self.base_url.strip().rstrip("/")
+                if base_url_clean:
+                    try:
+                        parsed = urlparse(base_url_clean)
+                        # Check if it looks like a valid URL
+                        if parsed.scheme in ("http", "https"):
+                            # Valid URL with scheme
+                            kwargs["api_base"] = base_url_clean
+                        elif not parsed.scheme and "://" not in base_url_clean:
+                            # No scheme - might be hostname:port format
+                            # Check if it looks like a file path (has backslashes or starts with drive letter)
+                            if "\\" in base_url_clean or (
+                                len(base_url_clean) >= 2
+                                and base_url_clean[1] == ":"
+                                and base_url_clean[0].isalpha()
+                            ):
+                                # Looks like a Windows file path (e.g., "C:\path" or "F:\path")
+                                logger.warning(
+                                    f"Invalid base_url format (looks like file path): {self.base_url}. Skipping api_base."
+                                )
+                                sys.stderr.flush()
+                            else:
+                                # Looks like hostname:port, add http://
+                                kwargs["api_base"] = f"http://{base_url_clean}"
+                        else:
+                            # Has "://" but invalid scheme, or other invalid format
+                            logger.warning(
+                                f"Invalid base_url format: {self.base_url}. Skipping api_base."
+                            )
+                            sys.stderr.flush()
+                    except Exception as e:
+                        logger.warning(
+                            f"Failed to parse base_url '{self.base_url}': {e}. Skipping api_base."
+                        )
+                        sys.stderr.flush()
             elif provider == "ollama":
                 # Ollama should always have a base_url (defaults to localhost:11434)
                 # If somehow it's None, set it now
@@ -252,15 +289,38 @@ class AIClient:
                 elif provider == "anthropic":
                     # Anthropic supports structured outputs, but we'll use system prompt for now
                     # Add instruction to system message if not already present
-                    system_msg = next((m for m in messages if m.get("role") == "system"), None)
+                    system_msg = next(
+                        (m for m in messages if m.get("role") == "system"), None
+                    )
                     if system_msg and "JSON" not in system_msg.get("content", ""):
-                        system_msg["content"] += "\n\nIMPORTANT: You must respond with valid JSON only, no additional text."
+                        system_msg["content"] += (
+                            "\n\nIMPORTANT: You must respond with valid JSON only, no additional text."
+                        )
                 # For other providers, rely on system messages to request JSON
 
-            logger.info(f"Calling LiteLLM with model: {self.model}, api_base: {kwargs.get('api_base', 'default')}, provider: {provider}")
+            logger.info(
+                f"Calling LiteLLM with model: {self.model}, api_base: {kwargs.get('api_base', 'default')}, provider: {provider}"
+            )
             sys.stderr.flush()
 
-            response = litellm.completion(**kwargs)
+            try:
+                response = litellm.completion(**kwargs)
+            except OSError as e:
+                # OSError with errno 22 often indicates invalid argument (e.g., bad URL, file path instead of URL)
+                error_msg = str(e)
+                if "api_base" in kwargs:
+                    logger.error(
+                        f"LiteLLM OSError (likely invalid api_base URL): {error_msg}. "
+                        f"api_base was: {kwargs.get('api_base')}"
+                    )
+                    sys.stderr.flush()
+                    # Try again without api_base if it was set
+                    logger.info("Retrying without api_base parameter")
+                    sys.stderr.flush()
+                    kwargs.pop("api_base", None)
+                    response = litellm.completion(**kwargs)
+                else:
+                    raise
 
             # Extract content from response
             content = response.choices[0].message.content
@@ -370,7 +430,7 @@ def parse_json_response(content: str) -> Optional[Dict[str, Any]]:
 
     Returns:
         Parsed JSON dict if successful, None otherwise
-        
+
     Note:
         Returns a special dict with key "_model_instruction_failure" = True
         if the response appears to be plain text (not JSON) - this indicates
@@ -378,9 +438,9 @@ def parse_json_response(content: str) -> Optional[Dict[str, Any]]:
     """
     if not content or not content.strip():
         return None
-        
+
     trimmed = content.strip()
-    
+
     try:
         # First try direct parsing
         return json.loads(trimmed)
@@ -407,7 +467,10 @@ def parse_json_response(content: str) -> Optional[Dict[str, Any]]:
             else:
                 # No JSON found at all - likely plain text response
                 # Return special marker to indicate model instruction failure
-                return {"_model_instruction_failure": True, "_raw_content": content[:500]}
+                return {
+                    "_model_instruction_failure": True,
+                    "_raw_content": content[:500],
+                }
 
     except json.JSONDecodeError:
         pass
@@ -468,7 +531,7 @@ def call_ai_analysis(
             "success": False,
             "error": f"Malformed JSON in AI response. Content: {content[:500]}",
         }
-    
+
     # Check if model failed to follow JSON instructions (returned plain text)
     if isinstance(parsed, dict) and parsed.get("_model_instruction_failure"):
         raw_content = parsed.get("_raw_content", content[:500])
@@ -483,10 +546,10 @@ def call_ai_analysis(
             elif model.startswith("ollama/"):
                 provider = "ollama"
                 model_name = model.replace("ollama/", "")
-        
+
         if provider == "ollama":
             error_msg = (
-                f"The Ollama model \"{model_name}\" did not follow JSON format instructions. "
+                f'The Ollama model "{model_name}" did not follow JSON format instructions. '
                 f"This model may not be capable enough for structured responses.\n\n"
                 f"Try using a more capable model like:\n"
                 f"• llama3.2 (or newer)\n"
@@ -498,11 +561,11 @@ def call_ai_analysis(
             )
         else:
             error_msg = (
-                f"The AI model \"{model_name}\" did not follow JSON format instructions. "
+                f'The AI model "{model_name}" did not follow JSON format instructions. '
                 f"The model returned plain text instead of JSON.\n\n"
                 f"Response preview: {raw_content}"
             )
-        
+
         logger.error(f"Model instruction failure: {error_msg}")
         return {
             "success": False,
