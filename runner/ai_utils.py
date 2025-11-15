@@ -23,6 +23,34 @@ from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
+# SSL Certificate initialization for PyInstaller bundles
+# Ensure SSL certificates are available for network requests
+def _ensure_ssl_certificates():
+    """Ensure SSL certificates are configured for network requests.
+    
+    This is especially important when running as a PyInstaller bundle,
+    where certificate paths need to be explicitly set.
+    """
+    try:
+        # Check if we're running as a PyInstaller bundle
+        if getattr(sys, 'frozen', False):
+            # Try to use certifi if available
+            try:
+                import certifi
+                cert_path = certifi.where()
+                # Set environment variables that requests/urllib3 will use
+                if 'REQUESTS_CA_BUNDLE' not in os.environ:
+                    os.environ['REQUESTS_CA_BUNDLE'] = cert_path
+                if 'SSL_CERT_FILE' not in os.environ:
+                    os.environ['SSL_CERT_FILE'] = cert_path
+            except ImportError:
+                pass
+    except Exception:
+        pass
+
+# Initialize SSL certificates early
+_ensure_ssl_certificates()
+
 # Sentry integration
 try:
     from sentry_config import add_breadcrumb

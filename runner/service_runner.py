@@ -9,6 +9,57 @@ import sys, os, ctypes, json, subprocess, argparse, logging, time
 from typing import List, Dict, Any, Callable, Optional, Tuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+# SSL Certificate initialization for PyInstaller bundles
+# This ensures network requests work correctly in frozen executables
+def _init_ssl_certificates():
+    """Initialize SSL certificate paths for PyInstaller bundles.
+    
+    When running as a PyInstaller bundle, the SSL certificate bundle needs to be
+    explicitly configured. This function sets up certificate paths for requests,
+    urllib3, and other network libraries.
+    """
+    try:
+        # Check if we're running as a PyInstaller bundle
+        if getattr(sys, 'frozen', False):
+            # We're in a PyInstaller bundle
+            bundle_dir = getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
+            
+            # Try to find certifi's certificate bundle
+            try:
+                import certifi
+                cert_path = certifi.where()
+                
+                # Set environment variables for requests/urllib3
+                os.environ.setdefault('REQUESTS_CA_BUNDLE', cert_path)
+                os.environ.setdefault('CURL_CA_BUNDLE', cert_path)
+                os.environ.setdefault('SSL_CERT_FILE', cert_path)
+                
+                # Also configure urllib3 directly if available
+                try:
+                    import urllib3
+                    # urllib3 will use the environment variable, but we can also set it directly
+                    if hasattr(urllib3, 'util'):
+                        # urllib3 2.0+ uses different API
+                        try:
+                            import ssl
+                            ssl_context = ssl.create_default_context(cafile=cert_path)
+                            # Store for later use if needed
+                        except Exception:
+                            pass
+                except ImportError:
+                    pass
+                    
+            except ImportError:
+                # certifi not available - try to use system certificates
+                # On Windows, Python should use system cert store, but PyInstaller may need help
+                pass
+    except Exception:
+        # If anything fails, continue - network requests may still work with system certs
+        pass
+
+# Initialize SSL certificates early, before any network imports
+_init_ssl_certificates()
+
 # Import Sentry configuration early for error tracking
 try:
     from sentry_config import (

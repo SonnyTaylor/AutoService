@@ -26,7 +26,7 @@ target/
 src-tauri/py_build/
 src-tauri/bin/service_runner.exe
 src-tauri/build/service_runner/
-src-tauri/service_runner.spec
+# Note: service_runner.spec is tracked - it's part of the build configuration
 data/resources/bin/service_runner.exe
 
 # Top-level binaries folder
