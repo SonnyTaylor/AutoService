@@ -4,6 +4,8 @@
  * Provides UI for viewing statistics and clearing all task time estimates.
  */
 
+import { settingsManager } from "../../utils/settings-manager.js";
+
 const { invoke } = window.__TAURI__.core;
 
 /**
@@ -28,6 +30,8 @@ function formatTimestamp(timestamp) {
 export async function initializeTaskTimesSettings(root) {
   const statsContainer = root.querySelector("#task-times-stats");
   const clearBtn = root.querySelector("#task-times-clear-btn");
+  const enabledToggle = root.querySelector("#task-times-enabled-toggle");
+  const statusEl = root.querySelector("#task-times-settings-status");
   const totalEl = root.querySelector("#task-times-total");
   const uniqueEl = root.querySelector("#task-times-unique");
   const oldestEl = root.querySelector("#task-times-oldest");
@@ -36,6 +40,57 @@ export async function initializeTaskTimesSettings(root) {
   if (!statsContainer || !clearBtn) {
     console.warn("Task times settings UI elements not found");
     return;
+  }
+
+  /**
+   * Show status message to user.
+   * @param {string} message - Message to display.
+   * @param {"success" | "error"} [type="success"] - Status type.
+   */
+  function showStatus(message, type = "success") {
+    if (!statusEl) return;
+    const icon = type === "success" ? "✓" : "✕";
+    statusEl.className = `settings-status ${type}`;
+    statusEl.textContent = `${icon} ${message}`;
+    statusEl.style.display = "inline-block";
+    setTimeout(() => {
+      statusEl.textContent = "";
+      statusEl.className = "";
+      statusEl.style.display = "none";
+    }, 3000);
+  }
+
+  // Load and set initial toggle state
+  if (enabledToggle) {
+    try {
+      const enabled = await settingsManager.get("reports.task_time_estimates_enabled");
+      enabledToggle.checked = enabled !== false; // Default to true if not set
+    } catch (err) {
+      console.error("Failed to load task time estimates setting:", err);
+      enabledToggle.checked = true; // Default to enabled on error
+    }
+
+    // Handle toggle changes
+    enabledToggle.addEventListener("change", async (e) => {
+      const enabled = e.target.checked;
+      try {
+        await settingsManager.set("reports.task_time_estimates_enabled", enabled, true);
+        console.log(`[Task Times] Estimates ${enabled ? "enabled" : "disabled"}`);
+        
+        // Show success message
+        showStatus("Settings saved", "success");
+        
+        // Dispatch event to notify other parts of the app
+        window.dispatchEvent(new CustomEvent("task-time-estimates-toggled", {
+          detail: { enabled }
+        }));
+      } catch (err) {
+        console.error("Failed to save task time estimates setting:", err);
+        // Revert toggle on error
+        enabledToggle.checked = !enabled;
+        showStatus("Failed to save setting", "error");
+      }
+    });
   }
 
   /**
@@ -105,18 +160,8 @@ export async function initializeTaskTimesSettings(root) {
       if (span) span.textContent = "Clear All Estimates";
       clearBtn.disabled = false;
       
-      // Show success message using status element
-      const statusEl = root.querySelector("#task-times-settings-status");
-      if (statusEl) {
-        statusEl.className = "settings-status success";
-        statusEl.textContent = "✓ All task time estimates have been cleared.";
-        statusEl.style.display = "inline-block";
-        setTimeout(() => {
-          statusEl.textContent = "";
-          statusEl.className = "";
-          statusEl.style.display = "none";
-        }, 3000);
-      }
+      // Show success message
+      showStatus("All task time estimates have been cleared", "success");
       
       // Clear cache and dispatch event to notify other parts of the app
       try {

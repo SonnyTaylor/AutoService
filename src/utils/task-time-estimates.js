@@ -317,6 +317,18 @@ export function clearTaskTimeCache() {
  * @returns {Promise<{estimate: number, sampleCount: number, variance: number, min: number, max: number, isParameterBased?: boolean, confidence?: string} | null>} Estimate with stats, or null if insufficient data
  */
 export async function getEstimate(taskType, taskParams, builtTaskType = null) {
+  // Check if task time estimates are enabled
+  try {
+    const { settingsManager } = await import("./settings-manager.js");
+    const enabled = await settingsManager.get("reports.task_time_estimates_enabled");
+    if (!enabled) {
+      return null;
+    }
+  } catch (error) {
+    // If we can't check the setting, continue (fallback behavior)
+    console.warn("[Task Time] Failed to check setting, continuing with estimate:", error);
+  }
+
   if (!taskType) {
     return null;
   }

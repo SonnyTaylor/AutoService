@@ -67,6 +67,7 @@ const ReportsSchema = z.object({
   sound_id: z.string().default("classic-beep"),
   sound_repeat: z.number().min(1).max(10).default(1),
   ai_summary_enabled: z.boolean().default(false),
+  task_time_estimates_enabled: z.boolean().default(true),
 });
 
 /**

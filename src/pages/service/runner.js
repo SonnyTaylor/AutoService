@@ -1761,148 +1761,163 @@ export async function initPage() {
 
         try {
           // Capture task durations for time estimation
+          // Check if task time estimates are enabled in settings
           try {
-            const { normalizeTaskParams, isParameterBasedTask } = await import(
-              "../../utils/task-time-estimates.js"
-            );
-            const { core } = window.__TAURI__ || {};
-            const { invoke } = core || {};
-
-            if (invoke && Array.isArray(finalReport.results)) {
-              // Get original task definitions from run plan
-              let originalTasks = [];
-              try {
-                const pendingRunRaw =
-                  sessionStorage.getItem("service.pendingRun");
-                if (pendingRunRaw) {
-                  const pendingRun = JSON.parse(pendingRunRaw);
-                  originalTasks = Array.isArray(pendingRun.tasks)
-                    ? pendingRun.tasks
-                    : [];
-                }
-              } catch (e) {
-                console.warn(
-                  "[Task Time] Failed to load original tasks for time capture:",
-                  e
-                );
-              }
-
-              const timeRecords = [];
-              const timestamp = Math.floor(Date.now() / 1000);
-
-              console.log(
-                `[Task Time] Processing ${finalReport.results.length} results for time capture`
-              );
-
-              // Match results to original tasks by index
-              finalReport.results.forEach((result, idx) => {
-                // Only save successful tasks
-                const status = String(result?.status || "").toLowerCase();
-                if (status !== "success") {
-                  console.log(
-                    `[Task Time] Skipping task ${idx}: status=${status}`
-                  );
-                  return;
-                }
-
-                // Get task type
-                const taskType = result?.task_type || originalTasks[idx]?.type;
-                if (!taskType) {
-                  console.log(`[Task Time] Skipping task ${idx}: no task type`);
-                  return;
-                }
-
-                // Skip logging for parameter-based tasks (duration is exactly determined by parameters)
-                // These tasks don't need historical data since duration can be calculated directly from params
-                if (isParameterBasedTask(taskType)) {
-                  console.log(
-                    `[Task Time] Skipping parameter-based task ${taskType}: duration is determined by parameters`
-                  );
-                  return;
-                }
-
-                // Extract duration
-                const duration = result?.summary?.duration_seconds;
-                // Allow very small durations (>= 0.001) to account for rounding
-                // Tasks that round to 0.00 are still valid (just very fast)
-                if (!Number.isFinite(duration) || duration < 0) {
-                  console.log(
-                    `[Task Time] Skipping task ${idx}: invalid duration=${duration}`
-                  );
-                  return;
-                }
-
-                // If duration is 0 or very small, use a minimum of 0.01 for storage
-                // This ensures we capture fast tasks while avoiding true 0 values
-                const durationToSave = Math.max(0.01, duration);
-
-                // Get original task for params
-                const originalTask = originalTasks[idx] || {};
-                const paramsHash = normalizeTaskParams(originalTask);
-                let paramsJson;
-                try {
-                  paramsJson = JSON.parse(paramsHash);
-                } catch (e) {
-                  console.warn(
-                    `[Task Time] Failed to parse params hash for ${taskType}:`,
-                    e
-                  );
-                  paramsJson = {};
-                }
-
-                const paramsStr = JSON.stringify(paramsJson);
-                console.log(
-                  `[Task Time] Capturing: ${taskType}, duration=${duration}s, params=`,
-                  paramsJson,
-                  `paramsStr=`,
-                  paramsStr
-                );
-
-                timeRecords.push({
-                  task_type: taskType,
-                  params: paramsJson,
-                  duration_seconds: Number(durationToSave),
-                  timestamp: timestamp,
-                });
-              });
-
-              // Save records if any
-              if (timeRecords.length > 0) {
-                try {
-                  await invoke("save_task_time", { records: timeRecords });
-                  console.log(
-                    `[Task Time] Successfully saved ${timeRecords.length} duration record(s)`
-                  );
-
-                  // Clear cache so estimates refresh
-                  try {
-                    const { clearTaskTimeCache } = await import(
-                      "../../utils/task-time-estimates.js"
-                    );
-                    clearTaskTimeCache();
-                  } catch (e) {
-                    // Ignore cache clear errors
-                  }
-                } catch (saveError) {
-                  console.error(
-                    "[Task Time] Failed to save duration records:",
-                    saveError
-                  );
-                }
-              } else {
-                console.log("[Task Time] No valid duration records to save");
-              }
+            const { settingsManager } = await import("../../utils/settings-manager.js");
+            const enabled = await settingsManager.get("reports.task_time_estimates_enabled");
+            if (!enabled) {
+              console.log("[Task Time] Recording disabled in settings, skipping capture");
             } else {
-              console.log(
-                "[Task Time] No invoke available or results not an array"
-              );
+              try {
+                const { normalizeTaskParams, isParameterBasedTask } = await import(
+                  "../../utils/task-time-estimates.js"
+                );
+                const { core } = window.__TAURI__ || {};
+                const { invoke } = core || {};
+
+                if (invoke && Array.isArray(finalReport.results)) {
+                  // Get original task definitions from run plan
+                  let originalTasks = [];
+                  try {
+                    const pendingRunRaw =
+                      sessionStorage.getItem("service.pendingRun");
+                    if (pendingRunRaw) {
+                      const pendingRun = JSON.parse(pendingRunRaw);
+                      originalTasks = Array.isArray(pendingRun.tasks)
+                        ? pendingRun.tasks
+                        : [];
+                    }
+                  } catch (e) {
+                    console.warn(
+                      "[Task Time] Failed to load original tasks for time capture:",
+                      e
+                    );
+                  }
+
+                  const timeRecords = [];
+                  const timestamp = Math.floor(Date.now() / 1000);
+
+                  console.log(
+                    `[Task Time] Processing ${finalReport.results.length} results for time capture`
+                  );
+
+                  // Match results to original tasks by index
+                  finalReport.results.forEach((result, idx) => {
+                    // Only save successful tasks
+                    const status = String(result?.status || "").toLowerCase();
+                    if (status !== "success") {
+                      console.log(
+                        `[Task Time] Skipping task ${idx}: status=${status}`
+                      );
+                      return;
+                    }
+
+                    // Get task type
+                    const taskType = result?.task_type || originalTasks[idx]?.type;
+                    if (!taskType) {
+                      console.log(`[Task Time] Skipping task ${idx}: no task type`);
+                      return;
+                    }
+
+                    // Skip logging for parameter-based tasks (duration is exactly determined by parameters)
+                    // These tasks don't need historical data since duration can be calculated directly from params
+                    if (isParameterBasedTask(taskType)) {
+                      console.log(
+                        `[Task Time] Skipping parameter-based task ${taskType}: duration is determined by parameters`
+                      );
+                      return;
+                    }
+
+                    // Extract duration
+                    const duration = result?.summary?.duration_seconds;
+                    // Allow very small durations (>= 0.001) to account for rounding
+                    // Tasks that round to 0.00 are still valid (just very fast)
+                    if (!Number.isFinite(duration) || duration < 0) {
+                      console.log(
+                        `[Task Time] Skipping task ${idx}: invalid duration=${duration}`
+                      );
+                      return;
+                    }
+
+                    // If duration is 0 or very small, use a minimum of 0.01 for storage
+                    // This ensures we capture fast tasks while avoiding true 0 values
+                    const durationToSave = Math.max(0.01, duration);
+
+                    // Get original task for params
+                    const originalTask = originalTasks[idx] || {};
+                    const paramsHash = normalizeTaskParams(originalTask);
+                    let paramsJson;
+                    try {
+                      paramsJson = JSON.parse(paramsHash);
+                    } catch (e) {
+                      console.warn(
+                        `[Task Time] Failed to parse params hash for ${taskType}:`,
+                        e
+                      );
+                      paramsJson = {};
+                    }
+
+                    const paramsStr = JSON.stringify(paramsJson);
+                    console.log(
+                      `[Task Time] Capturing: ${taskType}, duration=${duration}s, params=`,
+                      paramsJson,
+                      `paramsStr=`,
+                      paramsStr
+                    );
+
+                    timeRecords.push({
+                      task_type: taskType,
+                      params: paramsJson,
+                      duration_seconds: Number(durationToSave),
+                      timestamp: timestamp,
+                    });
+                  });
+
+                  // Save records if any
+                  if (timeRecords.length > 0) {
+                    try {
+                      await invoke("save_task_time", { records: timeRecords });
+                      console.log(
+                        `[Task Time] Successfully saved ${timeRecords.length} duration record(s)`
+                      );
+
+                      // Clear cache so estimates refresh
+                      try {
+                        const { clearTaskTimeCache } = await import(
+                          "../../utils/task-time-estimates.js"
+                        );
+                        clearTaskTimeCache();
+                      } catch (e) {
+                        // Ignore cache clear errors
+                      }
+                    } catch (saveError) {
+                      console.error(
+                        "[Task Time] Failed to save duration records:",
+                        saveError
+                      );
+                    }
+                  } else {
+                    console.log("[Task Time] No valid duration records to save");
+                  }
+                } else {
+                  console.log(
+                    "[Task Time] No invoke available or results not an array"
+                  );
+                }
+              } catch (error) {
+                console.error(
+                  "[Task Time] Failed to capture task durations:",
+                  error
+                );
+                // Don't block report processing if time capture fails
+              }
             }
           } catch (error) {
             console.error(
-              "[Task Time] Failed to capture task durations:",
+              "[Task Time] Failed to check task time estimates setting:",
               error
             );
-            // Don't block report processing if time capture fails
+            // If we can't check the setting, skip recording to be safe
           }
 
           // Get fresh DOM references

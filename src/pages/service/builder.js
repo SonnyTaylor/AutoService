@@ -752,6 +752,12 @@ class BuilderUI {
    */
   async loadTimeEstimates() {
     try {
+      const { settingsManager } = await import("../../utils/settings-manager.js");
+      const enabled = await settingsManager.get("reports.task_time_estimates_enabled");
+      if (!enabled) {
+        this.timeEstimates = [];
+        return;
+      }
       const { loadTaskTimeEstimates } = await import("../../utils/task-time-estimates.js");
       this.timeEstimates = await loadTaskTimeEstimates();
     } catch (error) {
@@ -807,6 +813,16 @@ class BuilderUI {
       console.log("Task times cleared, refreshing estimates...");
       this.render(); // Re-render to update estimates
       this.updateTotalTime(); // Refresh total time
+    });
+
+    // Listen for task time estimates toggle to update UI in real-time
+    window.addEventListener("task-time-estimates-toggled", async (e) => {
+      const enabled = e.detail?.enabled !== false;
+      console.log(`[Builder] Task time estimates ${enabled ? "enabled" : "disabled"}, updating UI...`);
+      // Re-render to show/hide badges
+      this.render();
+      // Update total time display
+      await this.updateTotalTime();
     });
 
     this.elements.searchInput?.addEventListener("input", () => {
@@ -1350,8 +1366,24 @@ class BuilderUI {
       </div>
     `;
 
-    // Load time estimate asynchronously and update placeholder
-    this.loadAndRenderTimeEstimate(id, li);
+    // Load time estimate asynchronously and update placeholder (only if enabled)
+    // Check setting first to avoid unnecessary calls
+    (async () => {
+      try {
+        const { settingsManager } = await import("../../utils/settings-manager.js");
+        const enabled = await settingsManager.get("reports.task_time_estimates_enabled");
+        if (enabled) {
+          await this.loadAndRenderTimeEstimate(id, li);
+        } else {
+          // Hide placeholder if disabled
+          const placeholder = li.querySelector(`.time-estimate-placeholder[data-task-id="${id}"]`);
+          if (placeholder) placeholder.style.display = "none";
+        }
+      } catch (error) {
+        // On error, try to load anyway (fallback behavior)
+        await this.loadAndRenderTimeEstimate(id, li);
+      }
+    })();
 
     const row = li.querySelector(".task-row");
     const checkbox = row.querySelector("input");
@@ -1400,6 +1432,26 @@ class BuilderUI {
    * Load and render time estimate for a task
    */
   async loadAndRenderTimeEstimate(id, liElement) {
+    // Check if task time estimates are enabled
+    try {
+      const { settingsManager } = await import("../../utils/settings-manager.js");
+      const enabled = await settingsManager.get("reports.task_time_estimates_enabled");
+      if (!enabled) {
+        // Hide any existing badges and placeholders
+        const metaSpan = liElement?.querySelector(".meta");
+        if (metaSpan) {
+          const placeholder = metaSpan.querySelector(`.time-estimate-placeholder[data-task-id="${id}"]`);
+          const existingBadge = metaSpan.querySelector(`.badge.time-estimate`);
+          if (placeholder) placeholder.style.display = "none";
+          if (existingBadge) existingBadge.style.display = "none";
+        }
+        return;
+      }
+    } catch (error) {
+      console.warn("[Task Time] Failed to check setting, skipping estimate:", error);
+      return;
+    }
+
     // Special handling for GPU parent: calculate combined estimate from child tasks
     if (id === GPU_PARENT_ID) {
       await this.loadGpuParentTimeEstimate(liElement);
@@ -1547,6 +1599,26 @@ class BuilderUI {
    * Uses parameter-based duration calculation for these tasks
    */
   async loadGpuParentTimeEstimate(liElement) {
+    // Check if task time estimates are enabled
+    try {
+      const { settingsManager } = await import("../../utils/settings-manager.js");
+      const enabled = await settingsManager.get("reports.task_time_estimates_enabled");
+      if (!enabled) {
+        // Hide any existing badges and placeholders
+        const metaSpan = liElement?.querySelector(".meta");
+        if (metaSpan) {
+          const placeholder = metaSpan.querySelector(`.time-estimate-placeholder[data-task-id="${GPU_PARENT_ID}"]`);
+          const existingBadge = metaSpan.querySelector(`.badge.time-estimate`);
+          if (placeholder) placeholder.style.display = "none";
+          if (existingBadge) existingBadge.style.display = "none";
+        }
+        return;
+      }
+    } catch (error) {
+      console.warn("[Task Time] Failed to check setting, skipping GPU estimate:", error);
+      return;
+    }
+
     try {
       const { calculateParameterBasedDuration, formatDuration } = await import("../../utils/task-time-estimates.js");
       // getServiceById is already imported at the top of the file from ./catalog.js
@@ -1956,6 +2028,20 @@ class BuilderUI {
    */
   async updateTotalTime() {
     if (!this.elements.totalTime) {
+      return;
+    }
+
+    // Check if task time estimates are enabled
+    try {
+      const { settingsManager } = await import("../../utils/settings-manager.js");
+      const enabled = await settingsManager.get("reports.task_time_estimates_enabled");
+      if (!enabled) {
+        this.elements.totalTime.style.display = "none";
+        return;
+      }
+    } catch (error) {
+      console.warn("[Task Time] Failed to check setting, hiding total time:", error);
+      this.elements.totalTime.style.display = "none";
       return;
     }
 

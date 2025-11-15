@@ -75,12 +75,38 @@ export async function initPage() {
   
   // Load and display time estimates for each preset
   await updatePresetTimeEstimates();
+
+  // Listen for task time estimates toggle to update UI in real-time
+  window.addEventListener("task-time-estimates-toggled", async () => {
+    console.log("[Presets] Task time estimates toggle changed, updating estimates...");
+    await updatePresetTimeEstimates();
+  });
 }
 
 /**
  * Calculate and display time estimates for each preset
  */
 async function updatePresetTimeEstimates() {
+  // Check if task time estimates are enabled
+  try {
+    const { settingsManager } = await import("../../utils/settings-manager.js");
+    const enabled = await settingsManager.get("reports.task_time_estimates_enabled");
+    if (!enabled) {
+      // Hide all preset time elements
+      const presetNames = ["diagnostics", "general", "complete"];
+      for (const presetName of presetNames) {
+        const timeEl = document.querySelector(`[data-preset-time="${presetName}"]`);
+        if (timeEl) {
+          timeEl.style.display = "none";
+        }
+      }
+      return;
+    }
+  } catch (error) {
+    console.warn("[Presets] Failed to check task time estimates setting:", error);
+    // Continue to try to show estimates on error (fallback behavior)
+  }
+
   try {
     const { getPreset } = await import("./handlers/presets.js");
     const { calculateTotalTime, formatDuration } = await import("../../utils/task-time-estimates.js");
