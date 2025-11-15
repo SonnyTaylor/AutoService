@@ -1,0 +1,19 @@
+[profile.dev]
+opt-level = 1
+incremental = true
+codegen-units = 16
+debug = 1  # Reduce debug symbols (1 = line tables only, faster than 2 = full debug info)
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[target.x86_64-pc-windows-msvc]
+linker = "rust-lld"
+# rust-lld is significantly faster than the default MSVC linker
+
+[build]
+incremental = true
+# Cargo automatically uses all available CPU cores by default
+# Uncomment after installing sccache for even faster builds:
+# rustc-wrapper = "sccache"
+
