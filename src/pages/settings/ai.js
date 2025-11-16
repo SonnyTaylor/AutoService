@@ -280,12 +280,20 @@ async function getModelsForProvider(provider) {
 async function fetchOllamaModels(baseUrl = "http://localhost:11434") {
   try {
     const url = `${baseUrl.replace(/\/$/, "")}/api/tags`;
+
+    // Add timeout to prevent hanging
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
     const response = await fetch(url, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
       },
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -322,8 +330,13 @@ async function fetchOllamaModels(baseUrl = "http://localhost:11434") {
       };
     });
   } catch (error) {
+    // Provide better error messages
+    if (error.name === "AbortError") {
+      console.error("Ollama request timed out after 5 seconds");
+      throw new Error("Connection timeout. Is Ollama running?");
+    }
     console.error("Failed to fetch Ollama models:", error);
-    throw error;
+    throw new Error(error.message || "Could not connect to Ollama");
   }
 }
 
