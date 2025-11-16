@@ -387,14 +387,9 @@ async function populateModelDropdown(provider, currentModel, baseUrl = "") {
       modelSelect.appendChild(option);
     });
 
-    // If current model isn't in the list, add it as custom
-    if (currentModel && !models.find((m) => m.value === currentModel)) {
-      const option = document.createElement("option");
-      option.value = currentModel;
-      option.textContent = `${currentModel} (Custom)`;
-      option.selected = true;
-      modelSelect.appendChild(option);
-    }
+    // If current model isn't in the list, don't add a custom option -- prefer only
+    // validated models in the dropdown. This prevents showing runtime-created
+    // "(Custom)" entries in the list.
   } catch (error) {
     // On error, show fallback options
     console.error(`Failed to load models for ${provider}:`, error);
@@ -419,14 +414,7 @@ async function populateModelDropdown(provider, currentModel, baseUrl = "") {
       modelSelect.appendChild(option);
     });
 
-    // Always allow custom entry
-    if (currentModel && !fallbackModels.find((m) => m.value === currentModel)) {
-      const option = document.createElement("option");
-      option.value = currentModel;
-      option.textContent = `${currentModel} (Custom)`;
-      option.selected = true;
-      modelSelect.appendChild(option);
-    }
+    // Do not append a custom option when falling back to static lists.
   }
 }
 
