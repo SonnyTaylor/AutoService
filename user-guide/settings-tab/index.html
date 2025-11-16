@@ -1,0 +1,2117 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../component-tests/">
+      
+      
+        <link rel="next" href="../shortcuts-tab/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
+    
+    
+      
+        <title>Settings Tab - AutoService Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.618322db.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#settings-tab" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="AutoService Docs" class="md-header__button md-logo" aria-label="AutoService Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            AutoService Docs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Settings Tab
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/SonnyTaylor/AutoService" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../overview/" class="md-tabs__link">
+          
+  
+  
+  User Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../developer-guide/overview/" class="md-tabs__link">
+          
+  
+  
+  Developer Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="AutoService Docs" class="md-nav__button md-logo" aria-label="AutoService Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    AutoService Docs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/SonnyTaylor/AutoService" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../service-tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Service Tab
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../programs-tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Programs Tab
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripts-tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scripts Tab
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../system-info-tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System Info Tab
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reports-tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reports Tab
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../component-tests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Component Tests
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Settings Tab
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Settings Tab
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#programs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Programs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Programs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tool-status-indicators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tool Status Indicators
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#available-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Available Tools
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#search-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Search Tools
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#technician" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technician
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Technician">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#adding-technician-links" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding Technician Links
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#persistent-web-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Persistent Web Data
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#network" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Network
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Network">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#iperf-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        iPerf Server
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ping-host" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ping Host
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ai-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AI / API
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="AI / API">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#openai-api-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenAI API Key
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#business" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Business
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Business">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#enable-technician-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enable Technician Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#technician-names" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technician Names
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#business-logo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Business Logo
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#business-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Business Information
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reports
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Reports">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#auto-save-reports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Auto-save Reports
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#desktop-notifications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Desktop Notifications
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#completion-sound" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Completion Sound
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#network-report-sharing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Network Report Sharing
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sentry-error-tracking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sentry Error Tracking
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Sentry Error Tracking">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#enable-sentry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enable Sentry
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#send-pii-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Send PII Data
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance-monitoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Performance Monitoring
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#system-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        System Information
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#saving-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Saving Settings
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shortcuts-tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shortcuts Tab
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Developer Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/dev-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/adding-service/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding a Service
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/frontend-dev/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Frontend Development
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/backend-dev/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Backend Development
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/settings-management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Settings Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/python-runner/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python Runner
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/portable-layout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Portable Layout
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#programs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Programs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Programs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tool-status-indicators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tool Status Indicators
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#available-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Available Tools
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#search-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Search Tools
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#technician" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technician
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Technician">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#adding-technician-links" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding Technician Links
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#persistent-web-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Persistent Web Data
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#network" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Network
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Network">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#iperf-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        iPerf Server
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ping-host" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ping Host
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ai-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AI / API
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="AI / API">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#openai-api-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenAI API Key
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#business" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Business
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Business">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#enable-technician-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enable Technician Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#technician-names" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technician Names
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#business-logo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Business Logo
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#business-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Business Information
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reports
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Reports">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#auto-save-reports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Auto-save Reports
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#desktop-notifications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Desktop Notifications
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#completion-sound" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Completion Sound
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#network-report-sharing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Network Report Sharing
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sentry-error-tracking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sentry Error Tracking
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Sentry Error Tracking">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#enable-sentry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enable Sentry
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#send-pii-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Send PII Data
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance-monitoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Performance Monitoring
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#system-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        System Information
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#saving-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Saving Settings
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="settings-tab">Settings Tab</h1>
+<p>The <strong>Settings</strong> tab allows you to configure AutoService behavior, preferences, and tool management.</p>
+<h2 id="overview">Overview</h2>
+<p>Settings are organized into several sections:</p>
+<ul>
+<li><strong>Programs</strong> - View and manage required external tools</li>
+<li><strong>Technician</strong> - Add quick-access web tools and links</li>
+<li><strong>Network</strong> - Configure network test settings</li>
+<li><strong>AI / API</strong> - Set up API keys for AI features</li>
+<li><strong>Business</strong> - Configure technician mode and business information</li>
+<li><strong>Reports</strong> - Configure report generation and completion notifications</li>
+<li><strong>Sentry</strong> - Error tracking and performance monitoring</li>
+</ul>
+<h2 id="programs">Programs</h2>
+<p>This section displays all external tools required by automated services.</p>
+<h3 id="tool-status-indicators">Tool Status Indicators</h3>
+<ul>
+<li><strong>Green checkmark (✓)</strong> - Tool is installed and available</li>
+<li><strong>Yellow warning (⚠)</strong> - Tool is available but may need update</li>
+<li><strong>Red X (✕)</strong> - Tool is missing or not available</li>
+</ul>
+<h3 id="available-tools">Available Tools</h3>
+<p>Common tools include:</p>
+<ul>
+<li><strong>BleachBit</strong> - Temporary file cleanup</li>
+<li><strong>AdwCleaner</strong> - Adware removal</li>
+<li><strong>7-Zip</strong> - Archive utility</li>
+<li><strong>SFC</strong> - System File Checker (built-in)</li>
+<li><strong>DISM</strong> - Deployment Image Servicing (built-in)</li>
+<li><strong>HeavyLoad</strong> - Stress testing</li>
+<li><strong>FurMark</strong> - GPU stress testing</li>
+<li><strong>smartctl</strong> - Drive health monitoring</li>
+<li><strong>And more...</strong></li>
+</ul>
+<h3 id="search-tools">Search Tools</h3>
+<p>Use the search box to quickly filter and find specific tools in the programs list.</p>
+<h2 id="technician">Technician</h2>
+<p>Quick-access web tools that technicians use frequently.</p>
+<h3 id="adding-technician-links">Adding Technician Links</h3>
+<ol>
+<li>Enter a <strong>Title</strong> (e.g., "Password Reset", "Remote Support")</li>
+<li>Enter the <strong>URL</strong> (must be valid https:// or http:// URL)</li>
+<li>Click <strong>Add</strong></li>
+<li>Links appear as tabs in the top bar of AutoService</li>
+</ol>
+<h3 id="persistent-web-data">Persistent Web Data</h3>
+<p>Browser data (cookies, localStorage, site data) is stored in the app's webview profile and persists across sessions when running from the same USB drive—useful for staying logged into frequently-used tools.</p>
+<h2 id="network">Network</h2>
+<p>Configure settings for network diagnostics and tests.</p>
+<h3 id="iperf-server">iPerf Server</h3>
+<p>Configure the IP address or hostname of your iPerf server for network performance testing:</p>
+<ul>
+<li>Leave blank to disable iPerf tests</li>
+<li>Enter a valid IPv4 (e.g., <code>192.168.0.34</code>) or IPv6 address</li>
+</ul>
+<h3 id="ping-host">Ping Host</h3>
+<p>Set the default host for network connectivity testing:</p>
+<ul>
+<li>Default: <code>8.8.8.8</code> (Google DNS)</li>
+<li>Can use IP address (IPv4 or IPv6) or hostname</li>
+<li>Used by network diagnostic services to verify connectivity</li>
+</ul>
+<h2 id="ai-api">AI / API</h2>
+<p>Configure API keys for AI-powered features.</p>
+<h3 id="openai-api-key">OpenAI API Key</h3>
+<p>Required for AI Startup Optimizer and other AI features:</p>
+<ol>
+<li>Get your API key from <a href="https://platform.openai.com/api-keys">platform.openai.com/api-keys</a></li>
+<li>Enter your key in the <strong>OpenAI API Key</strong> field (displayed as dots for security)</li>
+<li>Click <strong>Save</strong> to store it</li>
+<li>Click <strong>Clear</strong> to remove the saved key</li>
+</ol>
+<h2 id="business">Business</h2>
+<p>Configure business branding and technician information for customer-facing reports.</p>
+<h3 id="enable-technician-mode">Enable Technician Mode</h3>
+<p>Toggle <strong>Enable Technician Mode</strong> to:</p>
+<ul>
+<li>Add business branding to customer reports</li>
+<li>Enable all business information fields</li>
+<li>Include technician/company details on printed reports</li>
+</ul>
+<p>When disabled, all business fields are grayed out.</p>
+<h3 id="technician-names">Technician Names</h3>
+<p>Add frequently-used technician names for quick selection when starting services:</p>
+<ol>
+<li>Enter a technician name</li>
+<li>Click <strong>Add</strong></li>
+<li>Names appear in a list for quick access during service runs</li>
+</ol>
+<h3 id="business-logo">Business Logo</h3>
+<p>Upload an image file to use as your business logo on reports:</p>
+<ol>
+<li>Click <strong>Browse...</strong> to select an image file from your computer</li>
+<li>Any image format is supported (PNG, JPG, GIF, etc.)</li>
+<li>The image is embedded into settings for portability</li>
+</ol>
+<h3 id="business-information">Business Information</h3>
+<p>Fill in your business details (all fields optional):</p>
+<ul>
+<li><strong>Business Name</strong> - Your company/business name</li>
+<li><strong>Business Address</strong> - Office address</li>
+<li><strong>Phone Number</strong> - Contact phone</li>
+<li><strong>Email Address</strong> - Contact email</li>
+<li><strong>Website</strong> - Business website URL</li>
+<li><strong>TFN (Tax File Number)</strong> - Australian tax file number (if applicable)</li>
+<li><strong>ABN (Australian Business Number)</strong> - Australian business number (if applicable)</li>
+</ul>
+<p>All fields appear on customer reports when Technician Mode is enabled.</p>
+<h2 id="reports">Reports</h2>
+<p>Configure report saving behavior and completion notifications.</p>
+<h3 id="auto-save-reports">Auto-save Reports</h3>
+<p>Enable <strong>Auto-save Reports</strong> to automatically save reports after every service run completes:</p>
+<ul>
+<li><strong>On</strong>: Reports automatically saved to <code>data/reports/</code> with no action needed</li>
+<li><strong>Off</strong>: You must manually save reports using the Save Report button</li>
+</ul>
+<h3 id="desktop-notifications">Desktop Notifications</h3>
+<p>Enable <strong>Desktop Notifications</strong> to receive a system notification when a service run finishes:</p>
+<ul>
+<li>Shows a toast notification in the system tray</li>
+<li>Useful when you need to monitor multiple PC cleanups</li>
+</ul>
+<h3 id="completion-sound">Completion Sound</h3>
+<p>Enable <strong>Play Sound on Completion</strong> to hear an audio alert when services finish:</p>
+<ul>
+<li><strong>Volume</strong>: Adjust volume from 0-100%</li>
+<li><strong>Sound</strong>: Choose notification sound (currently: Classic Beep)</li>
+<li><strong>Repeat</strong>: Set how many times to play the sound (1-10)</li>
+<li><strong>Test</strong>: Click the speaker icon to preview the selected sound with current settings</li>
+</ul>
+<h3 id="network-report-sharing">Network Report Sharing</h3>
+<p>Share completed reports to a network location (UNC path):</p>
+<ol>
+<li>Enable <strong>Enable network report sharing</strong></li>
+<li>Enter a valid UNC path (e.g., <code>\\server\share\reports</code> or <code>//server/share/reports</code>)</li>
+<li>Choose where to save reports:</li>
+<li><strong>Local only</strong>: Save to <code>data/reports/</code> only</li>
+<li><strong>Network only</strong>: Save to network share only</li>
+<li><strong>Both (recommended)</strong>: Save to both locations for backup</li>
+<li>Click <strong>Test Connection</strong> to verify the network path is accessible</li>
+</ol>
+<h2 id="sentry-error-tracking">Sentry Error Tracking</h2>
+<p>Configure error reporting and performance monitoring for the Python service runner.</p>
+<h3 id="enable-sentry">Enable Sentry</h3>
+<p>Master toggle to enable/disable all error tracking:</p>
+<ul>
+<li><strong>Enabled</strong>: Reports errors and performance metrics to Sentry</li>
+<li><strong>Disabled</strong>: No error data is sent</li>
+</ul>
+<h3 id="environment">Environment</h3>
+<p>Select the environment for tracking:</p>
+<ul>
+<li><strong>Production</strong> - Standard environment (default)</li>
+<li><strong>Development</strong> - For development builds</li>
+<li><strong>Staging</strong> - For testing releases</li>
+</ul>
+<h3 id="send-pii-data">Send PII Data</h3>
+<p>Include personal information in error reports:</p>
+<ul>
+<li><strong>Enabled</strong>: Include hostname and username (helps identify which PC had issues)</li>
+<li><strong>Disabled</strong>: Strip personal identifiers from reports</li>
+</ul>
+<h3 id="performance-monitoring">Performance Monitoring</h3>
+<p>Enable transaction and trace sampling:</p>
+<ul>
+<li><strong>Enabled</strong>: Track task execution performance and response times</li>
+<li><strong>Disabled</strong>: Only errors are reported</li>
+</ul>
+<h3 id="system-information">System Information</h3>
+<p>Include system details in error reports:</p>
+<ul>
+<li><strong>Enabled</strong>: Include CPU, memory, disk information (helps diagnose hardware-related issues)</li>
+<li><strong>Disabled</strong>: Exclude system information</li>
+</ul>
+<h2 id="saving-settings">Saving Settings</h2>
+<p>Most settings save automatically as you make changes. Status messages confirm success or report errors.</p>
+<p>Settings are stored in JSON files:</p>
+<ul>
+<li><code>data/settings/app_settings.json</code> - Main settings</li>
+<li><code>data/settings/programs.json</code> - Tool definitions</li>
+<li><code>data/settings/scripts.json</code> - User scripts</li>
+</ul>
+<hr />
+<p>Next: <a href="../shortcuts-tab/">Shortcuts Tab</a></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.top", "navigation.instant", "navigation.instant.prefetch", "navigation.instant.progress", "content.code.copy", "content.tabs.link", "search", "search.suggest", "search.highlight"], "search": "../../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      
+    
+  </body>
+</html>
