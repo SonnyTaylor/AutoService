@@ -452,7 +452,7 @@ def _call_openai_api(
 
     Args:
         api_key: API key for the AI provider
-        model: Model name (e.g., "gpt-4-turbo-preview", "claude-3-sonnet")
+        model: Model name (e.g., "gpt-5", "gpt-4o", "claude-sonnet-4-20250514")
         notifications: List of notification permissions to analyze
         base_url: Optional base URL for API endpoint (for compatibility)
 

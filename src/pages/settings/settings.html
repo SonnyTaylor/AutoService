@@ -17,7 +17,9 @@
         <button class="shortcut-btn" data-target="ai">AI / API</button>
         <button class="shortcut-btn" data-target="business">Business</button>
         <button class="shortcut-btn" data-target="reports">Reports</button>
-        <button class="shortcut-btn" data-target="task-times">Task Times</button>
+        <button class="shortcut-btn" data-target="task-times">
+          Task Times
+        </button>
         <button class="shortcut-btn" data-target="sentry">Sentry</button>
       </nav>
     </aside>
@@ -224,22 +226,31 @@
                     <option value="anthropic">Anthropic (Claude)</option>
                     <option value="groq">Groq</option>
                     <option value="xai">xAI (Grok)</option>
+                    <option value="mistral">Mistral AI</option>
+                    <option value="deepseek">DeepSeek</option>
+                    <option value="cerebras">Cerebras</option>
                     <option value="azure">Azure OpenAI</option>
                     <option value="google">Google (Vertex AI)</option>
                     <option value="ollama">Ollama (Local)</option>
                   </select>
                   <span class="muted field-hint">
-                    Select your AI provider. LiteLLM handles the API translation.
+                    Select your AI provider. LiteLLM handles the API
+                    translation.
                   </span>
                 </label>
 
                 <label class="ai-form-field">
                   <span class="muted">Model</span>
-                  <select name="model" id="ai-model-select" class="ai-model-select">
-                    <!-- Options populated dynamically based on provider -->
+                  <select
+                    name="model"
+                    id="ai-model-select"
+                    class="ai-model-select"
+                  >
+                    <!-- Options populated dynamically via AI Gateway -->
                   </select>
                   <span class="muted field-hint">
-                    Select the AI model to use for analysis tasks.
+                    Models are fetched dynamically from AI Gateway. Select the
+                    AI model to use for analysis tasks.
                   </span>
                 </label>
               </div>
@@ -544,7 +555,10 @@
                   </div>
                   <div class="sound-controls">
                     <div class="sound-control-row">
-                      <label for="reports-sound-volume" class="sound-control-label">
+                      <label
+                        for="reports-sound-volume"
+                        class="sound-control-label"
+                      >
                         Volume
                       </label>
                       <input
@@ -557,12 +571,18 @@
                         aria-label="Completion sound volume"
                         class="sound-volume-slider"
                       />
-                      <span id="reports-sound-volume-label" class="sound-volume-value">
+                      <span
+                        id="reports-sound-volume-label"
+                        class="sound-volume-value"
+                      >
                         80%
                       </span>
                     </div>
                     <div class="sound-control-row">
-                      <label for="reports-sound-select" class="sound-control-label">
+                      <label
+                        for="reports-sound-select"
+                        class="sound-control-label"
+                      >
                         Sound
                       </label>
                       <select
@@ -574,7 +594,10 @@
                       </select>
                     </div>
                     <div class="sound-control-row">
-                      <label for="reports-sound-repeat" class="sound-control-label">
+                      <label
+                        for="reports-sound-repeat"
+                        class="sound-control-label"
+                      >
                         Repeat
                       </label>
                       <input
@@ -681,18 +704,25 @@
 
       <!-- Sentry pane -->
       <!-- Task Time Estimates pane -->
-      <div class="card settings-pane" data-pane="task-times" style="display: none">
+      <div
+        class="card settings-pane"
+        data-pane="task-times"
+        style="display: none"
+      >
         <div class="card-title"><span>Task Time Estimates</span></div>
         <div class="card-body">
           <p class="muted">
-            Task time estimates are calculated from historical execution data to help predict how long service runs will take.
-            Estimates are displayed after the first successful run of each task configuration.
+            Task time estimates are calculated from historical execution data to
+            help predict how long service runs will take. Estimates are
+            displayed after the first successful run of each task configuration.
           </p>
 
           <!-- Enable/Disable Toggle Section -->
           <div class="task-times-config-section">
             <div class="task-times-section-header">
-              <span class="task-times-section-title">Enable Task Time Estimates</span>
+              <span class="task-times-section-title"
+                >Enable Task Time Estimates</span
+              >
               <span class="muted task-times-section-subtitle">
                 Control whether task time estimates are recorded and displayed
               </span>
@@ -703,7 +733,10 @@
                 <div class="toggle-text">
                   <div class="toggle-title">Enable Task Time Estimates</div>
                   <div class="muted toggle-description">
-                    When enabled, task durations are recorded after each service run and time estimate badges are displayed in the builder and presets. When disabled, no durations are recorded and badges are hidden.
+                    When enabled, task durations are recorded after each service
+                    run and time estimate badges are displayed in the builder
+                    and presets. When disabled, no durations are recorded and
+                    badges are hidden.
                   </div>
                 </div>
               </label>
@@ -722,19 +755,27 @@
             <div id="task-times-stats" class="task-times-stats-grid">
               <div class="task-times-stat-card">
                 <div class="task-times-stat-label">Total Records</div>
-                <div class="task-times-stat-value" id="task-times-total">Loading...</div>
+                <div class="task-times-stat-value" id="task-times-total">
+                  Loading...
+                </div>
               </div>
               <div class="task-times-stat-card">
                 <div class="task-times-stat-label">Unique Task Types</div>
-                <div class="task-times-stat-value" id="task-times-unique">Loading...</div>
+                <div class="task-times-stat-value" id="task-times-unique">
+                  Loading...
+                </div>
               </div>
               <div class="task-times-stat-card">
                 <div class="task-times-stat-label">Oldest Record</div>
-                <div class="task-times-stat-value" id="task-times-oldest">Loading...</div>
+                <div class="task-times-stat-value" id="task-times-oldest">
+                  Loading...
+                </div>
               </div>
               <div class="task-times-stat-card">
                 <div class="task-times-stat-label">Newest Record</div>
-                <div class="task-times-stat-value" id="task-times-newest">Loading...</div>
+                <div class="task-times-stat-value" id="task-times-newest">
+                  Loading...
+                </div>
               </div>
             </div>
           </div>
@@ -754,7 +795,8 @@
                 <span>Clear All Estimates</span>
               </button>
               <p class="muted small task-times-warning">
-                This will permanently delete all task time records. Estimates will need to be rebuilt from future runs.
+                This will permanently delete all task time records. Estimates
+                will need to be rebuilt from future runs.
               </p>
             </div>
             <div id="task-times-settings-status" class="muted"></div>
@@ -833,8 +875,8 @@
                 <div class="toggle-text">
                   <div class="toggle-title">Send PII Data</div>
                   <div class="muted toggle-description">
-                    Include hostname and username in error reports (helps identify
-                    which PC had issues)
+                    Include hostname and username in error reports (helps
+                    identify which PC had issues)
                   </div>
                 </div>
               </label>
@@ -855,7 +897,8 @@
                 <div class="toggle-text">
                   <div class="toggle-title">System Information</div>
                   <div class="muted toggle-description">
-                    Include system information (CPU, memory, disk) in error reports
+                    Include system information (CPU, memory, disk) in error
+                    reports
                   </div>
                 </div>
               </label>

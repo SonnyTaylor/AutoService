@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.43",
+    "@ai-sdk/gateway": "^2.0.9",
     "@ai-sdk/google": "^2.0.30",
     "@ai-sdk/openai": "^2.0.64",
     "@phosphor-icons/web": "^2.1.2",

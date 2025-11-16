@@ -411,7 +411,7 @@ Format your response as JSON with the following structure:
         result = call_ai_analysis(
             system_prompt="You are a Windows Update expert assistant. Analyze errors and provide actionable remediation steps.",
             user_prompt=user_prompt,
-            model=model or "gpt-4-turbo-preview",
+            model=model or "gpt-4o-mini",
             api_key=api_key,
             base_url=base_url,
             temperature=0.5,

@@ -100,8 +100,8 @@ class AIClient:
 
         Args:
             api_key: API key for the provider. If None, reads from environment.
-            model: Model name (e.g., "gpt-4-turbo-preview", "claude-3-sonnet-20240229").
-                   If None, defaults to "gpt-4-turbo-preview".
+            model: Model name (e.g., "gpt-5", "gpt-4o", "claude-sonnet-4-20250514").
+                   If None, defaults to "gpt-4o-mini".
             base_url: Base URL for API endpoint. Only used for fallback mode.
             timeout: Request timeout in seconds (default: 120)
 
@@ -114,7 +114,7 @@ class AIClient:
 
         # Determine API key and model
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
-        self.model = model or "gpt-4-turbo-preview"
+        self.model = model or "gpt-4o-mini"
 
         # Set up LiteLLM if available
         if LITELLM_AVAILABLE:

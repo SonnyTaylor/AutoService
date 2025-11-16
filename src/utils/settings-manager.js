@@ -92,7 +92,18 @@ const NetworkSchema = z.object({
  */
 const AISchema = z.object({
   provider: z
-    .enum(["openai", "anthropic", "azure", "google", "groq", "ollama", "xai"])
+    .enum([
+      "openai",
+      "anthropic",
+      "azure",
+      "google",
+      "groq",
+      "ollama",
+      "xai",
+      "mistral",
+      "deepseek",
+      "cerebras",
+    ])
     .default("openai"),
   model: z.string().default("gpt-4o-mini"),
   api_key: z.string().default(""), // Current active API key
@@ -107,6 +118,9 @@ const AISchema = z.object({
       groq: z.string().default(""),
       ollama: z.string().default(""),
       xai: z.string().default(""),
+      mistral: z.string().default(""),
+      deepseek: z.string().default(""),
+      cerebras: z.string().default(""),
     })
     .default({}),
   // Provider-specific base URLs
@@ -119,6 +133,9 @@ const AISchema = z.object({
       groq: z.string().default(""),
       ollama: z.string().default("http://localhost:11434"),
       xai: z.string().default(""),
+      mistral: z.string().default(""),
+      deepseek: z.string().default(""),
+      cerebras: z.string().default(""),
     })
     .default({}),
   // Legacy field for backward compatibility

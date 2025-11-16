@@ -505,7 +505,7 @@ def call_chat_model(
 
     Args:
         api_key: API key for the AI provider
-        model: Model name (e.g., "gpt-4-turbo-preview", "claude-3-sonnet")
+        model: Model name (e.g., "gpt-5", "gpt-4o", "claude-sonnet-4-20250514")
         items: List of startup items to analyze
         base_url: Optional base URL for API endpoint (for compatibility)
 
