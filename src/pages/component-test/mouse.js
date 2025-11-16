@@ -13,7 +13,6 @@ let mouseState = {
   // DOM elements
   mouseArea: null,
   mousePos: null,
-  mouseButtons: null,
   mouseWheel: null,
   mouseWheelBar: null,
   mouseSpeed: null,
@@ -22,7 +21,6 @@ let mouseState = {
   dblReadout: null,
   dblBadge: null,
   cursorDot: null,
-  coordTag: null,
   btnL: null,
   btnM: null,
   btnR: null,
@@ -42,7 +40,6 @@ export function initMouse() {
   // Get DOM elements
   mouseState.mouseArea = qs('#mouse-area');
   mouseState.mousePos = qs('#mouse-pos');
-  mouseState.mouseButtons = qs('#mouse-buttons');
   mouseState.mouseWheel = qs('#mouse-wheel');
   mouseState.mouseWheelBar = qs('#mouse-wheel-bar');
   mouseState.mouseSpeed = qs('#mouse-speed');
@@ -51,7 +48,6 @@ export function initMouse() {
   mouseState.dblReadout = qs('#dblclick-time');
   mouseState.dblBadge = qs('#dblclick-badge');
   mouseState.cursorDot = qs('#cursor-dot');
-  mouseState.coordTag = qs('#coord-tag');
   mouseState.btnL = qs('#btn-left');
   mouseState.btnM = qs('#btn-middle');
   mouseState.btnR = qs('#btn-right');
@@ -98,11 +94,6 @@ function handleMouseMove(e) {
     mouseState.mousePos.textContent = `${x}, ${y}`;
   }
 
-  // Update buttons display
-  if (mouseState.mouseButtons) {
-    mouseState.mouseButtons.textContent = buttonsToText(e.buttons);
-  }
-
   // Update button visuals
   updateButtonVisuals(e.buttons);
 
@@ -111,11 +102,6 @@ function handleMouseMove(e) {
     mouseState.cursorDot.hidden = false;
     mouseState.cursorDot.style.left = `${x}px`;
     mouseState.cursorDot.style.top = `${y}px`;
-  }
-
-  // Update coordinate tag
-  if (mouseState.coordTag) {
-    mouseState.coordTag.textContent = `${x}, ${y}`;
   }
 
   // Calculate and display speed
@@ -127,9 +113,6 @@ function handleMouseMove(e) {
  * @param {MouseEvent} e - Mouse down event
  */
 function handleMouseDown(e) {
-  if (mouseState.mouseButtons) {
-    mouseState.mouseButtons.textContent = buttonsToText(e.buttons);
-  }
   updateButtonVisuals(e.buttons);
 
   // Check for double-click
@@ -153,9 +136,6 @@ function handleMouseDown(e) {
  * @param {MouseEvent} e - Mouse up event
  */
 function handleMouseUp(e) {
-  if (mouseState.mouseButtons) {
-    mouseState.mouseButtons.textContent = buttonsToText(e.buttons);
-  }
   updateButtonVisuals(e.buttons);
 }
 
@@ -247,24 +227,6 @@ function calculateMouseSpeed(x, y) {
 }
 
 /**
- * Convert button bitmask to text representation
- * @param {number} buttonMask - Bitmask of pressed buttons
- * @returns {string} Text representation of pressed buttons
- */
-function buttonsToText(buttonMask) {
-  const labels = ['L', 'R', 'M', 'X1', 'X2'];
-  const active = [];
-
-  labels.forEach((name, index) => {
-    if (buttonMask & (1 << index)) {
-      active.push(name);
-    }
-  });
-
-  return active.join(', ') || 'none';
-}
-
-/**
  * Update visual state of button indicators
  * @param {number} buttonMask - Bitmask of pressed buttons
  */
@@ -304,10 +266,6 @@ function resetMouseTest() {
 
   if (mouseState.cursorDot) {
     mouseState.cursorDot.hidden = true;
-  }
-
-  if (mouseState.coordTag) {
-    mouseState.coordTag.textContent = '0, 0';
   }
 
   updateButtonVisuals(0);

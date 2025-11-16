@@ -150,7 +150,6 @@
 [data-page="component-test"] .mouse-buttons-visual {
   display: inline-flex;
   gap: 6px;
-  margin-left: 8px;
   vertical-align: middle;
 }
 
@@ -181,19 +180,6 @@
   position: absolute;
   transform: translate(-50%, -50%);
   box-shadow: 0 0 0 2px rgba(79, 140, 255, 0.4);
-}
-
-[data-page="component-test"] .coord-tag {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid var(--border);
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.9rem;
-  color: var(--text);
 }
 
 [data-page="component-test"] .mouse-area-hint {
