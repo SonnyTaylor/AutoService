@@ -129,7 +129,9 @@ const AISchema = z.object({
  * Sentry settings schema
  */
 const SentrySchema = z.object({
-  environment: z.enum(["development", "production"]).default("production"),
+  environment: z
+    .enum(["development", "staging", "production"])
+    .default("production"),
   send_default_pii: z.boolean().default(true),
   traces_sample_rate: z.number().min(0).max(1).default(1.0),
   send_system_info: z.boolean().default(true),
