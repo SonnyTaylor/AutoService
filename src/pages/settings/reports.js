@@ -203,7 +203,10 @@ export async function initializeReportsSettings(root) {
 
   // Handle test button click
   if (soundTestBtn) {
-    soundTestBtn.addEventListener("click", testSelectedSound);
+    soundTestBtn.addEventListener("click", (e) => {
+      e.stopPropagation(); // Prevent event from bubbling to the checkbox toggle
+      testSelectedSound();
+    });
   }
 
   // Handle sound select change
