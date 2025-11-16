@@ -19,7 +19,6 @@ let mouseState = {
   mouseReset: null,
   dblBtn: null,
   dblReadout: null,
-  dblBadge: null,
   cursorDot: null,
   btnL: null,
   btnM: null,
@@ -46,7 +45,6 @@ export function initMouse() {
   mouseState.mouseReset = qs('#mouse-reset');
   mouseState.dblBtn = qs('#dblclick-test');
   mouseState.dblReadout = qs('#dblclick-time');
-  mouseState.dblBadge = qs('#dblclick-badge');
   mouseState.cursorDot = qs('#cursor-dot');
   mouseState.btnL = qs('#btn-left');
   mouseState.btnM = qs('#btn-middle');
@@ -125,9 +123,6 @@ function handleMouseDown(e) {
     if (mouseState.dblReadout) {
       mouseState.dblReadout.textContent = String(ms);
     }
-    if (mouseState.dblBadge) {
-      mouseState.dblBadge.textContent = `${ms} ms`;
-    }
   }
 }
 
@@ -169,9 +164,6 @@ function handleDoubleClickTest() {
     const ms = Math.round(dt);
     if (mouseState.dblReadout) {
       mouseState.dblReadout.textContent = String(ms);
-    }
-    if (mouseState.dblBadge) {
-      mouseState.dblBadge.textContent = `${ms} ms`;
     }
   }
 }
