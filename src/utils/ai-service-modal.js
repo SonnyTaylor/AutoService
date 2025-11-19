@@ -236,7 +236,13 @@ export async function openAIServiceModal(isToolAvailable, hasExistingTasks) {
 
     // Cleanup function (closes modal without resolving)
     const cleanup = () => {
-      modal.close();
+      if (modal.open) {
+        modal.close();
+      }
+      // Ensure modal is removed from DOM to prevent it from staying visible
+      if (modal.parentNode) {
+        modal.parentNode.removeChild(modal);
+      }
     };
 
     // Apply result with mode
