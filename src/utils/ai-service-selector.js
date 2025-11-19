@@ -69,30 +69,34 @@ function buildServiceCatalogDescription(isToolAvailable) {
       descriptions.push(`${category}:`);
       services.forEach(({ id, service }) => {
         const params = service.defaultParams || {};
-        const paramDesc = Object.keys(params).length > 0
-          ? ` (params: ${JSON.stringify(params)})`
-          : "";
-        
+        const paramDesc =
+          Object.keys(params).length > 0
+            ? ` (params: ${JSON.stringify(params)})`
+            : "";
+
         // Check tool availability if function provided
         let toolDesc = "";
         if (id === GPU_PARENT_ID) {
-          const hasFurmark = isToolAvailable ? isToolAvailable("furmark_stress_test") : true;
-          const hasHeavyload = isToolAvailable ? isToolAvailable("heavyload_stress_gpu") : true;
-          toolDesc = hasFurmark || hasHeavyload 
-            ? " [tools available]" 
-            : " [tools missing - may not work]";
+          const hasFurmark = isToolAvailable
+            ? isToolAvailable("furmark_stress_test")
+            : true;
+          const hasHeavyload = isToolAvailable
+            ? isToolAvailable("heavyload_stress_gpu")
+            : true;
+          toolDesc =
+            hasFurmark || hasHeavyload
+              ? " [tools available]"
+              : " [tools missing - may not work]";
         } else if (service.toolKeys && service.toolKeys.length > 0) {
           const available = isToolAvailable ? isToolAvailable(id) : true;
-          toolDesc = available 
+          toolDesc = available
             ? ` [requires: ${service.toolKeys.join(", ")} - available]`
             : ` [requires: ${service.toolKeys.join(", ")} - MISSING]`;
         } else {
           toolDesc = " [built-in - always available]";
         }
-        
-        descriptions.push(
-          `  - ${id}: ${service.label}${paramDesc}${toolDesc}`
-        );
+
+        descriptions.push(`  - ${id}: ${service.label}${paramDesc}${toolDesc}`);
       });
       descriptions.push("");
     });
@@ -145,7 +149,12 @@ ${paramSchema}
 
 INSTRUCTIONS:
 1. Analyze the user's problem description carefully
-2. Select ONLY the services that are relevant to solving their problem
+2. For performance issues (slow computer, lag, freezing), include BOTH cleanup AND diagnostics:
+   - Cleanup: Remove junk files (bleachbit_clean, drivecleanup_clean)
+   - Performance diagnostics: Disk benchmark (winsat_disk), disk space (disk_space_report), drive health (smartctl_report)
+   - Startup analysis: AI startup optimizer (ai_startup_disable) to identify slow startup items
+   - Security scans: Include at least one virus/malware scanner (kvrt_scan, trellix_stinger_scan, or adwcleaner_clean)
+   - Battery health: Include battery_health_report for laptops (may not apply to desktops)
 3. Set appropriate parameters for each service (use defaultParams as guidance)
 4. For stress tests, use reasonable durations (1-10 minutes for quick tests, 10-30 for thorough tests)
 5. For GPU stress testing, use the gpu_stress_parent service with appropriate furmark/heavyload settings
@@ -157,13 +166,13 @@ INSTRUCTIONS:
    - reasoning: Brief explanation of your selections
 
 EXAMPLES:
-- "My computer is slow" → Include cleanup services (bleachbit_clean, drivecleanup_clean), diagnostics (disk_space_report, smartctl_report)
+- "My computer is slow" → Include cleanup (bleachbit_clean, drivecleanup_clean), diagnostics (disk_space_report, smartctl_report, winsat_disk), startup optimization (ai_startup_disable), and security scan (kvrt_scan or adwcleaner_clean). For laptops, also include battery_health_report.
 - "Network issues" → Include network tests (ping_test, speedtest, iperf_test)
 - "System errors" → Include integrity checks (sfc_scan, dism_health_check, chkdsk_scan)
 - "GPU problems" → Include GPU stress test (gpu_stress_parent with furmark: true)
-- "Full diagnostic" → Include comprehensive set of diagnostics and health checks
+- "Full diagnostic" → Include comprehensive set of diagnostics, cleanup, health checks, and security scans
 
-Be selective - don't include every service. Focus on what's needed to address the specific problem.`;
+IMPORTANT: For performance/slow issues, always include diagnostic services (benchmarks, health reports) in addition to cleanup services. Don't just clean - also diagnose the root cause.`;
 
   const userPrompt = `User's problem description:
 ${userInput.trim()}
@@ -218,9 +227,10 @@ Please select the most appropriate services to address this problem. Return your
       }
 
       // Validate params is an object
-      const params = service.params && typeof service.params === "object"
-        ? service.params
-        : {};
+      const params =
+        service.params && typeof service.params === "object"
+          ? service.params
+          : {};
 
       validatedServices.push({
         id: service.id,
@@ -236,11 +246,11 @@ Please select the most appropriate services to address this problem. Return your
 
     return {
       services: validatedServices,
-      reasoning: response.reasoning || "Services selected based on problem description",
+      reasoning:
+        response.reasoning || "Services selected based on problem description",
     };
   } catch (error) {
     console.error("AI service selection failed:", error);
     throw error;
   }
 }
-
