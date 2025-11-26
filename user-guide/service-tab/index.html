@@ -1,0 +1,2090 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../getting-started/">
+      
+      
+        <link rel="next" href="../programs-tab/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
+    
+    
+      
+        <title>Service Tab - AutoService Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.618322db.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#service-tab-task-automation" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="AutoService Docs" class="md-header__button md-logo" aria-label="AutoService Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            AutoService Docs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Service Tab
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/SonnyTaylor/AutoService" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../overview/" class="md-tabs__link">
+          
+  
+  
+  User Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../developer-guide/overview/" class="md-tabs__link">
+          
+  
+  
+  Developer Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="AutoService Docs" class="md-nav__button md-logo" aria-label="AutoService Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    AutoService Docs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/SonnyTaylor/AutoService" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Service Tab
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Service Tab
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-builder-interface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Builder Interface
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The Builder Interface">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#service-catalog-left-panel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Service Catalog (Left Panel)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-queue-right-panel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task Queue (Right Panel)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adding-tasks-to-your-queue" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding Tasks to Your Queue
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Adding Tasks to Your Queue">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-search-or-browse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: Search or Browse
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-click-to-add" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Click to Add
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-configure-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: Configure (Optional)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-reorder-as-needed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4: Reorder as Needed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#presets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Presets
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#running-your-queue" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running Your Queue
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Running Your Queue">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#starting-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Starting Execution
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#monitoring-progress" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Monitoring Progress
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-to-expect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What to Expect
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#canceling-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Canceling Execution
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#viewing-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Viewing Results
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Viewing Results">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#technical-view" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technical View
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#customer-view" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Customer View
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#printing-exporting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Printing &amp; Exporting
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-workflow-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Workflow Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Common Workflow Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#quick-system-check-15-minutes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick System Check (15 minutes)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#full-maintenance-45-minutes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Full Maintenance (45 minutes)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pre-sale-diagnostics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pre-Sale Diagnostics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hardware-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hardware Validation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../programs-tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Programs Tab
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripts-tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scripts Tab
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../system-info-tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System Info Tab
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reports-tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reports Tab
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../component-tests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Component Tests
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../settings-tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Settings Tab
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shortcuts-tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shortcuts Tab
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Developer Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/dev-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/adding-service/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding a Service
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/frontend-dev/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Frontend Development
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/backend-dev/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Backend Development
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/settings-management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Settings Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/python-runner/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python Runner
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/portable-layout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Portable Layout
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-builder-interface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Builder Interface
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The Builder Interface">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#service-catalog-left-panel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Service Catalog (Left Panel)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-queue-right-panel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task Queue (Right Panel)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adding-tasks-to-your-queue" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding Tasks to Your Queue
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Adding Tasks to Your Queue">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-search-or-browse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: Search or Browse
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-click-to-add" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Click to Add
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-configure-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: Configure (Optional)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-reorder-as-needed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4: Reorder as Needed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#presets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Presets
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#running-your-queue" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running Your Queue
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Running Your Queue">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#starting-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Starting Execution
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#monitoring-progress" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Monitoring Progress
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-to-expect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What to Expect
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#canceling-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Canceling Execution
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#viewing-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Viewing Results
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Viewing Results">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#technical-view" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technical View
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#customer-view" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Customer View
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#printing-exporting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Printing &amp; Exporting
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-workflow-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Workflow Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Common Workflow Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#quick-system-check-15-minutes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick System Check (15 minutes)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#full-maintenance-45-minutes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Full Maintenance (45 minutes)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pre-sale-diagnostics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pre-Sale Diagnostics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hardware-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hardware Validation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="service-tab-task-automation">Service Tab - Task Automation</h1>
+<p>The <strong>Service</strong> tab is the heart of AutoService—where you build and execute automated maintenance and diagnostic tasks.</p>
+<h2 id="overview">Overview</h2>
+<p>The Service tab consists of three main views:</p>
+<ol>
+<li><strong>Presets</strong> (default view) - Pre-built task collections for common scenarios</li>
+<li><strong>Builder</strong> - Customize and queue individual tasks</li>
+<li><strong>Runner</strong> - Execute queued tasks and monitor progress</li>
+<li><strong>Results</strong> - Review completed task reports</li>
+</ol>
+<h2 id="the-builder-interface">The Builder Interface</h2>
+<h3 id="service-catalog-left-panel">Service Catalog (Left Panel)</h3>
+<p>The left side shows available services organized by category:</p>
+<ul>
+<li>
+<p><strong>Diagnostics</strong></p>
+</li>
+<li>
+<p>Disk Space Report - Analyze disk usage and free space</p>
+</li>
+<li>SMART Drive Report - Drive health and S.M.A.R.T. data</li>
+<li>CHKDSK Scan - Check disk for errors</li>
+<li>Battery Health Report - Battery status and health</li>
+<li>
+<p>WINSAT Disk - Disk performance benchmarking</p>
+</li>
+<li>
+<p><strong>System Maintenance</strong></p>
+</li>
+<li>
+<p>SFC Scan - Verify system file integrity</p>
+</li>
+<li>DISM Health Check - System image health check</li>
+<li>Windows Update - Install available updates</li>
+<li>
+<p>Why Not Win11 - Check Windows 11 compatibility</p>
+</li>
+<li>
+<p><strong>Cleanup &amp; Security</strong></p>
+</li>
+<li>
+<p>BleachBit Clean - Remove temporary files and cache</p>
+</li>
+<li>AdwCleaner Clean - Remove adware and PUPs</li>
+<li>Drive Cleanup - Remove large unnecessary files</li>
+<li>KVRT Scan - Kaspersky virus removal tool</li>
+<li>
+<p>Trellix Stinger - McAfee malware removal</p>
+</li>
+<li>
+<p><strong>Stress Testing</strong></p>
+</li>
+<li>
+<p>HeavyLoad CPU Stress - CPU load testing</p>
+</li>
+<li>HeavyLoad Memory Stress - RAM stress testing</li>
+<li>HeavyLoad GPU Stress - GPU load testing</li>
+<li>
+<p>FurMark Stress Test - Graphics stress testing</p>
+</li>
+<li>
+<p><strong>Network &amp; Connectivity</strong></p>
+</li>
+<li>
+<p>Ping Test - ICMP connectivity test</p>
+</li>
+<li>Speed Test - Internet speed benchmark</li>
+<li>
+<p>iPerf Test - Network performance testing</p>
+</li>
+<li>
+<p><strong>Optimization</strong></p>
+</li>
+<li>AI Startup Disable - Remove startup programs</li>
+<li>AI Browser Notification Disable - Disable browser notifications</li>
+</ul>
+<h3 id="task-queue-right-panel">Task Queue (Right Panel)</h3>
+<p>Your queued tasks appear here in execution order. For each task, you can:</p>
+<ul>
+<li><strong>View parameters</strong> - Click on a task to see adjustable settings</li>
+<li><strong>Reorder</strong> - Drag tasks up or down to change execution order</li>
+<li><strong>Remove</strong> - Click the X to remove a task from the queue</li>
+<li><strong>Adjust settings</strong> - Modify parameters like stress test duration before running</li>
+</ul>
+<h2 id="adding-tasks-to-your-queue">Adding Tasks to Your Queue</h2>
+<h3 id="step-1-search-or-browse">Step 1: Search or Browse</h3>
+<ul>
+<li>Scroll through the catalog, or</li>
+<li>Use the search box to find specific tasks quickly</li>
+</ul>
+<h3 id="step-2-click-to-add">Step 2: Click to Add</h3>
+<p>Click on any service in the left panel to add it to your queue. The task appears in the right panel with default settings.</p>
+<h3 id="step-3-configure-optional">Step 3: Configure (Optional)</h3>
+<p>Some tasks have configurable parameters:</p>
+<ul>
+<li><strong>Stress Tests</strong>: Set duration (in minutes)</li>
+<li><strong>Network Tests</strong>: Set target server or parameters</li>
+<li><strong>Cleanup Tasks</strong>: Choose what types of files to clean</li>
+</ul>
+<p>Click on a queued task to reveal its configuration options.</p>
+<h3 id="step-4-reorder-as-needed">Step 4: Reorder as Needed</h3>
+<p>Drag tasks up or down in the queue to set the execution order. For example:</p>
+<ol>
+<li>System diagnostics first (check drive health)</li>
+<li>Cleanup tasks (remove unnecessary files)</li>
+<li>Security scans (verify no threats)</li>
+<li>Stress tests last (test stability after cleanup)</li>
+</ol>
+<h2 id="presets">Presets</h2>
+<p>Presets are pre-configured task queues for common scenarios:</p>
+<ul>
+<li><strong>Quick Check</strong> - Basic diagnostics (5-10 minutes)</li>
+<li><strong>Full Maintenance</strong> - Complete cleanup and diagnostics (30-45 minutes)</li>
+<li><strong>Security Scan</strong> - Comprehensive security checks (15-20 minutes)</li>
+<li><strong>Hardware Stress</strong> - Full stress testing suite (varies by duration)</li>
+</ul>
+<p>To use a preset:</p>
+<ol>
+<li>Click the <strong>Presets</strong> tab</li>
+<li>Select a preset from the list</li>
+<li>Review the queued tasks</li>
+<li>Click <strong>Run</strong> to execute, or customize further in the <strong>Builder</strong></li>
+</ol>
+<h2 id="running-your-queue">Running Your Queue</h2>
+<div class="admonition warning">
+<p class="admonition-title">Before You Start</p>
+<ul>
+<li><strong>Save your work</strong> on the target system</li>
+<li><strong>Close other applications</strong> to prevent interference</li>
+<li><strong>Ensure admin privileges</strong> (UAC prompt may appear)</li>
+<li><strong>Plan for time</strong>: Check estimated duration</li>
+</ul>
+</div>
+<h3 id="starting-execution">Starting Execution</h3>
+<ol>
+<li>Click the <strong>Run</strong> button after building your queue</li>
+<li>You'll be taken to the <strong>Runner</strong> view</li>
+<li>Execution begins automatically</li>
+</ol>
+<h3 id="monitoring-progress">Monitoring Progress</h3>
+<p>During execution, you see:</p>
+<ul>
+<li><strong>Current task</strong> name and description</li>
+<li><strong>Progress bar</strong> showing overall completion</li>
+<li><strong>Task status</strong> (Running, Completed, Failed, Skipped)</li>
+<li><strong>Live output</strong> from the executing tool</li>
+<li><strong>Elapsed time</strong> for the current task</li>
+<li><strong>Estimated time remaining</strong></li>
+</ul>
+<h3 id="what-to-expect">What to Expect</h3>
+<ul>
+<li><strong>Normal tasks</strong> (SFC, DISM) may show no output initially</li>
+<li><strong>Scans</strong> will show progress bars or file counts</li>
+<li><strong>Stress tests</strong> will show CPU/Memory/GPU usage</li>
+<li><strong>Some tasks require admin elevation</strong> - UAC prompts may appear</li>
+<li><strong>Some tasks take longer</strong> - Be patient; don't interrupt</li>
+</ul>
+<h2 id="canceling-execution">Canceling Execution</h2>
+<div class="admonition warning">
+<p class="admonition-title">Interrupting Tasks</p>
+<p>Some tasks may take a moment to shut down gracefully. Avoid force-closing AutoService during execution.</p>
+</div>
+<p>If you need to stop the queue:</p>
+<ul>
+<li>Click the <strong>"Cancel"</strong> or <strong>"Stop"</strong> button</li>
+<li>Currently executing task will be interrupted</li>
+<li>Already completed tasks are saved</li>
+</ul>
+<h2 id="viewing-results">Viewing Results</h2>
+<p>After execution completes (or is canceled), navigate to the <strong>Results</strong> view:</p>
+<h3 id="technical-view">Technical View</h3>
+<p>Shows detailed technical information:</p>
+<ul>
+<li>Raw output from each tool</li>
+<li>Performance metrics and data</li>
+<li>Detailed error messages if any</li>
+<li>Complete execution logs</li>
+</ul>
+<p>Use this view for:</p>
+<ul>
+<li>Diagnosing issues</li>
+<li>Technical reference</li>
+<li>Archival records</li>
+</ul>
+<h3 id="customer-view">Customer View</h3>
+<p>Shows a simplified, professional summary:</p>
+<ul>
+<li>Key findings only</li>
+<li>Issues and recommendations</li>
+<li>Files cleaned / space freed</li>
+<li>Security threats found</li>
+<li>Performance improvements</li>
+</ul>
+<p>Use this view for:</p>
+<ul>
+<li>Customer communication</li>
+<li>Service documentation</li>
+<li>Quick summary reference</li>
+</ul>
+<h3 id="printing-exporting">Printing &amp; Exporting</h3>
+<p>From the results view, you can:</p>
+<ul>
+<li><strong>Print</strong> both technical and customer views</li>
+<li><strong>Save as PDF</strong> for archival or email</li>
+<li><strong>Download JSON</strong> for data analysis</li>
+<li><strong>Copy to clipboard</strong> for pasting into documents</li>
+</ul>
+<h2 id="common-workflow-examples">Common Workflow Examples</h2>
+<h3 id="quick-system-check-15-minutes">Quick System Check (15 minutes)</h3>
+<ol>
+<li>Add <strong>Disk Space Report</strong></li>
+<li>Add <strong>SMART Drive Report</strong></li>
+<li>Add <strong>SFC Scan</strong></li>
+<li>Run and review</li>
+<li>Export results</li>
+</ol>
+<h3 id="full-maintenance-45-minutes">Full Maintenance (45 minutes)</h3>
+<ol>
+<li>Add <strong>Disk Space Report</strong> (before)</li>
+<li>Add <strong>AdwCleaner Clean</strong></li>
+<li>Add <strong>BleachBit Clean</strong></li>
+<li>Add <strong>Drive Cleanup</strong></li>
+<li>Add <strong>Windows Update</strong></li>
+<li>Add <strong>SFC Scan</strong></li>
+<li>Add <strong>Disk Space Report</strong> (after, to compare)</li>
+<li>Run and review</li>
+</ol>
+<h3 id="pre-sale-diagnostics">Pre-Sale Diagnostics</h3>
+<ol>
+<li>Add <strong>System Info</strong> (base snapshot)</li>
+<li>Add <strong>SMART Drive Report</strong></li>
+<li>Add <strong>Battery Health Report</strong> (if laptop)</li>
+<li>Add <strong>Windows Update</strong> (if needed)</li>
+<li>Add <strong>CHKDSK Scan</strong> (if drive issues suspected)</li>
+<li>Run and generate customer report</li>
+</ol>
+<h3 id="hardware-validation">Hardware Validation</h3>
+<ol>
+<li>Add <strong>WINSAT Disk</strong> (performance baseline)</li>
+<li>Add <strong>HeavyLoad CPU Stress</strong> (5 minutes)</li>
+<li>Add <strong>HeavyLoad Memory Stress</strong> (5 minutes)</li>
+<li>Add <strong>FurMark Stress Test</strong> (5 minutes)</li>
+<li>Run and monitor system stability</li>
+<li>Review temperatures and results</li>
+</ol>
+<div class="admonition tip">
+<p class="admonition-title">Tips for Efficient Runs</p>
+<ul>
+<li><strong>Group similar tasks</strong> - Do diagnostics first, then cleanup, then stress tests</li>
+<li><strong>Run overnight</strong> for long maintenance routines (if UAC will allow it)</li>
+<li><strong>Check tool availability</strong> before queuing - If a tool is missing, the task will fail</li>
+<li><strong>Generate both reports</strong> - Technical for reference, customer for handoff</li>
+<li><strong>Save results</strong> - Store reports for future reference or comparison</li>
+</ul>
+</div>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<div class="admonition failure">
+<p class="admonition-title">Tasks Fail Immediately</p>
+<p><strong>Causes:</strong>
+- Required tool is missing or not in PATH
+- Task requires administrator privileges but run without elevation
+- System doesn't meet task requirements</p>
+<p><strong>Solution:</strong>
+- Check Settings → Tools for missing tools
+- Re-run AutoService as administrator
+- Check logs in <code>data/logs/</code> for specific error</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Progress Seems Stuck</p>
+<p><strong>Causes:</strong>
+- Long-running task (SFC, DISM can take 15+ minutes)
+- Tool is responding but not showing output
+- System is busy with other processes</p>
+<p><strong>Solution:</strong>
+- Wait longer before canceling (check system resource usage)
+- Check Windows Task Manager for tool processes
+- Close other applications to free resources</p>
+</div>
+<div class="admonition info">
+<p class="admonition-title">Some Tasks Skipped</p>
+<p><strong>Causes:</strong>
+- Tool not available on this system
+- Task requirements not met
+- System configuration prevents execution</p>
+<p><strong>Solution:</strong>
+- Check skip reason in results
+- Install missing tools via Programs tab
+- Verify system configuration</p>
+</div>
+<hr />
+<p>Next: <a href="../programs-tab/">Learn about Programs Tab</a></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.top", "navigation.instant", "navigation.instant.prefetch", "navigation.instant.progress", "content.code.copy", "content.tabs.link", "search", "search.suggest", "search.highlight"], "search": "../../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      
+    
+  </body>
+</html>
